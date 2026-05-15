@@ -126,6 +126,101 @@ const MOCK_STAGING_SUMMARY = {
 } as const
 
 /**
+ * Mock SPC signals surfaced on the home screen.
+ * Mirrors the SPC monitoring mock data for Kerry Listowel IE10.
+ */
+const MOCK_SPC_SIGNALS = [
+  {
+    signalId: 'SIG-2024-00312',
+    characteristicId: 'FAT_LINE02',
+    characteristicName: 'Fat Content — Line 2',
+    lineId: 'LINE-02',
+    ruleViolated: 'Rule 1 — Single point beyond 3σ',
+    severity: 'critical' as const,
+    detectedAt: '2024-03-08T08:15:00.000Z',
+    acknowledgedAt: undefined as string | undefined,
+  },
+  {
+    signalId: 'SIG-2024-00310',
+    characteristicId: 'MOISTURE_LINE01',
+    characteristicName: 'Moisture Content — Line 1',
+    lineId: 'LINE-01',
+    ruleViolated: 'Rule 2 — 9 consecutive points same side of mean',
+    severity: 'high' as const,
+    detectedAt: '2024-03-08T06:30:00.000Z',
+    acknowledgedAt: '2024-03-08T07:00:00.000Z',
+  },
+] as const
+
+/**
+ * Mock open warehouse holds surfaced on the home screen.
+ * Mirrors the warehouse 360 mock data for WH-IE10-MAIN.
+ */
+const MOCK_WAREHOUSE_HOLDS = [
+  {
+    holdId: 'HOLD-2024-00312',
+    batchId: 'CH-240308-0047',
+    materialDescription: 'Emmental Block 4 kg',
+    holdReason: 'quality-hold' as const,
+    ageHours: 3.5,
+    holdQuantity: 480,
+    uom: 'KG',
+  },
+  {
+    holdId: 'HOLD-2024-00298',
+    batchId: 'GC-240307-0091',
+    materialDescription: 'Gouda Classic 5 kg',
+    holdReason: 'investigation' as const,
+    ageHours: 27.2,
+    holdQuantity: 1200,
+    uom: 'KG',
+  },
+] as const
+
+/** Maps hold reason to display colour. */
+function holdReasonColor(reason: string): string {
+  if (reason === 'quality-hold') return '#DC2626'
+  if (reason === 'customer-hold') return '#D97706'
+  if (reason === 'investigation') return '#7C3AED'
+  if (reason === 'expired') return '#6B7280'
+  return '#D97706'
+}
+
+/**
+ * Mock critical maintenance work orders surfaced on the home screen.
+ * Mirrors the maintenance reliability mock data for Kerry Listowel IE10.
+ */
+const MOCK_CRITICAL_WORK_ORDERS = [
+  {
+    workOrderId: 'WO-2024-01847',
+    title: 'PHE gasket replacement — Line 2 down',
+    equipmentId: 'EQ-IE10-PHE-001',
+    equipmentDescription: 'Plate Heat Exchanger — Pasteurisation',
+    priority: 'critical' as const,
+    productionImpact: 'line-down' as const,
+    status: 'open' as const,
+    estimatedHours: 4,
+  },
+  {
+    workOrderId: 'WO-2024-01832',
+    title: 'Filler head bearing noise — Line 3',
+    equipmentId: 'EQ-IE10-FILL-003',
+    equipmentDescription: 'Filler Head Assembly Line 3',
+    priority: 'high' as const,
+    productionImpact: 'risk-only' as const,
+    status: 'in-progress' as const,
+    estimatedHours: 2,
+  },
+] as const
+
+function workOrderPriorityColor(priority: string): string {
+  if (priority === 'critical') return '#DC2626'
+  if (priority === 'high') return '#D97706'
+  if (priority === 'medium') return '#CA8A04'
+  return 'var(--shell-fg-3)'
+}
+
+/**
  * Home screen rendered when no workspace is active in the URL.
  *
  * @remarks
@@ -144,6 +239,9 @@ export function RoleAwareHome() {
     navigateToOperationsPlanRisk,
     navigateToEnvMon,
     navigateToProductionStaging,
+    navigateToSPCMonitoring,
+    navigateToWarehouse360,
+    navigateToMaintenanceReliability,
   } = useWorkspaceShellState()
   const [pinnedWorkspaces] = usePinnedWorkspaces(workspaceRegistry.map(w => w.workspaceId))
 
@@ -167,6 +265,18 @@ export function RoleAwareHome() {
 
   const hasProductionStaging = workspaceRegistry.some(
     w => w.workspaceId === 'production-staging' && isNavigable(w.lifecycle),
+  )
+
+  const hasSPCMonitoring = workspaceRegistry.some(
+    w => w.workspaceId === 'spc-monitoring' && isNavigable(w.lifecycle),
+  )
+
+  const hasWarehouse360 = workspaceRegistry.some(
+    w => w.workspaceId === 'warehouse-360-overview' && isNavigable(w.lifecycle),
+  )
+
+  const hasMaintenanceReliability = workspaceRegistry.some(
+    w => w.workspaceId === 'maintenance-reliability' && isNavigable(w.lifecycle),
   )
 
   return (
@@ -531,6 +641,187 @@ export function RoleAwareHome() {
           </button>
           <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
             Showing today&apos;s staging status (mock data). Open Production Staging workspace for order detail.
+          </p>
+        </section>
+      )}
+
+      {/* SPC Monitoring section — shown when spc-monitoring is navigable */}
+      {hasSPCMonitoring && (
+        <section style={{ marginTop: 32 }}>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Active Signals — SPC Monitoring
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 680 }}>
+            {MOCK_SPC_SIGNALS.map(signal => (
+              <button
+                key={signal.signalId}
+                type="button"
+                onClick={() => navigateToSPCMonitoring('chart-overview')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--shell-surface)',
+                  border: '1px solid var(--shell-line)',
+                  borderLeft: `3px solid ${severityColor(signal.severity)}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                aria-label={`Open SPC signal ${signal.signalId} for ${signal.characteristicName}`}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--shell-fg)' }}>
+                    {signal.characteristicName}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {signal.lineId} · {signal.ruleViolated}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: severityColor(signal.severity) }}>
+                    {signal.severity}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>
+                    {signal.acknowledgedAt ? 'acknowledged' : 'unacknowledged'}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Showing 2 active signals (mock data). Open SPC Monitoring workspace for full control chart view.
+          </p>
+        </section>
+      )}
+
+      {/* Warehouse 360 section — shown when warehouse-360-overview is navigable */}
+      {hasWarehouse360 && (
+        <section style={{ marginTop: 32 }}>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Open Holds — Warehouse
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 680 }}>
+            {MOCK_WAREHOUSE_HOLDS.map(hold => (
+              <button
+                key={hold.holdId}
+                type="button"
+                onClick={() => navigateToWarehouse360('holds-management')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--shell-surface)',
+                  border: '1px solid var(--shell-line)',
+                  borderLeft: `3px solid ${holdReasonColor(hold.holdReason)}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                aria-label={`Open hold ${hold.holdId} for ${hold.materialDescription}`}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--shell-fg)' }}>
+                    {hold.materialDescription}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {hold.batchId} · {hold.holdQuantity} {hold.uom} · age {hold.ageHours}h
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: holdReasonColor(hold.holdReason) }}>
+                    {hold.holdReason.replace(/-/g, ' ')}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>{hold.holdId}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Showing 2 open holds (mock data). Open Warehouse 360 workspace for full holds management view.
+          </p>
+        </section>
+      )}
+
+      {/* Maintenance & Reliability section — shown when maintenance-reliability is navigable */}
+      {hasMaintenanceReliability && (
+        <section style={{ marginTop: 32 }}>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Priority Work Orders — Maintenance
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 680 }}>
+            {MOCK_CRITICAL_WORK_ORDERS.map(wo => (
+              <button
+                key={wo.workOrderId}
+                type="button"
+                onClick={() => navigateToMaintenanceReliability('work-orders')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--shell-surface)',
+                  border: '1px solid var(--shell-line)',
+                  borderLeft: `3px solid ${workOrderPriorityColor(wo.priority)}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                aria-label={`Open work order ${wo.workOrderId}: ${wo.title}`}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--shell-fg)' }}>
+                    {wo.title}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {wo.equipmentDescription} · est. {wo.estimatedHours}h · {wo.workOrderId}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: workOrderPriorityColor(wo.priority) }}>
+                    {wo.priority}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--shell-fg-3)', textTransform: 'uppercase' }}>
+                    {wo.productionImpact.replace(/-/g, ' ')}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Showing 2 priority work orders (mock data). Open Maintenance & Reliability workspace for full view.
           </p>
         </section>
       )}

@@ -305,7 +305,122 @@ function LifecycleView() {
   )
 }
 
-type GovernanceView = 'workspaces' | 'panels' | 'lifecycle'
+/** Cross-workspace drill-through definition map. */
+function DrillThroughMapView() {
+  type DrillEntry = {
+    sourceWorkspaceId: string
+    sourceDisplayName: string
+    label: string
+    targetWorkspaceId: string
+    targetViewId?: string
+    contextScopes: readonly string[]
+  }
+
+  const entries: DrillEntry[] = []
+  for (const w of workspaceRegistry) {
+    for (const d of w.drillThroughDefinitions) {
+      entries.push({
+        sourceWorkspaceId: w.workspaceId,
+        sourceDisplayName: w.displayName,
+        label: d.label,
+        targetWorkspaceId: d.targetWorkspaceId,
+        targetViewId: d.targetViewId,
+        contextScopes: d.contextScopes,
+      })
+    }
+  }
+
+  if (entries.length === 0) {
+    return <p style={{ fontSize: 13, color: 'var(--shell-fg-3)' }}>No drill-through definitions registered.</p>
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: 'var(--shell-fg-2)', margin: '0 0 16px' }}>
+        {entries.length} drill-through definition{entries.length !== 1 ? 's' : ''} across {workspaceRegistry.length} workspaces.
+      </p>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--shell-line)' }}>
+            {['Source', 'Label', 'Target Workspace', 'Target View', 'Scope'].map(h => (
+              <th key={h} style={{ textAlign: 'left', padding: '6px 12px 8px', fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((e, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--shell-line)' }}>
+              <td style={{ padding: '8px 12px', color: 'var(--shell-fg)', fontWeight: 500 }}>{e.sourceDisplayName}</td>
+              <td style={{ padding: '8px 12px', color: 'var(--shell-fg)' }}>{e.label}</td>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 11, color: 'var(--shell-fg-2)' }}>{e.targetWorkspaceId}</td>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 11, color: 'var(--shell-fg-3)' }}>{e.targetViewId ?? '—'}</td>
+              <td style={{ padding: '8px 12px', color: 'var(--shell-fg-3)' }}>{e.contextScopes.join(', ')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** All required permissions registered across workspaces. */
+function PermissionsView() {
+  type PermEntry = {
+    permissionId: string
+    displayName: string
+    description: string
+    workspaceId: string
+    workspaceDisplayName: string
+    lifecycle: string
+  }
+
+  const entries: PermEntry[] = []
+  for (const w of workspaceRegistry) {
+    for (const p of w.requiredPermissions) {
+      entries.push({
+        permissionId: p.permissionId,
+        displayName: p.displayName,
+        description: p.description ?? '',
+        workspaceId: w.workspaceId,
+        workspaceDisplayName: w.displayName,
+        lifecycle: w.lifecycle,
+      })
+    }
+  }
+
+  if (entries.length === 0) {
+    return <p style={{ fontSize: 13, color: 'var(--shell-fg-3)' }}>No permissions registered.</p>
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: 'var(--shell-fg-2)', margin: '0 0 16px' }}>
+        {entries.length} permission{entries.length !== 1 ? 's' : ''} registered across {workspaceRegistry.length} workspaces.
+      </p>
+      {entries.map((e, i) => (
+        <div key={i} style={{ ...CARD, marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600, color: 'var(--shell-fg)' }}>
+              {e.permissionId}
+            </span>
+            <span style={{ ...BADGE, background: lifecycleColor(e.lifecycle) }}>{e.lifecycle}</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--shell-fg)', marginBottom: 4 }}>{e.displayName}</div>
+          <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginBottom: 6 }}>{e.description}</div>
+          <div style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Workspace: <strong style={{ color: 'var(--shell-fg-2)' }}>{e.workspaceDisplayName}</strong>
+            {' '}
+            <span style={{ fontFamily: 'monospace', fontSize: 10 }}>({e.workspaceId})</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type GovernanceView = 'workspaces' | 'panels' | 'lifecycle' | 'drill-through' | 'permissions'
 
 /** Admin governance page — read-only view of the product model registry. */
 export function AdminGovernancePage() {
@@ -315,6 +430,8 @@ export function AdminGovernancePage() {
     { id: 'workspaces', label: 'Registered Workspaces' },
     { id: 'panels', label: 'Panel Registry' },
     { id: 'lifecycle', label: 'Lifecycle & Source' },
+    { id: 'drill-through', label: 'Drill-through Map' },
+    { id: 'permissions', label: 'Permissions' },
   ]
 
   return (
@@ -356,6 +473,8 @@ export function AdminGovernancePage() {
       {activeView === 'workspaces' && <WorkspacesView />}
       {activeView === 'panels' && <PanelRegistryView />}
       {activeView === 'lifecycle' && <LifecycleView />}
+      {activeView === 'drill-through' && <DrillThroughMapView />}
+      {activeView === 'permissions' && <PermissionsView />}
     </div>
   )
 }

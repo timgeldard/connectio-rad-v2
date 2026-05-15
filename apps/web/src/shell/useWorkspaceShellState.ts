@@ -59,6 +59,12 @@ interface ShellStateActions {
   readonly navigateToEnvMon: (viewId?: string) => void
   /** Navigate directly to the Production Staging workspace with optional plan date and view. */
   readonly navigateToProductionStaging: (planDate?: string, viewId?: string) => void
+  /** Navigate directly to the SPC Monitoring workspace with optional view. */
+  readonly navigateToSPCMonitoring: (viewId?: string) => void
+  /** Navigate directly to the Warehouse 360 workspace with optional view. */
+  readonly navigateToWarehouse360: (viewId?: string) => void
+  /** Navigate directly to the Maintenance & Reliability workspace with optional view. */
+  readonly navigateToMaintenanceReliability: (viewId?: string) => void
 }
 
 /**
@@ -113,6 +119,11 @@ function readFromUrl(): ShellState {
  * Phase 4 additions:
  * - `navigateToEnvMon` — sets workspace + view atomically for Environmental Monitoring
  * - `navigateToProductionStaging` — sets workspace + planDate + view atomically for Production Staging
+ *
+ * Phase 5 additions:
+ * - `navigateToSPCMonitoring` — sets workspace + view atomically for SPC Monitoring
+ * - `navigateToWarehouse360` — sets workspace + view atomically for Warehouse 360
+ * - `navigateToMaintenanceReliability` — sets workspace + view atomically for Maintenance & Reliability
  *
  * @returns Combined shell state snapshot and action callbacks.
  */
@@ -225,6 +236,39 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     [],
   )
 
+  const navigateToSPCMonitoring = useCallback(
+    (viewId = 'chart-overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'spc-monitoring')
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
+  const navigateToWarehouse360 = useCallback(
+    (viewId = 'warehouse-overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'warehouse-360-overview')
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
+  const navigateToMaintenanceReliability = useCallback(
+    (viewId = 'overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'maintenance-reliability')
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
   return {
     ...state,
     setWorkspace,
@@ -237,5 +281,8 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     navigateToOperationsPlanRisk,
     navigateToEnvMon,
     navigateToProductionStaging,
+    navigateToSPCMonitoring,
+    navigateToWarehouse360,
+    navigateToMaintenanceReliability,
   }
 }

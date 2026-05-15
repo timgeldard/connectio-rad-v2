@@ -4,6 +4,7 @@ import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { RoleAwareHome } from '../pages/RoleAwareHome.js'
 import { NotFound } from '../pages/NotFound.js'
 import { AdminGovernancePage } from '../pages/AdminGovernancePage.js'
+import { LegacyRetirementPage } from '../pages/LegacyRetirementPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -40,6 +41,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page" data-testid="workspace-view-admin-governance">
           <AdminGovernancePage />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-legacy-retirement') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-legacy-retirement">
+          <LegacyRetirementPage />
         </div>
       </div>
     )
