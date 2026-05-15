@@ -1,6 +1,7 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration } from '@connectio/di-traceability'
 import { batchReleaseRegistration } from '@connectio/di-quality'
+import { operationsPlanRiskRegistration } from '@connectio/di-operations'
 
 /**
  * Static workspace registry — Phase 1 and Phase 2 implementations.
@@ -18,6 +19,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 2 — Quality Batch Release (cross-domain, fully implemented)
   batchReleaseRegistration,
+
+  // Phase 3 — Operations Plan Risk (cross-domain, fully implemented)
+  operationsPlanRiskRegistration,
 
   // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {

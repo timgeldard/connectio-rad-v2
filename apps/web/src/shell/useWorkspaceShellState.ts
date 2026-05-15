@@ -25,6 +25,11 @@ interface ShellState {
    * Encoded as `?releaseCaseId=X` in the URL.
    */
   readonly releaseCaseId: string | null
+  /**
+   * The active plan date for the Operations Plan Risk workspace.
+   * Encoded as `?planDate=X` in the URL (ISO 8601 date: YYYY-MM-DD).
+   */
+  readonly planDate: string | null
   /** True when a workspace is selected and the scopebar should be shown. */
   readonly hasScope: boolean
 }
@@ -48,6 +53,8 @@ interface ShellStateActions {
   readonly setReleaseCaseId: (releaseCaseId: string) => void
   /** Navigate directly to the Quality Batch Release workspace with optional view selection. */
   readonly navigateToBatchRelease: (releaseCaseId: string, viewId?: string) => void
+  /** Navigate directly to the Operations Plan Risk workspace with optional plan date and view. */
+  readonly navigateToOperationsPlanRisk: (planDate?: string, viewId?: string) => void
 }
 
 /**
@@ -63,12 +70,14 @@ function readFromUrl(): ShellState {
   const viewId = params.get('view')
   const investigationId = params.get('investigationId')
   const releaseCaseId = params.get('releaseCaseId')
+  const planDate = params.get('planDate')
   return {
     workspaceId,
     tabId,
     viewId,
     investigationId,
     releaseCaseId,
+    planDate,
     hasScope: workspaceId !== null,
   }
 }
@@ -92,6 +101,10 @@ function readFromUrl(): ShellState {
  * - `releaseCaseId` — active release case for the Quality Batch Release workspace
  * - `setReleaseCaseId` — sets `?releaseCaseId=X`
  * - `navigateToBatchRelease` — sets workspace + releaseCaseId + view atomically
+ *
+ * Phase 3 additions:
+ * - `planDate` — active plan date for the Operations Plan Risk workspace
+ * - `navigateToOperationsPlanRisk` — sets workspace + planDate + view atomically
  *
  * @returns Combined shell state snapshot and action callbacks.
  */
@@ -169,6 +182,18 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     [],
   )
 
+  const navigateToOperationsPlanRisk = useCallback(
+    (planDate?: string, viewId = 'plan-overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'operations-plan-risk')
+      if (planDate) params.set('planDate', planDate)
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
   return {
     ...state,
     setWorkspace,
@@ -178,5 +203,6 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     navigateToTraceInvestigation,
     setReleaseCaseId,
     navigateToBatchRelease,
+    navigateToOperationsPlanRisk,
   }
 }

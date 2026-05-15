@@ -1,5 +1,6 @@
 import { TraceInvestigationWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace } from '@connectio/di-quality'
+import { OperationsPlanRiskWorkspace } from '@connectio/di-operations'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
 
@@ -15,8 +16,8 @@ interface Props {
  * @remarks
  * Routes to the appropriate workspace component based on `workspaceId`.
  * Phase 1 implements `trace-investigation` fully. Phase 2 adds
- * `quality-batch-release`. All other workspace IDs render a placeholder
- * until their domain integration is implemented in a subsequent phase.
+ * `quality-batch-release`. Phase 3 adds `operations-plan-risk`. All other
+ * workspace IDs render a placeholder until implemented in a subsequent phase.
  *
  * The `scope` from `useAuthScope()` and URL params (`investigationId`,
  * `releaseCaseId`, `viewId`) are forwarded to workspace components that
@@ -25,7 +26,8 @@ interface Props {
  * @param props - Component props.
  */
 export default function WorkspaceViews({ workspaceId }: Props) {
-  const { investigationId, releaseCaseId, viewId, setReleaseCaseId } = useWorkspaceShellState()
+  const { investigationId, releaseCaseId, planDate, viewId, setReleaseCaseId, navigateToBatchRelease } =
+    useWorkspaceShellState()
   const { activeScope } = useAuthScope()
 
   if (workspaceId === 'trace-investigation') {
@@ -48,6 +50,19 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           releaseCaseId={releaseCaseId ?? undefined}
           viewId={viewId ?? 'release-queue'}
           onSelectCase={setReleaseCaseId}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'operations-plan-risk') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-operations-plan-risk">
+        <OperationsPlanRiskWorkspace
+          scope={activeScope}
+          planDate={planDate ?? undefined}
+          viewId={viewId ?? 'plan-overview'}
+          onNavigateToBatchRelease={navigateToBatchRelease}
         />
       </div>
     )

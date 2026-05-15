@@ -8,6 +8,14 @@
 
 export { operationsWorkspaceRegistration } from './registration.js'
 
+// Phase 3 — Operations Plan Risk workspace
+export { operationsPlanRiskRegistration } from './operations-plan-risk-registration.js'
+export { OperationsPlanRiskWorkspace } from './operations-plan-risk-workspace.js'
+export type {
+  OperationsPlanRiskWorkspaceProps,
+  OperationsPlanRiskViewId,
+} from './operations-plan-risk-workspace.js'
+
 export { OperationsEvidenceAdapter, operationsEvidenceAdapter, toAdapterError } from './adapters/operations-evidence-adapter.js'
 export type { OperationsEvidenceAdapterRequest, OperationsEvidenceAdapterOptions } from './adapters/operations-evidence-adapter.js'
 

@@ -3,6 +3,42 @@ import { isNavigable } from '@connectio/product-model'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 
+/** Maps risk status to a display colour. */
+function riskStatusColor(status: string): string {
+  if (status === 'critical') return '#DC2626'
+  if (status === 'at-risk') return '#D97706'
+  if (status === 'on-track') return '#16A34A'
+  return 'var(--shell-fg-3)'
+}
+
+/**
+ * Mock plan risk items shown in the Operations section.
+ * Surfaced from the same mock data as the OperationsPlanRiskAdapter.
+ * In production this would be driven by an API call.
+ */
+const MOCK_PLAN_RISK_ITEMS = [
+  {
+    planDate: '2024-03-08',
+    plantId: 'IE10',
+    plantName: 'Kerry Listowel',
+    riskStatus: 'critical' as const,
+    openBlockers: 5,
+    lateOrders: 3,
+    topRiskReason: 'Block press breakdown on L-04 blocking 2 process orders',
+    supervisor: 'Aoife Murphy',
+  },
+  {
+    planDate: '2024-03-09',
+    plantId: 'IE10',
+    plantName: 'Kerry Listowel',
+    riskStatus: 'at-risk' as const,
+    openBlockers: 2,
+    lateOrders: 1,
+    topRiskReason: 'Brine cooler PM on L-02 scheduled during shift — monitor throughput',
+    supervisor: 'Aoife Murphy',
+  },
+] as const
+
 /**
  * Mock priority release items shown in the Quality section.
  * These are surfaced from the same mock data as the QualityReleaseAdapter.
@@ -49,7 +85,7 @@ function priorityColor(priority: string): string {
  * two highest-priority mock cases so quality users can drill straight in.
  */
 export function RoleAwareHome() {
-  const { setWorkspace, navigateToBatchRelease } = useWorkspaceShellState()
+  const { setWorkspace, navigateToBatchRelease, navigateToOperationsPlanRisk } = useWorkspaceShellState()
   const [pinnedWorkspaces] = usePinnedWorkspaces(workspaceRegistry.map(w => w.workspaceId))
 
   const pinned = workspaceRegistry.filter(
@@ -60,6 +96,10 @@ export function RoleAwareHome() {
 
   const hasBatchRelease = workspaceRegistry.some(
     w => w.workspaceId === 'quality-batch-release' && isNavigable(w.lifecycle),
+  )
+
+  const hasOperationsPlanRisk = workspaceRegistry.some(
+    w => w.workspaceId === 'operations-plan-risk' && isNavigable(w.lifecycle),
   )
 
   return (
@@ -222,6 +262,75 @@ export function RoleAwareHome() {
           </div>
           <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
             Showing 2 priority items (mock data). Open Quality Batch Release workspace to see full queue.
+          </p>
+        </section>
+      )}
+
+      {/* Operations section — shown when operations-plan-risk is navigable */}
+      {hasOperationsPlanRisk && (
+        <section style={{ marginTop: 32 }}>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Plan Risk — Operations
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 680 }}>
+            {MOCK_PLAN_RISK_ITEMS.map(item => (
+              <button
+                key={item.planDate}
+                type="button"
+                onClick={() => navigateToOperationsPlanRisk(item.planDate, 'plan-overview')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--shell-surface)',
+                  border: '1px solid var(--shell-line)',
+                  borderLeft: `3px solid ${riskStatusColor(item.riskStatus)}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                aria-label={`Open plan risk for ${item.plantName} on ${item.planDate}`}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--shell-fg)' }}>
+                    {item.plantName} — {item.planDate}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {item.topRiskReason}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: riskStatusColor(item.riskStatus),
+                    }}
+                  >
+                    {item.riskStatus.replace(/-/g, ' ')}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>
+                    {item.openBlockers} blockers · {item.lateOrders} late
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Showing 2 plan days (mock data). Open Operations Plan Risk workspace for full shift view.
           </p>
         </section>
       )}
