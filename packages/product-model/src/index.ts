@@ -19,6 +19,17 @@ export type {
   DashboardRegistration,
   ActionFlowRegistration,
 } from './types/registration.js'
+export type {
+  ReadinessStatus,
+  ReadinessSeverity,
+  ReadinessFinding,
+  WorkspaceParityStatus,
+  WorkspaceParityAssessment,
+  CutoverSimulationMode,
+  CutoverSimulationResult,
+  RoleScopeMatrixEntry,
+  DesignSystemComplianceFinding,
+} from './types/readiness.js'
 export {
   isVisible,
   isNavigable,
@@ -26,3 +37,11 @@ export {
   lifecycleBadgeLabel,
 } from './helpers/lifecycle.js'
 export { scopeIncludes, resolveDefaultScope } from './helpers/scope.js'
+export {
+  isReadinessBlocker,
+  blocksProduction,
+  blocksPilot,
+  aggregateReadinessStatus,
+  pilotBlockers,
+  productionBlockers,
+} from './helpers/readiness.js'
