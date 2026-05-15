@@ -8,6 +8,18 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@connectio/product-model": "*"
+    "@connectio/product-model": "*",
+    "@connectio/data-contracts": "*",
+    "@connectio/evidence-panel-runtime": "*",
+    "@connectio/source-adapters": "*",
+    "react": "^18.3.1",
+    "@tanstack/react-query": "^5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vitest": "^3.2.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "jsdom": "^26.1.0"
   }
 }

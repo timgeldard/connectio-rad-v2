@@ -20,6 +20,21 @@ export {
   useDecisionHistory,
 } from './adapters/quality-release-queries.js'
 
+export {
+  QualityBlockersAdapter,
+  qualityBlockersAdapter,
+  toQualityBlockersAdapterError,
+} from './adapters/quality-blockers-adapter.js'
+export type {
+  QualityBlockersAdapterRequest,
+  QualityBlockersAdapterOptions,
+} from './adapters/quality-blockers-adapter.js'
+
+export {
+  useQualityBlockers,
+  useReleaseHoldImpacts,
+} from './adapters/quality-blockers-queries.js'
+
 // Evidence panels
 export { ReleaseSummaryPanel } from './panels/release-summary-panel.js'
 export type { ReleaseSummaryPanelProps } from './panels/release-summary-panel.js'

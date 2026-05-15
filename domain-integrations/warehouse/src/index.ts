@@ -12,6 +12,21 @@ export type { WarehouseEvidenceAdapterRequest, WarehouseEvidenceAdapterOptions }
 
 export { useWarehouseHoldStatus } from './adapters/warehouse-evidence-queries.js'
 
+export {
+  WarehouseStagingAdapter,
+  warehouseStagingAdapter,
+  toStagingAdapterError,
+} from './adapters/warehouse-staging-adapter.js'
+export type {
+  WarehouseStagingAdapterRequest,
+  WarehouseStagingAdapterOptions,
+} from './adapters/warehouse-staging-adapter.js'
+
+export {
+  useWarehouseStagingStatus,
+  useMaterialShortagesForPlan,
+} from './adapters/warehouse-staging-queries.js'
+
 // Evidence panels
 export { WarehouseHoldStatusPanel } from './panels/warehouse-hold-status-panel.js'
 export type { WarehouseHoldStatusPanelProps } from './panels/warehouse-hold-status-panel.js'

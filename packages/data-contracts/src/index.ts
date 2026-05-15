@@ -39,6 +39,37 @@ export {
   TraceExposureSummarySchema,
 } from './schemas/domain.js'
 
+export type {
+  OperationsPlanRiskContext,
+  PlanRiskSummary,
+  LateOrder,
+  MaterialShortage,
+  WarehouseStagingStatus,
+  QualityBlocker,
+  ReleaseHoldImpact,
+  LineStatus,
+  ScheduleAdherenceSummary,
+  YieldVarianceSummary,
+  MaintenanceConstraint,
+  ShiftHandoverItem,
+  OperationsActionQueueItem,
+} from './schemas/operations-plan-risk.js'
+export {
+  OperationsPlanRiskContextSchema,
+  PlanRiskSummarySchema,
+  LateOrderSchema,
+  MaterialShortageSchema,
+  WarehouseStagingStatusSchema,
+  QualityBlockerSchema,
+  ReleaseHoldImpactSchema,
+  LineStatusSchema,
+  ScheduleAdherenceSummarySchema,
+  YieldVarianceSummarySchema,
+  MaintenanceConstraintSchema,
+  ShiftHandoverItemSchema,
+  OperationsActionQueueItemSchema,
+} from './schemas/operations-plan-risk.js'
+
 export { ApiError, fetchJson, createApiClient } from './client.js'
 export type { ApiClientOptions, ApiRequestOptions } from './client.js'
 
