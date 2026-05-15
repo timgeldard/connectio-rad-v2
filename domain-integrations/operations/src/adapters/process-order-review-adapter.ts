@@ -1,0 +1,103 @@
+import type {
+  ProcessOrderReviewContext,
+  ProcessOrderHeader,
+  OrderProgressSummary,
+  ExecutionTimelineItem,
+  OrderQualityContext,
+  OrderStagingContext,
+  RelatedBatchContext,
+} from '@connectio/data-contracts'
+import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
+import {
+  mockProcessOrderReviewContext,
+  mockProcessOrderHeader,
+  mockOrderProgressSummary,
+  mockExecutionTimeline,
+  mockOrderQualityContext,
+  mockOrderStagingContext,
+  mockRelatedBatchContexts,
+} from './process-order-review-mock-data.js'
+
+export interface ProcessOrderReviewAdapterRequest {
+  readonly processOrderId?: string
+  readonly plantId?: string
+  readonly lineId?: string
+  readonly batchId?: string
+}
+
+type NowFn = () => string
+
+const defaultNow: NowFn = () => new Date().toISOString()
+
+function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
+  return { ok: true, data, fetchedAt: now() }
+}
+
+function err<T>(
+  code: AdapterError['code'],
+  message: string,
+  retryable = false
+): AdapterResult<T> {
+  return { ok: false, error: { code, message, retryable }, displayState: 'error' }
+}
+
+export interface ProcessOrderReviewAdapterOptions {
+  readonly now?: NowFn
+}
+
+export class ProcessOrderReviewAdapter {
+  private readonly now: NowFn
+
+  constructor(options: ProcessOrderReviewAdapterOptions = {}) {
+    this.now = options.now ?? defaultNow
+  }
+
+  async getProcessOrderReviewContext(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ProcessOrderReviewContext>> {
+    return ok(mockProcessOrderReviewContext, this.now)
+  }
+
+  async getProcessOrderHeader(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ProcessOrderHeader>> {
+    return ok(mockProcessOrderHeader, this.now)
+  }
+
+  async getOrderProgressSummary(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<OrderProgressSummary>> {
+    return ok(mockOrderProgressSummary, this.now)
+  }
+
+  async getExecutionTimeline(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ExecutionTimelineItem[]>> {
+    return ok(mockExecutionTimeline, this.now)
+  }
+
+  async getOrderQualityContext(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<OrderQualityContext>> {
+    return ok(mockOrderQualityContext, this.now)
+  }
+
+  async getOrderStagingContext(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<OrderStagingContext>> {
+    return ok(mockOrderStagingContext, this.now)
+  }
+
+  async getRelatedBatchContext(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<RelatedBatchContext[]>> {
+    return ok(mockRelatedBatchContexts, this.now)
+  }
+}
+
+export const processOrderReviewAdapter = new ProcessOrderReviewAdapter()
+
+export function toProcessOrderReviewAdapterError<T>(thrown: unknown): AdapterResult<T> {
+  const message = thrown instanceof Error ? thrown.message : 'Unknown error'
+  return err<T>('unknown', message, true)
+}

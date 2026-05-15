@@ -1,6 +1,6 @@
 import { TraceInvestigationWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace } from '@connectio/di-quality'
-import { OperationsPlanRiskWorkspace } from '@connectio/di-operations'
+import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace } from '@connectio/di-warehouse'
 import { SPCMonitoringWorkspace } from '@connectio/di-spc'
@@ -100,6 +100,17 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <SPCMonitoringWorkspace
           scope={activeScope}
           viewId={viewId ?? 'chart-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'process-order-review') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-process-order-review">
+        <ProcessOrderReviewWorkspace
+          scope={activeScope}
+          viewId={viewId ?? 'order-overview'}
         />
       </div>
     )

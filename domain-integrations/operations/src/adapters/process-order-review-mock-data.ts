@@ -1,0 +1,180 @@
+import type {
+  ProcessOrderReviewContext,
+  ProcessOrderHeader,
+  OrderProgressSummary,
+  ExecutionTimelineItem,
+  OrderQualityContext,
+  OrderStagingContext,
+  RelatedBatchContext,
+} from '@connectio/data-contracts'
+
+export const mockProcessOrderReviewContext: ProcessOrderReviewContext = {
+  processOrderId: 'PO-240308-3847',
+  materialId: 'MAT-CH-EMMENTAL-BLOCK',
+  materialDescription: 'Emmental Block 4 kg',
+  batchId: 'CH-240308-0047',
+  plantId: 'IE10',
+  lineOrResource: 'LINE-IE10-CHEESE-01',
+  orderStatus: 'in-process',
+  qualityStatus: 'in-inspection',
+  stagingStatus: 'partial',
+  lastUpdatedAt: '2024-03-08T10:00:00.000Z',
+  activeScope: 'plant',
+  activeView: 'order-overview',
+}
+
+export const mockProcessOrderHeader: ProcessOrderHeader = {
+  processOrderId: 'PO-240308-3847',
+  orderType: 'process-order',
+  materialId: 'MAT-CH-EMMENTAL-BLOCK',
+  materialDescription: 'Emmental Block 4 kg',
+  batchId: 'CH-240308-0047',
+  plantId: 'IE10',
+  plannedQuantity: 2400,
+  confirmedQuantity: 1860,
+  uom: 'KG',
+  plannedStart: '2024-03-08T00:00:00.000Z',
+  plannedFinish: '2024-03-08T23:59:00.000Z',
+  actualStart: '2024-03-08T00:15:00.000Z',
+  orderStatus: 'in-process',
+}
+
+export const mockOrderProgressSummary: OrderProgressSummary = {
+  processOrderId: 'PO-240308-3847',
+  progressPercent: 77.5,
+  operationsComplete: 6,
+  operationsTotal: 8,
+  confirmationsComplete: 5,
+  openConfirmations: 2,
+  currentOperation: 'OP-070 Pressing & Moulding',
+  delayMinutes: 35,
+  riskLevel: 'at-risk',
+  confidence: 0.88,
+}
+
+export const mockExecutionTimeline: ExecutionTimelineItem[] = [
+  {
+    eventId: 'EVT-001',
+    timestamp: '2024-03-07T22:00:00.000Z',
+    eventType: 'order-released',
+    title: 'Process Order Released',
+    description: 'PO-240308-3847 released to production floor for Emmental Block 4 kg.',
+    sourceSystem: 'SAP ERP',
+    actor: 'j.murphy@listowel.ie',
+  },
+  {
+    eventId: 'EVT-002',
+    timestamp: '2024-03-08T00:15:00.000Z',
+    eventType: 'operation-started',
+    title: 'OP-010 Milk Standardisation Started',
+    description: 'Milk standardisation commenced on LINE-IE10-CHEESE-01.',
+    sourceSystem: 'SAP ERP',
+  },
+  {
+    eventId: 'EVT-003',
+    timestamp: '2024-03-08T01:30:00.000Z',
+    eventType: 'goods-issued',
+    title: 'Goods Issue — 25,000 L Raw Milk',
+    description: 'GI posted for batch RM-240308-0012 (raw milk).',
+    sourceSystem: 'SAP ERP',
+    actor: 'warehouse.ie10@kerry.com',
+  },
+  {
+    eventId: 'EVT-004',
+    timestamp: '2024-03-08T03:00:00.000Z',
+    eventType: 'operation-confirmed',
+    title: 'OP-010 Milk Standardisation Confirmed',
+    description: 'Standardisation complete. Fat adjusted to 3.1%.',
+    sourceSystem: 'SAP ERP',
+  },
+  {
+    eventId: 'EVT-005',
+    timestamp: '2024-03-08T05:45:00.000Z',
+    eventType: 'alert',
+    title: 'SPC Signal — pH Out of Control',
+    description: 'pH measured at 6.92 (UCL: 6.85) on OP-030 Pasteurisation. Rule 1 violation flagged.',
+    sourceSystem: 'SPC',
+    actor: 'c.moriarty@listowel.ie',
+    severity: 'high',
+  },
+  {
+    eventId: 'EVT-006',
+    timestamp: '2024-03-08T06:30:00.000Z',
+    eventType: 'quality-inspection',
+    title: 'In-Process Quality Inspection Started',
+    description: 'Inspection lot IL-240308-0047 opened for batch CH-240308-0047.',
+    sourceSystem: 'SAP QM',
+  },
+  {
+    eventId: 'EVT-007',
+    timestamp: '2024-03-08T08:00:00.000Z',
+    eventType: 'deviation-raised',
+    title: 'Deviation — pH Excursion OP-030',
+    description: 'Deviation DEV-2024-00291 raised for pH out-of-control event during pasteurisation.',
+    sourceSystem: 'Quality System',
+    actor: 'c.moriarty@listowel.ie',
+    severity: 'high',
+  },
+  {
+    eventId: 'EVT-008',
+    timestamp: '2024-03-08T09:15:00.000Z',
+    eventType: 'operation-started',
+    title: 'OP-070 Pressing & Moulding Started',
+    description: 'Pressing commenced. Current operation on LINE-IE10-CHEESE-01.',
+    sourceSystem: 'SAP ERP',
+  },
+]
+
+export const mockOrderQualityContext: OrderQualityContext = {
+  inspectionLotId: 'IL-240308-0047',
+  releaseCaseId: 'RC-2024-0847',
+  qualityStatus: 'in-inspection',
+  usageDecision: undefined,
+  failedCharacteristics: 1,
+  openDeviations: 1,
+  spcSignals: 2,
+  releaseBlockers: [
+    'pH out-of-control signal (SIG-2024-00412) requires investigation before release.',
+    'Open deviation DEV-2024-00291 must be dispositioned.',
+  ],
+}
+
+export const mockOrderStagingContext: OrderStagingContext = {
+  processOrderId: 'PO-240308-3847',
+  stagingStatus: 'partial',
+  componentsRequired: 8,
+  componentsStaged: 5,
+  missingComponents: 2,
+  blockedComponents: 1,
+  openTransferRequirements: 3,
+  readinessStatus: 'partial',
+}
+
+export const mockRelatedBatchContexts: RelatedBatchContext[] = [
+  {
+    batchId: 'CH-240308-0047',
+    materialId: 'MAT-CH-EMMENTAL-BLOCK',
+    relationshipType: 'output',
+    traceRisk: 'potential',
+    qualityStatus: 'under-review',
+    stockStatus: 'quality-inspection',
+    drillThroughTarget: 'quality-batch-release',
+  },
+  {
+    batchId: 'RM-240308-0012',
+    materialId: 'MAT-RM-RAW-MILK',
+    relationshipType: 'input-component',
+    traceRisk: 'none',
+    qualityStatus: 'released',
+    stockStatus: 'unrestricted',
+    drillThroughTarget: 'trace-investigation',
+  },
+  {
+    batchId: 'MAD-240308-0003',
+    materialId: 'MAT-START-CULTURE-B10',
+    relationshipType: 'input-component',
+    traceRisk: 'none',
+    qualityStatus: 'released',
+    stockStatus: 'unrestricted',
+  },
+]
