@@ -2,6 +2,7 @@
 import { AuthScopeProvider } from '@connectio/auth-scope'
 import { ShellLayout } from './shell/ShellLayout.js'
 import { useManifestHydration } from './registry/useManifestHydration.js'
+import { FeedbackProvider } from './feedback/FeedbackContext.js'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000 } },
@@ -18,7 +19,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthScopeProvider>
-        <AppInner />
+        <FeedbackProvider>
+          <AppInner />
+        </FeedbackProvider>
       </AuthScopeProvider>
     </QueryClientProvider>
   )

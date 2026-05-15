@@ -281,6 +281,64 @@ export function RoleAwareHome() {
 
   return (
     <div style={{ padding: '32px 40px', maxWidth: 960 }}>
+      {/* Pilot banner — Phase 7 */}
+      <div
+        style={{
+          background: 'var(--shell-surface)',
+          border: '1px solid var(--shell-line)',
+          borderLeft: '3px solid var(--valentia-slate, #005776)',
+          borderRadius: 6,
+          padding: '12px 16px',
+          marginBottom: 28,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--shell-fg)', marginBottom: 2 }}>
+            ConnectIO-RAD V2 — Controlled Pilot
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--shell-fg-2)' }}>
+            You are using the pilot version of V2. Data shown is mock or adapter-backed. Please give feedback on anything that does not work as expected.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setWorkspace('help-getting-started')}
+            style={{
+              padding: '5px 12px',
+              background: 'none',
+              border: '1px solid var(--shell-line)',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12,
+              color: 'var(--shell-fg-2)',
+            }}
+          >
+            Help &amp; Training
+          </button>
+          <button
+            type="button"
+            onClick={() => setWorkspace('admin-pilot-feedback')}
+            style={{
+              padding: '5px 12px',
+              background: 'var(--valentia-slate, #005776)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            Give Feedback
+          </button>
+        </div>
+      </div>
       <h1
         style={{
           margin: '0 0 4px',
@@ -298,7 +356,7 @@ export function RoleAwareHome() {
           color: 'var(--shell-fg-2)',
         }}
       >
-        Select a workspace to get started.
+        Select a workspace to begin. Priority items from each domain are shown below — click any item to navigate directly.
       </p>
 
       {pinned.length > 0 && (

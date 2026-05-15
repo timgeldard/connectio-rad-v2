@@ -52,6 +52,23 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     { id: 'admin-telemetry', label: 'Telemetry Dashboard', description: 'Platform event log and workspace usage stats', category: 'Admin Tools', action: () => { setWorkspace('admin-telemetry'); onClose() } },
   ]
 
+  const pilotAdminCommands: Command[] = [
+    { id: 'admin-pilot-workspace-pack', label: 'Pilot Workspace Pack', description: 'Which workspaces are in the pilot and why', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-workspace-pack'); onClose() } },
+    { id: 'admin-pilot-scenario-validation', label: 'Scenario Validation Centre', description: 'Validate V2 by business scenario', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-scenario-validation'); onClose() } },
+    { id: 'admin-pilot-feedback', label: 'Feedback Triage', description: 'Review and triage pilot feedback', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-feedback'); onClose() } },
+    { id: 'admin-pilot-signoff', label: 'Stakeholder Sign-Off', description: 'Domain sign-off status and workflow', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-signoff'); onClose() } },
+    { id: 'admin-pilot-release-gates', label: 'Release Gate Dashboard', description: '10 release gates for pilot exit', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-release-gates'); onClose() } },
+    { id: 'admin-pilot-exit-criteria', label: 'Pilot Exit Criteria', description: '12 criteria for pilot phase exit', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-exit-criteria'); onClose() } },
+    { id: 'admin-pilot-data-integration-readiness', label: 'Data Integration Readiness', description: 'Source integration status for all pilot workspaces', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-data-integration-readiness'); onClose() } },
+    { id: 'admin-pilot-security-access-review', label: 'Security Access Review', description: 'Role/scope access review matrix', category: 'Pilot Admin', action: () => { setWorkspace('admin-pilot-security-access-review'); onClose() } },
+  ]
+
+  const helpCommands: Command[] = [
+    { id: 'help-getting-started', label: 'Getting Started', description: 'V2 navigation guide for pilot users', category: 'Help & Training', action: () => { setWorkspace('help-getting-started'); onClose() } },
+    { id: 'help-concepts', label: 'V2 Concepts Glossary', description: 'Domain, workspace, evidence panel, drill-through, and more', category: 'Help & Training', action: () => { setWorkspace('help-concepts'); onClose() } },
+    { id: 'help-scenarios', label: 'Scenario Review Guide', description: 'Step-by-step training scenarios by role', category: 'Help & Training', action: () => { setWorkspace('help-scenarios'); onClose() } },
+  ]
+
   /** Build the full command list from registered workspaces + quick actions. */
   const allCommands: Command[] = [
     ...workspaceRegistry
@@ -67,6 +84,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         },
       })),
     ...adminCommands,
+    ...pilotAdminCommands,
+    ...helpCommands,
     {
       id: 'trace-inv-mock',
       label: 'Open Trace Investigation — INV-2024-003847',

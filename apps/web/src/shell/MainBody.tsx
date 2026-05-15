@@ -11,6 +11,17 @@ import { CutoverSimulationPage } from '../pages/CutoverSimulationPage.js'
 import { RoleScopeMatrixPage } from '../pages/RoleScopeMatrixPage.js'
 import { DesignSystemCompliancePage } from '../pages/DesignSystemCompliancePage.js'
 import { TelemetryDashboardPage } from '../pages/TelemetryDashboardPage.js'
+import { PilotWorkspacePackPage } from '../pages/PilotWorkspacePackPage.js'
+import { ScenarioValidationPage } from '../pages/ScenarioValidationPage.js'
+import { FeedbackTriagePage } from '../pages/FeedbackTriagePage.js'
+import { StakeholderSignoffPage } from '../pages/StakeholderSignoffPage.js'
+import { ReleaseGatePage } from '../pages/ReleaseGatePage.js'
+import { PilotExitCriteriaPage } from '../pages/PilotExitCriteriaPage.js'
+import { DataIntegrationReadinessPage } from '../pages/DataIntegrationReadinessPage.js'
+import { SecurityAccessReviewPage } from '../pages/SecurityAccessReviewPage.js'
+import { HelpGettingStartedPage } from '../pages/HelpGettingStartedPage.js'
+import { HelpConceptsPage } from '../pages/HelpConceptsPage.js'
+import { HelpScenariosPage } from '../pages/HelpScenariosPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -32,6 +43,17 @@ function ActivePage({ workspaceId }: { readonly workspaceId: string | null }) {
   if (workspaceId === 'admin-role-scope-matrix') return <div className="connectio-page" data-testid="workspace-view-admin-role-scope-matrix"><RoleScopeMatrixPage /></div>
   if (workspaceId === 'admin-design-system-compliance') return <div className="connectio-page" data-testid="workspace-view-admin-design-system-compliance"><DesignSystemCompliancePage /></div>
   if (workspaceId === 'admin-telemetry') return <div className="connectio-page" data-testid="workspace-view-admin-telemetry"><TelemetryDashboardPage /></div>
+  if (workspaceId === 'admin-pilot-workspace-pack') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-workspace-pack"><PilotWorkspacePackPage /></div>
+  if (workspaceId === 'admin-pilot-scenario-validation') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-scenario-validation"><ScenarioValidationPage /></div>
+  if (workspaceId === 'admin-pilot-feedback') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-feedback"><FeedbackTriagePage /></div>
+  if (workspaceId === 'admin-pilot-signoff') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-signoff"><StakeholderSignoffPage /></div>
+  if (workspaceId === 'admin-pilot-release-gates') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-release-gates"><ReleaseGatePage /></div>
+  if (workspaceId === 'admin-pilot-exit-criteria') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-exit-criteria"><PilotExitCriteriaPage /></div>
+  if (workspaceId === 'admin-pilot-data-integration-readiness') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-data-integration-readiness"><DataIntegrationReadinessPage /></div>
+  if (workspaceId === 'admin-pilot-security-access-review') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-security-access-review"><SecurityAccessReviewPage /></div>
+  if (workspaceId === 'help-getting-started') return <div className="connectio-page" data-testid="workspace-view-help-getting-started"><HelpGettingStartedPage /></div>
+  if (workspaceId === 'help-concepts') return <div className="connectio-page" data-testid="workspace-view-help-concepts"><HelpConceptsPage /></div>
+  if (workspaceId === 'help-scenarios') return <div className="connectio-page" data-testid="workspace-view-help-scenarios"><HelpScenariosPage /></div>
 
   const found = workspaceRegistry.find(w => w.workspaceId === workspaceId)
   if (!found) return <div className="connectio-page"><NotFound /></div>

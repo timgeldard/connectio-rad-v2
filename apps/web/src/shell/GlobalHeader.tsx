@@ -13,6 +13,17 @@ const ADMIN_PAGE_TITLES: Record<string, string> = {
   'admin-role-scope-matrix': 'Role/Scope Visibility Matrix',
   'admin-design-system-compliance': 'Design-System Compliance',
   'admin-telemetry': 'Telemetry Dashboard',
+  'admin-pilot-workspace-pack': 'Pilot Workspace Pack',
+  'admin-pilot-scenario-validation': 'Scenario Validation Centre',
+  'admin-pilot-feedback': 'Feedback Triage',
+  'admin-pilot-signoff': 'Stakeholder Sign-Off',
+  'admin-pilot-release-gates': 'Release Gate Dashboard',
+  'admin-pilot-exit-criteria': 'Pilot Exit Criteria',
+  'admin-pilot-data-integration-readiness': 'Data Integration Readiness',
+  'admin-pilot-security-access-review': 'Security Access Review',
+  'help-getting-started': 'Getting Started',
+  'help-concepts': 'V2 Concepts Glossary',
+  'help-scenarios': 'Scenario Review Guide',
 }
 
 /**
