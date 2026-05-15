@@ -60,6 +60,9 @@ export type { RelatedInvestigationsPanelProps } from './panels/related-investiga
 export { RiskSignalsPanel } from './panels/risk-signals-panel.js'
 export type { RiskSignalsPanelProps } from './panels/risk-signals-panel.js'
 
+export { TraceExposureForReleasePanel } from './panels/trace-exposure-for-release-panel.js'
+export type { TraceExposureForReleasePanelProps } from './panels/trace-exposure-for-release-panel.js'
+
 // Adapter and queries
 export { Trace2Adapter, trace2Adapter } from './adapters/trace2-adapter.js'
 export type { Trace2AdapterRequest } from './adapters/trace2-adapter.js'

@@ -11,3 +11,7 @@ export { WarehouseEvidenceAdapter, warehouseEvidenceAdapter, toAdapterError } fr
 export type { WarehouseEvidenceAdapterRequest, WarehouseEvidenceAdapterOptions } from './adapters/warehouse-evidence-adapter.js'
 
 export { useWarehouseHoldStatus } from './adapters/warehouse-evidence-queries.js'
+
+// Evidence panels
+export { WarehouseHoldStatusPanel } from './panels/warehouse-hold-status-panel.js'
+export type { WarehouseHoldStatusPanelProps } from './panels/warehouse-hold-status-panel.js'

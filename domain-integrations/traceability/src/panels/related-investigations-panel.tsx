@@ -13,7 +13,7 @@ const registration: EvidencePanelRegistration = {
   ownerDomain: 'traceability',
   sourceOwnership: { domainId: 'traceability', systemName: 'trace2', legacyAppId: 'trace2' },
   lifecycle: 'live',
-  allowedConsumerWorkspaces: ['trace-investigation'],
+  allowedConsumerWorkspaces: ['trace-investigation', 'quality-batch-release'],
   requiredContext: [],
   freshnessPolicy: { staleAfterSeconds: 300, errorAfterSeconds: 900, refreshOnFocus: false, pollIntervalSeconds: null },
   confidencePolicy: { level: null, hidden: true },

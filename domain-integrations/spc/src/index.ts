@@ -11,3 +11,7 @@ export { SPCSignalsAdapter, spcSignalsAdapter, toAdapterError } from './adapters
 export type { SPCSignalsAdapterRequest, SPCSignalsAdapterOptions } from './adapters/spc-signals-adapter.js'
 
 export { useSPCSignals } from './adapters/spc-signals-queries.js'
+
+// Evidence panels
+export { SPCSignalsForReleasePanel } from './panels/spc-signals-for-release-panel.js'
+export type { SPCSignalsForReleasePanelProps } from './panels/spc-signals-for-release-panel.js'

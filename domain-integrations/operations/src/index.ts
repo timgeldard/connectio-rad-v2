@@ -11,3 +11,7 @@ export { OperationsEvidenceAdapter, operationsEvidenceAdapter, toAdapterError } 
 export type { OperationsEvidenceAdapterRequest, OperationsEvidenceAdapterOptions } from './adapters/operations-evidence-adapter.js'
 
 export { useProcessOrderEvidence } from './adapters/operations-evidence-queries.js'
+
+// Evidence panels
+export { ProcessOrderEvidencePanel } from './panels/process-order-evidence-panel.js'
+export type { ProcessOrderEvidencePanelProps } from './panels/process-order-evidence-panel.js'

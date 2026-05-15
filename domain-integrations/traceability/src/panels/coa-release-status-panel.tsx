@@ -13,7 +13,7 @@ const registration: EvidencePanelRegistration = {
   ownerDomain: 'quality',
   sourceOwnership: { domainId: 'quality', systemName: 'sap-qm', legacyAppId: 'connectedquality' },
   lifecycle: 'live',
-  allowedConsumerWorkspaces: ['trace-investigation'],
+  allowedConsumerWorkspaces: ['trace-investigation', 'quality-batch-release'],
   requiredContext: [{ contextKey: 'batchId', scopeLevel: 'batch', required: true }],
   freshnessPolicy: { staleAfterSeconds: 180, errorAfterSeconds: 600, refreshOnFocus: true, pollIntervalSeconds: null },
   confidencePolicy: { level: 0.99, hidden: false },
