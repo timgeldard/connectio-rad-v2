@@ -6,7 +6,7 @@
   "tags": ["scope:shared", "layer:runtime", "type:lib"],
   "targets": {
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "options": {
         "config": "packages/evidence-panel-runtime/vitest.config.ts"
       }
