@@ -2,6 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuthScope } from '@connectio/auth-scope'
 import { CommandPalette } from './CommandPalette.js'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
+import { workspaceRegistry } from '../registry/workspace-registry.js'
+
+const ADMIN_PAGE_TITLES: Record<string, string> = {
+  'admin-governance': 'Governance Registry',
+  'admin-legacy-retirement': 'Legacy Retirement Readiness',
+  'admin-production-readiness': 'Production Readiness Dashboard',
+  'admin-workspace-parity': 'Workspace Parity Assessment',
+  'admin-cutover-simulation': 'Cutover Simulation',
+  'admin-role-scope-matrix': 'Role/Scope Visibility Matrix',
+  'admin-design-system-compliance': 'Design-System Compliance',
+  'admin-telemetry': 'Telemetry Dashboard',
+}
 
 /**
  * Global top-bar header rendered across all views.
@@ -41,6 +53,23 @@ export function GlobalHeader() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
+
+  // Update document.title on workspace change for screen reader route announcements.
+  useEffect(() => {
+    if (!workspaceId) {
+      document.title = 'ConnectIO'
+      return
+    }
+    const adminTitle = ADMIN_PAGE_TITLES[workspaceId]
+    if (adminTitle) {
+      document.title = `${adminTitle} — ConnectIO`
+      return
+    }
+    const registration = workspaceRegistry.find(w => w.workspaceId === workspaceId)
+    if (registration) {
+      document.title = `${registration.displayName} — ConnectIO`
+    }
+  }, [workspaceId])
 
   /** Derive display initials for the user avatar. */
   function getInitials(name: string | null): string {
@@ -143,7 +172,7 @@ export function GlobalHeader() {
               position: 'relative',
             }}
           >
-            🔔
+            <span aria-hidden="true">🔔</span>
           </button>
 
           {/* User avatar + menu */}
