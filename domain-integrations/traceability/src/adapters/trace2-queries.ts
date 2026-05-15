@@ -1,0 +1,102 @@
+import { useQuery } from "@tanstack/react-query"
+import type {
+  TraceInvestigationContext,
+  BatchHeaderSummary,
+  TraceGraph,
+  MassBalanceSummary,
+  CustomerExposureSummary,
+  SupplierExposureSummary,
+  TraceEvent,
+  CoAReleaseStatus,
+  TraceRiskSignal,
+  RelatedInvestigation,
+} from "@connectio/data-contracts"
+import type { AdapterResult } from "@connectio/source-adapters"
+import { trace2Adapter, toAdapterError } from "./trace2-adapter.js"
+import type { Trace2AdapterRequest } from "./trace2-adapter.js"
+
+const TRACE_STALE_TIME_MS = 5 * 60 * 1000
+
+function traceKey(method: string, request: Trace2AdapterRequest) {
+  return ["trace2", method, request.investigationId, request.batchId ?? null] as const
+}
+
+export function useTraceInvestigationContext(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<TraceInvestigationContext>>({
+    queryKey: traceKey("getInvestigationContext", request),
+    queryFn: async () => { try { return await trace2Adapter.getInvestigationContext(request) } catch (e) { return toAdapterError<TraceInvestigationContext>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useBatchHeaderSummary(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<BatchHeaderSummary>>({
+    queryKey: traceKey("getBatchHeaderSummary", request),
+    queryFn: async () => { try { return await trace2Adapter.getBatchHeaderSummary(request) } catch (e) { return toAdapterError<BatchHeaderSummary>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useTraceGraph(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<TraceGraph>>({
+    queryKey: traceKey("getTraceGraph", request),
+    queryFn: async () => { try { return await trace2Adapter.getTraceGraph(request) } catch (e) { return toAdapterError<TraceGraph>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useMassBalanceSummary(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<MassBalanceSummary>>({
+    queryKey: traceKey("getMassBalanceSummary", request),
+    queryFn: async () => { try { return await trace2Adapter.getMassBalanceSummary(request) } catch (e) { return toAdapterError<MassBalanceSummary>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useCustomerExposureSummary(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<CustomerExposureSummary>>({
+    queryKey: traceKey("getCustomerExposureSummary", request),
+    queryFn: async () => { try { return await trace2Adapter.getCustomerExposureSummary(request) } catch (e) { return toAdapterError<CustomerExposureSummary>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useSupplierExposureSummary(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<SupplierExposureSummary>>({
+    queryKey: traceKey("getSupplierExposureSummary", request),
+    queryFn: async () => { try { return await trace2Adapter.getSupplierExposureSummary(request) } catch (e) { return toAdapterError<SupplierExposureSummary>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useTraceEvents(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<readonly TraceEvent[]>>({
+    queryKey: traceKey("getEventTimeline", request),
+    queryFn: async () => { try { return await trace2Adapter.getEventTimeline(request) } catch (e) { return toAdapterError<readonly TraceEvent[]>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useCoAReleaseStatus(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<CoAReleaseStatus>>({
+    queryKey: traceKey("getCoAReleaseStatus", request),
+    queryFn: async () => { try { return await trace2Adapter.getCoAReleaseStatus(request) } catch (e) { return toAdapterError<CoAReleaseStatus>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useRiskSignals(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<readonly TraceRiskSignal[]>>({
+    queryKey: traceKey("getRiskSignals", request),
+    queryFn: async () => { try { return await trace2Adapter.getRiskSignals(request) } catch (e) { return toAdapterError<readonly TraceRiskSignal[]>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useRelatedInvestigations(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<readonly RelatedInvestigation[]>>({
+    queryKey: traceKey("getRelatedInvestigations", request),
+    queryFn: async () => { try { return await trace2Adapter.getRelatedInvestigations(request) } catch (e) { return toAdapterError<readonly RelatedInvestigation[]>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}

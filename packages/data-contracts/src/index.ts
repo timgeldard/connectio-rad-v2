@@ -41,3 +41,32 @@ export {
 
 export { ApiError, fetchJson, createApiClient } from './client.js'
 export type { ApiClientOptions, ApiRequestOptions } from './client.js'
+
+export type {
+  TraceInvestigationContext,
+  BatchHeaderSummary,
+  TraceNode,
+  TraceEdge,
+  TraceGraph,
+  MassBalanceSummary,
+  CustomerExposureSummary,
+  SupplierExposureSummary,
+  TraceEvent,
+  CoAReleaseStatus,
+  TraceRiskSignal,
+  RelatedInvestigation,
+} from './schemas/trace-investigation.js'
+export {
+  TraceInvestigationContextSchema,
+  BatchHeaderSummarySchema,
+  TraceNodeSchema,
+  TraceEdgeSchema,
+  TraceGraphSchema,
+  MassBalanceSummarySchema,
+  CustomerExposureSummarySchema,
+  SupplierExposureSummarySchema,
+  TraceEventSchema,
+  CoAReleaseStatusSchema,
+  TraceRiskSignalSchema,
+  RelatedInvestigationSchema,
+} from './schemas/trace-investigation.js'

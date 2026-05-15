@@ -1,10 +1,15 @@
 /**
  * @connectio/di-traceability
  *
- * Domain integration package for the Traceability workspace.
- * Provides workspace registration, evidence panels, and a typed API client
- * for forward/reverse batch trace and mass balance.
+ * Domain integration package for the Traceability domain.
+ * Exports:
+ * - Phase 0: Traceability workspace (batch trace + lineage stubs)
+ * - Phase 1: Trace Investigation workspace (full 7-view, 8-panel implementation)
  */
+
+// ---------------------------------------------------------------------------
+// Phase 0 — Traceability workspace (batch trace + lineage stubs)
+// ---------------------------------------------------------------------------
 
 export { traceabilityWorkspaceRegistration } from './registration.js'
 export { TraceabilityWorkspace } from './TraceabilityWorkspace.js'
@@ -18,3 +23,55 @@ export type { BatchLineagePanelProps } from './panels/BatchLineagePanel.js'
 
 export { createTraceabilityClient } from './traceabilityClient.js'
 export type { BatchLineage } from './traceabilityClient.js'
+
+// ---------------------------------------------------------------------------
+// Phase 1 — Trace Investigation workspace
+// ---------------------------------------------------------------------------
+
+export { traceInvestigationRegistration } from './trace-investigation-registration.js'
+export { TraceInvestigationWorkspace } from './trace-investigation-workspace.js'
+export type {
+  TraceInvestigationWorkspaceProps,
+  TraceInvestigationViewId,
+} from './trace-investigation-workspace.js'
+
+// Evidence panels
+export { BatchHeaderPanel } from './panels/batch-header-panel.js'
+export type { BatchHeaderPanelProps } from './panels/batch-header-panel.js'
+
+export { TraceGraphPanel } from './panels/trace-graph-panel.js'
+export type { TraceGraphPanelProps } from './panels/trace-graph-panel.js'
+
+export { MaterialSupplierExposurePanel } from './panels/material-supplier-exposure-panel.js'
+export type { MaterialSupplierExposurePanelProps } from './panels/material-supplier-exposure-panel.js'
+
+export { CustomerImpactPanel } from './panels/customer-impact-panel.js'
+export type { CustomerImpactPanelProps } from './panels/customer-impact-panel.js'
+
+export { EventTimelinePanel } from './panels/event-timeline-panel.js'
+export type { EventTimelinePanelProps } from './panels/event-timeline-panel.js'
+
+export { CoAReleaseStatusPanel } from './panels/coa-release-status-panel.js'
+export type { CoAReleaseStatusPanelProps } from './panels/coa-release-status-panel.js'
+
+export { RelatedInvestigationsPanel } from './panels/related-investigations-panel.js'
+export type { RelatedInvestigationsPanelProps } from './panels/related-investigations-panel.js'
+
+export { RiskSignalsPanel } from './panels/risk-signals-panel.js'
+export type { RiskSignalsPanelProps } from './panels/risk-signals-panel.js'
+
+// Adapter and queries
+export { Trace2Adapter, trace2Adapter } from './adapters/trace2-adapter.js'
+export type { Trace2AdapterRequest } from './adapters/trace2-adapter.js'
+export {
+  useTraceInvestigationContext,
+  useBatchHeaderSummary,
+  useTraceGraph,
+  useMassBalanceSummary,
+  useCustomerExposureSummary,
+  useSupplierExposureSummary,
+  useTraceEvents,
+  useCoAReleaseStatus,
+  useRiskSignals,
+  useRelatedInvestigations,
+} from './adapters/trace2-queries.js'

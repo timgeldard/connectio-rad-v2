@@ -1,24 +1,28 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
+import { traceInvestigationRegistration } from '@connectio/di-traceability'
 
 /**
- * Static Phase 0 workspace registry.
+ * Static Phase 1 workspace registry.
  *
- * Each entry is a minimal {@link WorkspaceRegistration} stub. Domain-integration
- * packages (e.g. `@connectio-di/traceability`) will extend or replace these
- * entries in Phase 1 once the dynamic manifest API is available.
+ * `trace-investigation` is the first fully implemented workspace and is
+ * marked `lifecycle: 'live'`. The Phase 0 stubs remain registered as
+ * `concept-lab` so they appear in nav only when explicitly enabled.
  *
- * Lifecycle values follow the product model:
- * - `'live'`          — fully available, shown in nav by default
- * - `'concept-lab'`   — gated, hidden from navigation unless explicitly enabled
+ * Domain-integration packages own their registrations; this file imports
+ * and assembles them rather than duplicating the registration data.
  */
 export const workspaceRegistry: readonly WorkspaceRegistration[] = [
+  // Phase 1 — fully implemented
+  traceInvestigationRegistration,
+
+  // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {
     workspaceId: 'traceability-workspace',
     displayName: 'Traceability',
-    description: 'Traceability workspace — Phase 0 stub',
+    description: 'Traceability workspace — Phase 0 stub (superseded by Trace Investigation)',
     domainId: 'traceability',
     ownerDomain: 'traceability',
-    lifecycle: 'live',
+    lifecycle: 'concept-lab',
     supportedRoles: [],
     requiredPermissions: [],
     supportedScopes: ['batch'],
@@ -28,8 +32,8 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
       autoElevate: false,
     },
     defaultViews: [
-      { viewId: 'trace', displayName: 'Trace', lifecycle: 'live', sortOrder: 0, defaultPanels: [] },
-      { viewId: 'lineage', displayName: 'Lineage', lifecycle: 'live', sortOrder: 1, defaultPanels: [] },
+      { viewId: 'trace', displayName: 'Trace', lifecycle: 'concept-lab', sortOrder: 0, defaultPanels: [] },
+      { viewId: 'lineage', displayName: 'Lineage', lifecycle: 'concept-lab', sortOrder: 1, defaultPanels: [] },
     ],
     defaultPanels: [],
     route: '/traceability',
