@@ -58,6 +58,18 @@
       ],
       "@connectio/di-traceability": [
         "domain-integrations/traceability/src/index.ts"
+      ],
+      "@connectio/di-quality": [
+        "domain-integrations/quality/src/index.ts"
+      ],
+      "@connectio/di-spc": [
+        "domain-integrations/spc/src/index.ts"
+      ],
+      "@connectio/di-operations": [
+        "domain-integrations/operations/src/index.ts"
+      ],
+      "@connectio/di-warehouse": [
+        "domain-integrations/warehouse/src/index.ts"
       ]
     }
   }

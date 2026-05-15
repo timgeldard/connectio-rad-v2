@@ -17,6 +17,12 @@
       "options": {
         "lintFilePatterns": ["domain-integrations/spc/**/*.{ts,tsx}"]
       }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "domain-integrations/spc/vitest.config.ts"
+      }
     }
   }
 }

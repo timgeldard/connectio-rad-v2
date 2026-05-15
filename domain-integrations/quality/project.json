@@ -17,6 +17,12 @@
       "options": {
         "lintFilePatterns": ["domain-integrations/quality/**/*.{ts,tsx}"]
       }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "domain-integrations/quality/vitest.config.ts"
+      }
     }
   }
 }

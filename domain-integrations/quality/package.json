@@ -8,6 +8,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@connectio/product-model": "*"
+    "@connectio/product-model": "*",
+    "@connectio/data-contracts": "*",
+    "@connectio/evidence-panel-runtime": "*",
+    "@connectio/workspace-runtime": "*",
+    "@connectio/source-adapters": "*",
+    "react": "^18.3.1",
+    "@tanstack/react-query": "^5"
   }
 }

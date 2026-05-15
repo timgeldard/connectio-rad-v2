@@ -17,6 +17,12 @@
       "options": {
         "lintFilePatterns": ["domain-integrations/warehouse/**/*.{ts,tsx}"]
       }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "domain-integrations/warehouse/vitest.config.ts"
+      }
     }
   }
 }
