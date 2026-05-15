@@ -20,6 +20,11 @@ interface ShellState {
    * Encoded as `?investigationId=X` in the URL.
    */
   readonly investigationId: string | null
+  /**
+   * The active release case ID for the Quality Batch Release workspace.
+   * Encoded as `?releaseCaseId=X` in the URL.
+   */
+  readonly releaseCaseId: string | null
   /** True when a workspace is selected and the scopebar should be shown. */
   readonly hasScope: boolean
 }
@@ -39,6 +44,10 @@ interface ShellStateActions {
   readonly setInvestigationId: (investigationId: string) => void
   /** Navigate directly to a trace investigation with optional view selection. */
   readonly navigateToTraceInvestigation: (investigationId: string, viewId?: string) => void
+  /** Set the active release case ID (for the Quality Batch Release workspace). */
+  readonly setReleaseCaseId: (releaseCaseId: string) => void
+  /** Navigate directly to the Quality Batch Release workspace with optional view selection. */
+  readonly navigateToBatchRelease: (releaseCaseId: string, viewId?: string) => void
 }
 
 /**
@@ -53,11 +62,13 @@ function readFromUrl(): ShellState {
   const tabId = params.get('tab')
   const viewId = params.get('view')
   const investigationId = params.get('investigationId')
+  const releaseCaseId = params.get('releaseCaseId')
   return {
     workspaceId,
     tabId,
     viewId,
     investigationId,
+    releaseCaseId,
     hasScope: workspaceId !== null,
   }
 }
@@ -76,6 +87,11 @@ function readFromUrl(): ShellState {
  * - `setView` — sets `?view=X`
  * - `setInvestigationId` — sets `?investigationId=X`
  * - `navigateToTraceInvestigation` — sets workspace + investigationId + view atomically
+ *
+ * Phase 2 additions:
+ * - `releaseCaseId` — active release case for the Quality Batch Release workspace
+ * - `setReleaseCaseId` — sets `?releaseCaseId=X`
+ * - `navigateToBatchRelease` — sets workspace + releaseCaseId + view atomically
  *
  * @returns Combined shell state snapshot and action callbacks.
  */
@@ -134,5 +150,33 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     [],
   )
 
-  return { ...state, setWorkspace, setTab, setView, setInvestigationId, navigateToTraceInvestigation }
+  const setReleaseCaseId = useCallback((releaseCaseId: string) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('releaseCaseId', releaseCaseId)
+    history.replaceState(null, '', `?${params.toString()}`)
+    setState(readFromUrl())
+  }, [])
+
+  const navigateToBatchRelease = useCallback(
+    (releaseCaseId: string, viewId = 'release-queue') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'quality-batch-release')
+      params.set('releaseCaseId', releaseCaseId)
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
+  return {
+    ...state,
+    setWorkspace,
+    setTab,
+    setView,
+    setInvestigationId,
+    navigateToTraceInvestigation,
+    setReleaseCaseId,
+    navigateToBatchRelease,
+  }
 }

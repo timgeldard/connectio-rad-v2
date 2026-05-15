@@ -38,3 +38,46 @@ export type { DecisionHistoryPanelProps } from './panels/decision-history-panel.
 
 export { ReleaseQueuePanel } from './panels/release-queue-panel.js'
 export type { ReleaseQueuePanelProps } from './panels/release-queue-panel.js'
+
+// Workspace + registration
+export { batchReleaseRegistration } from './batch-release-registration.js'
+export { BatchReleaseWorkspace } from './batch-release-workspace.js'
+export type { BatchReleaseWorkspaceProps, BatchReleaseViewId } from './batch-release-workspace.js'
+
+// Views
+export { ReleaseQueueView } from './views/release-queue-view.js'
+export type { ReleaseQueueViewProps } from './views/release-queue-view.js'
+
+export { BatchDecisionView } from './views/batch-decision-view.js'
+export type { BatchDecisionViewProps } from './views/batch-decision-view.js'
+
+export { QualityEvidenceView } from './views/quality-evidence-view.js'
+export type { QualityEvidenceViewProps } from './views/quality-evidence-view.js'
+
+export { OperationsEvidenceView } from './views/operations-evidence-view.js'
+export type { OperationsEvidenceViewProps } from './views/operations-evidence-view.js'
+
+export { WarehouseTraceEvidenceView } from './views/warehouse-trace-evidence-view.js'
+export type { WarehouseTraceEvidenceViewProps } from './views/warehouse-trace-evidence-view.js'
+
+export { DecisionHistoryView } from './views/decision-history-view.js'
+export type { DecisionHistoryViewProps } from './views/decision-history-view.js'
+
+// Actions
+export { ReleaseActionsPanel, ActionSheet, Field, SheetActions, SuccessMessage, ActionButton } from './actions/release-actions-panel.js'
+export type { ReleaseActionsPanelProps, ActionButtonVariant, ActionButtonProps } from './actions/release-actions-panel.js'
+
+export { ReleaseBatchAction } from './actions/release-batch-action.js'
+export type { ReleaseBatchActionProps } from './actions/release-batch-action.js'
+
+export { PlaceOnHoldAction } from './actions/place-on-hold-action.js'
+export type { PlaceOnHoldActionProps } from './actions/place-on-hold-action.js'
+
+export { RequestRetestAction } from './actions/request-retest-action.js'
+export type { RequestRetestActionProps } from './actions/request-retest-action.js'
+
+export { EscalateDeviationAction } from './actions/escalate-deviation-action.js'
+export type { EscalateDeviationActionProps } from './actions/escalate-deviation-action.js'
+
+export { OpenTraceInvestigationAction } from './actions/open-trace-investigation-action.js'
+export type { OpenTraceInvestigationActionProps } from './actions/open-trace-investigation-action.js'

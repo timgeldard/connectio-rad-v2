@@ -1,4 +1,5 @@
 import { TraceInvestigationWorkspace } from '@connectio/di-traceability'
+import { BatchReleaseWorkspace } from '@connectio/di-quality'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
 
@@ -13,17 +14,18 @@ interface Props {
  *
  * @remarks
  * Routes to the appropriate workspace component based on `workspaceId`.
- * Phase 1 implements `trace-investigation` fully. All other workspace IDs
- * render a placeholder until their domain integration is implemented in
- * a subsequent phase.
+ * Phase 1 implements `trace-investigation` fully. Phase 2 adds
+ * `quality-batch-release`. All other workspace IDs render a placeholder
+ * until their domain integration is implemented in a subsequent phase.
  *
- * The `scope` from `useAuthScope()` and the `investigationId`/`viewId` URL
- * params are forwarded to workspace components that require them.
+ * The `scope` from `useAuthScope()` and URL params (`investigationId`,
+ * `releaseCaseId`, `viewId`) are forwarded to workspace components that
+ * require them.
  *
  * @param props - Component props.
  */
 export default function WorkspaceViews({ workspaceId }: Props) {
-  const { investigationId, viewId } = useWorkspaceShellState()
+  const { investigationId, releaseCaseId, viewId, setReleaseCaseId } = useWorkspaceShellState()
   const { activeScope } = useAuthScope()
 
   if (workspaceId === 'trace-investigation') {
@@ -38,12 +40,25 @@ export default function WorkspaceViews({ workspaceId }: Props) {
     )
   }
 
+  if (workspaceId === 'quality-batch-release') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-quality-batch-release">
+        <BatchReleaseWorkspace
+          scope={activeScope}
+          releaseCaseId={releaseCaseId ?? undefined}
+          viewId={viewId ?? 'release-queue'}
+          onSelectCase={setReleaseCaseId}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="connectio-page" data-testid={`workspace-view-${workspaceId}`}>
       <div style={{ padding: 32, color: 'var(--shell-fg-2)', fontSize: 13 }}>
         Workspace{' '}
         <strong style={{ color: 'var(--shell-fg)' }}>{workspaceId}</strong> —
-        implementation pending (Phase 2+).
+        implementation pending (Phase 3+).
       </div>
     </div>
   )

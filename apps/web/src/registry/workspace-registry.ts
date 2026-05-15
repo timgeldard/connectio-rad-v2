@@ -1,19 +1,23 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration } from '@connectio/di-traceability'
+import { batchReleaseRegistration } from '@connectio/di-quality'
 
 /**
- * Static Phase 1 workspace registry.
+ * Static workspace registry — Phase 1 and Phase 2 implementations.
  *
- * `trace-investigation` is the first fully implemented workspace and is
- * marked `lifecycle: 'live'`. The Phase 0 stubs remain registered as
- * `concept-lab` so they appear in nav only when explicitly enabled.
+ * Live workspaces are marked `lifecycle: 'live'` and appear in the nav rail
+ * and home screen by default. Phase 0 stubs remain `concept-lab` so they are
+ * hidden unless explicitly enabled.
  *
- * Domain-integration packages own their registrations; this file imports
- * and assembles them rather than duplicating the registration data.
+ * Domain-integration packages own their registrations; this file imports and
+ * assembles them rather than duplicating the registration data.
  */
 export const workspaceRegistry: readonly WorkspaceRegistration[] = [
-  // Phase 1 — fully implemented
+  // Phase 1 — Trace Investigation (fully implemented)
   traceInvestigationRegistration,
+
+  // Phase 2 — Quality Batch Release (cross-domain, fully implemented)
+  batchReleaseRegistration,
 
   // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {
