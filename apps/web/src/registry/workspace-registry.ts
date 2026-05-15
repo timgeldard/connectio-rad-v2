@@ -4,6 +4,7 @@ import { batchReleaseRegistration } from '@connectio/di-quality'
 import { operationsPlanRiskRegistration } from '@connectio/di-operations'
 import { envmonRegistration } from '@connectio/di-envmon'
 import { productionStagingRegistration } from '@connectio/di-warehouse'
+import { spcMonitoringRegistration } from '@connectio/di-spc'
 
 /**
  * Static workspace registry — Phase 1–4 implementations.
@@ -30,6 +31,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 4 — Production Staging (fully implemented)
   productionStagingRegistration,
+
+  // Phase 5 — SPC Monitoring (pilot)
+  spcMonitoringRegistration,
 
   // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {

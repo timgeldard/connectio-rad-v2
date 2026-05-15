@@ -1,0 +1,25 @@
+import type { CSSProperties } from 'react'
+import { SPCAlarmHistoryPanel } from '../panels/spc-alarm-history-panel.js'
+import { SPCRelatedBatchesPanel } from '../panels/spc-related-batches-panel.js'
+import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
+
+const GRID: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+  gap: 12,
+  padding: 16,
+  alignItems: 'start',
+}
+
+export interface AlarmHistoryViewProps {
+  readonly request: SPCMonitoringAdapterRequest
+}
+
+export function AlarmHistoryView({ request }: AlarmHistoryViewProps) {
+  return (
+    <div style={GRID}>
+      <SPCAlarmHistoryPanel request={request} />
+      <SPCRelatedBatchesPanel request={request} />
+    </div>
+  )
+}

@@ -3,6 +3,7 @@ import { BatchReleaseWorkspace } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace } from '@connectio/di-warehouse'
+import { SPCMonitoringWorkspace } from '@connectio/di-spc'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
 
@@ -88,6 +89,17 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           scope={activeScope}
           planDate={planDate ?? undefined}
           viewId={viewId ?? 'staging-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'spc-monitoring') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-spc-monitoring">
+        <SPCMonitoringWorkspace
+          scope={activeScope}
+          viewId={viewId ?? 'chart-overview'}
         />
       </div>
     )

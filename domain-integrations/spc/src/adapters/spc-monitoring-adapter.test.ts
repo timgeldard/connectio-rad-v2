@@ -1,0 +1,129 @@
+import { describe, it, expect } from 'vitest'
+import { SPCMonitoringAdapter } from './spc-monitoring-adapter.js'
+
+const FIXED_NOW = '2024-03-08T10:00:00.000Z'
+const adapter = new SPCMonitoringAdapter({ now: () => FIXED_NOW })
+
+const request = { plantId: 'IE10', workCentreId: 'WC-IE10-PASTEURISATION' }
+
+describe('SPCMonitoringAdapter', () => {
+  describe('getSPCMonitoringContext', () => {
+    it('returns ok result', async () => {
+      const result = await adapter.getSPCMonitoringContext(request)
+      expect(result.ok).toBe(true)
+    })
+
+    it('returns plantId IE10', async () => {
+      const result = await adapter.getSPCMonitoringContext(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.plantId).toBe('IE10')
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getSPCMonitoringContext(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
+
+  describe('getSPCSummary', () => {
+    it('returns ok result', async () => {
+      const result = await adapter.getSPCSummary(request)
+      expect(result.ok).toBe(true)
+    })
+
+    it('returns chartsMonitored > 0', async () => {
+      const result = await adapter.getSPCSummary(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.chartsMonitored).toBeGreaterThan(0)
+    })
+
+    it('confidence is between 0 and 1', async () => {
+      const result = await adapter.getSPCSummary(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.confidence).toBeGreaterThanOrEqual(0)
+      expect(result.data.confidence).toBeLessThanOrEqual(1)
+    })
+  })
+
+  describe('getActiveSPCSignals', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getActiveSPCSignals(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+    })
+
+    it('each signal has required fields', async () => {
+      const result = await adapter.getActiveSPCSignals(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const signal of result.data) {
+        expect(signal.signalId).toBeTruthy()
+        expect(signal.characteristicId).toBeTruthy()
+        expect(signal.status).toBeTruthy()
+      }
+    })
+  })
+
+  describe('getControlChartSeries', () => {
+    it('returns ok result with points array', async () => {
+      const result = await adapter.getControlChartSeries(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data.points)).toBe(true)
+      expect(result.data.points.length).toBeGreaterThan(0)
+    })
+
+    it('UCL is greater than LCL', async () => {
+      const result = await adapter.getControlChartSeries(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.upperControlLimit).toBeGreaterThan(result.data.lowerControlLimit)
+    })
+  })
+
+  describe('getCharacteristicCapability', () => {
+    it('returns ok result', async () => {
+      const result = await adapter.getCharacteristicCapability(request)
+      expect(result.ok).toBe(true)
+    })
+
+    it('Cpk is positive', async () => {
+      const result = await adapter.getCharacteristicCapability(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.cpk).toBeGreaterThan(0)
+    })
+
+    it('sampleCount is positive integer', async () => {
+      const result = await adapter.getCharacteristicCapability(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.sampleCount).toBeGreaterThan(0)
+      expect(Number.isInteger(result.data.sampleCount)).toBe(true)
+    })
+  })
+
+  describe('getSPCAlarmHistory', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getSPCAlarmHistory(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+      expect(result.data.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('getSPCRelatedBatches', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getSPCRelatedBatches(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+    })
+
+    it('each batch has a releaseImpact field', async () => {
+      const result = await adapter.getSPCRelatedBatches(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const batch of result.data) {
+        expect(['blocking', 'risk', 'none']).toContain(batch.releaseImpact)
+      }
+    })
+  })
+})

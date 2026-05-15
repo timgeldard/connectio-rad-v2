@@ -1,0 +1,104 @@
+import type {
+  SPCMonitoringContext,
+  SPCSummary,
+  SPCSignal,
+  ControlChartSeries,
+  CharacteristicCapability,
+  SPCAlarmHistoryItem,
+  SPCRelatedBatch,
+} from '@connectio/data-contracts'
+import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
+import {
+  mockSPCMonitoringContext,
+  mockSPCSummary,
+  mockActiveSPCSignals,
+  mockControlChartSeries,
+  mockCharacteristicCapability,
+  mockSPCAlarmHistory,
+  mockSPCRelatedBatches,
+} from './spc-monitoring-mock-data.js'
+
+export interface SPCMonitoringAdapterRequest {
+  readonly plantId?: string
+  readonly workCentreId?: string
+  readonly materialId?: string
+  readonly batchId?: string
+  readonly characteristicId?: string
+}
+
+type NowFn = () => string
+
+const defaultNow: NowFn = () => new Date().toISOString()
+
+function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
+  return { ok: true, data, fetchedAt: now() }
+}
+
+function err<T>(
+  code: AdapterError['code'],
+  message: string,
+  retryable = false
+): AdapterResult<T> {
+  return { ok: false, error: { code, message, retryable }, displayState: 'error' }
+}
+
+export interface SPCMonitoringAdapterOptions {
+  readonly now?: NowFn
+}
+
+export class SPCMonitoringAdapter {
+  private readonly now: NowFn
+
+  constructor(options: SPCMonitoringAdapterOptions = {}) {
+    this.now = options.now ?? defaultNow
+  }
+
+  async getSPCMonitoringContext(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<SPCMonitoringContext>> {
+    return ok(mockSPCMonitoringContext, this.now)
+  }
+
+  async getSPCSummary(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<SPCSummary>> {
+    return ok(mockSPCSummary, this.now)
+  }
+
+  async getActiveSPCSignals(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<SPCSignal[]>> {
+    return ok(mockActiveSPCSignals, this.now)
+  }
+
+  async getControlChartSeries(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<ControlChartSeries>> {
+    return ok(mockControlChartSeries, this.now)
+  }
+
+  async getCharacteristicCapability(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<CharacteristicCapability>> {
+    return ok(mockCharacteristicCapability, this.now)
+  }
+
+  async getSPCAlarmHistory(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
+    return ok(mockSPCAlarmHistory, this.now)
+  }
+
+  async getSPCRelatedBatches(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<SPCRelatedBatch[]>> {
+    return ok(mockSPCRelatedBatches, this.now)
+  }
+}
+
+export const spcMonitoringAdapter = new SPCMonitoringAdapter()
+
+export function toSPCMonitoringAdapterError<T>(thrown: unknown): AdapterResult<T> {
+  const message = thrown instanceof Error ? thrown.message : 'Unknown error'
+  return err<T>('unknown', message, true)
+}
