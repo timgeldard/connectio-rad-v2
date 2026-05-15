@@ -24,6 +24,20 @@ const ADMIN_PAGE_TITLES: Record<string, string> = {
   'help-getting-started': 'Getting Started',
   'help-concepts': 'V2 Concepts Glossary',
   'help-scenarios': 'Scenario Review Guide',
+  'admin-pilot-execution-dashboard': 'Pilot Execution Dashboard',
+  'admin-pilot-scenario-execution': 'Scenario Execution Tracking',
+  'admin-pilot-feedback-burndown': 'Feedback Burn-Down',
+  'admin-pilot-issues': 'Pilot Issue Register',
+  'admin-pilot-success-metrics': 'Pilot Success Metrics',
+  'admin-pilot-training-readiness': 'Training Readiness',
+  'admin-pilot-support-readiness': 'Support Readiness',
+  'admin-pilot-data-quality-gaps': 'Data Quality Gaps',
+  'admin-pilot-access-exceptions': 'Access Exceptions',
+  'admin-pilot-adoption': 'Workspace Adoption',
+  'admin-pilot-cutover-recommendation': 'Cutover Recommendation',
+  'admin-pilot-go-no-go': 'Go / No-Go Assessment',
+  'admin-pilot-rollout-plan': 'Rollout Wave Plan',
+  'admin-pilot-lessons-learned': 'Lessons Learned',
 }
 
 /**
