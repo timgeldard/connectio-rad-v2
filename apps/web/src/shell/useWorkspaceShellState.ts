@@ -55,6 +55,10 @@ interface ShellStateActions {
   readonly navigateToBatchRelease: (releaseCaseId: string, viewId?: string) => void
   /** Navigate directly to the Operations Plan Risk workspace with optional plan date and view. */
   readonly navigateToOperationsPlanRisk: (planDate?: string, viewId?: string) => void
+  /** Navigate directly to the Environmental Monitoring workspace with optional view. */
+  readonly navigateToEnvMon: (viewId?: string) => void
+  /** Navigate directly to the Production Staging workspace with optional plan date and view. */
+  readonly navigateToProductionStaging: (planDate?: string, viewId?: string) => void
 }
 
 /**
@@ -105,6 +109,10 @@ function readFromUrl(): ShellState {
  * Phase 3 additions:
  * - `planDate` — active plan date for the Operations Plan Risk workspace
  * - `navigateToOperationsPlanRisk` — sets workspace + planDate + view atomically
+ *
+ * Phase 4 additions:
+ * - `navigateToEnvMon` — sets workspace + view atomically for Environmental Monitoring
+ * - `navigateToProductionStaging` — sets workspace + planDate + view atomically for Production Staging
  *
  * @returns Combined shell state snapshot and action callbacks.
  */
@@ -194,6 +202,29 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     [],
   )
 
+  const navigateToEnvMon = useCallback(
+    (viewId = 'scope-overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'envmon-monitoring')
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
+  const navigateToProductionStaging = useCallback(
+    (planDate?: string, viewId = 'staging-overview') => {
+      const params = new URLSearchParams()
+      params.set('workspace', 'production-staging')
+      if (planDate) params.set('planDate', planDate)
+      params.set('view', viewId)
+      history.replaceState(null, '', `?${params.toString()}`)
+      setState(readFromUrl())
+    },
+    [],
+  )
+
   return {
     ...state,
     setWorkspace,
@@ -204,5 +235,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     setReleaseCaseId,
     navigateToBatchRelease,
     navigateToOperationsPlanRisk,
+    navigateToEnvMon,
+    navigateToProductionStaging,
   }
 }

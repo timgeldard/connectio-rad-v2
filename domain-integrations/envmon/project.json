@@ -17,6 +17,12 @@
       "options": {
         "lintFilePatterns": ["domain-integrations/envmon/**/*.{ts,tsx}"]
       }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "domain-integrations/envmon/vitest.config.ts"
+      }
     }
   }
 }

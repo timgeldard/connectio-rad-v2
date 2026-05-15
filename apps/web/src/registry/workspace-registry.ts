@@ -2,9 +2,11 @@ import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration } from '@connectio/di-traceability'
 import { batchReleaseRegistration } from '@connectio/di-quality'
 import { operationsPlanRiskRegistration } from '@connectio/di-operations'
+import { envmonRegistration } from '@connectio/di-envmon'
+import { productionStagingRegistration } from '@connectio/di-warehouse'
 
 /**
- * Static workspace registry — Phase 1 and Phase 2 implementations.
+ * Static workspace registry — Phase 1–4 implementations.
  *
  * Live workspaces are marked `lifecycle: 'live'` and appear in the nav rail
  * and home screen by default. Phase 0 stubs remain `concept-lab` so they are
@@ -22,6 +24,12 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 3 — Operations Plan Risk (cross-domain, fully implemented)
   operationsPlanRiskRegistration,
+
+  // Phase 4 — Environmental Monitoring (fully implemented)
+  envmonRegistration,
+
+  // Phase 4 — Production Staging (fully implemented)
+  productionStagingRegistration,
 
   // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {

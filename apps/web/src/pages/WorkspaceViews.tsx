@@ -1,6 +1,8 @@
 import { TraceInvestigationWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace } from '@connectio/di-operations'
+import { EnvMonWorkspace } from '@connectio/di-envmon'
+import { ProductionStagingWorkspace } from '@connectio/di-warehouse'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
 
@@ -15,13 +17,13 @@ interface Props {
  *
  * @remarks
  * Routes to the appropriate workspace component based on `workspaceId`.
- * Phase 1 implements `trace-investigation` fully. Phase 2 adds
- * `quality-batch-release`. Phase 3 adds `operations-plan-risk`. All other
- * workspace IDs render a placeholder until implemented in a subsequent phase.
+ * Phase 1: trace-investigation. Phase 2: quality-batch-release.
+ * Phase 3: operations-plan-risk. Phase 4: envmon-monitoring, production-staging.
+ * All other workspace IDs render a placeholder until implemented.
  *
  * The `scope` from `useAuthScope()` and URL params (`investigationId`,
- * `releaseCaseId`, `viewId`) are forwarded to workspace components that
- * require them.
+ * `releaseCaseId`, `planDate`, `viewId`) are forwarded to workspace components
+ * that require them.
  *
  * @param props - Component props.
  */
@@ -63,6 +65,29 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           planDate={planDate ?? undefined}
           viewId={viewId ?? 'plan-overview'}
           onNavigateToBatchRelease={navigateToBatchRelease}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'envmon-monitoring') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-envmon-monitoring">
+        <EnvMonWorkspace
+          scope={activeScope}
+          viewId={viewId ?? 'scope-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'production-staging') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-production-staging">
+        <ProductionStagingWorkspace
+          scope={activeScope}
+          planDate={planDate ?? undefined}
+          viewId={viewId ?? 'staging-overview'}
         />
       </div>
     )

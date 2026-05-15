@@ -70,6 +70,12 @@
       ],
       "@connectio/di-warehouse": [
         "domain-integrations/warehouse/src/index.ts"
+      ],
+      "@connectio/di-envmon": [
+        "domain-integrations/envmon/src/index.ts"
+      ],
+      "@connectio/di-maintenance": [
+        "domain-integrations/maintenance/src/index.ts"
       ]
     }
   }
