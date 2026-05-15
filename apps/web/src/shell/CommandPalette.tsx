@@ -40,6 +40,18 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     inputRef.current?.focus()
   }, [])
 
+  /** Admin tool pages (not in workspace registry). */
+  const adminCommands: Command[] = [
+    { id: 'admin-governance', label: 'Governance Registry', description: 'Workspace registry, drill-through map, permissions', category: 'Admin Tools', action: () => { setWorkspace('admin-governance'); onClose() } },
+    { id: 'admin-legacy-retirement', label: 'Legacy Retirement Readiness', description: 'Retirement status across all 6 legacy systems', category: 'Admin Tools', action: () => { setWorkspace('admin-legacy-retirement'); onClose() } },
+    { id: 'admin-production-readiness', label: 'Production Readiness Dashboard', description: 'ReadinessFinding audit across all 9 workspaces', category: 'Admin Tools', action: () => { setWorkspace('admin-production-readiness'); onClose() } },
+    { id: 'admin-workspace-parity', label: 'Workspace Parity Assessment', description: 'Coverage scores vs legacy systems', category: 'Admin Tools', action: () => { setWorkspace('admin-workspace-parity'); onClose() } },
+    { id: 'admin-cutover-simulation', label: 'Cutover Simulation', description: 'Per-legacy-system simulation mode and results', category: 'Admin Tools', action: () => { setWorkspace('admin-cutover-simulation'); onClose() } },
+    { id: 'admin-role-scope-matrix', label: 'Role/Scope Visibility Matrix', description: 'Workspace visibility per role and scope', category: 'Admin Tools', action: () => { setWorkspace('admin-role-scope-matrix'); onClose() } },
+    { id: 'admin-design-system-compliance', label: 'Design-System Compliance Report', description: 'ESLint boundary and inline-style audit', category: 'Admin Tools', action: () => { setWorkspace('admin-design-system-compliance'); onClose() } },
+    { id: 'admin-telemetry', label: 'Telemetry Dashboard', description: 'Platform event log and workspace usage stats', category: 'Admin Tools', action: () => { setWorkspace('admin-telemetry'); onClose() } },
+  ]
+
   /** Build the full command list from registered workspaces + quick actions. */
   const allCommands: Command[] = [
     ...workspaceRegistry
@@ -54,6 +66,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
           onClose()
         },
       })),
+    ...adminCommands,
     {
       id: 'trace-inv-mock',
       label: 'Open Trace Investigation — INV-2024-003847',
