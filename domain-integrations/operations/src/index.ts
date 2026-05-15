@@ -63,3 +63,39 @@ export type { ShiftHandoverPanelProps } from './panels/shift-handover-panel.js'
 
 export { OperationsActionQueuePanel } from './panels/operations-action-queue-panel.js'
 export type { OperationsActionQueuePanelProps } from './panels/operations-action-queue-panel.js'
+
+// Views — Phase 3
+export { PlanOverviewView } from './views/plan-overview-view.js'
+export type { PlanOverviewViewProps } from './views/plan-overview-view.js'
+
+export { CriticalBlockersView } from './views/critical-blockers-view.js'
+export type { CriticalBlockersViewProps } from './views/critical-blockers-view.js'
+
+export { MaterialStagingRiskView } from './views/material-staging-risk-view.js'
+export type { MaterialStagingRiskViewProps } from './views/material-staging-risk-view.js'
+
+export { QualityReleaseBlockersView } from './views/quality-release-blockers-view.js'
+export type { QualityReleaseBlockersViewProps } from './views/quality-release-blockers-view.js'
+
+export { LineResourceRiskView } from './views/line-resource-risk-view.js'
+export type { LineResourceRiskViewProps } from './views/line-resource-risk-view.js'
+
+export { ScheduleAdherenceView } from './views/schedule-adherence-view.js'
+export type { ScheduleAdherenceViewProps } from './views/schedule-adherence-view.js'
+
+export { HandoverActionsView } from './views/handover-actions-view.js'
+export type { HandoverActionsViewProps } from './views/handover-actions-view.js'
+
+// Actions — Phase 3
+export {
+  OperationsPlanRiskActionsPanel,
+  ActionSheet,
+  Field,
+  SheetActions,
+  SuccessMessage,
+  ActionButton,
+} from './actions/operations-plan-risk-actions-panel.js'
+export type {
+  OperationsPlanRiskActionsPanelProps,
+  ActionButtonVariant,
+} from './actions/operations-plan-risk-actions-panel.js'
