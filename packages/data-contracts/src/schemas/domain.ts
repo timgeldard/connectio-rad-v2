@@ -27,7 +27,9 @@ export const ProcessOrderSummarySchema = z.object({
   oeePercent: z.number().min(0).max(100).optional(),
 })
 
-export const WarehouseHoldStatusSchema = z.object({
+/** A single warehouse hold record (one hold line). For the full batch stock + holds
+ *  status used in release decisions, see {@link WarehouseHoldStatus} in batch-release. */
+export const WarehouseHoldRecordSchema = z.object({
   materialId: z.string(),
   plantId: z.string(),
   storageLocationId: z.string().optional(),
@@ -40,7 +42,9 @@ export const WarehouseHoldStatusSchema = z.object({
   releasedAt: z.string().datetime().optional(),
 })
 
-export const SPCSignalSummarySchema = z.object({
+/** A single SPC signal occurrence. For the aggregate batch-level SPC alarm summary
+ *  used in release decisions, see {@link SPCSignalSummary} in batch-release. */
+export const SPCSignalRecordSchema = z.object({
   chartId: z.string(),
   materialId: z.string(),
   plantId: z.string(),
@@ -65,6 +69,6 @@ export const TraceExposureSummarySchema = z.object({
 
 export type BatchSummary = z.infer<typeof BatchSummarySchema>
 export type ProcessOrderSummary = z.infer<typeof ProcessOrderSummarySchema>
-export type WarehouseHoldStatus = z.infer<typeof WarehouseHoldStatusSchema>
-export type SPCSignalSummary = z.infer<typeof SPCSignalSummarySchema>
+export type WarehouseHoldRecord = z.infer<typeof WarehouseHoldRecordSchema>
+export type SPCSignalRecord = z.infer<typeof SPCSignalRecordSchema>
 export type TraceExposureSummary = z.infer<typeof TraceExposureSummarySchema>

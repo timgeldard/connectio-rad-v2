@@ -27,15 +27,15 @@ export { DrillThroughMetadataSchema } from './schemas/navigation.js'
 export type {
   BatchSummary,
   ProcessOrderSummary,
-  WarehouseHoldStatus,
-  SPCSignalSummary,
+  WarehouseHoldRecord,
+  SPCSignalRecord,
   TraceExposureSummary,
 } from './schemas/domain.js'
 export {
   BatchSummarySchema,
   ProcessOrderSummarySchema,
-  WarehouseHoldStatusSchema,
-  SPCSignalSummarySchema,
+  WarehouseHoldRecordSchema,
+  SPCSignalRecordSchema,
   TraceExposureSummarySchema,
 } from './schemas/domain.js'
 
@@ -70,3 +70,32 @@ export {
   TraceRiskSignalSchema,
   RelatedInvestigationSchema,
 } from './schemas/trace-investigation.js'
+
+export type {
+  BatchReleaseContext,
+  BatchReleaseQueueItem,
+  BatchReleaseSummary,
+  QualityResultsSummary,
+  MICFailure,
+  SPCSignalSummary,
+  ProcessOrderReleaseEvidence,
+  WarehouseHoldStatus,
+  TraceExposureForRelease,
+  CoAReadiness,
+  DeviationSummary,
+  ReleaseDecisionHistoryItem,
+} from './schemas/batch-release.js'
+export {
+  BatchReleaseContextSchema,
+  BatchReleaseQueueItemSchema,
+  BatchReleaseSummarySchema,
+  QualityResultsSummarySchema,
+  MICFailureSchema,
+  SPCSignalSummarySchema,
+  ProcessOrderReleaseEvidenceSchema,
+  WarehouseHoldStatusSchema,
+  TraceExposureForReleaseSchema,
+  CoAReadinessSchema,
+  DeviationSummarySchema,
+  ReleaseDecisionHistoryItemSchema,
+} from './schemas/batch-release.js'
