@@ -9,6 +9,7 @@ import { ProductionReadinessPage } from '../pages/ProductionReadinessPage.js'
 import { WorkspaceParityPage } from '../pages/WorkspaceParityPage.js'
 import { CutoverSimulationPage } from '../pages/CutoverSimulationPage.js'
 import { RoleScopeMatrixPage } from '../pages/RoleScopeMatrixPage.js'
+import { DesignSystemCompliancePage } from '../pages/DesignSystemCompliancePage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -95,6 +96,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page" data-testid="workspace-view-admin-role-scope-matrix">
           <RoleScopeMatrixPage />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-design-system-compliance') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-design-system-compliance">
+          <DesignSystemCompliancePage />
         </div>
       </div>
     )
