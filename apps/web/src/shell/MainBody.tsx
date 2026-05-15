@@ -3,6 +3,7 @@ import { useWorkspaceShellState } from './useWorkspaceShellState.js'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { RoleAwareHome } from '../pages/RoleAwareHome.js'
 import { NotFound } from '../pages/NotFound.js'
+import { AdminGovernancePage } from '../pages/AdminGovernancePage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -17,6 +18,7 @@ const WorkspaceViews = lazy(() => import('../pages/WorkspaceViews.js'))
  *
  * Routing logic (no router library):
  * - No `workspaceId` in URL → render {@link RoleAwareHome}
+ * - `workspaceId === 'admin-governance'` → render {@link AdminGovernancePage} (no registry entry needed)
  * - `workspaceId` not found in registry → render {@link NotFound}
  * - Valid `workspaceId` → lazy-render {@link WorkspaceViews} with Suspense
  */
@@ -28,6 +30,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page">
           <RoleAwareHome />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-governance') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-governance">
+          <AdminGovernancePage />
         </div>
       </div>
     )
