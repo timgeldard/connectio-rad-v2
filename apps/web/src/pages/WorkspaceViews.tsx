@@ -4,6 +4,7 @@ import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@conne
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
 import { SPCMonitoringWorkspace } from '@connectio/di-spc'
+import { MaintenanceReliabilityWorkspace } from '@connectio/di-maintenance'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
 
@@ -122,6 +123,17 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <ProcessOrderReviewWorkspace
           scope={activeScope}
           viewId={viewId ?? 'order-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'maintenance-reliability') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-maintenance-reliability">
+        <MaintenanceReliabilityWorkspace
+          scope={activeScope}
+          viewId={viewId ?? 'overview'}
         />
       </div>
     )

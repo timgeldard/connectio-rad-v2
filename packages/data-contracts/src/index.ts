@@ -239,3 +239,22 @@ export {
   ReplenishmentNeedSchema,
   LocationCapacitySchema,
 } from './schemas/warehouse-360-overview.js'
+
+export type {
+  MaintenanceReliabilityContext,
+  MaintenanceKpiSummary,
+  WorkOrder,
+  PreventiveMaintenanceTask,
+  EquipmentAvailability,
+  ReliabilityMetric,
+  MaintenanceBacklogItem,
+} from './schemas/maintenance-reliability.js'
+export {
+  MaintenanceReliabilityContextSchema,
+  MaintenanceKpiSummarySchema,
+  WorkOrderSchema,
+  PreventiveMaintenanceTaskSchema,
+  EquipmentAvailabilitySchema,
+  ReliabilityMetricSchema,
+  MaintenanceBacklogItemSchema,
+} from './schemas/maintenance-reliability.js'

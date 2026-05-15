@@ -7,6 +7,7 @@ import { productionStagingRegistration } from '@connectio/di-warehouse'
 import { spcMonitoringRegistration } from '@connectio/di-spc'
 import { processOrderReviewRegistration } from '@connectio/di-operations'
 import { warehouse360Registration } from '@connectio/di-warehouse'
+import { maintenanceReliabilityRegistration } from '@connectio/di-maintenance'
 
 /**
  * Static workspace registry — Phase 1–4 implementations.
@@ -42,6 +43,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 5 — Warehouse 360 Overview (pilot)
   warehouse360Registration,
+
+  // Phase 5 — Maintenance & Reliability (pilot)
+  maintenanceReliabilityRegistration,
 
   // Phase 0 stubs — kept for traceability workspace backwards compatibility
   {
