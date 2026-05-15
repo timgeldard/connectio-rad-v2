@@ -2,7 +2,7 @@ import { TraceInvestigationWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
-import { ProductionStagingWorkspace } from '@connectio/di-warehouse'
+import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
 import { SPCMonitoringWorkspace } from '@connectio/di-spc'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
@@ -100,6 +100,17 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <SPCMonitoringWorkspace
           scope={activeScope}
           viewId={viewId ?? 'chart-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'warehouse-360-overview') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-warehouse-360-overview">
+        <Warehouse360Workspace
+          scope={activeScope}
+          viewId={viewId ?? 'warehouse-overview'}
         />
       </div>
     )

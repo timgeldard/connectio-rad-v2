@@ -1,0 +1,61 @@
+import { useQuery } from '@tanstack/react-query'
+import { warehouse360Adapter } from './warehouse-360-adapter.js'
+import type { Warehouse360AdapterRequest } from './warehouse-360-adapter.js'
+
+const STALE = 5 * 60 * 1000
+
+export function useWarehouse360Context(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-360-context', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouse360Context(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouse360Summary(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-360-summary', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouse360Summary(request),
+    staleTime: STALE,
+  })
+}
+
+export function useStockOverview(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['stock-overview', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getStockOverview(request),
+    staleTime: STALE,
+  })
+}
+
+export function useOpenHolds(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['open-holds', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getOpenHolds(request),
+    staleTime: STALE,
+  })
+}
+
+export function useGoodsMovements(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['goods-movements', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getGoodsMovements(request),
+    staleTime: STALE,
+  })
+}
+
+export function useReplenishmentNeeds(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['replenishment-needs', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getReplenishmentNeeds(request),
+    staleTime: STALE,
+  })
+}
+
+export function useLocationCapacities(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['location-capacities', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getLocationCapacities(request),
+    staleTime: STALE,
+  })
+}

@@ -1,0 +1,27 @@
+import type { CSSProperties } from 'react'
+import { Warehouse360SummaryPanel } from '../panels/warehouse-360-summary-panel.js'
+import { StockOverviewPanel } from '../panels/stock-overview-panel.js'
+import { OpenHoldsPanel } from '../panels/open-holds-panel.js'
+import type { Warehouse360AdapterRequest } from '../adapters/warehouse-360-adapter.js'
+
+const GRID: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+  gap: 12,
+  padding: 16,
+  alignItems: 'start',
+}
+
+export interface WarehouseOverviewViewProps {
+  readonly request: Warehouse360AdapterRequest
+}
+
+export function WarehouseOverviewView({ request }: WarehouseOverviewViewProps) {
+  return (
+    <div style={GRID}>
+      <Warehouse360SummaryPanel request={request} />
+      <StockOverviewPanel request={request} />
+      <OpenHoldsPanel request={request} />
+    </div>
+  )
+}
