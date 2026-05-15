@@ -18,3 +18,7 @@ export type {
 } from './adapters/maintenance-constraints-adapter.js'
 
 export { useMaintenanceConstraints } from './adapters/maintenance-constraints-queries.js'
+
+// Evidence panels
+export { MaintenanceConstraintPanel } from './panels/maintenance-constraint-panel.js'
+export type { MaintenanceConstraintPanelProps } from './panels/maintenance-constraint-panel.js'

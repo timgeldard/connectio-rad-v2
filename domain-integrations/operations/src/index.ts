@@ -38,3 +38,28 @@ export {
 // Evidence panels — Phase 2 (consumed by Batch Release)
 export { ProcessOrderEvidencePanel } from './panels/process-order-evidence-panel.js'
 export type { ProcessOrderEvidencePanelProps } from './panels/process-order-evidence-panel.js'
+
+// Evidence panels — Phase 3 (Operations Plan Risk)
+export { PlanRiskSummaryPanel } from './panels/plan-risk-summary-panel.js'
+export type { PlanRiskSummaryPanelProps } from './panels/plan-risk-summary-panel.js'
+
+export { LateOrdersPanel } from './panels/late-orders-panel.js'
+export type { LateOrdersPanelProps } from './panels/late-orders-panel.js'
+
+export { MaterialShortagePanel } from './panels/material-shortage-panel.js'
+export type { MaterialShortagePanelProps } from './panels/material-shortage-panel.js'
+
+export { LineStatusPanel } from './panels/line-status-panel.js'
+export type { LineStatusPanelProps } from './panels/line-status-panel.js'
+
+export { ScheduleAdherencePanel } from './panels/schedule-adherence-panel.js'
+export type { ScheduleAdherencePanelProps } from './panels/schedule-adherence-panel.js'
+
+export { YieldVariancePanel } from './panels/yield-variance-panel.js'
+export type { YieldVariancePanelProps } from './panels/yield-variance-panel.js'
+
+export { ShiftHandoverPanel } from './panels/shift-handover-panel.js'
+export type { ShiftHandoverPanelProps } from './panels/shift-handover-panel.js'
+
+export { OperationsActionQueuePanel } from './panels/operations-action-queue-panel.js'
+export type { OperationsActionQueuePanelProps } from './panels/operations-action-queue-panel.js'

@@ -30,3 +30,6 @@ export {
 // Evidence panels
 export { WarehouseHoldStatusPanel } from './panels/warehouse-hold-status-panel.js'
 export type { WarehouseHoldStatusPanelProps } from './panels/warehouse-hold-status-panel.js'
+
+export { WarehouseStagingStatusPanel } from './panels/warehouse-staging-status-panel.js'
+export type { WarehouseStagingStatusPanelProps } from './panels/warehouse-staging-status-panel.js'

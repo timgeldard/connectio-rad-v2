@@ -78,6 +78,13 @@ export type { WarehouseTraceEvidenceViewProps } from './views/warehouse-trace-ev
 export { DecisionHistoryView } from './views/decision-history-view.js'
 export type { DecisionHistoryViewProps } from './views/decision-history-view.js'
 
+// Cross-domain evidence panels — consumed by Operations Plan Risk
+export { QualityBlockersPanel } from './panels/quality-blockers-panel.js'
+export type { QualityBlockersPanelProps } from './panels/quality-blockers-panel.js'
+
+export { ReleaseHoldImpactPanel } from './panels/release-hold-impact-panel.js'
+export type { ReleaseHoldImpactPanelProps } from './panels/release-hold-impact-panel.js'
+
 // Actions
 export { ReleaseActionsPanel, ActionSheet, Field, SheetActions, SuccessMessage, ActionButton } from './actions/release-actions-panel.js'
 export type { ReleaseActionsPanelProps, ActionButtonVariant, ActionButtonProps } from './actions/release-actions-panel.js'

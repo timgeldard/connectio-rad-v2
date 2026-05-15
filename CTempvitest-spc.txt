@@ -1,0 +1,4 @@
+Microsoft Windows [Version 10.0.22631.6936]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\tgeldard\Documents\GitHub\connectio-rad-v2>
