@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SPCMonitoringWorkspace } from './spc-monitoring-workspace.js'
 import type { ScopeContext } from '@connectio/data-contracts'
