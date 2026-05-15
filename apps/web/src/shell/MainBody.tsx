@@ -6,6 +6,7 @@ import { NotFound } from '../pages/NotFound.js'
 import { AdminGovernancePage } from '../pages/AdminGovernancePage.js'
 import { LegacyRetirementPage } from '../pages/LegacyRetirementPage.js'
 import { ProductionReadinessPage } from '../pages/ProductionReadinessPage.js'
+import { WorkspaceParityPage } from '../pages/WorkspaceParityPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -62,6 +63,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page" data-testid="workspace-view-admin-production-readiness">
           <ProductionReadinessPage />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-workspace-parity') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-workspace-parity">
+          <WorkspaceParityPage />
         </div>
       </div>
     )
