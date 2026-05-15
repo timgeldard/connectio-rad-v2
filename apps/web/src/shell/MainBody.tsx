@@ -5,6 +5,7 @@ import { RoleAwareHome } from '../pages/RoleAwareHome.js'
 import { NotFound } from '../pages/NotFound.js'
 import { AdminGovernancePage } from '../pages/AdminGovernancePage.js'
 import { LegacyRetirementPage } from '../pages/LegacyRetirementPage.js'
+import { ProductionReadinessPage } from '../pages/ProductionReadinessPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -51,6 +52,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page" data-testid="workspace-view-admin-legacy-retirement">
           <LegacyRetirementPage />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-production-readiness') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-production-readiness">
+          <ProductionReadinessPage />
         </div>
       </div>
     )
