@@ -8,6 +8,7 @@ import { LegacyRetirementPage } from '../pages/LegacyRetirementPage.js'
 import { ProductionReadinessPage } from '../pages/ProductionReadinessPage.js'
 import { WorkspaceParityPage } from '../pages/WorkspaceParityPage.js'
 import { CutoverSimulationPage } from '../pages/CutoverSimulationPage.js'
+import { RoleScopeMatrixPage } from '../pages/RoleScopeMatrixPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -84,6 +85,16 @@ export function MainBody() {
       <div className="connectio-body">
         <div className="connectio-page" data-testid="workspace-view-admin-cutover-simulation">
           <CutoverSimulationPage />
+        </div>
+      </div>
+    )
+  }
+
+  if (workspaceId === 'admin-role-scope-matrix') {
+    return (
+      <div className="connectio-body">
+        <div className="connectio-page" data-testid="workspace-view-admin-role-scope-matrix">
+          <RoleScopeMatrixPage />
         </div>
       </div>
     )
