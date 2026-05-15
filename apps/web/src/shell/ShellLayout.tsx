@@ -20,14 +20,38 @@ export function ShellLayout() {
   const { hasScope } = useWorkspaceShellState()
 
   return (
-    <div
-      className={`connectio-shell${hasScope ? '' : ' no-scope'}`}
-      data-testid="workspace-shell"
-    >
-      <DomainSidebar />
-      <GlobalHeader />
-      {hasScope && <ScopeBar />}
-      <MainBody />
-    </div>
+    <>
+      {/* Skip-to-main-content link for keyboard and screen-reader users. */}
+      <a
+        href="#connectio-main-content"
+        style={{
+          position: 'absolute',
+          top: -100,
+          left: 0,
+          zIndex: 9999,
+          padding: '8px 16px',
+          background: 'var(--shell-surface)',
+          color: 'var(--shell-fg)',
+          fontWeight: 600,
+          fontSize: 13,
+          textDecoration: 'none',
+          borderBottom: '2px solid var(--valentia-slate, #005776)',
+          outline: 'none',
+        }}
+        onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '0' }}
+        onBlur={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '-100px' }}
+      >
+        Skip to main content
+      </a>
+      <div
+        className={`connectio-shell${hasScope ? '' : ' no-scope'}`}
+        data-testid="workspace-shell"
+      >
+        <DomainSidebar />
+        <GlobalHeader />
+        {hasScope && <ScopeBar />}
+        <MainBody />
+      </div>
+    </>
   )
 }
