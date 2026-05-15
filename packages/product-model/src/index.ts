@@ -45,3 +45,30 @@ export {
   pilotBlockers,
   productionBlockers,
 } from './helpers/readiness.js'
+export type {
+  PilotStatus,
+  ValidationScenarioStatus,
+  ValidationScenario,
+  StakeholderSignoffStatus,
+  StakeholderSignoff,
+  FeedbackCategory,
+  FeedbackStatus,
+  FeedbackPriority,
+  FeedbackItem,
+  ReleaseGateStatus,
+  ReleaseGate,
+  PilotExitCriteria,
+  DataIntegrationStatus,
+  DataContractCoverage,
+  DataIntegrationReadiness,
+  AccessStatus,
+  SecurityAccessReviewItem,
+} from './types/pilot.js'
+export {
+  isValidationPassed,
+  isSignoffApproved,
+  isGatePassed,
+  aggregateGateStatus,
+  pilotExitBlocking,
+  scenarioPilotBlockers,
+} from './helpers/pilot.js'
