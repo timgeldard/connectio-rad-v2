@@ -1,0 +1,33 @@
+[project]
+name = "connectio-api"
+version = "0.1.0"
+description = "ConnectIO V2 FastAPI backend"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.29",
+  "shared-db",
+]
+
+[tool.uv.sources]
+shared-db = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["routes"]
+include = ["main.py"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 75

@@ -1,0 +1,14 @@
+{
+  "name": "@connectio/data-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@connectio/product-model": "*",
+    "zod": "^3.24.4"
+  }
+}

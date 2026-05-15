@@ -1,0 +1,28 @@
+{
+  "name": "data-contracts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/data-contracts/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "layer:data-contracts", "type:lib"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "packages/data-contracts"
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "packages/data-contracts/vitest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["packages/data-contracts/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

@@ -34,6 +34,31 @@ yarn-error.log
 testem.log
 /typings
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Design system generated (shadcn)
+packages/design-system/components/ui/
+
+# Env files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Playwright
+playwright-report/
+test-results/
+
 # System Files
 .DS_Store
 Thumbs.db

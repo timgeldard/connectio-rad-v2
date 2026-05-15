@@ -1,21 +1,35 @@
-{
+﻿{
   "compilerOptions": {
-    "composite": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "importHelpers": true,
-    "isolatedModules": true,
-    "lib": ["es2022"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "bundler",
+    "strict": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "skipLibCheck": true,
-    "strict": true,
-    "target": "es2022",
-    "customConditions": ["@org/source"]
+    "skipDefaultLibCheck": true,
+    "sourceMap": true,
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@connectio/product-model": ["packages/product-model/src/index.ts"],
+      "@connectio/data-contracts": ["packages/data-contracts/src/index.ts"],
+      "@connectio/design-system": ["packages/design-system/src/index.ts"],
+      "@connectio/workspace-runtime": ["packages/workspace-runtime/src/index.ts"],
+      "@connectio/evidence-panel-runtime": ["packages/evidence-panel-runtime/src/index.ts"],
+      "@connectio/personalization": ["packages/personalization/src/index.ts"],
+      "@connectio/auth-scope": ["packages/auth-scope/src/index.ts"],
+      "@connectio/source-adapters": ["packages/source-adapters/src/index.ts"],
+      "@connectio/telemetry": ["packages/telemetry/src/index.ts"],
+      "@connectio/feature-flags": ["packages/feature-flags/src/index.ts"],
+      "@connectio/shared-playwright": ["packages/shared-playwright/src/index.ts"]
+    }
   }
 }
