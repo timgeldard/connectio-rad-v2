@@ -10,6 +10,7 @@ import type {
   CoAReleaseStatus,
   TraceRiskSignal,
   RelatedInvestigation,
+  TraceExposureForRelease,
 } from "@connectio/data-contracts"
 import type { AdapterResult } from "@connectio/source-adapters"
 import { trace2Adapter, toAdapterError } from "./trace2-adapter.js"
@@ -97,6 +98,14 @@ export function useRelatedInvestigations(request: Trace2AdapterRequest) {
   return useQuery<AdapterResult<readonly RelatedInvestigation[]>>({
     queryKey: traceKey("getRelatedInvestigations", request),
     queryFn: async () => { try { return await trace2Adapter.getRelatedInvestigations(request) } catch (e) { return toAdapterError<readonly RelatedInvestigation[]>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+  })
+}
+
+export function useTraceExposureForRelease(request: Trace2AdapterRequest) {
+  return useQuery<AdapterResult<TraceExposureForRelease>>({
+    queryKey: traceKey("getTraceExposureForRelease", request),
+    queryFn: async () => { try { return await trace2Adapter.getTraceExposureForRelease(request) } catch (e) { return toAdapterError<TraceExposureForRelease>(e) } },
     staleTime: TRACE_STALE_TIME_MS,
   })
 }

@@ -9,6 +9,7 @@ import type {
   CoAReleaseStatus,
   TraceRiskSignal,
   RelatedInvestigation,
+  TraceExposureForRelease,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -22,6 +23,7 @@ import {
   mockCoAReleaseStatus,
   mockRiskSignals,
   mockRelatedInvestigations,
+  mockTraceExposureForRelease,
 } from './trace2-mock-data.js'
 
 /**
@@ -231,6 +233,24 @@ export class Trace2Adapter {
   ): Promise<AdapterResult<readonly RelatedInvestigation[]>> {
     await this.delay()
     return ok(mockRelatedInvestigations, this.now)
+  }
+
+  /**
+   * Fetches a trace exposure summary oriented for a batch release decision.
+   *
+   * @remarks
+   * This method provides a release-decision view of the trace data — upstream/
+   * downstream risk levels, affected parties, and open investigation links.
+   * Consumed by the Quality Batch Release workspace's Trace Evidence panel.
+   *
+   * @param _request - Investigation and batch identifiers.
+   * @returns The trace exposure for release summary, or an error result.
+   */
+  async getTraceExposureForRelease(
+    _request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<TraceExposureForRelease>> {
+    await this.delay()
+    return ok(mockTraceExposureForRelease, this.now)
   }
 }
 

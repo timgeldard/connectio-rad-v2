@@ -74,4 +74,5 @@ export {
   useCoAReleaseStatus,
   useRiskSignals,
   useRelatedInvestigations,
+  useTraceExposureForRelease,
 } from './adapters/trace2-queries.js'

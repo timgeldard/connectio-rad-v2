@@ -2,7 +2,12 @@
  * @connectio/di-operations
  *
  * Domain integration package for the Operations workspace.
- * Phase 0 stub — registration only.
+ * Phase 2: Operations evidence adapter consumed by Quality Batch Release workspace.
  */
 
 export { operationsWorkspaceRegistration } from './registration.js'
+
+export { OperationsEvidenceAdapter, operationsEvidenceAdapter, toAdapterError } from './adapters/operations-evidence-adapter.js'
+export type { OperationsEvidenceAdapterRequest, OperationsEvidenceAdapterOptions } from './adapters/operations-evidence-adapter.js'
+
+export { useProcessOrderEvidence } from './adapters/operations-evidence-queries.js'

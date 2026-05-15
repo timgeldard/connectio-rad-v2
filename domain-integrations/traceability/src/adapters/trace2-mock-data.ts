@@ -9,6 +9,7 @@ import type {
   CoAReleaseStatus,
   TraceRiskSignal,
   RelatedInvestigation,
+  TraceExposureForRelease,
 } from '@connectio/data-contracts'
 
 /**
@@ -362,3 +363,24 @@ export const mockRelatedInvestigations: RelatedInvestigation[] = [
     owner: 'supplier.quality@kerry.com',
   },
 ]
+
+/** Trace exposure summary oriented for a batch release decision. */
+export const mockTraceExposureForRelease: TraceExposureForRelease = {
+  batchId: MOCK_BATCH_ID,
+  releaseCaseId: 'RC-2024-001847',
+  upstreamRiskLevel: 'high',
+  downstreamRiskLevel: 'critical',
+  affectedCustomerCount: 3,
+  affectedSupplierLotCount: 1,
+  openTraceInvestigations: [
+    {
+      investigationId: MOCK_INVESTIGATION_ID,
+      status: 'in-progress',
+      severity: 'high',
+      summary: 'Listeria monocytogenes — environmental signal and MIC failure linked to batch CH-240308-0047',
+    },
+  ],
+  recallRiskFlag: true,
+  traceReadiness: 'blocked',
+  lastEvaluatedAt: '2024-03-08T10:30:00.000Z',
+}
