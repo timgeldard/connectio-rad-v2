@@ -149,4 +149,136 @@ describe('ProcessOrderReviewAdapter', () => {
       }
     })
   })
+
+  describe('getOrderOperations', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getOrderOperations(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+    })
+
+    it('returns 8 operations matching progress summary totals', async () => {
+      const result = await adapter.getOrderOperations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.length).toBe(8)
+    })
+
+    it('6 operations are confirmed matching operationsComplete count', async () => {
+      const result = await adapter.getOrderOperations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const confirmed = result.data.filter(o => o.confirmed)
+      expect(confirmed.length).toBe(6)
+    })
+
+    it('each operation has valid status', async () => {
+      const result = await adapter.getOrderOperations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const validStatuses = ['pending', 'in-progress', 'confirmed', 'skipped']
+      for (const op of result.data) {
+        expect(validStatuses).toContain(op.status)
+      }
+    })
+
+    it('plannedDurationMinutes is positive for all operations', async () => {
+      const result = await adapter.getOrderOperations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const op of result.data) {
+        expect(op.plannedDurationMinutes).toBeGreaterThan(0)
+      }
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getOrderOperations(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
+
+  describe('getOrderConfirmations', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+    })
+
+    it('returns 7 confirmations matching progress summary totals', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.length).toBe(7)
+    })
+
+    it('5 final confirmations matching confirmationsComplete count', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const finalConfs = result.data.filter(c => c.isFinalConfirmation)
+      expect(finalConfs.length).toBe(5)
+    })
+
+    it('2 open confirmations matching openConfirmations count', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const openConfs = result.data.filter(c => !c.isFinalConfirmation)
+      expect(openConfs.length).toBe(2)
+    })
+
+    it('confirmedYield is non-negative for all confirmations', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const conf of result.data) {
+        expect(conf.confirmedYield).toBeGreaterThanOrEqual(0)
+      }
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getOrderConfirmations(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
+
+  describe('getOrderGoodsMovements', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+    })
+
+    it('includes both input and output movements', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const hasInput = result.data.some(m => m.direction === 'input')
+      const hasOutput = result.data.some(m => m.direction === 'output')
+      expect(hasInput).toBe(true)
+      expect(hasOutput).toBe(true)
+    })
+
+    it('each movement has valid direction', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const mov of result.data) {
+        expect(['input', 'output']).toContain(mov.direction)
+      }
+    })
+
+    it('each movement has positive quantity', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const mov of result.data) {
+        expect(mov.quantity).toBeGreaterThan(0)
+      }
+    })
+
+    it('output movement references output batch CH-240308-0047', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const outputMov = result.data.find(m => m.direction === 'output')
+      expect(outputMov?.batchId).toBe('CH-240308-0047')
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getOrderGoodsMovements(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
 })

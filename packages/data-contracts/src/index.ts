@@ -212,6 +212,9 @@ export type {
   OrderQualityContext,
   OrderStagingContext,
   RelatedBatchContext,
+  ProcessOrderOperation,
+  ProcessOrderConfirmation,
+  ProcessOrderGoodsMovement,
 } from './schemas/process-order-review.js'
 export {
   ProcessOrderReviewContextSchema,
@@ -221,6 +224,9 @@ export {
   OrderQualityContextSchema,
   OrderStagingContextSchema,
   RelatedBatchContextSchema,
+  ProcessOrderOperationSchema,
+  ProcessOrderConfirmationSchema,
+  ProcessOrderGoodsMovementSchema,
 } from './schemas/process-order-review.js'
 
 export type {

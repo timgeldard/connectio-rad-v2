@@ -34,8 +34,10 @@ export const ProcessOrderHeaderSchema = z.object({
   materialDescription: z.string(),
   batchId: z.string().optional(),
   plantId: z.string(),
+  productionLine: z.string().optional(),
   plannedQuantity: z.number().min(0),
   confirmedQuantity: z.number().min(0),
+  scrapQuantity: z.number().min(0).optional(),
   uom: z.string(),
   plannedStart: z.string().datetime(),
   plannedFinish: z.string().datetime(),
@@ -131,3 +133,71 @@ export const RelatedBatchContextSchema = z.object({
 })
 
 export type RelatedBatchContext = z.infer<typeof RelatedBatchContextSchema>
+
+// ---------------------------------------------------------------------------
+// ProcessOrderOperation
+// ---------------------------------------------------------------------------
+
+export const ProcessOrderOperationSchema = z.object({
+  operationId: z.string(),
+  operationNumber: z.string(),
+  operationText: z.string(),
+  workCentre: z.string(),
+  resource: z.string().optional(),
+  plannedStart: z.string().datetime(),
+  plannedFinish: z.string().datetime(),
+  actualStart: z.string().datetime().optional(),
+  actualFinish: z.string().datetime().optional(),
+  status: z.enum(['pending', 'in-progress', 'confirmed', 'skipped']),
+  plannedDurationMinutes: z.number().min(0),
+  actualDurationMinutes: z.number().min(0).optional(),
+  confirmationStatus: z.enum(['unconfirmed', 'partially-confirmed', 'final-confirmed']),
+  confirmed: z.boolean(),
+  hasException: z.boolean(),
+})
+
+export type ProcessOrderOperation = z.infer<typeof ProcessOrderOperationSchema>
+
+// ---------------------------------------------------------------------------
+// ProcessOrderConfirmation
+// ---------------------------------------------------------------------------
+
+export const ProcessOrderConfirmationSchema = z.object({
+  confirmationId: z.string(),
+  operationId: z.string(),
+  operationText: z.string(),
+  confirmedYield: z.number().min(0),
+  scrapQuantity: z.number().min(0).optional(),
+  reworkQuantity: z.number().min(0).optional(),
+  uom: z.string(),
+  confirmedAt: z.string().datetime(),
+  confirmedBy: z.string().optional(),
+  isFinalConfirmation: z.boolean(),
+  setupDurationMinutes: z.number().min(0).optional(),
+  machineDurationMinutes: z.number().min(0).optional(),
+  cleaningDurationMinutes: z.number().min(0).optional(),
+  variancePercent: z.number().optional(),
+})
+
+export type ProcessOrderConfirmation = z.infer<typeof ProcessOrderConfirmationSchema>
+
+// ---------------------------------------------------------------------------
+// ProcessOrderGoodsMovement
+// ---------------------------------------------------------------------------
+
+export const ProcessOrderGoodsMovementSchema = z.object({
+  movementId: z.string(),
+  movementType: z.string(),
+  direction: z.enum(['input', 'output']),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string().optional(),
+  quantity: z.number(),
+  uom: z.string(),
+  postedAt: z.string().datetime(),
+  postedBy: z.string().optional(),
+  referenceDocument: z.string().optional(),
+  storageLocation: z.string().optional(),
+})
+
+export type ProcessOrderGoodsMovement = z.infer<typeof ProcessOrderGoodsMovementSchema>

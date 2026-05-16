@@ -6,6 +6,9 @@ import type {
   OrderQualityContext,
   OrderStagingContext,
   RelatedBatchContext,
+  ProcessOrderOperation,
+  ProcessOrderConfirmation,
+  ProcessOrderGoodsMovement,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -16,6 +19,9 @@ import {
   mockOrderQualityContext,
   mockOrderStagingContext,
   mockRelatedBatchContexts,
+  mockOrderOperations,
+  mockOrderConfirmations,
+  mockOrderGoodsMovements,
 } from './process-order-review-mock-data.js'
 
 export interface ProcessOrderReviewAdapterRequest {
@@ -92,6 +98,24 @@ export class ProcessOrderReviewAdapter {
     _request: ProcessOrderReviewAdapterRequest
   ): Promise<AdapterResult<RelatedBatchContext[]>> {
     return ok(mockRelatedBatchContexts, this.now)
+  }
+
+  async getOrderOperations(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ProcessOrderOperation[]>> {
+    return ok(mockOrderOperations, this.now)
+  }
+
+  async getOrderConfirmations(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ProcessOrderConfirmation[]>> {
+    return ok(mockOrderConfirmations, this.now)
+  }
+
+  async getOrderGoodsMovements(
+    _request: ProcessOrderReviewAdapterRequest
+  ): Promise<AdapterResult<ProcessOrderGoodsMovement[]>> {
+    return ok(mockOrderGoodsMovements, this.now)
   }
 }
 

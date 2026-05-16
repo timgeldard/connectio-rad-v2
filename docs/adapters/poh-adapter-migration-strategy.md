@@ -1,0 +1,155 @@
+# POH Adapter Migration Strategy
+
+**Date:** 2026-05-16
+**Domain:** `di-operations`
+**Reference:** `docs/adapters/adapter-migration-strategy.md` (general lifecycle)
+
+---
+
+## Lifecycle Overview
+
+```
+mock
+  → legacy-api (FastAPI proxy → V1 POH backend)
+  → databricks-api (direct Databricks SQL / Unity Catalog)
+```
+
+The `ProcessOrderReviewLegacyApiAdapter` class extends `ProcessOrderReviewAdapter` and overrides methods one at a time as V1 endpoints are confirmed and browser-verified. The `OperationsPlanRiskAdapter` currently has no legacy-api override.
+
+---
+
+## Current State (2026-05-16)
+
+### ProcessOrderReviewAdapter
+
+| Method | V2 tier | V1 endpoint | Proxy route | Browser verified |
+|---|---|---|---|---|
+| `getProcessOrderReviewContext` | mock | `GET /por/order-context` | No | No |
+| `getProcessOrderHeader` | legacy-api (unverified) | `POST /por/order-header` | Yes (exists in `apps/api/routes/por.py`) | No |
+| `getOrderProgressSummary` | mock | `GET /por/order-progress` | No | No |
+| `getExecutionTimeline` | mock | `GET /por/execution-events` | No | No |
+| `getOrderQualityContext` | mock | `GET /por/quality-context` | No | No |
+| `getOrderStagingContext` | mock | `GET /por/staging-context` | No | No |
+| `getRelatedBatchContext` | mock | `GET /por/related-batches` | No | No |
+| `getOrderOperations` | mock | `GET /por/order-phases` | No | No |
+| `getOrderConfirmations` | mock | `GET /por/confirmations` | No | No |
+| `getOrderGoodsMovements` | mock | `GET /por/goods-movements` | No | No |
+
+### OperationsPlanRiskAdapter
+
+| Method | V2 tier | V1 endpoint | Proxy route | Browser verified |
+|---|---|---|---|---|
+| `getOperationsPlanRiskContext` | mock | — | No | No |
+| `getPlanRiskSummary` | mock | — | No | No |
+| `getLateOrders` | mock | — | No | No |
+| `getMaterialShortages` | mock | — | No | No |
+| `getLineStatuses` | mock | — | No | No |
+| `getScheduleAdherence` | mock | — | No | No |
+| `getYieldVariances` | mock | — | No | No |
+| `getShiftHandover` | mock | — | No | No |
+| `getOperationsActionQueue` | mock | — | No | No |
+
+---
+
+## What Can Remain Mock Temporarily
+
+| Method | Reason acceptable at mock |
+|---|---|
+| `getProcessOrderReviewContext` | Context frame; operators know their order |
+| `getExecutionTimeline` | Derived event feed; operators have source records |
+| `getOrderProgressSummary` | Directional — computed from operations/confirmations |
+| `getOrderQualityContext` | QM data visible in SAP directly |
+| `getOrderStagingContext` | Staging operators know their zone |
+| All `OperationsPlanRisk*` methods | Plan-level aggregates; operators verify at source |
+
+---
+
+## What Must Use V1/Legacy API to Prove Parity
+
+| Method | Why V1 is required | V1 endpoint |
+|---|---|---|
+| `getProcessOrderHeader` | Order header drives release and production decisions; unverified mapping may silently show wrong quantities | `POST /por/order-header` |
+| `getOrderOperations` | Operations are the execution record; mock operations show wrong phase state | `GET /por/order-phases` |
+| `getOrderConfirmations` | Confirmations are the yield/scrap audit trail; mock data is misleading | `GET /por/confirmations` |
+| `getOrderGoodsMovements` | Goods movements are the material flow record; mock shows wrong materials | `GET /por/goods-movements` |
+| `getRelatedBatchContext` | Batch tracing drives recall and quality decisions | `GET /por/related-batches` |
+
+---
+
+## What Should Eventually Be Native Databricks API
+
+| Method | Likely Databricks source |
+|---|---|
+| `getProcessOrderHeader` | `vw_gold_process_order` |
+| `getOrderOperations` | `vw_gold_process_order_phase` |
+| `getOrderConfirmations` | `vw_gold_confirmation` |
+| `getOrderGoodsMovements` | `vw_gold_adp_movement` (types 101, 261) |
+| `getRelatedBatchContext` | `vw_gold_batch_material` |
+| `getOrderQualityContext` | `vw_gold_inspection_lot` + `vw_gold_inspection_usage_decision` |
+| `getExecutionTimeline` | Derived from multiple gold views (order, confirmation, movement, inspection) |
+| `getOrderProgressSummary` | Computed from `vw_gold_process_order_phase` aggregate |
+
+---
+
+## Required Tests Before Advancing to Legacy-API
+
+Each method must satisfy the following before a FastAPI proxy route is added:
+
+1. **V1 endpoint confirmed** — URL, HTTP method, request and response field names verified from V1 source code.
+2. **Proxy route created** in `apps/api/routes/por.py`.
+3. **Browser-verified** — end-to-end call from V2 workspace to V1 backend confirmed for at least one plant and one process order.
+4. **Contract tests written** in `process-order-review-legacy-api-adapter.test.ts`:
+   - Success case with representative data
+   - 401 Unauthorized
+   - 404 Not Found (order does not exist)
+   - 500 Internal Server Error
+   - Network failure / timeout
+   - Fallback to mock when `processOrderId` is missing
+
+**Do not advance to legacy-api based on field name assumptions.** The V1 POH backend uses snake_case; V2 schemas use camelCase. The mapping layer must be verified against live V1 responses.
+
+---
+
+## Required Tests Before Advancing to Databricks-API
+
+1. V1 POH backend retired or scheduled for retirement.
+2. `csm_process_order_history` gold views confirmed queryable in Unity Catalog.
+3. V2 `@connectio/data-contracts` Zod schemas validated against Databricks query responses without field renames.
+4. Pilot sign-off on legacy-api tier for at least `getProcessOrderHeader` and `getOrderOperations`.
+5. `process-order-review-databricks-api-adapter.test.ts` created covering same cases as legacy adapter tests.
+
+---
+
+## Advance Order Recommendation
+
+Priority order for V1 wiring:
+
+1. **Browser-verify `getProcessOrderHeader`** — already wired, just needs verification
+2. **`getOrderOperations`** — core execution record; highest daily visibility
+3. **`getOrderConfirmations`** — yield/scrap audit trail; required for quality release
+4. **`getOrderGoodsMovements`** — material flow record; needed for goods-issue reconciliation
+5. **`getRelatedBatchContext`** — batch tracing; required for recall readiness
+6. **`getOrderQualityContext`** — inspection lot detail; linked to QM
+7. **`getExecutionTimeline`** — derived; lowest priority since composed from above
+
+---
+
+## FastAPI Proxy Routes (current state)
+
+```python
+# apps/api/routes/por.py
+POST /por/order-header   # exists — not browser-verified
+```
+
+Routes not yet created (require V1 endpoint shape confirmation first):
+```python
+GET /por/order-phases
+GET /por/confirmations
+GET /por/goods-movements
+GET /por/related-batches
+GET /por/quality-context
+GET /por/staging-context
+GET /por/execution-events
+GET /por/order-context
+GET /por/order-progress
+```
