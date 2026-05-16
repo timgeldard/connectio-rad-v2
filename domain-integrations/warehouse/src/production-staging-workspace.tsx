@@ -23,12 +23,14 @@ export interface ProductionStagingWorkspaceProps {
   readonly scope: ScopeContext
   readonly planDate?: string
   readonly viewId?: string
+  readonly onNavigateToWorkspace?: (workspaceId: string) => void
 }
 
 export function ProductionStagingWorkspace({
   scope,
   planDate,
   viewId = 'staging-overview',
+  onNavigateToWorkspace,
 }: ProductionStagingWorkspaceProps) {
   const request: ProductionStagingAdapterRequest = {
     plantId: scope.plantId,
@@ -46,15 +48,15 @@ export function ProductionStagingWorkspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'staging-overview'}
       actionSidebar={<ProductionStagingActionsPanel context={context} />}
     >
-      {resolveView(viewId, request)}
+      {resolveView(viewId, request, onNavigateToWorkspace)}
     </StandardWorkspaceTemplate>
   )
 }
 
-function resolveView(viewId: string, request: ProductionStagingAdapterRequest): React.ReactNode {
+function resolveView(viewId: string, request: ProductionStagingAdapterRequest, onNavigateToWorkspace?: (workspaceId: string) => void): React.ReactNode {
   switch (viewId as ProductionStagingViewId) {
     case 'staging-overview':
-      return <StagingOverviewView request={request} />
+      return <StagingOverviewView request={request} onNavigateToWorkspace={onNavigateToWorkspace} />
     case 'order-staging':
       return <OrderStagingView request={request} />
     case 'shortfalls':

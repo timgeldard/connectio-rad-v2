@@ -90,6 +90,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           scope={activeScope}
           planDate={planDate ?? undefined}
           viewId={viewId ?? 'staging-overview'}
+          onNavigateToWorkspace={setWorkspace}
         />
       </div>
     )

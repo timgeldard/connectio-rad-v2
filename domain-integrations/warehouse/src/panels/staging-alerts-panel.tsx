@@ -21,6 +21,7 @@ const registration: EvidencePanelRegistration = {
 
 export interface StagingAlertsPanelProps {
   readonly request: ProductionStagingAdapterRequest
+  readonly onNavigateToWorkspace?: (workspaceId: string) => void
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -41,7 +42,7 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-export function StagingAlertsPanel({ request }: StagingAlertsPanelProps) {
+export function StagingAlertsPanel({ request, onNavigateToWorkspace }: StagingAlertsPanelProps) {
   const { data: result, isLoading } = useStagingAlerts(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
@@ -64,6 +65,7 @@ export function StagingAlertsPanel({ request }: StagingAlertsPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {open && (
         <div style={{ padding: '8px 0' }}>
@@ -83,11 +85,19 @@ export function StagingAlertsPanel({ request }: StagingAlertsPanelProps) {
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--shell-fg)', flex: 1 }}>{alert.description}</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--shell-fg-2)', fontStyle: 'italic' }}>{alert.recommendedAction}</div>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>{STATUS_LABEL[alert.status] ?? alert.status}</span>
                     <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>{formatTime(alert.raisedAt)}</span>
                     {alert.owner && (
                       <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>{alert.owner}</span>
+                    )}
+                    {alert.alertType === 'blocked-order' && onNavigateToWorkspace && (
+                      <button
+                        onClick={() => onNavigateToWorkspace('warehouse-360-overview')}
+                        style={{ fontSize: 11, color: 'var(--ocean, #005776)', border: '1px solid var(--ocean, #005776)', borderRadius: 4, padding: '1px 6px', background: 'transparent', cursor: 'pointer' }}
+                      >
+                        View WH360 Holds
+                      </button>
                     )}
                   </div>
                 </div>

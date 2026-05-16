@@ -21,6 +21,7 @@ const registration: EvidencePanelRegistration = {
 
 export interface StagingShortfallsPanelProps {
   readonly request: ProductionStagingAdapterRequest
+  readonly onProcessOrderClick?: (processOrderId: string) => void
 }
 
 const URGENCY_COLOR: Record<string, string> = {
@@ -39,7 +40,7 @@ const PROC_STATUS_COLOR: Record<string, string> = {
   unknown: '#9E9E9E',
 }
 
-export function StagingShortfallsPanel({ request }: StagingShortfallsPanelProps) {
+export function StagingShortfallsPanel({ request, onProcessOrderClick }: StagingShortfallsPanelProps) {
   const { data: result, isLoading } = useStagingShortfalls(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
@@ -61,6 +62,7 @@ export function StagingShortfallsPanel({ request }: StagingShortfallsPanelProps)
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {shortfalls && (
         <div style={{ padding: '8px 0' }}>
@@ -89,7 +91,21 @@ export function StagingShortfallsPanel({ request }: StagingShortfallsPanelProps)
                     {sf.expectedArrival && (
                       <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>ETA: {new Date(sf.expectedArrival).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                     )}
-                    <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>Orders: {sf.affectedOrders.length}</span>
+                    {onProcessOrderClick ? (
+                      <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {sf.affectedOrders.map(orderId => (
+                          <button
+                            key={orderId}
+                            onClick={() => onProcessOrderClick(orderId)}
+                            style={{ fontSize: 11, color: 'var(--ocean, #005776)', border: '1px solid var(--ocean, #005776)', borderRadius: 4, padding: '1px 6px', background: 'transparent', cursor: 'pointer' }}
+                          >
+                            {orderId}
+                          </button>
+                        ))}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>Orders: {sf.affectedOrders.length}</span>
+                    )}
                     {sf.canBeSubstituted && (
                       <span style={{ fontSize: 11, color: '#1976D2' }}>Substitution available</span>
                     )}
