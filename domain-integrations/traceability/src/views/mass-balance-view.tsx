@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
-import type { MassBalanceSummary } from '@connectio/data-contracts'
+import type { MassBalanceSummary, MassBalanceMovement } from '@connectio/data-contracts'
 import { BatchHeaderPanel } from '../panels/batch-header-panel.js'
 import { TraceGraphPanel } from '../panels/trace-graph-panel.js'
 import { RiskSignalsPanel } from '../panels/risk-signals-panel.js'
@@ -120,9 +120,92 @@ function MassBalancePanel({ request }: MassBalancePanelProps) {
               {data.unresolvedMovements} unresolved movement(s) — balance may be incomplete
             </div>
           )}
+          {data.movements && data.movements.length > 0 && (
+            <MovementsTable movements={data.movements} />
+          )}
         </div>
       )}
     </EvidencePanel>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Movements table
+// ---------------------------------------------------------------------------
+
+const CATEGORY_COLORS: Record<string, string> = {
+  production: '#2563EB',
+  shipment: '#D97706',
+  consumption: '#7C3AED',
+  adjustment: '#6B7280',
+}
+
+function MovementsTable({ movements }: { movements: readonly MassBalanceMovement[] }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+        Movements ({movements.length})
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+          <thead>
+            <tr>
+              {['Date', 'Category', 'Delta', 'Balance', 'Reference'].map(h => (
+                <th
+                  key={h}
+                  style={{
+                    padding: '4px 6px',
+                    textAlign: 'left',
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: '#9CA3AF',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    borderBottom: '1px solid var(--shell-line)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {movements.map((m, i) => {
+              const catColor = CATEGORY_COLORS[m.category] ?? '#6B7280'
+              const deltaPositive = m.delta >= 0
+              return (
+                <tr key={i} style={{ borderBottom: '1px solid var(--shell-line)' }}>
+                  <td style={{ padding: '4px 6px', color: '#374151', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                    {m.date}
+                  </td>
+                  <td style={{ padding: '4px 6px' }}>
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: catColor,
+                      letterSpacing: '0.04em',
+                    }}>
+                      {m.category}
+                    </span>
+                  </td>
+                  <td style={{ padding: '4px 6px', fontWeight: 600, color: deltaPositive ? '#059669' : '#DC2626', whiteSpace: 'nowrap' }}>
+                    {deltaPositive ? '+' : ''}{m.delta.toLocaleString()} {m.uom}
+                  </td>
+                  <td style={{ padding: '4px 6px', color: '#374151', whiteSpace: 'nowrap' }}>
+                    {m.runningBalance.toLocaleString()} {m.uom}
+                  </td>
+                  <td style={{ padding: '4px 6px', color: '#6B7280', fontFamily: 'monospace', fontSize: 10 }}>
+                    {m.reference ?? '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 

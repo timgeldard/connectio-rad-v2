@@ -123,6 +123,23 @@ export const TraceGraphSchema = z.object({
 export type TraceGraph = z.infer<typeof TraceGraphSchema>
 
 // ---------------------------------------------------------------------------
+// MassBalanceMovement
+// ---------------------------------------------------------------------------
+
+export const MassBalanceMovementSchema = z.object({
+  date: z.string(),
+  category: z.enum(['production', 'shipment', 'consumption', 'adjustment']),
+  quantity: z.number().min(0),
+  delta: z.number(),
+  runningBalance: z.number(),
+  uom: z.string(),
+  reference: z.string().optional(),
+  movementType: z.string().optional(),
+})
+
+export type MassBalanceMovement = z.infer<typeof MassBalanceMovementSchema>
+
+// ---------------------------------------------------------------------------
 // MassBalanceSummary
 // ---------------------------------------------------------------------------
 
@@ -134,6 +151,7 @@ export const MassBalanceSummarySchema = z.object({
   uom: z.string(),
   confidence: z.number().min(0).max(1),
   unresolvedMovements: z.number().int().min(0),
+  movements: MassBalanceMovementSchema.array().readonly().optional(),
 })
 
 export type MassBalanceSummary = z.infer<typeof MassBalanceSummarySchema>

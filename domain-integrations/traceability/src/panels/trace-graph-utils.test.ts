@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bfsLayout, mapToFlowNodes, mapToFlowEdges, H_SPACING, NODE_WIDTH } from './trace-graph-utils.js'
+import { bfsLayout, mapToFlowNodes, mapToFlowEdges, filterGraphByDirection, H_SPACING, NODE_WIDTH } from './trace-graph-utils.js'
 import type { TraceGraph } from '@connectio/data-contracts'
 
 // ---------------------------------------------------------------------------
@@ -118,6 +118,91 @@ describe('mapToFlowNodes', () => {
     const rootNode = nodes.find(n => n.id === 'root')
     expect(rootNode?.data.node.materialDescription).toBe('Root material')
     expect(rootNode?.data.node.riskLevel).toBe('high')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// bfsLayout — disconnected nodes
+// ---------------------------------------------------------------------------
+
+describe('bfsLayout — disconnected nodes', () => {
+  it('places disconnected nodes below the rest of the graph', () => {
+    const disconnectedGraph: TraceGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        { id: 'orphan', type: 'process-order', materialId: 'MAT-999', materialDescription: 'Orphan node', status: 'unresolved', riskLevel: 'none' },
+      ],
+    }
+    const positions = bfsLayout(disconnectedGraph)
+    const orphan = positions.get('orphan')
+    const root = positions.get('root')
+    expect(orphan).toBeDefined()
+    expect(root).toBeDefined()
+    // Disconnected nodes go to min_level - 2 which is below all connected upstream nodes
+    const minConnectedY = Math.min(...['root', 'up1', 'up2', 'dn1', 'dn2'].map(id => positions.get(id)!.y))
+    expect(orphan!.y).toBeLessThan(minConnectedY)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// filterGraphByDirection
+// ---------------------------------------------------------------------------
+
+describe('filterGraphByDirection', () => {
+  it('returns the full graph unchanged for "both"', () => {
+    const result = filterGraphByDirection(graph, 'both')
+    expect(result.nodes).toHaveLength(graph.nodes.length)
+    expect(result.edges).toHaveLength(graph.edges.length)
+  })
+
+  it('"forward" returns root and all downstream nodes only', () => {
+    const result = filterGraphByDirection(graph, 'forward')
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain('root')
+    expect(ids).toContain('dn1')
+    expect(ids).toContain('dn2')
+    expect(ids).not.toContain('up1')
+    expect(ids).not.toContain('up2')
+  })
+
+  it('"reverse" returns root and all upstream nodes only', () => {
+    const result = filterGraphByDirection(graph, 'reverse')
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain('root')
+    expect(ids).toContain('up1')
+    expect(ids).toContain('up2')
+    expect(ids).not.toContain('dn1')
+    expect(ids).not.toContain('dn2')
+  })
+
+  it('"forward" only includes edges between reachable nodes', () => {
+    const result = filterGraphByDirection(graph, 'forward')
+    for (const e of result.edges) {
+      const sourceReachable = result.nodes.some(n => n.id === e.source)
+      const targetReachable = result.nodes.some(n => n.id === e.target)
+      expect(sourceReachable).toBe(true)
+      expect(targetReachable).toBe(true)
+    }
+  })
+
+  it('"forward" sets upstreamCount to 0', () => {
+    const result = filterGraphByDirection(graph, 'forward')
+    expect(result.upstreamCount).toBe(0)
+    expect(result.direction).toBe('forward')
+  })
+
+  it('"reverse" sets downstreamCount to 0', () => {
+    const result = filterGraphByDirection(graph, 'reverse')
+    expect(result.downstreamCount).toBe(0)
+    expect(result.direction).toBe('reverse')
+  })
+
+  it('returns empty nodes/edges for an empty graph', () => {
+    const emptyGraph: TraceGraph = { ...graph, nodes: [], edges: [] }
+    const result = filterGraphByDirection(emptyGraph, 'forward')
+    expect(result.nodes).toHaveLength(0)
+    expect(result.edges).toHaveLength(0)
   })
 })
 

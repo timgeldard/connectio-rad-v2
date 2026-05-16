@@ -8,10 +8,11 @@ import {
   useEdgesState,
   type NodeProps,
   type Node,
+  type Edge,
 } from '@xyflow/react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
-import type { TraceNode } from '@connectio/data-contracts'
+import type { TraceNode, TraceEdge } from '@connectio/data-contracts'
 import { useTraceGraph } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 import {
@@ -23,6 +24,7 @@ import {
   NODE_HEIGHT,
   mapToFlowNodes,
   mapToFlowEdges,
+  filterGraphByDirection,
   type TraceNodeData,
 } from './trace-graph-utils.js'
 
@@ -112,9 +114,10 @@ const nodeTypes = { traceNode: TraceNodeCard }
 // Selected node detail panel
 // ---------------------------------------------------------------------------
 
-function SelectedNodeDetail({ node }: { node: TraceNode }) {
+function SelectedNodeDetail({ node, graphEdges }: { node: TraceNode; graphEdges: TraceEdge[] }) {
   const risk = node.riskLevel ?? 'none'
   const borderColor = RISK_BORDER[risk] ?? '#6B7280'
+  const connectedEdges = graphEdges.filter(e => e.source === node.id || e.target === node.id)
 
   return (
     <div
@@ -139,6 +142,58 @@ function SelectedNodeDetail({ node }: { node: TraceNode }) {
         {node.quantity != null && <Detail label="Quantity" value={`${node.quantity}${node.uom ? ` ${node.uom}` : ''}`} />}
         <Detail label="Status" value={node.status ?? '—'} />
       </div>
+      {connectedEdges.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+            Relationships ({connectedEdges.length})
+          </div>
+          {connectedEdges.map(e => (
+            <div key={e.id} style={{ fontSize: 10, color: '#374151', padding: '2px 0', display: 'flex', gap: 4 }}>
+              <span style={{ color: '#9CA3AF' }}>{e.source === node.id ? '→' : '←'}</span>
+              <span>{e.relationshipType.replace(/-/g, ' ')}</span>
+              {e.documentReference && (
+                <span style={{ color: '#6B7280', fontFamily: 'monospace' }}>({e.documentReference})</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Selected edge detail panel
+// ---------------------------------------------------------------------------
+
+function SelectedEdgeDetail({ edge, nodes }: { edge: TraceEdge; nodes: TraceNode[] }) {
+  const sourceNode = nodes.find(n => n.id === edge.source)
+  const targetNode = nodes.find(n => n.id === edge.target)
+
+  return (
+    <div
+      style={{
+        padding: '10px 12px',
+        background: 'var(--shell-surface)',
+        border: '1px solid #9CA3AF',
+        borderRadius: 6,
+        marginTop: 8,
+      }}
+      aria-label="Selected relationship details"
+    >
+      <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+        Selected relationship
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+        <Detail label="Type" value={edge.relationshipType.replace(/-/g, ' ')} />
+        {edge.quantity != null && (
+          <Detail label="Quantity" value={`${edge.quantity}${edge.uom ? ` ${edge.uom}` : ''}`} />
+        )}
+        {sourceNode && <Detail label="From" value={sourceNode.materialDescription} />}
+        {targetNode && <Detail label="To" value={targetNode.materialDescription} />}
+        {edge.movementType && <Detail label="Movement type" value={edge.movementType} />}
+        {edge.documentReference && <Detail label="Reference" value={edge.documentReference} />}
+      </div>
     </div>
   )
 }
@@ -161,6 +216,50 @@ function GraphStat({ label, value, highlight = false }: { label: string; value: 
     <div style={{ textAlign: 'center', padding: '8px 4px', background: 'var(--shell-surface)', borderRadius: 4, border: '1px solid var(--shell-line)' }}>
       <div style={{ fontSize: 20, fontWeight: 700, color: highlight ? 'var(--sunset, #F24A00)' : 'var(--shell-fg)' }}>{value}</div>
       <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Direction toggle
+// ---------------------------------------------------------------------------
+
+type DirectionOption = 'both' | 'forward' | 'reverse'
+
+const DIRECTION_LABELS: Record<DirectionOption, string> = {
+  both: 'Both',
+  forward: 'Downstream ↓',
+  reverse: 'Upstream ↑',
+}
+
+function DirectionToggle({
+  active,
+  onChange,
+}: {
+  active: DirectionOption
+  onChange: (d: DirectionOption) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 4, marginBottom: 10 }} role="group" aria-label="Trace direction">
+      {(['reverse', 'both', 'forward'] as DirectionOption[]).map(dir => (
+        <button
+          key={dir}
+          onClick={() => onChange(dir)}
+          style={{
+            padding: '3px 10px',
+            fontSize: 11,
+            borderRadius: 4,
+            border: '1px solid var(--shell-line)',
+            background: active === dir ? '#2563EB' : 'var(--shell-surface)',
+            color: active === dir ? '#fff' : 'var(--shell-fg)',
+            cursor: 'pointer',
+            fontWeight: active === dir ? 600 : 400,
+          }}
+          aria-pressed={active === dir}
+        >
+          {DIRECTION_LABELS[dir]}
+        </button>
+      ))}
     </div>
   )
 }
@@ -191,24 +290,32 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
   const graph = result?.ok ? result.data : null
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
+  const [activeDirection, setActiveDirection] = useState<DirectionOption>('both')
+
+  const directedGraph = useMemo(
+    () => (graph ? filterGraphByDirection(graph, activeDirection) : null),
+    [graph, activeDirection],
+  )
 
   const initialNodes = useMemo(
-    () => (graph ? mapToFlowNodes(graph, selectedId) : []),
+    () => (directedGraph ? mapToFlowNodes(directedGraph, selectedId) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [graph],
+    [directedGraph],
   )
-  const initialEdges = useMemo(() => (graph ? mapToFlowEdges(graph) : []), [graph])
+  const initialEdges = useMemo(() => (directedGraph ? mapToFlowEdges(directedGraph) : []), [directedGraph])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
-  // Sync when graph data changes (e.g. after a refetch)
+  // Sync when graph data or direction changes
   useEffect(() => {
-    if (!graph) return
-    setNodes(mapToFlowNodes(graph, selectedId))
-  // We deliberately omit selectedId so a data refresh doesn't clear selection
+    if (!directedGraph) return
+    setNodes(mapToFlowNodes(directedGraph, selectedId))
+    setEdges(mapToFlowEdges(directedGraph))
+  // Deliberately omit selectedId to avoid clearing selection on data refresh
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, setNodes])
+  }, [directedGraph, setNodes, setEdges])
 
   // Update node selected state without triggering a full graph re-layout
   useEffect(() => {
@@ -220,12 +327,28 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
     )
   }, [selectedId, setNodes])
 
+  // Clear selections when direction changes
+  useEffect(() => {
+    setSelectedId(null)
+    setSelectedEdgeId(null)
+  }, [activeDirection])
+
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedId(prev => (prev === node.id ? null : node.id))
+    setSelectedEdgeId(null)
+  }, [])
+
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id))
+    setSelectedId(null)
   }, [])
 
   const selectedNode = selectedId
-    ? graph?.nodes.find(n => n.id === selectedId) ?? null
+    ? directedGraph?.nodes.find(n => n.id === selectedId) ?? null
+    : null
+
+  const selectedEdge = selectedEdgeId
+    ? directedGraph?.edges.find(e => e.id === selectedEdgeId) ?? null
     : null
 
   return (
@@ -245,40 +368,65 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
             <GraphStat label="Unresolved" value={graph.unresolvedNodeCount} highlight={graph.unresolvedNodeCount > 0} />
           </div>
 
-          {/* Direction / root metadata */}
-          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Direction: <strong style={{ color: 'var(--shell-fg)' }}>{graph.direction}</strong>
-            {' · '}Root: <strong style={{ color: 'var(--shell-fg)', fontFamily: 'monospace' }}>{graph.rootBatch}</strong>
+          {/* Direction toggle + root metadata */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <DirectionToggle active={activeDirection} onChange={setActiveDirection} />
+            <span style={{ fontSize: 11, color: 'var(--shell-fg-3)', fontFamily: 'monospace' }}>
+              {graph.rootBatch}
+            </span>
           </div>
 
-          {/* React Flow graph */}
-          <div
-            style={{ height: 360, borderRadius: 6, border: '1px solid var(--shell-line)', overflow: 'hidden' }}
-            aria-label="Trace graph visualisation"
-          >
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={onNodeClick}
-              fitView
-              fitViewOptions={{ padding: 0.3 }}
-              minZoom={0.3}
-              maxZoom={2}
-              attributionPosition="bottom-right"
+          {/* React Flow graph or empty state */}
+          {directedGraph && directedGraph.nodes.length === 0 ? (
+            <div
+              style={{
+                height: 120,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px dashed var(--shell-line)',
+                borderRadius: 6,
+                color: 'var(--shell-fg-3)',
+                fontSize: 13,
+              }}
             >
-              <Background gap={16} size={1} color="#E5E7EB" />
-              <Controls showInteractive={false} />
-            </ReactFlow>
-          </div>
+              No batch lineage found.
+            </div>
+          ) : (
+            <div
+              style={{ height: 360, borderRadius: 6, border: '1px solid var(--shell-line)', overflow: 'hidden' }}
+              aria-label="Trace graph visualisation"
+            >
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                fitView
+                fitViewOptions={{ padding: 0.3 }}
+                minZoom={0.3}
+                maxZoom={2}
+                attributionPosition="bottom-right"
+              >
+                <Background gap={16} size={1} color="#E5E7EB" />
+                <Controls showInteractive={false} />
+              </ReactFlow>
+            </div>
+          )}
 
-          {/* Selected node detail */}
-          {selectedNode && <SelectedNodeDetail node={selectedNode} />}
-          {!selectedNode && (
+          {/* Selection detail panels */}
+          {selectedNode && (
+            <SelectedNodeDetail node={selectedNode} graphEdges={directedGraph?.edges ?? []} />
+          )}
+          {selectedEdge && directedGraph && (
+            <SelectedEdgeDetail edge={selectedEdge} nodes={directedGraph.nodes} />
+          )}
+          {!selectedNode && !selectedEdge && (
             <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
-              Click a node to see details. Pan and zoom to explore the graph.
+              Click a node or edge to see details. Pan and zoom to explore the graph.
             </p>
           )}
         </div>

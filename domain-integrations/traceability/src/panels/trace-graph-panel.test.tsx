@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { TraceGraphPanel } from './trace-graph-panel.js'
 import type { TraceGraph } from '@connectio/data-contracts'
 
@@ -8,7 +8,17 @@ import type { TraceGraph } from '@connectio/data-contracts'
 // ---------------------------------------------------------------------------
 
 vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ nodes, onNodeClick }: { nodes: { id: string; data: { node: { materialDescription: string } } }[]; onNodeClick?: (evt: unknown, node: unknown) => void }) => (
+  ReactFlow: ({
+    nodes,
+    edges,
+    onNodeClick,
+    onEdgeClick,
+  }: {
+    nodes: { id: string; data: { node: { materialDescription: string } } }[]
+    edges: { id: string; source: string; target: string; label?: string }[]
+    onNodeClick?: (evt: unknown, node: unknown) => void
+    onEdgeClick?: (evt: unknown, edge: unknown) => void
+  }) => (
     <div data-testid="react-flow">
       {nodes.map(n => (
         <button
@@ -17,6 +27,15 @@ vi.mock('@xyflow/react', () => ({
           onClick={evt => onNodeClick?.(evt, n)}
         >
           {n.data.node.materialDescription}
+        </button>
+      ))}
+      {edges.map(e => (
+        <button
+          key={e.id}
+          data-testid={`edge-${e.id}`}
+          onClick={evt => onEdgeClick?.(evt, e)}
+        >
+          {e.label ?? e.id}
         </button>
       ))}
     </div>
@@ -30,8 +49,8 @@ vi.mock('@xyflow/react', () => ({
   },
   useEdgesState: (init: unknown[]) => {
     const { useState } = require('react')
-    const [edges] = useState(init)
-    return [edges, () => {}, () => {}]
+    const [edges, setEdges] = useState(init)
+    return [edges, setEdges, () => {}]
   },
 }))
 
@@ -67,8 +86,8 @@ const mockGraph: TraceGraph = {
     { id: 'dn1', type: 'customer-delivery', materialId: 'MAT-001', batchId: 'BATCH-DN1', materialDescription: 'Delivery DE', quantity: 60, uom: 'KG', status: 'unresolved', riskLevel: 'critical' },
   ],
   edges: [
-    { id: 'e1', source: 'up1', target: 'root', relationshipType: 'component-of', quantity: 1000, uom: 'L' },
-    { id: 'e2', source: 'root', target: 'dn1', relationshipType: 'delivered-to', quantity: 60, uom: 'KG' },
+    { id: 'e1', source: 'up1', target: 'root', relationshipType: 'component-of', quantity: 1000, uom: 'L', documentReference: 'MAT-DOC-001' },
+    { id: 'e2', source: 'root', target: 'dn1', relationshipType: 'delivered-to', quantity: 60, uom: 'KG', movementType: 'GD-601', documentReference: 'DO-4900089123' },
   ],
 }
 
@@ -82,7 +101,7 @@ beforeEach(() => {
 })
 
 // ---------------------------------------------------------------------------
-// Tests
+// Core rendering tests
 // ---------------------------------------------------------------------------
 
 describe('TraceGraphPanel', () => {
@@ -111,32 +130,9 @@ describe('TraceGraphPanel', () => {
     expect(screen.getByText('BATCH-ROOT')).toBeDefined()
   })
 
-  it('shows the hint text when no node is selected', () => {
+  it('shows the hint text when no node or edge is selected', () => {
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/click a node/i)).toBeDefined()
-  })
-
-  it('shows selected node details when a node is clicked', () => {
-    render(<TraceGraphPanel request={request} />)
-    fireEvent.click(screen.getByTestId('node-dn1'))
-    expect(screen.getByText('Selected node')).toBeDefined()
-    expect(screen.getByText('Delivery DE')).toBeDefined()
-  })
-
-  it('deselects a node when clicked again', () => {
-    render(<TraceGraphPanel request={request} />)
-    fireEvent.click(screen.getByTestId('node-dn1'))
-    expect(screen.getByText('Selected node')).toBeDefined()
-    fireEvent.click(screen.getByTestId('node-dn1'))
-    expect(screen.queryByText('Selected node')).toBeNull()
-  })
-
-  it('switches selection between two nodes', () => {
-    render(<TraceGraphPanel request={request} />)
-    fireEvent.click(screen.getByTestId('node-root'))
-    expect(screen.getByText('Root Cheese Block')).toBeDefined()
-    fireEvent.click(screen.getByTestId('node-up1'))
-    expect(screen.getByText('Raw Milk')).toBeDefined()
+    expect(screen.getByText(/click a node or edge/i)).toBeDefined()
   })
 
   it('wraps content in the EvidencePanel', () => {
@@ -162,5 +158,151 @@ describe('TraceGraphPanel', () => {
 
     render(<TraceGraphPanel request={request} />)
     expect(screen.queryByTestId('react-flow')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Node selection tests
+// ---------------------------------------------------------------------------
+
+describe('TraceGraphPanel — node selection', () => {
+  it('shows selected node details when a node is clicked', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-dn1'))
+    expect(screen.getByText('Selected node')).toBeDefined()
+    expect(screen.getByText('Delivery DE')).toBeDefined()
+  })
+
+  it('deselects a node when clicked again', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-dn1'))
+    expect(screen.getByText('Selected node')).toBeDefined()
+    fireEvent.click(screen.getByTestId('node-dn1'))
+    expect(screen.queryByText('Selected node')).toBeNull()
+  })
+
+  it('switches selection between two nodes', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-root'))
+    expect(screen.getByText('Root Cheese Block')).toBeDefined()
+    fireEvent.click(screen.getByTestId('node-up1'))
+    expect(screen.getByText('Raw Milk')).toBeDefined()
+  })
+
+  it('shows connected relationships in selected node detail', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-root'))
+    // root has e1 (component of, incoming) and e2 (delivered to, outgoing)
+    expect(screen.getByText('Relationships (2)')).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Edge selection tests
+// ---------------------------------------------------------------------------
+
+describe('TraceGraphPanel — edge selection', () => {
+  it('shows edge detail panel when an edge is clicked', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.getByText('Selected relationship')).toBeDefined()
+  })
+
+  it('shows relationship type for the selected edge', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    const detail = screen.getByLabelText('Selected relationship details')
+    expect(within(detail).getByText('component of')).toBeDefined()
+  })
+
+  it('shows movement type when present', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e2'))
+    expect(screen.getByText('GD-601')).toBeDefined()
+  })
+
+  it('shows document reference when present', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.getByText('MAT-DOC-001')).toBeDefined()
+  })
+
+  it('shows source and target material descriptions', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    const detail = screen.getByLabelText('Selected relationship details')
+    expect(within(detail).getByText('Raw Milk')).toBeDefined()
+    expect(within(detail).getByText('Root Cheese Block')).toBeDefined()
+  })
+
+  it('clears edge detail when edge clicked again', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.getByText('Selected relationship')).toBeDefined()
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.queryByText('Selected relationship')).toBeNull()
+  })
+
+  it('clears node selection when an edge is clicked', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-root'))
+    expect(screen.getByText('Selected node')).toBeDefined()
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.queryByText('Selected node')).toBeNull()
+    expect(screen.getByText('Selected relationship')).toBeDefined()
+  })
+
+  it('clears edge selection when a node is clicked', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('edge-e1'))
+    expect(screen.getByText('Selected relationship')).toBeDefined()
+    fireEvent.click(screen.getByTestId('node-root'))
+    expect(screen.queryByText('Selected relationship')).toBeNull()
+    expect(screen.getByText('Selected node')).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Direction toggle tests
+// ---------------------------------------------------------------------------
+
+describe('TraceGraphPanel — direction toggle', () => {
+  it('renders the three direction toggle buttons', () => {
+    render(<TraceGraphPanel request={request} />)
+    expect(screen.getByText('Both')).toBeDefined()
+    expect(screen.getByText('Downstream ↓')).toBeDefined()
+    expect(screen.getByText('Upstream ↑')).toBeDefined()
+  })
+
+  it('"Downstream ↓" hides upstream nodes', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByText('Downstream ↓'))
+    expect(screen.queryByTestId('node-up1')).toBeNull()
+    expect(screen.getByTestId('node-root')).toBeDefined()
+    expect(screen.getByTestId('node-dn1')).toBeDefined()
+  })
+
+  it('"Upstream ↑" hides downstream nodes', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByText('Upstream ↑'))
+    expect(screen.queryByTestId('node-dn1')).toBeNull()
+    expect(screen.getByTestId('node-root')).toBeDefined()
+    expect(screen.getByTestId('node-up1')).toBeDefined()
+  })
+
+  it('"Both" restores all nodes', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByText('Downstream ↓'))
+    expect(screen.queryByTestId('node-up1')).toBeNull()
+    fireEvent.click(screen.getByText('Both'))
+    expect(screen.getByTestId('node-up1')).toBeDefined()
+  })
+
+  it('clears selection when direction changes', () => {
+    render(<TraceGraphPanel request={request} />)
+    fireEvent.click(screen.getByTestId('node-root'))
+    expect(screen.getByText('Selected node')).toBeDefined()
+    fireEvent.click(screen.getByText('Downstream ↓'))
+    expect(screen.queryByText('Selected node')).toBeNull()
   })
 })

@@ -222,6 +222,48 @@ export const mockMassBalance: MassBalanceSummary = {
   uom: 'KG-equivalent',
   confidence: 0.94,
   unresolvedMovements: 1,
+  movements: [
+    {
+      date: '2024-03-08',
+      category: 'production',
+      quantity: 2400,
+      delta: 2400,
+      runningBalance: 2400,
+      uom: 'KG',
+      reference: 'PO-240308-1189',
+      movementType: 'GR-101',
+    },
+    {
+      date: '2024-03-09',
+      category: 'shipment',
+      quantity: 800,
+      delta: -800,
+      runningBalance: 1600,
+      uom: 'KG',
+      reference: 'DO-4900089124',
+      movementType: 'GD-601',
+    },
+    {
+      date: '2024-03-10',
+      category: 'shipment',
+      quantity: 600,
+      delta: -600,
+      runningBalance: 1000,
+      uom: 'KG',
+      reference: 'DO-4900089123',
+      movementType: 'GD-601',
+    },
+    {
+      date: '2024-03-10',
+      category: 'consumption',
+      quantity: 0,
+      delta: 0,
+      runningBalance: 1000,
+      uom: 'KG',
+      reference: 'MAT-4500123456',
+      movementType: 'GI-261',
+    },
+  ],
 }
 
 export const mockCustomerExposure: CustomerExposureSummary = {

@@ -56,8 +56,11 @@ export const NODE_TYPE_LABEL: Record<string, string> = {
  *
  * Levels: root = 0, upstream nodes get negative levels, downstream get positive.
  * Within each level nodes are spread horizontally by H_SPACING.
+ * Nodes unreachable from the root are placed in a disconnected row at the bottom.
  */
 export function bfsLayout(graph: TraceGraph): Map<string, { x: number; y: number }> {
+  if (graph.nodes.length === 0) return new Map()
+
   const rootNode = graph.nodes.find(n => n.batchId === graph.rootBatch) ?? graph.nodes[0]
   if (!rootNode) return new Map()
 
@@ -81,6 +84,17 @@ export function bfsLayout(graph: TraceGraph): Map<string, { x: number; y: number
     }
   }
 
+  // Place disconnected nodes (unreachable from root) in a separate row below the graph
+  const disconnectedLevel =
+    levelOf.size > 0
+      ? Math.min(...Array.from(levelOf.values())) - 2
+      : 0
+  for (const node of graph.nodes) {
+    if (!levelOf.has(node.id)) {
+      levelOf.set(node.id, disconnectedLevel)
+    }
+  }
+
   // Group nodes by level so we can centre each row
   const byLevel = new Map<number, string[]>()
   for (const [id, level] of levelOf) {
@@ -99,6 +113,53 @@ export function bfsLayout(graph: TraceGraph): Map<string, { x: number; y: number
   }
 
   return positions
+}
+
+/**
+ * Returns a filtered view of the graph containing only nodes and edges
+ * reachable from the root in the specified direction.
+ *
+ * `'both'` returns the graph unchanged.
+ * `'forward'` follows edges from root → downstream.
+ * `'reverse'` follows edges from root ← upstream.
+ */
+export function filterGraphByDirection(
+  graph: TraceGraph,
+  activeDirection: 'forward' | 'reverse' | 'both',
+): TraceGraph {
+  if (activeDirection === 'both') return graph
+
+  const rootNode = graph.nodes.find(n => n.batchId === graph.rootBatch) ?? graph.nodes[0]
+  if (!rootNode) return { ...graph, nodes: [], edges: [] }
+
+  const reachable = new Set<string>([rootNode.id])
+  const queue = [rootNode.id]
+
+  while (queue.length > 0) {
+    const cur = queue.shift()!
+    for (const edge of graph.edges) {
+      if (activeDirection === 'forward' && edge.source === cur && !reachable.has(edge.target)) {
+        reachable.add(edge.target)
+        queue.push(edge.target)
+      }
+      if (activeDirection === 'reverse' && edge.target === cur && !reachable.has(edge.source)) {
+        reachable.add(edge.source)
+        queue.push(edge.source)
+      }
+    }
+  }
+
+  const filteredNodes = graph.nodes.filter(n => reachable.has(n.id))
+  const filteredEdges = graph.edges.filter(e => reachable.has(e.source) && reachable.has(e.target))
+
+  return {
+    ...graph,
+    direction: activeDirection,
+    nodes: filteredNodes,
+    edges: filteredEdges,
+    upstreamCount: activeDirection === 'forward' ? 0 : graph.upstreamCount,
+    downstreamCount: activeDirection === 'reverse' ? 0 : graph.downstreamCount,
+  }
 }
 
 // ---------------------------------------------------------------------------
