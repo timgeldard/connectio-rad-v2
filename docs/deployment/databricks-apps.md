@@ -265,10 +265,57 @@ path-segment deep links is not needed.
 | `V1_WH360_API_BASE_URL` | Secret scope | Base URL of the V1 Warehouse 360 proxy target |
 | `V1_POH_API_BASE_URL` | Secret scope | Base URL of the V1 Process Order History proxy target |
 | `V1_CQ_API_BASE_URL` | Secret scope | Base URL of the V1 Connected Quality backend |
+| `BACKEND_ADAPTER_MODE` | app.yaml literal or secret | `legacy-api` (default) or `databricks-api`. Controls whether POH and CQ Lab routes query Databricks directly or proxy to V1. |
+| `DATABRICKS_HOST` | Secret scope | Databricks workspace hostname (no `https://` prefix). Required when `BACKEND_ADAPTER_MODE=databricks-api`. Example: `myworkspace.azuredatabricks.net` |
+| `SQL_WAREHOUSE_ID` | Secret scope | SQL Warehouse ID to run statements against. Required when `BACKEND_ADAPTER_MODE=databricks-api`. |
 | `VITE_CQ_API_BASE_URL` | Build env | Frontend base URL for CQ API (empty = same-origin Databricks Apps deployment) |
 | `ADAPTER_MODE` | app.yaml literal | Informational only — the frontend adapter mode is baked into the JS bundle at build time |
 | `PYTHONUNBUFFERED` | app.yaml literal | Ensures FastAPI logs appear immediately in Databricks Apps log stream |
 | `PORT` | Injected by Databricks Apps | Databricks may override the port; current app.yaml binds to 8000 regardless — align if needed |
+
+### Databricks-api mode secrets
+
+To enable native Databricks reads, add the following secrets and update `app.yaml`:
+
+```bash
+databricks secrets put-secret connectio-v2 backend-adapter-mode \
+  --string-value "databricks-api"
+
+databricks secrets put-secret connectio-v2 databricks-host \
+  --string-value "<workspace>.azuredatabricks.net"
+
+databricks secrets put-secret connectio-v2 sql-warehouse-id \
+  --string-value "<warehouse-id>"
+```
+
+In `app.yaml`:
+```yaml
+env:
+  - name: BACKEND_ADAPTER_MODE
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: backend-adapter-mode
+  - name: DATABRICKS_HOST
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: databricks-host
+  - name: SQL_WAREHOUSE_ID
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: sql-warehouse-id
+```
+
+### Databricks Apps OAuth headers (identity forwarding)
+
+Databricks Apps injects the following headers into every authenticated request. The backend reads these to extract the user's OAuth identity for Databricks queries:
+
+| Header | Purpose | Verified in production? |
+|---|---|---|
+| `x-forwarded-access-token` | End-user OAuth bearer token | **TODO: verify** — assumed from documentation |
+| `x-forwarded-user` | User identifier | **TODO: verify** — assumed from documentation |
+| `x-forwarded-email` | User email address | **TODO: verify** — assumed from documentation |
+
+If these header names differ in the actual Databricks Apps environment, update `apps/api/shared/query_service/identity.py` (`extract_user_identity()` function) and this table.
 
 ---
 

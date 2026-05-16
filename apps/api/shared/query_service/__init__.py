@@ -1,15 +1,33 @@
-"""QuerySpec/QueryExecutor infrastructure — ADR-024 §3."""
+"""QuerySpec/QueryExecutor infrastructure — ADR-024 §3, ADR-025."""
 from .cache_policy import CacheTier
-from .errors import DatabricksAuthRequiredError, QueryExecutionError
-from .identity import UserIdentity
-from .query_spec import QuerySpec
+from .databricks_client import (
+    DatabricksQueryClient,
+    NotImplementedDatabricksClient,
+    StatementApiDatabricksClient,
+)
+from .errors import (
+    DatabricksAuthRequiredError,
+    DatabricksConfigError,
+    DatabricksQueryError,
+    DatabricksQueryTimeoutError,
+    QueryExecutionError,
+)
+from .identity import UserIdentity, extract_user_identity
 from .query_executor import QueryExecutor
+from .query_spec import QuerySpec
 
 __all__ = [
     "CacheTier",
     "DatabricksAuthRequiredError",
+    "DatabricksConfigError",
+    "DatabricksQueryClient",
+    "DatabricksQueryError",
+    "DatabricksQueryTimeoutError",
+    "NotImplementedDatabricksClient",
     "QueryExecutionError",
-    "UserIdentity",
-    "QuerySpec",
     "QueryExecutor",
+    "QuerySpec",
+    "StatementApiDatabricksClient",
+    "UserIdentity",
+    "extract_user_identity",
 ]

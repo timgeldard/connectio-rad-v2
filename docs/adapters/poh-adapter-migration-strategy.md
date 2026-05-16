@@ -18,14 +18,14 @@ The `ProcessOrderReviewLegacyApiAdapter` class extends `ProcessOrderReviewAdapte
 
 ---
 
-## Current State (2026-05-16)
+## Current State (2026-05-16, updated k.txt)
 
 ### ProcessOrderReviewAdapter
 
-| Method | V2 tier | V1 endpoint | Proxy route | Browser verified |
-|---|---|---|---|---|
-| `getProcessOrderReviewContext` | mock | `GET /por/order-context` | No | No |
-| `getProcessOrderHeader` | legacy-api (unverified) | `POST /por/order-header` | Yes (exists in `apps/api/routes/por.py`) | No |
+| Method | V2 tier | V1 endpoint | Proxy route | Browser verified | Databricks QuerySpec | Row mapper |
+|---|---|---|---|---|---|---|
+| `getProcessOrderReviewContext` | mock | `GET /por/order-context` | No | No | No | No |
+| `getProcessOrderHeader` | legacy-api / **databricks-api** (mode-gated) | `POST /por/order-header` | Yes | No | **Yes** — `get_process_order_header_spec` | **Yes** — `map_process_order_header_rows` |
 | `getOrderProgressSummary` | mock | `GET /por/order-progress` | No | No |
 | `getExecutionTimeline` | mock | `GET /por/execution-events` | No | No |
 | `getOrderQualityContext` | mock | `GET /por/quality-context` | No | No |
@@ -137,8 +137,8 @@ Priority order for V1 wiring:
 ## FastAPI Proxy Routes (current state)
 
 ```python
-# apps/api/routes/por.py
-POST /por/order-header   # exists — not browser-verified
+# apps/api/routes/process_order.py
+POST /api/por/order-header   # mode-gated: legacy-api (proxy) or databricks-api (StatementApi)
 ```
 
 Routes not yet created (require V1 endpoint shape confirmation first):
@@ -153,3 +153,15 @@ GET /por/execution-events
 GET /por/order-context
 GET /por/order-progress
 ```
+
+## Databricks Column Verification Required
+
+All column names in `get_process_order_header_spec` are TODO-marked. Verify before production use:
+
+```sql
+DESCRIBE TABLE connected_plant_uat.vw_gold_process_order;
+```
+
+Columns to confirm: `aufnr`, `auart`, `matnr`, `maktx`, `charg`, `werks`, `arbpl`, `gamng`, `gmein`, `wemng`, `gstrp`, `gltrp`, `gstri`, `getri`, `objnr`.
+
+The `objnr` → `order_status_raw` mapping is approximate. The gold view may expose a dedicated status column with text values rather than the SAP status object number. Verify by inspecting sample rows.

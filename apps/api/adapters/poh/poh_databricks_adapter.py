@@ -1,17 +1,10 @@
-"""POH Databricks-api adapter — QuerySpec factories for Process Order Review.
+"""POH Databricks-api adapter — QuerySpec factories and row mappers for Process Order Review.
 
 Implemented slices:
-  - get_process_order_header_spec: maps to ProcessOrderHeaderSchema
-  - get_order_operations_spec: maps to ProcessOrderOperationSchema (array)
+  - get_process_order_header_spec / map_process_order_header_rows
+  - get_order_operations_spec (QuerySpec only — row mapper deferred)
 
-Route wiring deferred: existing proxy routes in apps/api/routes/process_order.py
-forward to V1. Databricks route wiring requires:
-  1. Column names verified against live vw_gold_process_order /
-     vw_gold_process_order_phase in connected_plant_uat
-  2. ADR-024 open questions #1 (Statement API vs Connector) and #7 (cache backend) resolved
-  3. POST /api/por/order-header browser-verified against live V1 (for parallel validation)
-
-IMPORTANT: All SQL column names below are unverified. They are inferred from SAP PP
+IMPORTANT: All SQL column names are unverified. They are inferred from SAP PP
 naming conventions (AUFNR, AUART, MATNR, etc.) and ADR-024 schema notes.
 Every column alias is marked with a TODO comment. Do not remove TODOs until the
 column has been confirmed by inspecting the live view DDL or running a test query
@@ -24,6 +17,34 @@ from typing import Optional
 
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.query_spec import QuerySpec
+
+# ---------------------------------------------------------------------------
+# Status/type mapping tables — all TODO-marked (unverified SAP values)
+# ---------------------------------------------------------------------------
+
+# TODO: Verify AUART values against live vw_gold_process_order.
+# SAP AUART → V2 contract enum ('process-order' | 'production-order' | 'maintenance-order' | 'planned-order')
+_ORDER_TYPE_MAP: dict[str, str] = {
+    "PI01": "process-order",
+    "PP01": "production-order",
+    "PM01": "maintenance-order",
+    "PR": "planned-order",
+    "PP": "production-order",
+}
+
+# TODO: Verify status string values against live vw_gold_process_order data.
+# SAP order status keywords → V2 contract enum
+# ('created' | 'released' | 'in-process' | 'confirmed' | 'partially-confirmed' | 'closed' | 'cancelled')
+_ORDER_STATUS_MAP: dict[str, str] = {
+    "CRTD": "created",
+    "REL": "released",
+    "PCNF": "partially-confirmed",
+    "CNF": "confirmed",
+    "CLSD": "closed",
+    "DLT": "cancelled",
+    "CANCEL": "cancelled",
+    "TECO": "closed",
+}
 
 
 @dataclass
@@ -82,6 +103,84 @@ def get_process_order_header_spec(request: ProcessOrderHeaderRequest) -> QuerySp
         cache_policy=CacheTier.PER_USER_60S,
         tags=["poh", "process-order", "header"],
     )
+
+
+def map_process_order_header_rows(rows: list[dict]) -> dict | None:
+    """Map raw Databricks rows to the ProcessOrderHeader contract shape.
+
+    Returns ``None`` if *rows* is empty (caller should return 404).
+
+    All field mappings are based on SQL aliases in ``get_process_order_header_spec``.
+    Status and type mappings are TODO-marked and will need verification against
+    live vw_gold_process_order data before production use.
+    """
+    if not rows:
+        return None
+    row = rows[0]
+
+    result: dict[str, object] = {
+        "processOrderId": str(row.get("process_order_id") or ""),
+        "orderType": _map_order_type(row.get("order_type")),
+        "materialId": str(row.get("material_id") or ""),
+        "materialDescription": str(row.get("material_description") or ""),
+        "plantId": str(row.get("plant_id") or ""),
+        "plannedQuantity": _safe_float(row.get("planned_quantity")),
+        "confirmedQuantity": _safe_float(row.get("confirmed_quantity")),
+        "uom": str(row.get("uom") or ""),
+        "plannedStart": _format_datetime(row.get("planned_start")),
+        "plannedFinish": _format_datetime(row.get("planned_finish")),
+        "orderStatus": _map_order_status(row.get("order_status_raw")),
+    }
+
+    if row.get("batch_id"):
+        result["batchId"] = str(row["batch_id"])
+    if row.get("production_line"):
+        result["productionLine"] = str(row["production_line"])
+    if row.get("actual_start"):
+        result["actualStart"] = _format_datetime(row["actual_start"])
+    if row.get("actual_finish"):
+        result["actualFinish"] = _format_datetime(row["actual_finish"])
+
+    return result
+
+
+def _map_order_type(raw: object) -> str:
+    if not raw:
+        return "process-order"
+    return _ORDER_TYPE_MAP.get(str(raw).upper(), "process-order")
+
+
+def _map_order_status(raw: object) -> str:
+    if not raw:
+        return "created"
+    raw_upper = str(raw).upper()
+    for key, val in _ORDER_STATUS_MAP.items():
+        if key in raw_upper:
+            return val
+    return "created"
+
+
+def _safe_float(value: object) -> float:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _format_datetime(value: object) -> str:
+    """Normalise a Databricks date/datetime value to an ISO 8601 string."""
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if not s or s == "None":
+        return ""
+    # Databricks may return "2024-01-15 06:00:00.000" — convert space to T
+    if " " in s:
+        s = s.replace(" ", "T", 1)
+    # Date-only: append midnight
+    if "T" not in s:
+        s = f"{s}T00:00:00"
+    return s
 
 
 def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:

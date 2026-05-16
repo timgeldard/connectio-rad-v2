@@ -2,10 +2,14 @@
 import pytest
 
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.databricks_client import (
+    DatabricksQueryClient,
+    NotImplementedDatabricksClient,
+)
 from shared.query_service.errors import DatabricksAuthRequiredError, QueryExecutionError
 from shared.query_service.identity import UserIdentity
+from shared.query_service.query_executor import QueryExecutor
 from shared.query_service.query_spec import QuerySpec
-from shared.query_service.query_executor import NotImplementedDatabricksClient, QueryExecutor
 
 
 # ---------------------------------------------------------------------------
@@ -138,31 +142,44 @@ class TestQuerySpec:
 
 
 # ---------------------------------------------------------------------------
-# QueryExecutor
+# NotImplementedDatabricksClient
 # ---------------------------------------------------------------------------
 
 class TestNotImplementedDatabricksClient:
-    def test_raises_not_implemented(self) -> None:
+    async def test_raises_not_implemented(self) -> None:
         client = NotImplementedDatabricksClient()
-        spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
-        with pytest.raises(NotImplementedError, match="ADR-024"):
-            client.execute(spec, "some-token")
+        with pytest.raises(NotImplementedError, match="ADR-025"):
+            await client.execute(
+                sql="SELECT 1",
+                params={},
+                oauth_token="tok",
+                warehouse_id="wh",
+                timeout_seconds=30,
+                tags={},
+            )
 
+    def test_is_databricks_query_client_subclass(self) -> None:
+        assert issubclass(NotImplementedDatabricksClient, DatabricksQueryClient)
+
+
+# ---------------------------------------------------------------------------
+# QueryExecutor
+# ---------------------------------------------------------------------------
 
 class TestQueryExecutor:
-    def test_raises_auth_error_when_token_absent(self) -> None:
+    async def test_raises_auth_error_when_token_absent(self) -> None:
         executor = QueryExecutor()
         identity = UserIdentity(user_id="u001", raw_oauth_token=None)
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
         with pytest.raises(DatabricksAuthRequiredError):
-            executor.execute(spec, identity)
+            await executor.execute(spec, identity)
 
-    def test_calls_require_user_oauth_before_client(self) -> None:
+    async def test_calls_require_user_oauth_before_client(self) -> None:
         """The identity check must run before the client — not after."""
         calls: list[str] = []
 
-        class SpyClient:
-            def execute(self, spec: QuerySpec, token: str) -> list[dict]:
+        class SpyClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
                 calls.append("client.execute")
                 return []
 
@@ -171,30 +188,132 @@ class TestQueryExecutor:
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
 
         with pytest.raises(DatabricksAuthRequiredError):
-            executor.execute(spec, identity)
+            await executor.execute(spec, identity)
 
         assert "client.execute" not in calls
 
-    def test_passes_token_to_client(self) -> None:
+    async def test_passes_token_to_client(self) -> None:
         received: list[str] = []
 
-        class CapturingClient:
-            def execute(self, spec: QuerySpec, token: str) -> list[dict]:
-                received.append(token)
+        class CapturingClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                received.append(oauth_token)
                 return [{"col": "val"}]
 
         executor = QueryExecutor(client=CapturingClient())
         identity = UserIdentity(user_id="u001", raw_oauth_token="bearer-xyz")
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
 
-        result = executor.execute(spec, identity)
+        result = await executor.execute(spec, identity)
 
         assert received == ["bearer-xyz"]
         assert result == [{"col": "val"}]
 
-    def test_default_client_is_not_implemented(self) -> None:
+    async def test_default_client_is_not_implemented(self) -> None:
         executor = QueryExecutor()
         identity = UserIdentity(user_id="u001", raw_oauth_token="tok")
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
         with pytest.raises(NotImplementedError):
-            executor.execute(spec, identity)
+            await executor.execute(spec, identity)
+
+    async def test_merges_max_rows_into_params(self) -> None:
+        received_params: list[dict] = []
+
+        class CapturingClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                received_params.append(params)
+                return []
+
+        spec = QuerySpec(
+            name="x", module="x", endpoint="/x", sql="SELECT 1 LIMIT :max_rows",
+            params={"process_order_id": "100"},
+            max_rows=500,
+        )
+        executor = QueryExecutor(client=CapturingClient())
+        identity = UserIdentity(user_id="u001", raw_oauth_token="tok")
+
+        await executor.execute(spec, identity)
+
+        assert received_params[0]["max_rows"] == 500
+        assert received_params[0]["process_order_id"] == "100"
+
+    async def test_passes_warehouse_id_to_client(self) -> None:
+        received: list[str] = []
+
+        class CapturingClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                received.append(warehouse_id)
+                return []
+
+        executor = QueryExecutor(client=CapturingClient(), warehouse_id="wh-abc123")
+        identity = UserIdentity(user_id="u001", raw_oauth_token="tok")
+        spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
+
+        await executor.execute(spec, identity)
+
+        assert received == ["wh-abc123"]
+
+    async def test_builds_tags_with_query_metadata(self) -> None:
+        received: list[dict] = []
+
+        class CapturingClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                received.append(tags)
+                return []
+
+        spec = QuerySpec(
+            name="poh.get_header", module="poh", endpoint="/api/por/order-header",
+            sql="SELECT 1", tags=["poh", "header"],
+        )
+        executor = QueryExecutor(client=CapturingClient())
+        identity = UserIdentity(user_id="user42", raw_oauth_token="tok")
+
+        await executor.execute(spec, identity)
+
+        tags = received[0]
+        assert tags["query_name"] == "poh.get_header"
+        assert tags["module"] == "poh"
+        assert tags["user_id"] == "user42"
+        assert tags["poh"] == "true"
+        assert tags["header"] == "true"
+
+    async def test_does_not_read_service_principal_env_vars(self, monkeypatch) -> None:
+        """Executor must not use DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET."""
+        monkeypatch.setenv("DATABRICKS_CLIENT_ID", "spn-id")
+        monkeypatch.setenv("DATABRICKS_CLIENT_SECRET", "spn-secret")
+
+        received: list[str] = []
+
+        class CapturingClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                received.append(oauth_token)
+                return []
+
+        executor = QueryExecutor(client=CapturingClient())
+        identity = UserIdentity(user_id="u001", raw_oauth_token="user-token")
+        spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
+
+        await executor.execute(spec, identity)
+
+        assert received == ["user-token"]
+        assert "spn-id" not in received[0]
+        assert "spn-secret" not in received[0]
+
+    async def test_does_not_mutate_spec_params(self) -> None:
+        """max_rows merge must not modify the original spec.params dict."""
+
+        class NoopClient(DatabricksQueryClient):
+            async def execute(self, *, sql, params, oauth_token, warehouse_id, timeout_seconds, tags):
+                return []
+
+        spec = QuerySpec(
+            name="x", module="x", endpoint="/x", sql="SELECT 1",
+            params={"process_order_id": "100"},
+        )
+        original_params = dict(spec.params)
+        executor = QueryExecutor(client=NoopClient())
+        identity = UserIdentity(user_id="u001", raw_oauth_token="tok")
+
+        await executor.execute(spec, identity)
+
+        assert spec.params == original_params

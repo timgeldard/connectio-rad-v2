@@ -100,7 +100,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
-| `getProcessOrderHeader` | ✓ | ✓ W | — | — | amber when live | **Browser-verify** `POST /api/por/order-header` before databricks-api |
+| `getProcessOrderHeader` | ✓ | ✓ W | — | **✓ mode-gated** | green when databricks | Route mode-gated; databricks path uses `vw_gold_process_order` — column names TODO |
 | `getProcessOrderReviewContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getOrderProgressSummary` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getExecutionTimeline` | ✓ | — | — | — | none | Include in POH databricks-api slice |
@@ -138,24 +138,24 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getLabFailures` | ✓ | ✓ W | — | — | amber when live | **Browser-verify** `GET /api/cq/lab/fails`. Databricks-api blocked on `vw_gold_process_order_plan` |
-| `getLabPlants` | ✓ | ✓ W | — | — | amber when live | **Browser-verify** `GET /api/cq/lab/plants`. Unblocked for databricks-api |
+| `getLabPlants` | ✓ | ✓ W | — | **✓ mode-gated** | green when databricks | `GET /api/cq/lab/plants` wired in both modes; databricks path uses `gold_plant` — column names TODO |
 
-**Summary:** 2 methods — both wired legacy-api (not browser-verified), both on mock fallback.  
-**Blocker:** `vw_gold_process_order_plan` does not exist in `csm_process_order_history`. `getLabFailures` cannot migrate to databricks-api until this view is created. `getLabPlants` (`gold_plant` + `vw_gold_inspection_result`) is unblocked.
+**Summary:** 2 methods — both wired legacy-api (not browser-verified); `getLabPlants` also mode-gated for databricks-api.  
+**Blocker:** `vw_gold_process_order_plan` does not exist. `getLabFailures` cannot migrate to databricks-api until this view is created. `getLabPlants` unblocked — column names must be confirmed.
 
 ---
 
 ## Cross-Domain Totals
 
-| Domain | Total methods | Browser-verified | Wired (not verified) | Mock only | Databricks-api |
+| Domain | Total methods | Browser-verified | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
 |--------|--------------|-----------------|---------------------|-----------|----------------|
 | Traceability | 11 | 1 | 0 | 10 | 0 |
 | SPC | 9 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 1 | 8 | 0 |
-| POH (POR) | 10 | 0 | 1 | 9 | 0 |
+| POH (POR) | 10 | 0 | 1 | 9 | **1** (`getProcessOrderHeader`) |
 | POH (plan risk) | 9 | 0 | 0 | 9 | 0 |
-| Quality/Lab | 2 | 0 | 2 | 0 | 0 |
-| **Total** | **50** | **1** | **4** | **45** | **0** |
+| Quality/Lab | 2 | 0 | 2 | 0 | **1** (`getLabPlants`) |
+| **Total** | **50** | **1** | **4** | **45** | **2** |
 
 ---
 

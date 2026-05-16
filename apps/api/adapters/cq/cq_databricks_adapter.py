@@ -24,6 +24,26 @@ from shared.query_service.cache_policy import CacheTier
 from shared.query_service.query_spec import QuerySpec
 
 
+def map_lab_plants_rows(rows: list[dict]) -> dict:
+    """Map raw Databricks rows to the ConnectedQualityLabPlantsResponse contract shape.
+
+    Returns ``{"plants": [...]}`` always — empty list if no rows.
+
+    Mapping: ``plant_id`` → ``plantId``, ``plant_name`` → ``plantName``.
+    Column names are SQL aliases from ``get_lab_plants_spec`` — both are TODO-marked
+    and must be verified against the live gold_plant table before production use.
+    """
+    plants = [
+        {
+            "plantId": str(row.get("plant_id", "")),
+            "plantName": str(row.get("plant_name", "")),
+        }
+        for row in rows
+        if row.get("plant_id")
+    ]
+    return {"plants": plants}
+
+
 def get_lab_plants_spec() -> QuerySpec:
     """Return a QuerySpec for getLabPlants.
 

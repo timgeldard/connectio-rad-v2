@@ -1,8 +1,10 @@
-"""User identity dataclass — ADR-024 §4."""
+"""User identity dataclass and FastAPI dependency — ADR-024 §4."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+
+from fastapi import Header
 
 from .errors import DatabricksAuthRequiredError
 
@@ -32,3 +34,35 @@ class UserIdentity:
         if not self.raw_oauth_token:
             raise DatabricksAuthRequiredError(self.user_id)
         return self.raw_oauth_token
+
+
+# ---------------------------------------------------------------------------
+# FastAPI dependency
+# ---------------------------------------------------------------------------
+
+# TODO: Verify these header names in a live Databricks Apps environment.
+# Databricks Apps injects OAuth proxy headers into every request. Based on
+# Databricks documentation and community reports the expected header names are:
+#   x-forwarded-access-token — end-user OAuth2 bearer token  (ASSUMED)
+#   x-forwarded-user         — user identifier / subject      (ASSUMED)
+#   x-forwarded-email        — user email address             (ASSUMED)
+# If the names differ in practice, update this function and
+# docs/deployment/databricks-apps.md accordingly.
+
+
+def extract_user_identity(
+    x_forwarded_access_token: Optional[str] = Header(default=None),
+    x_forwarded_user: Optional[str] = Header(default=None),
+    x_forwarded_email: Optional[str] = Header(default=None),
+) -> "UserIdentity":
+    """FastAPI ``Depends()`` function — extract ``UserIdentity`` from Databricks Apps headers.
+
+    A missing OAuth token does *not* raise here. Callers must invoke
+    ``identity.require_user_oauth()`` to enforce the constraint before any
+    Databricks query is executed.
+    """
+    return UserIdentity(
+        user_id=x_forwarded_user or "unknown",
+        email=x_forwarded_email,
+        raw_oauth_token=x_forwarded_access_token,
+    )
