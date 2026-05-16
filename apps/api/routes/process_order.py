@@ -9,11 +9,9 @@ router = APIRouter()
 _V1_BASE_URL = os.getenv("V1_POH_API_BASE_URL", "")
 
 
-class OrderRequest(BaseModel):
+class OrderHeaderRequest(BaseModel):
     process_order_id: str
     plant_id: str | None = None
-    batch_id: str | None = None
-    line_id: str | None = None
 
 
 async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
@@ -42,90 +40,12 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
 
 @router.post("/por/order-header")
 async def order_header(
-    body: OrderRequest,
+    body: OrderHeaderRequest,
     x_forwarded_access_token: str | None = Header(default=None),
 ) -> dict:
     """Proxy to V1 process order header endpoint."""
     return await _forward_post(
         "/api/por/order-header",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/context")
-async def order_context(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 process order review context endpoint."""
-    return await _forward_post(
-        "/api/por/context",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/order-progress")
-async def order_progress(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 order progress summary endpoint."""
-    return await _forward_post(
-        "/api/por/order-progress",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/execution-timeline")
-async def execution_timeline(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 execution timeline endpoint."""
-    return await _forward_post(
-        "/api/por/execution-timeline",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/quality-context")
-async def quality_context(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 order quality context endpoint."""
-    return await _forward_post(
-        "/api/por/quality-context",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/staging-context")
-async def staging_context(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 order staging context endpoint."""
-    return await _forward_post(
-        "/api/por/staging-context",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/por/related-batches")
-async def related_batches(
-    body: OrderRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 related batch context endpoint."""
-    return await _forward_post(
-        "/api/por/related-batches",
         body.model_dump(exclude_none=True),
         x_forwarded_access_token,
     )

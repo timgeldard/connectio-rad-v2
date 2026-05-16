@@ -1,17 +1,5 @@
 import { BatchHeaderSummarySchema, ApiError } from '@connectio/data-contracts'
-import type {
-  BatchHeaderSummary,
-  TraceInvestigationContext,
-  TraceGraph,
-  MassBalanceSummary,
-  CustomerExposureSummary,
-  SupplierExposureSummary,
-  TraceEvent,
-  CoAReleaseStatus,
-  TraceRiskSignal,
-  RelatedInvestigation,
-  TraceExposureForRelease,
-} from '@connectio/data-contracts'
+import type { BatchHeaderSummary } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
 import type { Trace2AdapterRequest } from './trace2-adapter.js'
@@ -70,8 +58,8 @@ function mapReleaseStatus(r: V1BatchHeaderResponse): BatchHeaderSummary['release
 }
 
 /**
- * Trace2 adapter that calls the V2 proxy routes, which forward to the V1 FastAPI backend.
- * Falls back to mock data for any method missing required context.
+ * Trace2 adapter that proxies to the V1 backend for verified endpoints.
+ * All other methods fall back to mock via super.
  */
 export class Trace2LegacyApiAdapter extends Trace2Adapter {
   private readonly baseUrl: string
@@ -79,47 +67,6 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
   constructor(baseUrl: string) {
     super()
     this.baseUrl = baseUrl.replace(/\/$/, '')
-  }
-
-  private async _post<T>(path: string, body: Record<string, unknown>): Promise<AdapterResult<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      if (!response.ok) {
-        const code =
-          response.status === 401
-            ? ('unauthorized' as const)
-            : response.status === 404
-              ? ('not-found' as const)
-              : ('network' as const)
-        return {
-          ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
-          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
-          source: 'legacy-api',
-        }
-      }
-
-      const data = (await response.json()) as T
-      return { ok: true, data, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e)
-      return { ok: false, error: { code: 'unknown', message, retryable: true }, displayState: 'error', source: 'legacy-api' }
-    }
-  }
-
-  private _traceBody(request: Trace2AdapterRequest): Record<string, unknown> {
-    return {
-      investigation_id: request.investigationId,
-      batch_id: request.batchId,
-      material_id: request.materialId,
-      plant_id: request.plantId,
-    }
   }
 
   override async getBatchHeaderSummary(
@@ -191,75 +138,5 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         source: 'legacy-api',
       }
     }
-  }
-
-  override async getInvestigationContext(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<TraceInvestigationContext>> {
-    if (!request.batchId || !request.materialId) return super.getInvestigationContext(request)
-    return this._post<TraceInvestigationContext>('/api/trace2/investigation-context', this._traceBody(request))
-  }
-
-  override async getTraceGraph(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<TraceGraph>> {
-    if (!request.batchId || !request.materialId) return super.getTraceGraph(request)
-    return this._post<TraceGraph>('/api/trace2/trace-graph', this._traceBody(request))
-  }
-
-  override async getMassBalanceSummary(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<MassBalanceSummary>> {
-    if (!request.batchId || !request.materialId) return super.getMassBalanceSummary(request)
-    return this._post<MassBalanceSummary>('/api/trace2/mass-balance', this._traceBody(request))
-  }
-
-  override async getCustomerExposureSummary(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<CustomerExposureSummary>> {
-    if (!request.batchId || !request.materialId) return super.getCustomerExposureSummary(request)
-    return this._post<CustomerExposureSummary>('/api/trace2/customer-exposure', this._traceBody(request))
-  }
-
-  override async getSupplierExposureSummary(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<SupplierExposureSummary>> {
-    if (!request.batchId || !request.materialId) return super.getSupplierExposureSummary(request)
-    return this._post<SupplierExposureSummary>('/api/trace2/supplier-exposure', this._traceBody(request))
-  }
-
-  override async getEventTimeline(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<readonly TraceEvent[]>> {
-    if (!request.batchId || !request.materialId) return super.getEventTimeline(request)
-    return this._post<readonly TraceEvent[]>('/api/trace2/event-timeline', this._traceBody(request))
-  }
-
-  override async getCoAReleaseStatus(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<CoAReleaseStatus>> {
-    if (!request.batchId || !request.materialId) return super.getCoAReleaseStatus(request)
-    return this._post<CoAReleaseStatus>('/api/trace2/coa-release', this._traceBody(request))
-  }
-
-  override async getRiskSignals(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<readonly TraceRiskSignal[]>> {
-    if (!request.batchId || !request.materialId) return super.getRiskSignals(request)
-    return this._post<readonly TraceRiskSignal[]>('/api/trace2/risk-signals', this._traceBody(request))
-  }
-
-  override async getRelatedInvestigations(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<readonly RelatedInvestigation[]>> {
-    if (!request.batchId || !request.materialId) return super.getRelatedInvestigations(request)
-    return this._post<readonly RelatedInvestigation[]>('/api/trace2/related-investigations', this._traceBody(request))
-  }
-
-  override async getTraceExposureForRelease(
-    request: Trace2AdapterRequest,
-  ): Promise<AdapterResult<TraceExposureForRelease>> {
-    if (!request.batchId || !request.materialId) return super.getTraceExposureForRelease(request)
-    return this._post<TraceExposureForRelease>('/api/trace2/trace-exposure', this._traceBody(request))
   }
 }

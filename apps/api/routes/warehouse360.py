@@ -9,10 +9,9 @@ router = APIRouter()
 _V1_BASE_URL = os.getenv("V1_WH360_API_BASE_URL", "")
 
 
-class WarehouseRequest(BaseModel):
+class WarehouseSummaryRequest(BaseModel):
     warehouse_id: str
     plant_id: str | None = None
-    storage_location_id: str | None = None
 
 
 async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
@@ -41,90 +40,12 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
 
 @router.post("/wh360/warehouse-summary")
 async def warehouse_summary(
-    body: WarehouseRequest,
+    body: WarehouseSummaryRequest,
     x_forwarded_access_token: str | None = Header(default=None),
 ) -> dict:
     """Proxy to V1 warehouse summary endpoint."""
     return await _forward_post(
         "/api/wh360/warehouse-summary",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/context")
-async def warehouse_context(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 warehouse overview context endpoint."""
-    return await _forward_post(
-        "/api/wh360/context",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/stock-overview")
-async def stock_overview(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 stock overview endpoint."""
-    return await _forward_post(
-        "/api/wh360/stock-overview",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/open-holds")
-async def open_holds(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 open holds endpoint."""
-    return await _forward_post(
-        "/api/wh360/open-holds",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/goods-movements")
-async def goods_movements(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 goods movements endpoint."""
-    return await _forward_post(
-        "/api/wh360/goods-movements",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/replenishment-needs")
-async def replenishment_needs(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 replenishment needs endpoint."""
-    return await _forward_post(
-        "/api/wh360/replenishment-needs",
-        body.model_dump(exclude_none=True),
-        x_forwarded_access_token,
-    )
-
-
-@router.post("/wh360/location-capacities")
-async def location_capacities(
-    body: WarehouseRequest,
-    x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
-    """Proxy to V1 location capacities endpoint."""
-    return await _forward_post(
-        "/api/wh360/location-capacities",
         body.model_dump(exclude_none=True),
         x_forwarded_access_token,
     )
