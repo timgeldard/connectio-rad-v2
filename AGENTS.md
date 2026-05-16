@@ -151,6 +151,14 @@ Coverage thresholds (per domain): 60% lines/functions/branches/statements.
 
 ---
 
+## Databricks Data-Access Security Rules
+
+- Production Databricks reads in V2 must use the authenticated end user's OAuth identity.
+- Do not introduce service-principal fallback paths for user-facing reads.
+- If user OAuth is unavailable, mark databricks-api mode as blocked rather than bypassing identity controls.
+
+---
+
 ## What NOT to do without explicit user direction
 
 - Do not add new governance screens, pilot phases, or rollout tracking
@@ -189,4 +197,4 @@ npm exec nx -- run-many --target=typecheck --all
 - `docs/adapters/adapter-migration-strategy.md` — lifecycle: mock → legacy-api → databricks-api
 - `docs/data/semantic-model-overview.md` — data contracts and entity model
 - `docs/deployment/databricks-apps.md` — production deployment
-- `docs/adr/` — architectural decision records (ADR-001 through ADR-023)
+- `docs/adr/` — architectural decision records (ADR-001 through ADR-024)
