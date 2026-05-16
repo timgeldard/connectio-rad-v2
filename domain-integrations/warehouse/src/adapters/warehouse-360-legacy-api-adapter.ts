@@ -5,8 +5,8 @@ import type { Warehouse360AdapterRequest } from './warehouse-360-adapter.js'
 
 /**
  * Tier: legacy-api
- * Verified methods: getWarehouse360Summary (browser-verified against V1 WH360)
- * Fallback: Warehouse360Adapter (mock) — all other methods return mock data via super
+ * Verified methods: none yet — getWarehouse360Summary wired but not browser-verified against V1 WH360
+ * Fallback: Warehouse360Adapter (mock) — all methods return mock data until verified
  * Next tier: databricks-api (pending V1 WH360 retirement)
  */
 export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
@@ -18,8 +18,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
   }
 
   /**
-   * Tier: legacy-api — browser-verified against V1 WH360 warehouse-summary endpoint.
-   * Next tier: databricks-api (pending V1 WH360 retirement).
+   * Tier: legacy-api — wired to V1 WH360 warehouse-summary endpoint, not yet browser-verified.
+   * Falls back to mock on any error until verified.
    */
   override async getWarehouse360Summary(
     request: Warehouse360AdapterRequest,

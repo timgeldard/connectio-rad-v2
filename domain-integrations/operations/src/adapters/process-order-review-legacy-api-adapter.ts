@@ -5,8 +5,8 @@ import type { ProcessOrderReviewAdapterRequest } from './process-order-review-ad
 
 /**
  * Tier: legacy-api
- * Verified methods: getProcessOrderHeader (browser-verified against V1 POH)
- * Fallback: ProcessOrderReviewAdapter (mock) — all other methods return mock data via super
+ * Verified methods: none yet — getProcessOrderHeader wired but not browser-verified against V1 POH
+ * Fallback: ProcessOrderReviewAdapter (mock) — all methods return mock data until verified
  * Next tier: databricks-api (pending V1 POH retirement)
  */
 export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapter {
@@ -18,8 +18,8 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
   }
 
   /**
-   * Tier: legacy-api — browser-verified against V1 POH order-header endpoint.
-   * Next tier: databricks-api (pending V1 POH retirement).
+   * Tier: legacy-api — wired to V1 POH order-header endpoint, not yet browser-verified.
+   * Falls back to mock on any error until verified.
    */
   override async getProcessOrderHeader(
     request: ProcessOrderReviewAdapterRequest,

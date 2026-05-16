@@ -164,32 +164,35 @@ self-contained and the proxy wiring is correct.
 ### Steps
 
 ```bash
-# Install Python deps
+# Install Python deps (from repo root)
 pip install -r apps/api/requirements.txt
 
-# Start the local server (not uvicorn workers — single process is fine for smoke-test)
+# Start the local server from apps/api/ (single process is fine for smoke-test)
 cd apps/api
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-With the V1 backends available at known hostnames, set the env vars before starting:
-
-```bash
 V1_TRACE_API_BASE_URL="https://<trace2-host>" \
 V1_WH360_API_BASE_URL="https://<wh360-host>" \
 V1_POH_API_BASE_URL="https://<poh-host>" \
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
+Omit the `V1_*` vars if the V1 backends are not reachable — proxy routes will return 503,
+but the React app and `/health` should still work.
+
 ### What to check
 
-| URL | Expected result |
+| URL / request | Expected result |
 |---|---|
-| `http://localhost:8000/health` | `{"status": "ok"}` |
-| `http://localhost:8000/` | React app loads (ConnectIO login or workspace shell) |
-| `http://localhost:8000/?workspace=trace-investigation` | Trace workspace renders |
-| `http://localhost:8000/api/trace2/batch-header` (POST with valid body) | Proxy returns V1 response or 503 if V1 unreachable |
+| `GET http://localhost:8000/health` | `{"status": "ok"}` |
+| `GET http://localhost:8000/` | React app loads (ConnectIO login or workspace shell) |
+| `GET http://localhost:8000/?workspace=trace-investigation` | Trace workspace renders |
 | Browser refresh on any `?workspace=X` URL | React app reloads correctly (search params preserved) |
+| `POST http://localhost:8000/api/trace2/batch-header` body `{"material_id":"<id>","batch_id":"<id>"}` | V1 response (with V1 set) or `{"detail":"V1_TRACE_API_BASE_URL is not configured"}` 503 |
+| `POST http://localhost:8000/api/wh360/warehouse-summary` body `{"warehouse_id":"<id>"}` | V1 response or 503 |
+| `POST http://localhost:8000/api/por/order-header` body `{"process_order_id":"<id>"}` | V1 response or 503 |
+
+**Note:** all three proxy endpoints accept `snake_case` request fields only (`material_id`, `batch_id`,
+`warehouse_id`, `process_order_id`, `plant_id`). The TypeScript adapters already send snake_case — do
+not send camelCase to the proxy.
 
 **Source badge:** With V1 reachable, the batch header panel should show
 `source: legacy-api`. With V1 unreachable, only `getBatchHeaderSummary`
@@ -212,7 +215,7 @@ After deploying to Databricks Apps, verify in order:
 - [ ] `<url>/` loads the React app without blank page or JS errors
 - [ ] Navigate to a workspace (`?workspace=trace-investigation`) — renders correctly
 - [ ] Browser refresh on `<url>/?workspace=trace-investigation` — React app reloads (not 404)
-- [ ] `<url>/api/trace2/batch-header` (POST with `{"batchId":"<id>","plantId":"<id>"}`) — returns data or a specific error (not 500)
+- [ ] `<url>/api/trace2/batch-header` (POST with `{"material_id":"<id>","batch_id":"<id>"}`) — returns data or a specific error (not 500)
 - [ ] If V1 Trace2 is reachable: source badge shows `legacy-api`
 - [ ] If V1 is unreachable: source badge shows `mock` (fallback working, not crash)
 - [ ] Check Databricks Apps logs: `databricks apps logs connectio-v2` — no startup errors
