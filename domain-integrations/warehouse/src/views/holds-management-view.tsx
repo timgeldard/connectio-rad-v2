@@ -13,12 +13,13 @@ const GRID: CSSProperties = {
 
 export interface HoldsManagementViewProps {
   readonly request: Warehouse360AdapterRequest
+  readonly onHoldNavigate?: (workspaceId: string) => void
 }
 
-export function HoldsManagementView({ request }: HoldsManagementViewProps) {
+export function HoldsManagementView({ request, onHoldNavigate }: HoldsManagementViewProps) {
   return (
     <div style={GRID}>
-      <OpenHoldsPanel request={request} />
+      <OpenHoldsPanel request={request} onHoldNavigate={onHoldNavigate} />
       <Warehouse360SummaryPanel request={request} />
     </div>
   )

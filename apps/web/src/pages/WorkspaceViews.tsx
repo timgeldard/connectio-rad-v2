@@ -30,7 +30,7 @@ interface Props {
  * @param props - Component props.
  */
 export default function WorkspaceViews({ workspaceId }: Props) {
-  const { investigationId, releaseCaseId, planDate, viewId, setReleaseCaseId, navigateToBatchRelease } =
+  const { investigationId, releaseCaseId, planDate, viewId, setReleaseCaseId, navigateToBatchRelease, setView, setWorkspace } =
     useWorkspaceShellState()
   const { activeScope } = useAuthScope()
 
@@ -112,6 +112,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <Warehouse360Workspace
           scope={activeScope}
           viewId={viewId ?? 'warehouse-overview'}
+          onNavigateToWorkspace={setWorkspace}
         />
       </div>
     )
@@ -134,6 +135,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <MaintenanceReliabilityWorkspace
           scope={activeScope}
           viewId={viewId ?? 'overview'}
+          onNavigateToView={setView}
         />
       </div>
     )

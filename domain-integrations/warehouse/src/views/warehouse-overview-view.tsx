@@ -14,14 +14,15 @@ const GRID: CSSProperties = {
 
 export interface WarehouseOverviewViewProps {
   readonly request: Warehouse360AdapterRequest
+  readonly onHoldNavigate?: (workspaceId: string) => void
 }
 
-export function WarehouseOverviewView({ request }: WarehouseOverviewViewProps) {
+export function WarehouseOverviewView({ request, onHoldNavigate }: WarehouseOverviewViewProps) {
   return (
     <div style={GRID}>
       <Warehouse360SummaryPanel request={request} />
       <StockOverviewPanel request={request} />
-      <OpenHoldsPanel request={request} />
+      <OpenHoldsPanel request={request} onHoldNavigate={onHoldNavigate} />
     </div>
   )
 }

@@ -23,6 +23,16 @@ export interface PlanRiskSummaryPanelProps {
   readonly request: OperationsPlanRiskAdapterRequest
 }
 
+const ADHERENCE_TREND = [
+  { day: 'Mon', pct: 80 },
+  { day: 'Tue', pct: 84 },
+  { day: 'Wed', pct: 82 },
+  { day: 'Thu', pct: 76 },
+  { day: 'Fri', pct: 74 },
+  { day: 'Sat', pct: 79 },
+  { day: 'Sun', pct: 75 },
+]
+
 const SEVERITY_COLOR: Record<string, string> = {
   critical: '#D32F2F',
   high: '#F57C00',
@@ -40,6 +50,41 @@ function MetricTile({ label, value, color }: { label: string; value: number; col
     <div style={{ flex: '1 1 0', minWidth: 64, background: 'var(--shell-surface-2)', borderRadius: 6, padding: '10px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <span style={{ fontSize: 24, fontWeight: 700, color: color ?? 'var(--shell-fg)', lineHeight: 1 }}>{value}</span>
       <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--shell-fg-3)' }}>{label}</span>
+    </div>
+  )
+}
+
+function AdherenceSparkline() {
+  const W = 280
+  const H = 36
+  const PAD_X = 12
+  const PAD_Y = 6
+  const plotW = W - PAD_X * 2
+  const plotH = H - PAD_Y * 2
+  const n = ADHERENCE_TREND.length
+  const minPct = Math.min(...ADHERENCE_TREND.map(d => d.pct)) - 4
+  const maxPct = Math.max(...ADHERENCE_TREND.map(d => d.pct)) + 4
+  const range = maxPct - minPct
+
+  function toX(i: number) { return PAD_X + (i / (n - 1)) * plotW }
+  function toY(pct: number) { return PAD_Y + (1 - (pct - minPct) / range) * plotH }
+
+  const pts = ADHERENCE_TREND.map((d, i) => `${toX(i)},${toY(d.pct)}`).join(' ')
+
+  return (
+    <div style={{ background: 'var(--shell-surface-2)', borderRadius: 4, padding: '6px 0 4px' }}>
+      <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', paddingLeft: PAD_X, marginBottom: 2 }}>
+        7-day adherence trend
+      </div>
+      <svg width={W} height={H} style={{ display: 'block', overflow: 'visible' }}>
+        <polyline fill="none" stroke="var(--ocean, #005776)" strokeWidth={1.5} points={pts} />
+        {ADHERENCE_TREND.map((d, i) => (
+          <g key={d.day}>
+            <circle cx={toX(i)} cy={toY(d.pct)} r={3} fill="var(--ocean, #005776)" />
+            <text x={toX(i)} y={H - 1} textAnchor="middle" fontSize={8} fill="var(--shell-fg-3)">{d.day}</text>
+          </g>
+        ))}
+      </svg>
     </div>
   )
 }
@@ -92,6 +137,8 @@ export function PlanRiskSummaryPanel({ request }: PlanRiskSummaryPanelProps) {
             <MetricTile label="Late" value={data.ordersLate} color="#F57C00" />
             <MetricTile label="Blocked" value={data.blockedOrders} color="#D32F2F" />
           </div>
+
+          <AdherenceSparkline />
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10, display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>

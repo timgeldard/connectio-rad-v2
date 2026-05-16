@@ -21,7 +21,9 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
     <div style={GRID}>
       <SPCSummaryPanel request={request} />
       <ActiveSPCSignalsPanel request={request} />
-      <ControlChartPanel request={request} />
+      <ControlChartPanel request={{ ...request, characteristicId: 'CHAR-PH-001' }} />
+      <ControlChartPanel request={{ ...request, characteristicId: 'CHAR-MOISTURE-001' }} />
+      <ControlChartPanel request={{ ...request, characteristicId: 'CHAR-FAT-001' }} />
     </div>
   )
 }

@@ -14,13 +14,14 @@ const GRID: CSSProperties = {
 
 export interface MaintenanceOverviewViewProps {
   readonly request: MaintenanceReliabilityAdapterRequest
+  readonly onNavigateToView?: (viewId: string) => void
 }
 
-export function MaintenanceOverviewView({ request }: MaintenanceOverviewViewProps) {
+export function MaintenanceOverviewView({ request, onNavigateToView }: MaintenanceOverviewViewProps) {
   return (
     <div style={GRID}>
       <MaintenanceKpiSummaryPanel request={request} />
-      <OpenWorkOrdersPanel request={request} />
+      <OpenWorkOrdersPanel request={request} onWorkOrderClick={() => onNavigateToView?.('work-orders')} />
       <EquipmentAvailabilityPanel request={request} />
     </div>
   )

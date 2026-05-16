@@ -20,11 +20,13 @@ export type Warehouse360ViewId =
 export interface Warehouse360WorkspaceProps {
   readonly scope: ScopeContext
   readonly viewId?: string
+  readonly onNavigateToWorkspace?: (workspaceId: string) => void
 }
 
 export function Warehouse360Workspace({
   scope,
   viewId = 'warehouse-overview',
+  onNavigateToWorkspace,
 }: Warehouse360WorkspaceProps) {
   const request: Warehouse360AdapterRequest = {
     warehouseId: scope.warehouseId,
@@ -42,25 +44,25 @@ export function Warehouse360Workspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'warehouse-overview'}
       actionSidebar={<Warehouse360ActionsPanel context={context} />}
     >
-      {resolveView(viewId, request)}
+      {resolveView(viewId, request, onNavigateToWorkspace)}
     </StandardWorkspaceTemplate>
   )
 }
 
-function resolveView(viewId: string, request: Warehouse360AdapterRequest): React.ReactNode {
+function resolveView(viewId: string, request: Warehouse360AdapterRequest, onNavigateToWorkspace?: (workspaceId: string) => void): React.ReactNode {
   switch (viewId as Warehouse360ViewId) {
     case 'warehouse-overview':
-      return <WarehouseOverviewView request={request} />
+      return <WarehouseOverviewView request={request} onHoldNavigate={onNavigateToWorkspace} />
     case 'stock-status':
       return <StockStatusView request={request} />
     case 'holds-management':
-      return <HoldsManagementView request={request} />
+      return <HoldsManagementView request={request} onHoldNavigate={onNavigateToWorkspace} />
     case 'goods-movements':
       return <GoodsMovementsView request={request} />
     case 'replenishment':
       return <ReplenishmentView request={request} />
     default:
-      return <WarehouseOverviewView request={request} />
+      return <WarehouseOverviewView request={request} onHoldNavigate={onNavigateToWorkspace} />
   }
 }
 

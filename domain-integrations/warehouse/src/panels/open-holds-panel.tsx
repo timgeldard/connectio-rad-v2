@@ -21,6 +21,7 @@ const registration: EvidencePanelRegistration = {
 
 export interface OpenHoldsPanelProps {
   readonly request: Warehouse360AdapterRequest
+  readonly onHoldNavigate?: (workspaceId: string) => void
 }
 
 const REASON_COLOR: Record<string, string> = {
@@ -43,7 +44,7 @@ const REASON_LABEL: Record<string, string> = {
   'damaged': 'Damaged',
 }
 
-export function OpenHoldsPanel({ request }: OpenHoldsPanelProps) {
+export function OpenHoldsPanel({ request, onHoldNavigate }: OpenHoldsPanelProps) {
   const { data: result, isLoading } = useOpenHolds(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
@@ -82,8 +83,19 @@ export function OpenHoldsPanel({ request }: OpenHoldsPanelProps) {
               <span>{hold.holdQuantity.toLocaleString()} {hold.uom}</span>
               <span style={{ color: hold.ageHours > 24 ? '#D32F2F' : 'var(--shell-fg-3)' }}>{hold.ageHours.toFixed(0)}h old</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
-              {hold.storageLocationId}{hold.linkedWorkspaceId && ` · → ${hold.linkedWorkspaceId}`}
+            <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2, display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span>{hold.storageLocationId}</span>
+              {hold.linkedWorkspaceId && onHoldNavigate && (
+                <button
+                  onClick={() => onHoldNavigate(hold.linkedWorkspaceId!)}
+                  style={{ background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer', fontSize: 11, color: 'var(--ocean, #005776)', fontWeight: 600 }}
+                >
+                  → {hold.linkedWorkspaceId}
+                </button>
+              )}
+              {hold.linkedWorkspaceId && !onHoldNavigate && (
+                <span>· → {hold.linkedWorkspaceId}</span>
+              )}
             </div>
           </div>
         ))}

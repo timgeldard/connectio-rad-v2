@@ -13,6 +13,8 @@ import {
   mockSPCSummary,
   mockActiveSPCSignals,
   mockControlChartSeries,
+  mockMoistureChartSeries,
+  mockFatChartSeries,
   mockCharacteristicCapability,
   mockSPCAlarmHistory,
   mockSPCRelatedBatches,
@@ -72,8 +74,10 @@ export class SPCMonitoringAdapter {
   }
 
   async getControlChartSeries(
-    _request: SPCMonitoringAdapterRequest
+    request: SPCMonitoringAdapterRequest
   ): Promise<AdapterResult<ControlChartSeries>> {
+    if (request.characteristicId === 'CHAR-MOISTURE-001') return ok(mockMoistureChartSeries, this.now)
+    if (request.characteristicId === 'CHAR-FAT-001') return ok(mockFatChartSeries, this.now)
     return ok(mockControlChartSeries, this.now)
   }
 

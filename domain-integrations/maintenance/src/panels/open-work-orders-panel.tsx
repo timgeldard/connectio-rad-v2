@@ -21,6 +21,7 @@ const registration: EvidencePanelRegistration = {
 
 export interface OpenWorkOrdersPanelProps {
   readonly request: MaintenanceReliabilityAdapterRequest
+  readonly onWorkOrderClick?: (workOrderId: string) => void
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -44,7 +45,7 @@ const IMPACT_LABEL: Record<string, string> = {
   'risk-only': 'Risk Only',
 }
 
-export function OpenWorkOrdersPanel({ request }: OpenWorkOrdersPanelProps) {
+export function OpenWorkOrdersPanel({ request, onWorkOrderClick }: OpenWorkOrdersPanelProps) {
   const { data: result, isLoading } = useWorkOrders(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
@@ -72,7 +73,11 @@ export function OpenWorkOrdersPanel({ request }: OpenWorkOrdersPanelProps) {
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {orders.map(wo => (
-          <div key={wo.workOrderId} style={{ borderLeft: `3px solid ${PRIORITY_COLOR[wo.priority] ?? '#9E9E9E'}`, paddingLeft: 10, paddingTop: 4, paddingBottom: 4 }}>
+          <button
+            key={wo.workOrderId}
+            onClick={() => onWorkOrderClick?.(wo.workOrderId)}
+            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: onWorkOrderClick ? 'pointer' : 'default', borderLeft: `3px solid ${PRIORITY_COLOR[wo.priority] ?? '#9E9E9E'}`, paddingLeft: 10, paddingTop: 4, paddingBottom: 4 }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--shell-fg)', flex: 1 }}>{wo.title}</span>
               <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 3, background: STATUS_COLOR[wo.status] ?? '#9E9E9E', color: '#fff', whiteSpace: 'nowrap', fontWeight: 600 }}>{wo.status}</span>
@@ -86,7 +91,7 @@ export function OpenWorkOrdersPanel({ request }: OpenWorkOrdersPanelProps) {
               <span>{IMPACT_LABEL[wo.productionImpact]}</span>
               {wo.assignedTechnician && <span>{wo.assignedTechnician}</span>}
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </EvidencePanel>

@@ -16,7 +16,7 @@ export const mockWarehouse360Context: Warehouse360OverviewContext = {
   holdPercent: 8.4,
   openTransfers: 23,
   capacityUtilizationPercent: 74.2,
-  lastUpdatedAt: '2024-03-08T10:00:00.000Z',
+  lastUpdatedAt: '2026-05-14T10:00:00.000Z',
 }
 
 export const mockWarehouse360Summary: Warehouse360Summary = {
@@ -84,7 +84,7 @@ export const mockOpenHolds: OpenHoldItem[] = [
     holdReason: 'quality-hold',
     holdQuantity: 480,
     uom: 'KG',
-    raisedAt: '2024-03-08T06:30:00.000Z',
+    raisedAt: '2026-05-14T06:30:00.000Z',
     raisedBy: 'c.moriarty@listowel.ie',
     ageHours: 3.5,
     linkedWorkspaceId: 'quality-batch-release',
@@ -98,7 +98,7 @@ export const mockOpenHolds: OpenHoldItem[] = [
     holdReason: 'investigation',
     holdQuantity: 2000,
     uom: 'KG',
-    raisedAt: '2024-03-07T14:00:00.000Z',
+    raisedAt: '2026-05-13T14:00:00.000Z',
     raisedBy: 'quality.ie10@kerry.com',
     ageHours: 20,
     linkedWorkspaceId: 'trace-investigation',
@@ -111,7 +111,7 @@ export const mockOpenHolds: OpenHoldItem[] = [
     holdReason: 'expired',
     holdQuantity: 75,
     uom: 'L',
-    raisedAt: '2024-03-06T08:00:00.000Z',
+    raisedAt: '2026-05-12T08:00:00.000Z',
     ageHours: 50,
   },
 ]
@@ -119,7 +119,7 @@ export const mockOpenHolds: OpenHoldItem[] = [
 export const mockGoodsMovements: GoodsMovementEvent[] = [
   {
     movementId: 'GR-2024-004812',
-    timestamp: '2024-03-08T07:00:00.000Z',
+    timestamp: '2026-05-14T07:00:00.000Z',
     movementType: 'goods-receipt',
     materialId: 'MAT-RM-RAW-MILK',
     materialDescription: 'Raw Milk — Full Tanker',
@@ -131,7 +131,7 @@ export const mockGoodsMovements: GoodsMovementEvent[] = [
   },
   {
     movementId: 'GI-2024-003547',
-    timestamp: '2024-03-08T08:30:00.000Z',
+    timestamp: '2026-05-14T08:30:00.000Z',
     movementType: 'goods-issue',
     materialId: 'MAT-START-CULTURE-B10',
     materialDescription: 'Starter Culture B10',
@@ -144,7 +144,7 @@ export const mockGoodsMovements: GoodsMovementEvent[] = [
   },
   {
     movementId: 'TO-2024-001923',
-    timestamp: '2024-03-08T09:15:00.000Z',
+    timestamp: '2026-05-14T09:15:00.000Z',
     movementType: 'transfer-order',
     materialId: 'MAT-CH-EMMENTAL-BLOCK',
     materialDescription: 'Emmental Block 4 kg',
@@ -158,7 +158,7 @@ export const mockGoodsMovements: GoodsMovementEvent[] = [
   },
   {
     movementId: 'GR-2024-004799',
-    timestamp: '2024-03-08T06:45:00.000Z',
+    timestamp: '2026-05-14T06:45:00.000Z',
     movementType: 'goods-receipt',
     materialId: 'MAT-PACK-SHRINKWRAP',
     materialDescription: 'Shrink Wrap Film Roll',
@@ -170,7 +170,7 @@ export const mockGoodsMovements: GoodsMovementEvent[] = [
   },
   {
     movementId: 'ADJ-2024-000487',
-    timestamp: '2024-03-08T05:30:00.000Z',
+    timestamp: '2026-05-14T05:30:00.000Z',
     movementType: 'adjustment',
     materialId: 'MAT-RM-RENNET',
     materialDescription: 'Liquid Rennet 25 L',
@@ -193,7 +193,7 @@ export const mockReplenishmentNeeds: ReplenishmentNeed[] = [
     uom: 'KG',
     urgency: 'high',
     openPurchaseOrderId: 'PO-240309-0047',
-    expectedDelivery: '2024-03-09T08:00:00.000Z',
+    expectedDelivery: '2026-05-15T08:00:00.000Z',
   },
   {
     needId: 'REP-002',
@@ -228,7 +228,7 @@ export const mockReplenishmentNeeds: ReplenishmentNeed[] = [
     uom: 'EA',
     urgency: 'high',
     openPurchaseOrderId: 'PO-240310-0012',
-    expectedDelivery: '2024-03-10T12:00:00.000Z',
+    expectedDelivery: '2026-05-16T12:00:00.000Z',
   },
   {
     needId: 'REP-005',

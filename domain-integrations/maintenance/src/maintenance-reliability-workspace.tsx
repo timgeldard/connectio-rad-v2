@@ -20,11 +20,13 @@ export type MaintenanceReliabilityViewId =
 export interface MaintenanceReliabilityWorkspaceProps {
   readonly scope: ScopeContext
   readonly viewId?: string
+  readonly onNavigateToView?: (viewId: string) => void
 }
 
 export function MaintenanceReliabilityWorkspace({
   scope,
   viewId = 'overview',
+  onNavigateToView,
 }: MaintenanceReliabilityWorkspaceProps) {
   const request: MaintenanceReliabilityAdapterRequest = {
     plantId: scope.plantId,
@@ -41,15 +43,15 @@ export function MaintenanceReliabilityWorkspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'overview'}
       actionSidebar={<MaintenanceReliabilityActionsPanel context={context} />}
     >
-      {resolveView(viewId, request)}
+      {resolveView(viewId, request, onNavigateToView)}
     </StandardWorkspaceTemplate>
   )
 }
 
-function resolveView(viewId: string, request: MaintenanceReliabilityAdapterRequest): React.ReactNode {
+function resolveView(viewId: string, request: MaintenanceReliabilityAdapterRequest, onNavigateToView?: (viewId: string) => void): React.ReactNode {
   switch (viewId as MaintenanceReliabilityViewId) {
     case 'overview':
-      return <MaintenanceOverviewView request={request} />
+      return <MaintenanceOverviewView request={request} onNavigateToView={onNavigateToView} />
     case 'work-orders':
       return <WorkOrdersView request={request} />
     case 'preventive-maintenance':
