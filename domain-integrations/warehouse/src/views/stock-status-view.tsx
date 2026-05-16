@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import { StockOverviewPanel } from '../panels/stock-overview-panel.js'
 import { LocationCapacityPanel } from '../panels/location-capacity-panel.js'
+import { NearExpiryStockPanel } from '../panels/near-expiry-stock-panel.js'
+import { WarehouseReconciliationExceptionsPanel } from '../panels/warehouse-reconciliation-exceptions-panel.js'
 import type { Warehouse360AdapterRequest } from '../adapters/warehouse-360-adapter.js'
 
 const GRID: CSSProperties = {
@@ -19,6 +21,8 @@ export function StockStatusView({ request }: StockStatusViewProps) {
   return (
     <div style={GRID}>
       <StockOverviewPanel request={request} />
+      <NearExpiryStockPanel request={request} />
+      <WarehouseReconciliationExceptionsPanel request={request} />
       <LocationCapacityPanel request={request} />
     </div>
   )

@@ -142,3 +142,52 @@ export const LocationCapacitySchema = z.object({
 })
 
 export type LocationCapacity = z.infer<typeof LocationCapacitySchema>
+
+// ---------------------------------------------------------------------------
+// NearExpiryBatch
+// ---------------------------------------------------------------------------
+
+export const NearExpiryBatchSchema = z.object({
+  batchId: z.string(),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  storageLocationId: z.string(),
+  expiryDate: z.string().datetime(),
+  daysUntilExpiry: z.number(),
+  quantity: z.number().min(0),
+  uom: z.string(),
+  urgency: z.enum(['expired', 'critical', 'warning', 'caution']),
+  holdStatus: z.enum(['unrestricted', 'quality-hold', 'blocked']),
+})
+
+export type NearExpiryBatch = z.infer<typeof NearExpiryBatchSchema>
+
+// ---------------------------------------------------------------------------
+// WarehouseReconciliationException
+// ---------------------------------------------------------------------------
+
+export const WarehouseReconciliationExceptionSchema = z.object({
+  exceptionId: z.string(),
+  exceptionType: z.enum([
+    'quantity-mismatch',
+    'location-mismatch',
+    'status-mismatch',
+    'missing-in-wms',
+    'missing-in-im',
+    'duplicate-posting',
+  ]),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string().optional(),
+  storageLocationId: z.string(),
+  imQuantity: z.number().optional(),
+  wmsQuantity: z.number().optional(),
+  discrepancyQuantity: z.number().optional(),
+  uom: z.string(),
+  detectedAt: z.string().datetime(),
+  ageHours: z.number().min(0),
+  severity: z.enum(['critical', 'high', 'medium', 'low']),
+  resolution: z.enum(['open', 'in-progress', 'resolved', 'escalated']),
+})
+
+export type WarehouseReconciliationException = z.infer<typeof WarehouseReconciliationExceptionSchema>

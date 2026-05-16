@@ -59,3 +59,19 @@ export function useLocationCapacities(request: Warehouse360AdapterRequest) {
     staleTime: STALE,
   })
 }
+
+export function useNearExpiryStock(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['near-expiry-stock', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getNearExpiryStock(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouseExceptions(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-exceptions', request.warehouseId ?? null, request.plantId ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseExceptions(request),
+    staleTime: STALE,
+  })
+}

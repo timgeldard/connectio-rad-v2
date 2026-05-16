@@ -232,6 +232,8 @@ export type {
   GoodsMovementEvent,
   ReplenishmentNeed,
   LocationCapacity,
+  NearExpiryBatch,
+  WarehouseReconciliationException,
 } from './schemas/warehouse-360-overview.js'
 export {
   Warehouse360OverviewContextSchema,
@@ -242,6 +244,8 @@ export {
   GoodsMovementEventSchema,
   ReplenishmentNeedSchema,
   LocationCapacitySchema,
+  NearExpiryBatchSchema,
+  WarehouseReconciliationExceptionSchema,
 } from './schemas/warehouse-360-overview.js'
 
 export type {

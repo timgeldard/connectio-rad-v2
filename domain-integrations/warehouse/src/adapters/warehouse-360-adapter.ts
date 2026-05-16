@@ -6,6 +6,8 @@ import type {
   GoodsMovementEvent,
   ReplenishmentNeed,
   LocationCapacity,
+  NearExpiryBatch,
+  WarehouseReconciliationException,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -16,6 +18,8 @@ import {
   mockGoodsMovements,
   mockReplenishmentNeeds,
   mockLocationCapacities,
+  mockNearExpiryBatches,
+  mockWarehouseReconciliationExceptions,
 } from './warehouse-360-mock-data.js'
 
 export interface Warehouse360AdapterRequest {
@@ -91,6 +95,18 @@ export class Warehouse360Adapter {
     _request: Warehouse360AdapterRequest
   ): Promise<AdapterResult<LocationCapacity[]>> {
     return ok(mockLocationCapacities, this.now)
+  }
+
+  async getNearExpiryStock(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<NearExpiryBatch[]>> {
+    return ok(mockNearExpiryBatches, this.now)
+  }
+
+  async getWarehouseExceptions(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<WarehouseReconciliationException[]>> {
+    return ok(mockWarehouseReconciliationExceptions, this.now)
   }
 }
 

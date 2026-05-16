@@ -137,4 +137,84 @@ describe('Warehouse360Adapter', () => {
       }
     })
   })
+
+  describe('getNearExpiryStock', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getNearExpiryStock(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+      expect(result.data.length).toBeGreaterThan(0)
+    })
+
+    it('each batch has a valid urgency', async () => {
+      const result = await adapter.getNearExpiryStock(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const validUrgencies = ['expired', 'critical', 'warning', 'caution']
+      for (const batch of result.data) {
+        expect(validUrgencies).toContain(batch.urgency)
+      }
+    })
+
+    it('each batch has a valid holdStatus', async () => {
+      const result = await adapter.getNearExpiryStock(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const validStatuses = ['unrestricted', 'quality-hold', 'blocked']
+      for (const batch of result.data) {
+        expect(validStatuses).toContain(batch.holdStatus)
+      }
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getNearExpiryStock(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+
+    it('mock data includes an expired batch', async () => {
+      const result = await adapter.getNearExpiryStock(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.some((b) => b.urgency === 'expired')).toBe(true)
+    })
+  })
+
+  describe('getWarehouseExceptions', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getWarehouseExceptions(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+      expect(result.data.length).toBeGreaterThan(0)
+    })
+
+    it('each exception has a valid severity', async () => {
+      const result = await adapter.getWarehouseExceptions(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const validSeverities = ['critical', 'high', 'medium', 'low']
+      for (const ex of result.data) {
+        expect(validSeverities).toContain(ex.severity)
+      }
+    })
+
+    it('each exception has a valid resolution', async () => {
+      const result = await adapter.getWarehouseExceptions(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      const validResolutions = ['open', 'in-progress', 'resolved', 'escalated']
+      for (const ex of result.data) {
+        expect(validResolutions).toContain(ex.resolution)
+      }
+    })
+
+    it('each exception has positive ageHours', async () => {
+      const result = await adapter.getWarehouseExceptions(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const ex of result.data) {
+        expect(ex.ageHours).toBeGreaterThan(0)
+      }
+    })
+
+    it('includes fetchedAt timestamp', async () => {
+      const result = await adapter.getWarehouseExceptions(request)
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
 })
