@@ -5,7 +5,7 @@
 
 ## Purpose
 
-4-wave production rollout plan for ConnectIO-RAD V2. Wave 0 is the controlled pilot. Waves 1–3 are planned production rollout waves, each gated on the previous wave's exit criteria.
+Illustrative production rollout plan for ConnectIO-RAD V2. Wave 0 is the controlled pilot currently active at IE10. Waves 1–3 are planning targets only — scope, plant selection, and timing are subject to steering committee approval at each wave exit review.
 
 ## Wave Overview
 
@@ -20,25 +20,25 @@
 
 ### Wave 1 — Production Go-Live (IE10)
 
-- **Status:** Planned
+- **Status:** Planned (illustrative target)
 - **Conditions:** All Wave 0 exit criteria met, production connectors deployed
-- **Start:** 2026-09-01 | **End:** 2026-10-31
+- **Start:** 2026-09-01 | **End:** 2026-10-31 *(subject to Wave 0 exit review)*
 - **Legacy status:** Read-only fallback mode
 
-### Wave 2 — Expansion (IE10 + 2 Plants)
+### Wave 2 — Expansion (Additional Plants)
 
-- **Status:** Not Started
-- **Plants:** IE10, IE20 (Kerry Charleville), NL05 (Kerry Almere)
-- **Conditions:** Wave 1 exit criteria met, SAP PM contract signed
-- **Start:** 2026-11-01 | **End:** 2027-01-31
+- **Status:** Not Started (illustrative target)
+- **Plants:** IE10 (baseline) + additional plants TBD in Wave 1 exit review
+- **Conditions:** Wave 1 exit criteria met, SAP PM contract signed, Wave 2 plant scope formally agreed
+- **Start:** TBD — pending Wave 1 exit | **End:** TBD
 
-### Wave 3 — Full Rollout
+### Wave 3 — Broader Rollout
 
-- **Status:** Not Started
-- **Plants:** All Kerry plants globally
-- **Conditions:** Wave 2 exit criteria met, global support model in place
-- **Start:** 2027-02-01 | **End:** 2027-12-31
+- **Status:** Not Started (illustrative target)
+- **Plants:** TBD — to be scoped in Wave 2 exit review
+- **Conditions:** Wave 2 exit criteria met, all source connectors proven in production, global support model established
+- **Start:** TBD — pending Wave 2 exit | **End:** TBD
 
 ## Rollback Policy
 
-Each wave has a documented rollback plan. Legacy apps remain accessible through at least Wave 1. Do not decommission legacy apps until a plant has completed at least 30 days of stable production use of V2.
+Each wave has a documented rollback plan. Legacy apps remain accessible through at least Wave 1. Legacy app retirement is managed separately through the existing Legacy Retirement Readiness process — no retirement actions are taken within this screen.

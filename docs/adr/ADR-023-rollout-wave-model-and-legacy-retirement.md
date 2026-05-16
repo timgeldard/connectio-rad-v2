@@ -14,10 +14,10 @@ Phase 8 introduces the production rollout plan. We needed to decide the wave str
 The rollout follows 4 waves:
 - **Wave 0:** Controlled pilot (IE10 only, no production writes from V2, legacy apps primary)
 - **Wave 1:** Production go-live at IE10 (V2 primary, legacy apps in read-only fallback)
-- **Wave 2:** Expansion to IE10 + 2 additional plants
-- **Wave 3:** Full corporate rollout, legacy app retirement on a plant-by-plant schedule
+- **Wave 2:** Expansion to additional plants — scope TBD in Wave 1 exit review
+- **Wave 3:** Broader rollout — scope TBD in Wave 2 exit review
 
-Legacy apps are **not retired** during Wave 0 or Wave 1. Retirement is deferred to Wave 3, plant-by-plant, following ≥30 days of stable production use of V2.
+Legacy apps are **not retired** during Wave 0 or Wave 1. Legacy app retirement is handled through the existing Legacy Retirement Readiness process, not through new screens introduced in Phase 8. No retirement actions are taken within the Rollout Wave Plan screen.
 
 ## Rationale
 
@@ -27,6 +27,7 @@ Legacy apps are **not retired** during Wave 0 or Wave 1. Retirement is deferred 
 
 ## Consequences
 
-- Legacy apps must remain maintained and accessible through at least Wave 2.
+- Legacy apps must remain maintained and accessible through at least Wave 1.
 - The Cutover Simulation and Legacy Retirement Readiness admin pages remain relevant through Wave 2.
-- Wave 3 retirement schedule must include per-plant formal approval from plant operations leads.
+- Wave 2 and Wave 3 plant scope is not determined in this ADR — it is deferred to the respective exit reviews.
+- Legacy app retirement schedule and per-plant approval is governed by the existing Legacy Retirement Readiness process, outside the scope of Phase 8 screens.

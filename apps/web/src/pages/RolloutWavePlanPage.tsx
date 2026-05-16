@@ -38,34 +38,34 @@ const ROLLOUT_WAVES: readonly RolloutWave[] = [
   },
   {
     waveId: 'WAVE-2',
-    name: 'Wave 2 — Expansion (IE10 + 2 Additional Plants)',
-    description: 'Expand V2 rollout to 2 additional Kerry plants following successful Wave 1 at IE10. Maintenance Reliability workspace included if SAP PM contract is signed.',
+    name: 'Wave 2 — Expansion (Additional Plants)',
+    description: 'Expand V2 to additional Kerry plants following successful Wave 1 at IE10. Specific plants, scope, and timing to be confirmed in the Wave 1 exit review. Maintenance Reliability workspace included if SAP PM contract is signed.',
     targetRoles: ['quality-lead', 'food-safety-lead', 'operations-supervisor', 'warehouse-manager', 'qa-technician', 'plant-manager', 'maintenance-technician'],
-    targetPlants: ['IE10 — Kerry Listowel', 'IE20 — Kerry Charleville', 'NL05 — Kerry Almere'],
+    targetPlants: ['IE10 — Kerry Listowel (baseline)', 'Additional plants — TBD in Wave 1 exit review'],
     targetWorkspaces: ['quality-batch-release', 'trace-investigation', 'operations-plan-risk', 'warehouse-360-overview', 'production-staging', 'spc-monitoring', 'envmon-monitoring', 'process-order-review', 'maintenance-reliability'],
-    prerequisites: ['WAVE-1 exit criteria met', 'SAP PM contract signed', 'Maintenance Reliability workspace validated at IE10', 'Wave 2 plants provisioned'],
-    entryCriteria: ['WAVE-1 exit criteria all met', 'Wave 2 plant environments provisioned', 'Training delivered to Wave 2 cohort', 'Local support contacts at IE20 and NL05 identified'],
+    prerequisites: ['WAVE-1 exit criteria met', 'SAP PM contract signed', 'Maintenance Reliability workspace validated at IE10', 'Wave 2 plant scope formally agreed'],
+    entryCriteria: ['WAVE-1 exit criteria all met', 'Wave 2 plant environments provisioned', 'Training delivered to Wave 2 cohort', 'Local support contacts identified'],
     exitCriteria: ['V2 primary across Wave 2 plants', 'Zero P1 incidents in first 30 days per plant', 'Maintenance Reliability scenario validated at each plant'],
-    rollbackPlan: 'Per-plant rollback available. Legacy apps remain accessible. IE10 Wave 1 production state not affected by Wave 2 rollback.',
+    rollbackPlan: 'Per-plant rollback available. Legacy apps remain accessible throughout Wave 2. IE10 Wave 1 state not affected by Wave 2 rollback.',
     owner: 'programme-manager',
-    plannedStart: '2026-11-01',
-    plannedEnd: '2027-01-31',
+    plannedStart: 'TBD — pending Wave 1 exit',
+    plannedEnd: 'TBD',
     status: 'not-started',
   },
   {
     waveId: 'WAVE-3',
-    name: 'Wave 3 — Full Rollout',
-    description: 'Full corporate rollout of ConnectIO-RAD V2 across all Kerry plants globally. Legacy apps decommissioned on a plant-by-plant schedule.',
+    name: 'Wave 3 — Broader Rollout',
+    description: 'Continued rollout to remaining Kerry plants. Scope, sequence, and timing to be defined following Wave 2. Legacy app retirement is managed separately through the existing Legacy Retirement Readiness process — no retirement actions are taken within this screen.',
     targetRoles: ['quality-lead', 'food-safety-lead', 'operations-supervisor', 'warehouse-manager', 'qa-technician', 'plant-manager', 'maintenance-technician'],
-    targetPlants: ['All Kerry plants globally'],
-    targetWorkspaces: ['all'],
+    targetPlants: ['TBD — to be scoped in Wave 2 exit review'],
+    targetWorkspaces: ['all in-scope workspaces per plant'],
     prerequisites: ['WAVE-2 exit criteria met', 'All source connectors proven in production', 'Global support model established'],
-    entryCriteria: ['WAVE-2 exit criteria met', 'All plants provisioned', 'Global L&D programme delivered', 'Legacy app retirement schedule agreed'],
-    exitCriteria: ['100% of targeted plants live on V2', 'Legacy app usage <1%', 'Zero P1 incidents per plant within first 30 days', 'Legacy retirement formally approved per plant'],
-    rollbackPlan: 'Per-region rollback with 30-day legacy app availability window. Global rollback not recommended once >50% of plants are live.',
+    entryCriteria: ['WAVE-2 exit criteria met', 'Plant environments provisioned', 'L&D programme delivered to Wave 3 cohort'],
+    exitCriteria: ['V2 adopted as primary interface across Wave 3 plants', 'Zero P1 incidents in first 30 days per plant'],
+    rollbackPlan: 'Per-plant rollback with legacy app availability window. Rollback plan to be confirmed for each plant in Wave 3 scoping.',
     owner: 'cto-office',
-    plannedStart: '2027-02-01',
-    plannedEnd: '2027-12-31',
+    plannedStart: 'TBD — pending Wave 2 exit',
+    plannedEnd: 'TBD',
     status: 'not-started',
   },
 ]
@@ -99,7 +99,7 @@ export function RolloutWavePlanPage() {
           <Badge variant="outline">Phase 8</Badge>
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--shell-fg-2)' }}>
-          4-wave production rollout plan for ConnectIO-RAD V2. Wave 0 (controlled pilot) is currently active at IE10 Kerry Listowel. Waves 1–3 are planned, conditional on Wave 0 exit criteria.
+          Illustrative production rollout plan for ConnectIO-RAD V2. Wave 0 (controlled pilot) is currently active at IE10. Waves 1–3 are planning targets only — scope, plant selection, and timing are subject to steering committee approval at each wave exit review.
         </p>
       </div>
 
