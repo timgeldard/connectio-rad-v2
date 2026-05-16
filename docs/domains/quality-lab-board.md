@@ -90,6 +90,32 @@ The board shows up to 6 inspection failure cards per page, auto-rotates every 30
 
 ---
 
+## Layout cues (V1 preservation)
+
+The following UI elements are rendered inside the panel body to match V1 Lab Board visual context:
+
+| Element | Location | Content |
+|---------|----------|---------|
+| Board header | Top of panel body | `ConnectedQuality · Lab Board` (uppercase, small) |
+| Plant context | Board header (right of title) | `Plant: {plantId}` — only shown when `plantId` is set |
+| Source label | Board header (trailing) | `Mock SAP QM lab failures` or `SAP QM via legacy API` |
+| Fail / Warn legend | Below board header | Colored chips: FAIL (red) = Outside spec · WARN (amber) = Warning threshold |
+| Auto-rotate note | Page indicator | `Page N/M · Auto-rotates · Next in Xs` |
+
+---
+
+## Source wording
+
+| Source | EvidencePanel badge | Panel source label |
+|--------|--------------------|--------------------|
+| `mock` | (none) | `Mock SAP QM lab failures` |
+| `legacy-api` | Amber "Legacy API" | `SAP QM via legacy API` |
+
+The registration `description` field does not use the word "Live" — it reads  
+`"SAP QM inspection failures and warnings — 6-card rotating wallboard with spec bar and severity indicators."`
+
+---
+
 ## Accessing the view
 
 ```

@@ -36,6 +36,7 @@ const buildEnv = {
   VITE_TRACE_API_BASE_URL: process.env.VITE_TRACE_API_BASE_URL ?? '',
   VITE_WH360_API_BASE_URL: process.env.VITE_WH360_API_BASE_URL ?? '',
   VITE_POH_API_BASE_URL: process.env.VITE_POH_API_BASE_URL ?? '',
+  VITE_CQ_API_BASE_URL: process.env.VITE_CQ_API_BASE_URL ?? '',
 }
 
 console.log('=== prepare-databricks-app ===')
@@ -43,6 +44,7 @@ console.log(`Adapter mode       : ${buildEnv.VITE_ADAPTER_MODE}`)
 console.log(`Trace base URL     : "${buildEnv.VITE_TRACE_API_BASE_URL}" (empty = same-origin)`)
 console.log(`WH360 base URL     : "${buildEnv.VITE_WH360_API_BASE_URL}" (empty = same-origin)`)
 console.log(`POH base URL       : "${buildEnv.VITE_POH_API_BASE_URL}" (empty = same-origin)`)
+console.log(`CQ base URL        : "${buildEnv.VITE_CQ_API_BASE_URL}" (empty = same-origin)`)
 console.log()
 
 // ── 2. Build frontend ──────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ const registration: EvidencePanelRegistration = {
   panelId: 'connected-quality-lab-board',
   displayName: 'Lab Board',
   description:
-    'Live SAP QM inspection failures and warnings — 6-card rotating wallboard with spec bar and severity indicators.',
+    'SAP QM inspection failures and warnings — 6-card rotating wallboard with spec bar and severity indicators.',
   ownerDomain: 'quality',
   sourceOwnership: {
     domainId: 'quality',
@@ -216,6 +216,13 @@ export function ConnectedQualityLabBoardPanel({ request }: ConnectedQualityLabBo
   const { data: result, isLoading } = useConnectedQualityLabFailures(effectiveRequest)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
 
+  const sourceLabel =
+    result?.source === 'mock'
+      ? 'Mock SAP QM lab failures'
+      : result?.source === 'legacy-api'
+        ? 'SAP QM via legacy API'
+        : null
+
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,
     staleAfterSeconds: registration.freshnessPolicy.staleAfterSeconds,
@@ -273,6 +280,76 @@ export function ConnectedQualityLabBoardPanel({ request }: ConnectedQualityLabBo
       errorMessage={!result?.ok ? result?.error.message : undefined}
       source={result?.source}
     >
+      {/* board header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 6,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            color: 'var(--shell-fg-3)',
+            textTransform: 'uppercase',
+          }}
+        >
+          ConnectedQuality · Lab Board
+        </span>
+        {request.plantId && (
+          <span style={{ fontSize: 10, color: 'var(--shell-fg-2)' }}>
+            Plant: {request.plantId}
+          </span>
+        )}
+        {sourceLabel && (
+          <span style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginLeft: 'auto' }}>
+            {sourceLabel}
+          </span>
+        )}
+      </div>
+      {/* legend */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 6,
+          alignItems: 'center',
+          marginBottom: 10,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '1px 5px',
+            borderRadius: 3,
+            background: '#D32F2F',
+            color: '#fff',
+          }}
+        >
+          FAIL
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>Outside spec</span>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '1px 5px',
+            borderRadius: 3,
+            background: '#D97706',
+            color: '#fff',
+            marginLeft: 8,
+          }}
+        >
+          WARN
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>Warning threshold</span>
+      </div>
       {/* context strip */}
       <div
         style={{
@@ -319,7 +396,7 @@ export function ConnectedQualityLabBoardPanel({ request }: ConnectedQualityLabBo
         </span>
         {totalPages > 1 && (
           <span style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>
-            Page {page + 1}/{totalPages} · Next in {countdown}s
+            Page {page + 1}/{totalPages} · Auto-rotates · Next in {countdown}s
           </span>
         )}
       </div>

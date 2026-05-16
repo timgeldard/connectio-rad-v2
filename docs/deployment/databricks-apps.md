@@ -35,9 +35,9 @@ Browser → Databricks Apps (TLS + OAuth2) → FastAPI (apps/api/)
 
 ## Secret scope setup
 
-Create the scope and add the three V1 backend URL secrets before the first
-deploy. Replace the placeholder values with the actual internal service URLs
-for the target environment.
+Create the scope and add the V1 backend URL secrets before the first deploy.
+Replace the placeholder values with the actual internal service URLs for the
+target environment.
 
 ```bash
 # Create the scope (skip if it already exists)
@@ -54,6 +54,10 @@ databricks secrets put-secret connectio-v2 v1-wh360-api-base-url \
 # V1 Process Order History backend
 databricks secrets put-secret connectio-v2 v1-poh-api-base-url \
   --string-value "https://<poh-service-host>"
+
+# V1 Connected Quality Lab backend
+databricks secrets put-secret connectio-v2 v1-cq-api-base-url \
+  --string-value "https://<cq-service-host>"
 ```
 
 Secrets are encrypted at rest and never appear in logs or environment variable
@@ -93,6 +97,7 @@ VITE_ADAPTER_MODE=legacy-api \
 VITE_TRACE_API_BASE_URL="" \
 VITE_WH360_API_BASE_URL="" \
 VITE_POH_API_BASE_URL="" \
+VITE_CQ_API_BASE_URL="" \
 npm exec nx -- run web:build
 
 rm -rf apps/api/static
@@ -172,6 +177,7 @@ cd apps/api
 V1_TRACE_API_BASE_URL="https://<trace2-host>" \
 V1_WH360_API_BASE_URL="https://<wh360-host>" \
 V1_POH_API_BASE_URL="https://<poh-host>" \
+V1_CQ_API_BASE_URL="https://<cq-host>" \
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -189,6 +195,8 @@ but the React app and `/health` should still work.
 | `POST http://localhost:8000/api/trace2/batch-header` body `{"material_id":"<id>","batch_id":"<id>"}` | V1 response (with V1 set) or `{"detail":"V1_TRACE_API_BASE_URL is not configured"}` 503 |
 | `POST http://localhost:8000/api/wh360/warehouse-summary` body `{"warehouse_id":"<id>"}` | V1 response or 503 |
 | `POST http://localhost:8000/api/por/order-header` body `{"process_order_id":"<id>"}` | V1 response or 503 |
+| `GET http://localhost:8000/api/cq/lab/fails?plant_id=IE10` | V1 response or 503 |
+| `GET http://localhost:8000/api/cq/lab/plants` | V1 response or 503 |
 
 **Note:** all three proxy endpoints accept `snake_case` request fields only (`material_id`, `batch_id`,
 `warehouse_id`, `process_order_id`, `plant_id`). The TypeScript adapters already send snake_case — do
@@ -256,6 +264,8 @@ path-segment deep links is not needed.
 | `V1_TRACE_API_BASE_URL` | Secret scope | Base URL of the V1 Trace2 proxy target |
 | `V1_WH360_API_BASE_URL` | Secret scope | Base URL of the V1 Warehouse 360 proxy target |
 | `V1_POH_API_BASE_URL` | Secret scope | Base URL of the V1 Process Order History proxy target |
+| `V1_CQ_API_BASE_URL` | Secret scope | Base URL of the V1 Connected Quality backend |
+| `VITE_CQ_API_BASE_URL` | Build env | Frontend base URL for CQ API (empty = same-origin Databricks Apps deployment) |
 | `ADAPTER_MODE` | app.yaml literal | Informational only — the frontend adapter mode is baked into the JS bundle at build time |
 | `PYTHONUNBUFFERED` | app.yaml literal | Ensures FastAPI logs appear immediately in Databricks Apps log stream |
 | `PORT` | Injected by Databricks Apps | Databricks may override the port; current app.yaml binds to 8000 regardless — align if needed |
@@ -319,6 +329,7 @@ them.
 | Trace2 proxy | Partially verified | `getBatchHeaderSummary` browser-verified; other methods return mock |
 | WH360 proxy | Not yet verified | Proxy route wired; all methods return mock until browser-verified |
 | POH proxy | Not yet verified | Proxy route wired; all methods return mock until browser-verified |
+| CQ Lab Board proxy | Not yet verified | Proxy routes wired (`/api/cq/lab/fails`, `/api/cq/lab/plants`); returns mock until browser-verified |
 | V1 network connectivity | Not confirmed | Databricks Apps → V1 firewall/private link rules not tested |
 | `databricks-api` adapter | Not implemented | All adapters are at `legacy-api` or `mock` tier |
 

@@ -97,3 +97,37 @@
 ## Deployment file status
 
 `apps/api/main.py` modified (router import + include). All other deployment files — `apps/api/app.yaml`, `apps/api/requirements.txt`, `scripts/prepare-databricks-app.mjs` — are **unchanged**.
+
+---
+
+## Hardening pass addendum (2026-05-16)
+
+A targeted hardening pass was applied after the initial preservation commit. Architecture constraints remain satisfied.
+
+### Deployment/env alignment
+
+| File | Change |
+|------|--------|
+| `scripts/prepare-databricks-app.mjs` | Added `VITE_CQ_API_BASE_URL` to `buildEnv` and console.log output |
+| `apps/api/app.yaml` | Added `V1_CQ_API_BASE_URL` env entry reading from secret scope key `v1-cq-api-base-url` |
+| `docs/deployment/databricks-apps.md` | Added CQ secret setup, build equivalent, smoke-test command, what-to-check rows, env var table rows, readiness table row |
+| `README.md` | Added CQ proxy route rows to FastAPI routes table |
+
+### Source wording (constraint 7 — honesty)
+
+- `registration.description` no longer contains "Live" — changed to `"SAP QM inspection failures and warnings…"`
+- Source-aware subtitle added inside panel body: mock → `"Mock SAP QM lab failures"`, legacy-api → `"SAP QM via legacy API"`
+- EvidencePanelHeader already renders "Legacy API" amber badge for `legacy-api` source and nothing for `mock` — no change to runtime
+
+### Layout cues (constraint 3 — no data outside EvidencePanel)
+
+Board header, legend, and auto-rotate note were added **inside** `<EvidencePanel>` body. No data rendered outside EvidencePanel. No new components outside the existing file.
+
+### Tests added
+
+| File | Count |
+|------|-------|
+| `panels/connected-quality-lab-board-panel.test.tsx` | +7 tests |
+| `adapters/connected-quality-lab-legacy-api-adapter.test.ts` | 7 tests (new file) |
+
+All constraints from the original checklist remain **PASS**.

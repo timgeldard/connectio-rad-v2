@@ -74,13 +74,15 @@ Every data panel in the UI is an `EvidencePanel`. Panels declare:
 
 ### FastAPI proxy
 
-`apps/api/` proxies requests from the React frontend to V1 backends. Only verified endpoints have proxy routes — see `apps/api/routes/`. Currently verified routes:
+`apps/api/` proxies requests from the React frontend to V1 backends. See `apps/api/routes/` for individual verification status. Proxy routes:
 
-| Route | V1 target | Domain |
-|---|---|---|
-| `POST /api/trace2/batch-header` | V1 Trace2 batch-header | Traceability |
-| `POST /api/wh360/warehouse-summary` | V1 WH360 summary | Warehouse |
-| `POST /api/por/order-header` | V1 POH order-header | Operations |
+| Route | V1 target | Domain | Status |
+|---|---|---|---|
+| `POST /api/trace2/batch-header` | V1 Trace2 batch-header | Traceability | browser-verified |
+| `POST /api/wh360/warehouse-summary` | V1 WH360 summary | Warehouse | wired, not yet verified |
+| `POST /api/por/order-header` | V1 POH order-header | Operations | wired, not yet verified |
+| `GET /api/cq/lab/fails` | V1 CQ lab failures | Quality | wired, not yet verified |
+| `GET /api/cq/lab/plants` | V1 CQ plant list | Quality | wired, not yet verified |
 
 ---
 

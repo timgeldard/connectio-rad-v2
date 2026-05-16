@@ -109,4 +109,47 @@ describe('ConnectedQualityLabBoardPanel', () => {
       expect(badges.length).toBeGreaterThan(0)
     })
   })
+
+  it('does not show "Live" when source is mock', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={request} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.queryByText(/live/i)).toBeNull()
+    })
+  })
+
+  it('renders legend with Outside spec and Warning threshold labels', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={request} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.getByText('Outside spec')).toBeInTheDocument()
+      expect(screen.getByText('Warning threshold')).toBeInTheDocument()
+    })
+  })
+
+  it('renders ConnectedQuality Lab Board board header', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={request} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.getByText(/ConnectedQuality · Lab Board/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows plant context in board header when plantId provided', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={{ plantId: 'IE20' }} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.getByText('Plant: IE20')).toBeInTheDocument()
+    })
+  })
+
+  it('shows Mock SAP QM lab failures source label when source is mock', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={request} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.getByText('Mock SAP QM lab failures')).toBeInTheDocument()
+    })
+  })
+
+  it('shows Auto-rotates in page indicator when multiple pages', async () => {
+    render(<Wrapper><ConnectedQualityLabBoardPanel request={request} /></Wrapper>)
+    await waitFor(() => {
+      expect(screen.getByText(/Auto-rotates/)).toBeInTheDocument()
+    })
+  })
 })

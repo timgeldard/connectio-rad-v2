@@ -107,3 +107,41 @@
 
 To activate legacy-api mode: set `VITE_ADAPTER_MODE=legacy-api` and `VITE_CQ_API_BASE_URL=<origin>` (empty = same origin on Databricks Apps).  
 Backend requires `V1_CQ_API_BASE_URL` env var pointing to the V1 CQ backend.
+
+---
+
+## Hardening pass (2026-05-16)
+
+Changes applied after the initial preservation commit.
+
+### Deployment / env alignment
+
+| Variable | Where added |
+|----------|-------------|
+| `VITE_CQ_API_BASE_URL` | `scripts/prepare-databricks-app.mjs` `buildEnv` |
+| `V1_CQ_API_BASE_URL` | `apps/api/app.yaml` env block (reads from secret scope key `v1-cq-api-base-url`) |
+
+Both variables were missing from the deployment artifact before this pass.
+
+### Source wording
+
+- Registration `description` changed from `"Live SAP QM inspection failures and warnings…"` to `"SAP QM inspection failures and warnings…"` (removed "Live" — misleading when source is mock).
+- Source-aware subtitle added inside the panel body: mock → `"Mock SAP QM lab failures"`, legacy-api → `"SAP QM via legacy API"`.
+
+### Layout cues
+
+Added inside the panel body without breaking `EvidencePanel` or `StandardWorkspaceTemplate`:
+
+| Cue | Implementation |
+|-----|---------------|
+| `ConnectedQuality · Lab Board` heading | Board header row at top of panel body |
+| Plant context | `Plant: {plantId}` shown in board header when `request.plantId` is set |
+| Fail / Warn legend | Colored chips + "Outside spec" / "Warning threshold" labels below board header |
+| Auto-rotate note | Page indicator updated: `Page N/M · Auto-rotates · Next in Xs` |
+
+### Tests added
+
+| File | Tests added |
+|------|------------|
+| `panels/connected-quality-lab-board-panel.test.tsx` | no "Live" when mock; legend renders; board header; plant context; source label; auto-rotate note |
+| `adapters/connected-quality-lab-legacy-api-adapter.test.ts` | same-origin URL; baseUrl prepend; source field; fallback to mock; error result; trailing-slash strip; prepare script VITE_CQ_API_BASE_URL check |

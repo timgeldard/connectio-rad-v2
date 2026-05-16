@@ -36,6 +36,11 @@ env:
       secretScope: connectio-v2
       secretKey: v1-poh-api-base-url
 
+  - name: V1_CQ_API_BASE_URL
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: v1-cq-api-base-url
+
   # ── App behaviour ─────────────────────────────────────────────────────────
   # "legacy-api" proxies to V1; "mock" returns fixture data (useful for demos
   # when V1 is unavailable). The value is baked into the frontend build, so
