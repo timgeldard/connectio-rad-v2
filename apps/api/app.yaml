@@ -2,9 +2,8 @@
 # Docs: https://docs.databricks.com/en/dev-tools/databricks-apps/index.html
 #
 # Deploy from the repo root:
-#   1. Build frontend:   VITE_ADAPTER_MODE=legacy-api VITE_TRACE_API_BASE_URL="" VITE_WH360_API_BASE_URL="" VITE_POH_API_BASE_URL="" npm exec nx -- run web:build
-#   2. Copy static:      cp -r apps/web/dist apps/api/static
-#   3. Deploy app:       databricks apps deploy connectio-v2 --source-code-path apps/api
+#   1. Prepare artifact: npm run prepare:databricks  (builds frontend + copies to apps/api/static/)
+#   2. Deploy app:       databricks apps deploy connectio-v2 --source-code-path apps/api
 #
 # Secret scope "connectio-v2" must exist in the target workspace before deployment.
 # See docs/deployment/databricks-apps.md for full setup instructions.
