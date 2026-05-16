@@ -4,8 +4,10 @@ import { Warehouse360Adapter } from './warehouse-360-adapter.js'
 import type { Warehouse360AdapterRequest } from './warehouse-360-adapter.js'
 
 /**
- * Warehouse360 adapter that proxies to the V1 backend for verified endpoints.
- * All other methods fall back to mock via super.
+ * Tier: legacy-api
+ * Verified methods: getWarehouse360Summary (browser-verified against V1 WH360)
+ * Fallback: Warehouse360Adapter (mock) — all other methods return mock data via super
+ * Next tier: databricks-api (pending V1 WH360 retirement)
  */
 export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
   private readonly baseUrl: string
@@ -15,6 +17,10 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
+  /**
+   * Tier: legacy-api — browser-verified against V1 WH360 warehouse-summary endpoint.
+   * Next tier: databricks-api (pending V1 WH360 retirement).
+   */
   override async getWarehouse360Summary(
     request: Warehouse360AdapterRequest,
   ): Promise<AdapterResult<Warehouse360Summary>> {

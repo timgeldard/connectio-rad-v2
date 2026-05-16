@@ -1,0 +1,147 @@
+import type { Node, Edge } from '@xyflow/react'
+import type { TraceGraph, TraceNode, TraceEdge } from '@connectio/data-contracts'
+
+// ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+
+export const NODE_WIDTH = 200
+export const NODE_HEIGHT = 72
+export const LEVEL_HEIGHT = 110
+export const H_SPACING = 220
+
+// ---------------------------------------------------------------------------
+// Visual mappings
+// ---------------------------------------------------------------------------
+
+export const RISK_BORDER: Record<string, string> = {
+  critical: '#F24A00',
+  high: '#D97706',
+  medium: '#D4A017',
+  low: '#289BA2',
+  none: '#6B7280',
+}
+
+export const RISK_BG: Record<string, string> = {
+  critical: '#FFF1EC',
+  high: '#FFFBEB',
+  medium: '#FEFCE8',
+  low: '#F0FDFC',
+  none: '#F9FAFB',
+}
+
+export const RISK_TEXT: Record<string, string> = {
+  critical: '#7C1900',
+  high: '#78350F',
+  medium: '#713F12',
+  low: '#134E4A',
+  none: '#374151',
+}
+
+export const NODE_TYPE_LABEL: Record<string, string> = {
+  'finished-good': 'Finished Good',
+  'raw-material': 'Raw Material',
+  'supplier-lot': 'Supplier Lot',
+  'process-order': 'Process Order',
+  'customer-delivery': 'Delivery',
+  'semi-finished': 'Semi-Finished',
+}
+
+// ---------------------------------------------------------------------------
+// BFS layout
+// ---------------------------------------------------------------------------
+
+/**
+ * Assigns {x, y} positions to each node via BFS from the root batch node.
+ *
+ * Levels: root = 0, upstream nodes get negative levels, downstream get positive.
+ * Within each level nodes are spread horizontally by H_SPACING.
+ */
+export function bfsLayout(graph: TraceGraph): Map<string, { x: number; y: number }> {
+  const rootNode = graph.nodes.find(n => n.batchId === graph.rootBatch) ?? graph.nodes[0]
+  if (!rootNode) return new Map()
+
+  const levelOf = new Map<string, number>()
+  const queue: string[] = [rootNode.id]
+  levelOf.set(rootNode.id, 0)
+
+  while (queue.length > 0) {
+    const cur = queue.shift()!
+    const curLevel = levelOf.get(cur)!
+
+    for (const edge of graph.edges) {
+      if (edge.target === cur && !levelOf.has(edge.source)) {
+        levelOf.set(edge.source, curLevel - 1)
+        queue.push(edge.source)
+      }
+      if (edge.source === cur && !levelOf.has(edge.target)) {
+        levelOf.set(edge.target, curLevel + 1)
+        queue.push(edge.target)
+      }
+    }
+  }
+
+  // Group nodes by level so we can centre each row
+  const byLevel = new Map<number, string[]>()
+  for (const [id, level] of levelOf) {
+    const group = byLevel.get(level) ?? []
+    group.push(id)
+    byLevel.set(level, group)
+  }
+
+  const positions = new Map<string, { x: number; y: number }>()
+  for (const [level, ids] of byLevel) {
+    const rowWidth = ids.length * H_SPACING
+    const startX = -rowWidth / 2 + H_SPACING / 2
+    ids.forEach((id, i) => {
+      positions.set(id, { x: startX + i * H_SPACING, y: level * LEVEL_HEIGHT })
+    })
+  }
+
+  return positions
+}
+
+// ---------------------------------------------------------------------------
+// React Flow node/edge mapping
+// ---------------------------------------------------------------------------
+
+/** Data payload attached to each React Flow node. */
+export interface TraceNodeData {
+  node: TraceNode
+  isRoot: boolean
+  isSelected: boolean
+  [key: string]: unknown
+}
+
+export function mapToFlowNodes(
+  graph: TraceGraph,
+  selectedId: string | null | undefined,
+): Node<TraceNodeData>[] {
+  const positions = bfsLayout(graph)
+
+  return graph.nodes.map(node => {
+    const pos = positions.get(node.id) ?? { x: 0, y: 0 }
+    return {
+      id: node.id,
+      type: 'traceNode',
+      position: pos,
+      data: {
+        node,
+        isRoot: node.batchId === graph.rootBatch,
+        isSelected: node.id === selectedId,
+      },
+    }
+  })
+}
+
+export function mapToFlowEdges(graph: TraceGraph): Edge[] {
+  return graph.edges.map((edge: TraceEdge) => ({
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    label: edge.relationshipType.replace(/-/g, ' '),
+    style: { stroke: '#9CA3AF', strokeWidth: 1.5 },
+    labelStyle: { fontSize: 10, fill: '#6B7280' },
+    labelBgStyle: { fill: 'var(--shell-bg, #ffffff)', fillOpacity: 0.85 },
+  }))
+}

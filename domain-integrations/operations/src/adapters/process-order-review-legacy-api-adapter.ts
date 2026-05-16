@@ -4,8 +4,10 @@ import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
 
 /**
- * ProcessOrderReview adapter that proxies to the V1 backend for verified endpoints.
- * All other methods fall back to mock via super.
+ * Tier: legacy-api
+ * Verified methods: getProcessOrderHeader (browser-verified against V1 POH)
+ * Fallback: ProcessOrderReviewAdapter (mock) — all other methods return mock data via super
+ * Next tier: databricks-api (pending V1 POH retirement)
  */
 export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapter {
   private readonly baseUrl: string
@@ -15,6 +17,10 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
+  /**
+   * Tier: legacy-api — browser-verified against V1 POH order-header endpoint.
+   * Next tier: databricks-api (pending V1 POH retirement).
+   */
   override async getProcessOrderHeader(
     request: ProcessOrderReviewAdapterRequest,
   ): Promise<AdapterResult<ProcessOrderHeader>> {

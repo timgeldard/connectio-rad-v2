@@ -1,107 +1,142 @@
-# New Nx Repository
+# ConnectIO RAD V2
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+ConnectIO RAD (Rapid Application Development) V2 is a React + FastAPI application that provides supply-chain visibility and quality-management workspaces for Kerry Ingredients manufacturing operations. V2 replaces the original ConnectIO-RAD monolithic frontend with a domain-integration architecture that composes evidence across operational domains into purpose-built supervisor workspaces.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+---
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
-## Finish your Nx platform setup
+## Domains
 
-🚀 [Finish setting up your workspace](https://cloud.nx.app/connect/6dhI52z6k1) to get faster builds with remote caching, distributed task execution, and self-healing CI. [Learn more about Nx Cloud](https://nx.dev/ci/intro/why-nx-cloud).
+| Domain integration | Package | Primary source system | Live workspaces |
+|---|---|---|---|
+| `di-traceability` | `@connectio/di-traceability` | Trace2 | Trace Investigation |
+| `di-warehouse` | `@connectio/di-warehouse` | Warehouse 360 (WMS) | Warehouse 360 |
+| `di-operations` | `@connectio/di-operations` | POH + Plan data | Process Order Review, Operations Plan Risk |
+| `di-quality` | `@connectio/di-quality` | SAP QM | Quality Batch Release |
+| `di-spc` | `@connectio/di-spc` | SPC system | SPC Monitoring |
+| `di-maintenance` | `@connectio/di-maintenance` | Maintenance system | Maintenance & Reliability |
+| `di-envmon` | `@connectio/di-envmon` | EnvMon | Environmental Monitoring |
 
-## Generate a library
+---
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
-```
-
-## Run tasks
-
-To build the library use:
-
-```sh
-npx nx build pkg1
-```
-
-To run any task with Nx use:
-
-```sh
-npx nx <target> <project-name>
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
+## Architecture
 
 ```
-npx nx release
+apps/web/         React frontend (Vite, TypeScript)
+apps/api/         FastAPI proxy backend (Python 3.11+)
+
+domain-integrations/
+  traceability/   Evidence panels, adapters, views for Trace2 domain
+  warehouse/      Evidence panels, adapters, views for WH360 domain
+  operations/     Evidence panels, adapters, views for POH/plan domain
+  quality/        Evidence panels, adapters, views for QM domain
+  spc/            Evidence panels for SPC domain
+  maintenance/    Evidence panels for maintenance domain
+  envmon/         Evidence panels for environmental monitoring
+  analytics/      Cross-domain analytics
+
+packages/
+  data-contracts/         Zod schemas + TypeScript types for all domain entities
+  product-model/          Workspace/panel registration types and lifecycle enums
+  evidence-panel-runtime/ EvidencePanel component and useEvidencePanel hook
+  workspace-runtime/      StandardWorkspaceTemplate and workspace primitives
+  source-adapters/        AdapterResult<T> type, AdapterError, AdapterSource
+  design-system/          Shared UI tokens and components
+  auth-scope/             ScopeContext and role definitions
+  feature-flags/          Feature flag primitives
+  personalization/        User personalization hooks
+  telemetry/              Telemetry and analytics primitives
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+### Adapter pattern
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Each domain-integration has one adapter class per mode:
 
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+```
+MockAdapter          → returns fixture data (always works, no backend needed)
+LegacyApiAdapter     → extends Mock, overrides verified methods to call FastAPI proxy
+DatabricksApiAdapter → future; calls Databricks SQL / Unity Catalog directly
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+Active mode is configured at build time via `VITE_ADAPTER_MODE`:
 
-```sh
-npx nx sync:check
+```bash
+VITE_ADAPTER_MODE=mock          # default in development
+VITE_ADAPTER_MODE=legacy-api    # uses FastAPI proxy → V1 backends
+VITE_ADAPTER_MODE=databricks-api  # not yet implemented
 ```
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+### Evidence Panel pattern
 
-## Nx Cloud
+Every data panel in the UI is an `EvidencePanel`. Panels declare:
+- `EvidencePanelRegistration` — id, domain, lifecycle, required permissions, freshness policy
+- `useEvidencePanel()` — manages displayState (loading / ready / stale / error / unauthorized)
+- `source` — amber badge for `legacy-api`, green for `databricks-api`, none for `mock`
 
-Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+### FastAPI proxy
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+`apps/api/` proxies requests from the React frontend to V1 backends. Only verified endpoints have proxy routes — see `apps/api/routes/`. Currently verified routes:
 
-### Set up CI (non-Github Actions CI)
+| Route | V1 target | Domain |
+|---|---|---|
+| `POST /api/trace2/batch-header` | V1 Trace2 batch-header | Traceability |
+| `POST /api/wh360/warehouse-summary` | V1 WH360 summary | Warehouse |
+| `POST /api/por/order-header` | V1 POH order-header | Operations |
 
-**Note:** This is only required if your CI provider is not GitHub Actions.
+---
 
-Use the following command to configure a CI workflow for your workspace:
+## Getting started
 
-```sh
-npx nx g ci-workflow
+### Prerequisites
+
+- Node.js 20+ and npm 10+
+- Python 3.11+ (for API development)
+- `uv` (Python package manager — see `pyproject.toml`)
+
+### Development
+
+```bash
+# Install JS dependencies
+npm install
+
+# Start frontend (port 4200)
+npm exec nx -- run web:dev
+
+# Start FastAPI backend (port 8000)
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir apps/api
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Running tests
 
-## Install Nx Console
+```bash
+# All domain tests
+npm exec nx -- run-many --target=test --all
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+# Single domain
+npm exec nx -- run di-traceability:test
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Typecheck
+npm exec nx -- run-many --target=typecheck --all
+```
 
-## Useful links
+### Building for production
 
-Learn more:
+```bash
+npm exec nx -- run web:build
+```
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+See `docs/deployment/databricks-apps.md` for Databricks Apps deployment.
 
-And join the Nx community:
+---
 
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Key docs
+
+| Topic | Location |
+|---|---|
+| Architecture overview | `docs/architecture/overview.md` |
+| Adapter modes (mock / legacy-api / databricks-api) | `docs/adapters/mock-legacy-databricks-modes.md` |
+| Adapter migration strategy | `docs/adapters/adapter-migration-strategy.md` |
+| Data / semantic model | `docs/data/semantic-model-overview.md` |
+| V1 → V2 functionality preservation | `docs/migration/v1-to-v2-functionality-preservation.md` |
+| Databricks Apps deployment | `docs/deployment/databricks-apps.md` |
+| Workspace + panel registry | `docs/governance/workspace-and-panel-registry.md` |
+| ADRs | `docs/adr/` |

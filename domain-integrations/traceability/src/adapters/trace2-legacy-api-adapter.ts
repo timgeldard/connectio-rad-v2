@@ -58,8 +58,10 @@ function mapReleaseStatus(r: V1BatchHeaderResponse): BatchHeaderSummary['release
 }
 
 /**
- * Trace2 adapter that proxies to the V1 backend for verified endpoints.
- * All other methods fall back to mock via super.
+ * Tier: legacy-api
+ * Verified methods: getBatchHeaderSummary (browser-verified against V1 Trace2)
+ * Fallback: Trace2Adapter (mock) — all other methods return mock data via super
+ * Next tier: databricks-api (pending V1 Trace2 retirement)
  */
 export class Trace2LegacyApiAdapter extends Trace2Adapter {
   private readonly baseUrl: string
@@ -69,6 +71,10 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
+  /**
+   * Tier: legacy-api — browser-verified against V1 Trace2 batch-header endpoint.
+   * Next tier: databricks-api (pending V1 Trace2 retirement).
+   */
   override async getBatchHeaderSummary(
     request: Trace2AdapterRequest,
   ): Promise<AdapterResult<BatchHeaderSummary>> {

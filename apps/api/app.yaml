@@ -1,0 +1,49 @@
+# Databricks Apps configuration for ConnectIO V2
+# Docs: https://docs.databricks.com/en/dev-tools/databricks-apps/index.html
+#
+# Deploy from the repo root:
+#   1. Build frontend:   npm exec nx -- run web:build
+#   2. Copy static:      cp -r apps/web/dist apps/api/static
+#   3. Deploy app:       databricks apps deploy connectio-v2 --source-code-path apps/api
+#
+# Secret scope "connectio-v2" must exist in the target workspace before deployment.
+# See docs/deployment/databricks-apps.md for full setup instructions.
+
+command:
+  - uvicorn
+  - main:app
+  - --host
+  - 0.0.0.0
+  - --port
+  - "8000"
+  - --workers
+  - "2"
+
+env:
+  # ── V1 backend URLs ──────────────────────────────────────────────────────
+  # Store each value in the secret scope; never commit the real URLs.
+  - name: V1_TRACE_API_BASE_URL
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: v1-trace-api-base-url
+
+  - name: V1_WH360_API_BASE_URL
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: v1-wh360-api-base-url
+
+  - name: V1_POH_API_BASE_URL
+    valueFrom:
+      secretScope: connectio-v2
+      secretKey: v1-poh-api-base-url
+
+  # ── App behaviour ─────────────────────────────────────────────────────────
+  # "legacy-api" proxies to V1; "mock" returns fixture data (useful for demos
+  # when V1 is unavailable). The value is baked into the frontend build, so
+  # changing it here has no effect on the React bundle — rebuild the frontend.
+  - name: ADAPTER_MODE
+    value: legacy-api
+
+  # ── Python runtime ────────────────────────────────────────────────────────
+  - name: PYTHONUNBUFFERED
+    value: "1"
