@@ -11,13 +11,30 @@ from typing import Any
 
 import httpx
 
-from .errors import DatabricksAuthRequiredError, DatabricksQueryError, DatabricksQueryTimeoutError
+from .errors import (
+    DatabricksAuthRequiredError,
+    DatabricksPermissionError,
+    DatabricksQueryError,
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
+)
 
 _log = logging.getLogger(__name__)
 
 
 def _infer_param_type(value: object) -> str:
-    """Map a Python value to a Databricks Statement API parameter type string."""
+    """Map a Python value to a Databricks Statement API parameter type string.
+
+    Raises ValueError for None — callers must either filter None params before
+    calling execute() or provide explicit fallback values. Passing None would
+    produce the string literal "None" in SQL which is never correct.
+    """
+    if value is None:
+        raise ValueError(
+            "None is not a valid Statement API parameter value. "
+            "Filter or replace None before building the params dict."
+        )
     if isinstance(value, bool):
         return "BOOLEAN"
     if isinstance(value, int):
@@ -90,7 +107,15 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
     """
 
     def __init__(self, host: str) -> None:
-        self._host = host.rstrip("/")
+        # Strip scheme (https:// or http://) if present, then whitespace and trailing slashes.
+        # Prevents double-scheme URLs like https://https://... when DATABRICKS_HOST includes
+        # the prefix. The URL is reconstructed with explicit https:// in execute().
+        h = host.strip()
+        for scheme in ("https://", "http://"):
+            if h.lower().startswith(scheme):
+                h = h[len(scheme):]
+                break
+        self._host = h.rstrip("/")
 
     async def execute(
         self,
@@ -141,8 +166,16 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
             raise DatabricksQueryError(query_name, f"HTTP transport error: {exc}") from exc
 
         if response.status_code == 401:
-            # Token expired or revoked — surface as auth error so the route returns 401.
             raise DatabricksAuthRequiredError(tags.get("user_id", "unknown"))
+
+        if response.status_code == 403:
+            raise DatabricksPermissionError(query_name)
+
+        if response.status_code == 404:
+            raise DatabricksWarehouseConfigError(warehouse_id)
+
+        if response.status_code == 429:
+            raise DatabricksRateLimitError(query_name)
 
         if not response.is_success:
             raise DatabricksQueryError(

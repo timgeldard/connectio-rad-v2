@@ -47,3 +47,42 @@ class DatabricksConfigError(Exception):
             "Set DATABRICKS_HOST and SQL_WAREHOUSE_ID environment variables."
         )
         self.missing_vars = missing_vars
+
+
+class DatabricksPermissionError(Exception):
+    """Raised when the authenticated user lacks permission for the query (HTTP 403).
+
+    Check Unity Catalog grants for the user's account. This error must not
+    trigger a service-principal fallback — the user's identity must be used.
+    """
+
+    def __init__(self, query_name: str) -> None:
+        super().__init__(
+            f"Permission denied for query {query_name!r}. "
+            "Check Unity Catalog grants for this user."
+        )
+        self.query_name = query_name
+
+
+class DatabricksRateLimitError(Exception):
+    """Raised when Databricks returns HTTP 429 Too Many Requests."""
+
+    def __init__(self, query_name: str) -> None:
+        super().__init__(
+            f"Rate limit exceeded for query {query_name!r}. Retry after a short delay."
+        )
+        self.query_name = query_name
+
+
+class DatabricksWarehouseConfigError(Exception):
+    """Raised when the SQL Warehouse is not found or not accessible (HTTP 404).
+
+    Usually indicates SQL_WAREHOUSE_ID is wrong or the warehouse has been deleted.
+    """
+
+    def __init__(self, warehouse_id: str) -> None:
+        super().__init__(
+            f"SQL Warehouse {warehouse_id!r} not found or not accessible. "
+            "Check SQL_WAREHOUSE_ID configuration."
+        )
+        self.warehouse_id = warehouse_id

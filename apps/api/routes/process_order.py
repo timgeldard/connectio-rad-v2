@@ -21,11 +21,15 @@ from adapters.poh.poh_databricks_adapter import (
     get_process_order_header_spec,
     map_process_order_header_rows,
 )
+from routes._databricks import require_databricks_config, set_databricks_response_headers
 from shared.query_service.databricks_client import StatementApiDatabricksClient
 from shared.query_service.errors import (
     DatabricksAuthRequiredError,
+    DatabricksPermissionError,
     DatabricksQueryError,
     DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
 )
 from shared.query_service.identity import UserIdentity
 from shared.query_service.query_executor import QueryExecutor
@@ -97,17 +101,7 @@ async def _order_header_databricks(
     user: str | None,
     email: str | None,
 ) -> dict:
-    databricks_host = os.getenv("DATABRICKS_HOST", "")
-    warehouse_id = os.getenv("SQL_WAREHOUSE_ID", "")
-
-    if not databricks_host or not warehouse_id:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "DATABRICKS_HOST and SQL_WAREHOUSE_ID must be configured "
-                "for BACKEND_ADAPTER_MODE=databricks-api"
-            ),
-        )
+    databricks_host, warehouse_id = require_databricks_config()
 
     identity = UserIdentity(
         user_id=user or "unknown",
@@ -127,6 +121,12 @@ async def _order_header_databricks(
         rows = await executor.execute(spec, identity)
     except DatabricksAuthRequiredError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except DatabricksQueryTimeoutError as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except DatabricksQueryError as exc:
@@ -136,5 +136,5 @@ async def _order_header_databricks(
     if result is None:
         raise HTTPException(status_code=404, detail="Process order not found")
 
-    response.headers["X-Data-Source"] = spec.source_badge
+    set_databricks_response_headers(response, spec)
     return result

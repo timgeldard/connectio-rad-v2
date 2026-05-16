@@ -12,8 +12,11 @@ from shared.query_service.databricks_client import (
 )
 from shared.query_service.errors import (
     DatabricksAuthRequiredError,
+    DatabricksPermissionError,
     DatabricksQueryError,
     DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
 )
 
 
@@ -37,8 +40,9 @@ class TestInferParamType:
     def test_bool_false_is_boolean_not_int(self) -> None:
         assert _infer_param_type(False) == "BOOLEAN"
 
-    def test_none_is_string(self) -> None:
-        assert _infer_param_type(None) == "STRING"
+    def test_none_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="None is not a valid"):
+            _infer_param_type(None)
 
     def test_large_int_is_int(self) -> None:
         assert _infer_param_type(10_000) == "INT"
@@ -343,3 +347,176 @@ class TestStatementApiDatabricksClient:
             )
 
         assert "parameters" not in captured_bodies[0]
+
+    # ── Host normalisation ──────────────────────────────────────────────────
+
+    async def test_host_with_https_scheme_normalised(self) -> None:
+        captured_urls: list[str] = []
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+
+        http_client = AsyncMock()
+
+        async def capture_post(url, *, headers, json, **_):
+            captured_urls.append(url)
+            return response
+
+        http_client.post = capture_post
+        ctx = MagicMock()
+        ctx.__aenter__ = AsyncMock(return_value=http_client)
+        ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("httpx.AsyncClient", return_value=ctx):
+            client = StatementApiDatabricksClient(host="https://myworkspace.azuredatabricks.net")
+            await client.execute(
+                sql="SELECT 1", params={}, oauth_token="tok",
+                warehouse_id="wh", timeout_seconds=30, tags={},
+            )
+
+        assert captured_urls[0] == "https://myworkspace.azuredatabricks.net/api/2.0/sql/statements"
+        assert "https://https://" not in captured_urls[0]
+
+    async def test_host_with_http_scheme_normalised(self) -> None:
+        captured_urls: list[str] = []
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+
+        http_client = AsyncMock()
+
+        async def capture_post(url, *, headers, json, **_):
+            captured_urls.append(url)
+            return response
+
+        http_client.post = capture_post
+        ctx = MagicMock()
+        ctx.__aenter__ = AsyncMock(return_value=http_client)
+        ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("httpx.AsyncClient", return_value=ctx):
+            client = StatementApiDatabricksClient(host="http://myworkspace.azuredatabricks.net")
+            await client.execute(
+                sql="SELECT 1", params={}, oauth_token="tok",
+                warehouse_id="wh", timeout_seconds=30, tags={},
+            )
+
+        assert captured_urls[0] == "https://myworkspace.azuredatabricks.net/api/2.0/sql/statements"
+
+    async def test_host_without_scheme_preserved(self) -> None:
+        captured_urls: list[str] = []
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+
+        http_client = AsyncMock()
+
+        async def capture_post(url, *, headers, json, **_):
+            captured_urls.append(url)
+            return response
+
+        http_client.post = capture_post
+        ctx = MagicMock()
+        ctx.__aenter__ = AsyncMock(return_value=http_client)
+        ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("httpx.AsyncClient", return_value=ctx):
+            client = StatementApiDatabricksClient(host="myworkspace.azuredatabricks.net")
+            await client.execute(
+                sql="SELECT 1", params={}, oauth_token="tok",
+                warehouse_id="wh", timeout_seconds=30, tags={},
+            )
+
+        assert captured_urls[0] == "https://myworkspace.azuredatabricks.net/api/2.0/sql/statements"
+
+    async def test_host_with_leading_whitespace_normalised(self) -> None:
+        """Whitespace in DATABRICKS_HOST env value must not produce an invalid URL."""
+        captured_urls: list[str] = []
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+
+        http_client = AsyncMock()
+
+        async def capture_post(url, *, headers, json, **_):
+            captured_urls.append(url)
+            return response
+
+        http_client.post = capture_post
+        ctx = MagicMock()
+        ctx.__aenter__ = AsyncMock(return_value=http_client)
+        ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("httpx.AsyncClient", return_value=ctx):
+            client = StatementApiDatabricksClient(host="  myworkspace.azuredatabricks.net  ")
+            await client.execute(
+                sql="SELECT 1", params={}, oauth_token="tok",
+                warehouse_id="wh", timeout_seconds=30, tags={},
+            )
+
+        assert captured_urls[0] == "https://myworkspace.azuredatabricks.net/api/2.0/sql/statements"
+
+    # ── HTTP error mapping ──────────────────────────────────────────────────
+
+    async def test_http_403_raises_permission_error(self) -> None:
+        response = MagicMock()
+        response.status_code = 403
+        response.is_success = False
+        response.text = "Forbidden"
+
+        with patch("httpx.AsyncClient", return_value=_make_http_client_mock(response)):
+            client = StatementApiDatabricksClient(host="test.databricks.com")
+            with pytest.raises(DatabricksPermissionError):
+                await client.execute(**self._BASE_KWARGS)
+
+    async def test_http_404_raises_warehouse_config_error(self) -> None:
+        response = MagicMock()
+        response.status_code = 404
+        response.is_success = False
+        response.text = "Not Found"
+
+        with patch("httpx.AsyncClient", return_value=_make_http_client_mock(response)):
+            client = StatementApiDatabricksClient(host="test.databricks.com")
+            with pytest.raises(DatabricksWarehouseConfigError):
+                await client.execute(**self._BASE_KWARGS)
+
+    async def test_http_429_raises_rate_limit_error(self) -> None:
+        response = MagicMock()
+        response.status_code = 429
+        response.is_success = False
+        response.text = "Too Many Requests"
+
+        with patch("httpx.AsyncClient", return_value=_make_http_client_mock(response)):
+            client = StatementApiDatabricksClient(host="test.databricks.com")
+            with pytest.raises(DatabricksRateLimitError):
+                await client.execute(**self._BASE_KWARGS)
+
+    # ── Token safety ────────────────────────────────────────────────────────
+
+    async def test_oauth_token_not_present_in_log_records(self) -> None:
+        """The raw OAuth token must never appear in log output."""
+        import logging
+
+        log_records: list[str] = []
+
+        class CapturingHandler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                log_records.append(self.format(record))
+
+        handler = CapturingHandler()
+        logger = logging.getLogger("shared.query_service.databricks_client")
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        try:
+            response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+            with patch("httpx.AsyncClient", return_value=_make_http_client_mock(response)):
+                client = StatementApiDatabricksClient(host="test.databricks.com")
+                secret_token = "super-secret-oauth-bearer-xyz-abc-123"
+                await client.execute(
+                    sql="SELECT 1",
+                    params={},
+                    oauth_token=secret_token,
+                    warehouse_id="wh",
+                    timeout_seconds=30,
+                    tags={"query_name": "test", "user_id": "u1"},
+                )
+        finally:
+            logger.removeHandler(handler)
+
+        for record in log_records:
+            assert secret_token not in record, (
+                f"OAuth token leaked into log record: {record!r}"
+            )

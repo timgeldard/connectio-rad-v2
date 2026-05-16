@@ -8,8 +8,11 @@ from .databricks_client import (
 from .errors import (
     DatabricksAuthRequiredError,
     DatabricksConfigError,
+    DatabricksPermissionError,
     DatabricksQueryError,
     DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
     QueryExecutionError,
 )
 from .identity import UserIdentity, extract_user_identity
@@ -20,9 +23,12 @@ __all__ = [
     "CacheTier",
     "DatabricksAuthRequiredError",
     "DatabricksConfigError",
+    "DatabricksPermissionError",
     "DatabricksQueryClient",
     "DatabricksQueryError",
     "DatabricksQueryTimeoutError",
+    "DatabricksRateLimitError",
+    "DatabricksWarehouseConfigError",
     "NotImplementedDatabricksClient",
     "QueryExecutionError",
     "QueryExecutor",

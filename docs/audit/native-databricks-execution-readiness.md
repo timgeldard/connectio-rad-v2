@@ -1,7 +1,7 @@
 # Native Databricks Execution Readiness
 
-**Date:** 2026-05-16
-**Scope:** k.txt tranche — first executable Databricks read path
+**Date:** 2026-05-17 (updated — l.txt hardening tranche)
+**Scope:** k.txt tranche — first executable Databricks read path; l.txt — hardening and verification readiness
 **References:** ADR-024, ADR-025
 
 ---
@@ -94,12 +94,13 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 
 ## Route integration status
 
-| Route | Mode gate | Databricks path | Legacy path preserved | X-Data-Source header |
+| Route | Mode gate | Databricks path | Legacy path preserved | Response headers (databricks-api mode) |
 |---|---|---|---|---|
-| `POST /api/por/order-header` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_order_header_databricks()` | Yes | Yes |
-| `GET /api/cq/lab/plants` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_lab_plants_databricks()` | Yes | Yes |
+| `POST /api/por/order-header` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_order_header_databricks()` | Yes | `X-Data-Source`, `X-Adapter-Mode`, `X-Query-Name` |
+| `GET /api/cq/lab/plants` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_lab_plants_databricks()` | Yes | `X-Data-Source`, `X-Adapter-Mode`, `X-Query-Name` |
 | `GET /api/cq/lab/fails` | No gate needed | N/A — blocked | Yes | N/A |
-| `POST /api/trace2/batch-header` | No gate — not wired yet | No | Yes | No |
+| `POST /api/trace2/batch-header` | No gate — not wired yet | No | Yes | N/A |
+| `GET /api/diagnostics/auth-headers` | Env var gate — `ENABLE_AUTH_DIAGNOSTICS=true` | N/A (diagnostic only) | N/A | N/A |
 
 ---
 
@@ -143,7 +144,7 @@ python -m pytest tests/shared/ -q
 python -m pytest tests/routes/ -q
 ```
 
-All 250 tests pass without a Databricks connection.
+All 276 tests pass without a Databricks connection (250 from k.txt tranche + 26 new in l.txt hardening tranche).
 
 ---
 
@@ -159,20 +160,7 @@ All 250 tests pass without a Databricks connection.
      --string-value "<warehouse-id>"
    ```
 
-3. Update `apps/api/app.yaml` to include:
-   ```yaml
-   env:
-     - name: BACKEND_ADAPTER_MODE
-       value: databricks-api
-     - name: DATABRICKS_HOST
-       valueFrom:
-         secretScope: connectio-v2
-         secretKey: databricks-host
-     - name: SQL_WAREHOUSE_ID
-       valueFrom:
-         secretScope: connectio-v2
-         secretKey: sql-warehouse-id
-   ```
+3. Update `apps/api/app.yaml` — change `BACKEND_ADAPTER_MODE` to `databricks-api` and uncomment the `DATABRICKS_HOST`/`SQL_WAREHOUSE_ID` `valueFrom.secretScope` blocks (already present in app.yaml as commented-out placeholders).
 
 4. Redeploy and open the app in a browser (as an authenticated Databricks user).
 
@@ -180,6 +168,13 @@ All 250 tests pass without a Databricks connection.
 
 6. Check `databricks apps logs connectio-v2` for `Executing Databricks statement` log entries confirming user_id and query_name.
 
-7. Verify `X-Data-Source: databricks-api` header is present in browser DevTools → Network → the order-header request.
+7. Verify these headers are present in browser DevTools → Network → the order-header request:
+   - `X-Data-Source: databricks-api`
+   - `X-Adapter-Mode: databricks-api`
+   - `X-Query-Name: poh.get_process_order_header`
 
-8. If the panel shows a 401 error: OAuth header names differ from assumed values. Inspect the actual headers in the Databricks Apps logs and update `identity.py`.
+8. Before switching to databricks-api, enable `ENABLE_AUTH_DIAGNOSTICS=true` and call `GET /api/diagnostics/auth-headers` to confirm the OAuth headers are injected. See `docs/audit/databricks-apps-oauth-header-verification.md`.
+
+9. If the panel shows a 401 error: OAuth header names differ from assumed values. Inspect the actual headers in the Databricks Apps logs and update `identity.py`.
+
+10. Column name verification: if data returns but fields show empty values, the SQL column aliases are wrong. Run `DESCRIBE TABLE` queries from `docs/audit/native-databricks-column-verification-checklist.md`.

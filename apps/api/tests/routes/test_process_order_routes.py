@@ -191,6 +191,45 @@ class TestOrderHeaderDatabricksMode:
 
         assert response.headers.get("x-data-source") == "databricks-api"
 
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_query_name_header(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.headers.get("x-query-name") is not None
+        assert "process_order_header" in response.headers.get("x-query-name", "")
+
     async def test_source_is_databricks_api(self, monkeypatch) -> None:
         """Source badge on the POH spec must be 'databricks-api'."""
         from adapters.poh.poh_databricks_adapter import (

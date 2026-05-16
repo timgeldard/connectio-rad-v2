@@ -130,6 +130,41 @@ class TestLabPlantsDatabricksMode:
 
         assert response.headers.get("x-data-source") == "databricks-api"
 
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=_FAKE_PLANT_ROWS,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/cq/lab/plants", headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_query_name_header(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=_FAKE_PLANT_ROWS,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/cq/lab/plants", headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.headers.get("x-query-name") is not None
+        assert "lab_plants" in response.headers.get("x-query-name", "")
+
     async def test_empty_rows_returns_empty_plants_list(self, monkeypatch) -> None:
         monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")

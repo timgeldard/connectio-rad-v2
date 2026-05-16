@@ -276,6 +276,8 @@ class TestQueryExecutor:
         assert tags["user_id"] == "user42"
         assert tags["poh"] == "true"
         assert tags["header"] == "true"
+        assert tags["cache_policy"] == "global_300s"
+        assert tags["source_badge"] == "databricks-api"
 
     async def test_does_not_read_service_principal_env_vars(self, monkeypatch) -> None:
         """Executor must not use DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET."""

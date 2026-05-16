@@ -63,6 +63,9 @@ class QueryExecutor:
         }
         for t in spec.tags:
             tags[t] = "true"
+        # Reserved keys written after spec.tags loop so they cannot be overridden by caller tags.
+        tags["cache_policy"] = spec.cache_policy.value
+        tags["source_badge"] = spec.source_badge
 
         _log.info(
             "QueryExecutor.execute",

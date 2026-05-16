@@ -41,12 +41,57 @@ env:
       secretScope: connectio-v2
       secretKey: v1-cq-api-base-url
 
+  # ── Backend adapter mode ──────────────────────────────────────────────────
+  # Controls whether POH and CQ Lab routes query Databricks directly or proxy
+  # to V1. Default is "legacy-api" — do not change without also setting
+  # DATABRICKS_HOST and SQL_WAREHOUSE_ID below.
+  # To switch to databricks-api: store "databricks-api" in the secret scope
+  # and replace the literal value here with a valueFrom.secretScope reference:
+  #
+  #   - name: BACKEND_ADAPTER_MODE
+  #     valueFrom:
+  #       secretScope: connectio-v2
+  #       secretKey: backend-adapter-mode
+  - name: BACKEND_ADAPTER_MODE
+    value: legacy-api
+
+  # ── Databricks connection (required for BACKEND_ADAPTER_MODE=databricks-api) ──
+  # DATABRICKS_HOST: workspace hostname WITHOUT https:// prefix.
+  #   Example: myworkspace.azuredatabricks.net
+  #   StatementApiDatabricksClient strips any https:// prefix if present —
+  #   but always store without scheme to be explicit.
+  #   Set via secret scope; placeholder shown below — do not commit real values.
+  #
+  # SQL_WAREHOUSE_ID: SQL Warehouse ID (not a cluster ID).
+  #   Find it in the Databricks UI under SQL > SQL Warehouses > <name> > Overview.
+  #   Set via secret scope; placeholder shown below.
+  #
+  # Uncomment and populate when switching to databricks-api mode:
+  #
+  # - name: DATABRICKS_HOST
+  #   valueFrom:
+  #     secretScope: connectio-v2
+  #     secretKey: databricks-host
+  #
+  # - name: SQL_WAREHOUSE_ID
+  #   valueFrom:
+  #     secretScope: connectio-v2
+  #     secretKey: sql-warehouse-id
+
   # ── App behaviour ─────────────────────────────────────────────────────────
   # "legacy-api" proxies to V1; "mock" returns fixture data (useful for demos
   # when V1 is unavailable). The value is baked into the frontend build, so
   # changing it here has no effect on the React bundle — rebuild the frontend.
   - name: ADAPTER_MODE
     value: legacy-api
+
+  # ── Auth diagnostics (non-production only) ────────────────────────────────
+  # Set to "true" to enable GET /api/diagnostics/auth-headers.
+  # This endpoint returns OAuth header presence metadata (never the token value)
+  # and is used to verify that Databricks Apps injects the expected headers.
+  # Must be "false" or absent in production.
+  # - name: ENABLE_AUTH_DIAGNOSTICS
+  #   value: "true"
 
   # ── Python runtime ────────────────────────────────────────────────────────
   - name: PYTHONUNBUFFERED

@@ -76,18 +76,25 @@ class DatabricksQueryClient(ABC):
 
 The Databricks Statement API does not have a native query-tag field. Tags (query name, module, endpoint, user ID) are included in structured log output. This limitation is documented.
 
+### Host normalisation
+
+`StatementApiDatabricksClient.__init__()` strips any `https://` or `http://` scheme prefix, leading/trailing whitespace, and trailing slashes from `DATABRICKS_HOST`. This prevents double-scheme URLs (`https://https://...`) if the env var is set with a scheme prefix. The URL is always reconstructed with `https://` in `execute()`.
+
 ### Error mapping
 
-| Condition | Error raised |
-|---|---|
-| Missing OAuth token | `DatabricksAuthRequiredError` (before client call) |
-| Statement API returns 401 | `DatabricksAuthRequiredError` (token expired/revoked) |
-| Statement API HTTP 4xx/5xx | `DatabricksQueryError` |
-| State = CANCELED / CLOSED | `DatabricksQueryTimeoutError` |
-| State = FAILED | `DatabricksQueryError` with Databricks error message |
-| Unexpected state | `DatabricksQueryError` |
-| httpx transport error | `DatabricksQueryError` |
-| httpx timeout | `DatabricksQueryTimeoutError` |
+| Condition | Error raised | HTTP response |
+|---|---|---|
+| Missing OAuth token | `DatabricksAuthRequiredError` (before client call) | 401 |
+| Statement API returns 401 | `DatabricksAuthRequiredError` (token expired/revoked) | 401 |
+| Statement API returns 403 | `DatabricksPermissionError` | 403 |
+| Statement API returns 404 | `DatabricksWarehouseConfigError` | 503 |
+| Statement API returns 429 | `DatabricksRateLimitError` | 429 |
+| Statement API HTTP 5xx | `DatabricksQueryError` | 502 |
+| State = CANCELED / CLOSED | `DatabricksQueryTimeoutError` | 504 |
+| State = FAILED | `DatabricksQueryError` with Databricks error message | 502 |
+| Unexpected state | `DatabricksQueryError` | 502 |
+| httpx transport error | `DatabricksQueryError` | 502 |
+| httpx timeout | `DatabricksQueryTimeoutError` | 504 |
 
 ---
 
@@ -97,6 +104,8 @@ The Databricks Statement API does not have a native query-tag field. Tags (query
 - There is no `DATABRICKS_TOKEN`, `DATABRICKS_CLIENT_ID`, or `DATABRICKS_CLIENT_SECRET` read by the client.
 - The `QueryExecutor` calls `identity.require_user_oauth()` before passing any token to the client, ensuring the user token is present.
 - Route handlers raise HTTP 401 on `DatabricksAuthRequiredError` — no fallback to mock or legacy-api.
+- `None` is rejected by `_infer_param_type()` with a `ValueError` — prevents the literal string `"None"` reaching SQL.
+- OAuth tokens are never included in log output; only `user_id`, `query_name`, `warehouse_id`, and tags are logged.
 
 ---
 
