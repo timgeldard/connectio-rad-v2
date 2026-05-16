@@ -1,4 +1,5 @@
 import type {
+  MonitoredSPCCharacteristic,
   SPCMonitoringContext,
   SPCSummary,
   SPCSignal,
@@ -9,12 +10,15 @@ import type {
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
+  mockMonitoredCharacteristics,
   mockSPCMonitoringContext,
   mockSPCSummary,
   mockActiveSPCSignals,
   mockControlChartSeries,
   mockMoistureChartSeries,
   mockFatChartSeries,
+  mockSaltChartSeries,
+  mockTextureChartSeries,
   mockCharacteristicCapability,
   mockSPCAlarmHistory,
   mockSPCRelatedBatches,
@@ -73,11 +77,19 @@ export class SPCMonitoringAdapter {
     return ok(mockActiveSPCSignals, this.now)
   }
 
+  async getMonitoredCharacteristics(
+    _request: SPCMonitoringAdapterRequest
+  ): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
+    return ok(mockMonitoredCharacteristics, this.now)
+  }
+
   async getControlChartSeries(
     request: SPCMonitoringAdapterRequest
   ): Promise<AdapterResult<ControlChartSeries>> {
     if (request.characteristicId === 'CHAR-MOISTURE-001') return ok(mockMoistureChartSeries, this.now)
     if (request.characteristicId === 'CHAR-FAT-001') return ok(mockFatChartSeries, this.now)
+    if (request.characteristicId === 'CHAR-SALT-001') return ok(mockSaltChartSeries, this.now)
+    if (request.characteristicId === 'CHAR-TEXTURE-001') return ok(mockTextureChartSeries, this.now)
     return ok(mockControlChartSeries, this.now)
   }
 

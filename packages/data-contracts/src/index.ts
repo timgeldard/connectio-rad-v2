@@ -182,6 +182,7 @@ export {
 } from './schemas/production-staging.js'
 
 export type {
+  MonitoredSPCCharacteristic,
   SPCMonitoringContext,
   SPCSummary,
   SPCSignal,
@@ -192,6 +193,7 @@ export type {
   SPCRelatedBatch,
 } from './schemas/spc-monitoring.js'
 export {
+  MonitoredSPCCharacteristicSchema,
   SPCMonitoringContextSchema,
   SPCSummarySchema,
   SPCSignalSchema,

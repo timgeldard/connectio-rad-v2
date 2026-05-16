@@ -54,25 +54,45 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
     >
       {series && (
         <div style={{ padding: '12px 16px' }}>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
-            <ChartStat label="UCL" value={series.upperControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />
-            <ChartStat label="CL" value={series.centerLine.toFixed(2)} color="var(--shell-fg-2)" />
-            <ChartStat label="LCL" value={series.lowerControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />
-            {series.upperSpecLimit != null && <ChartStat label="USL" value={series.upperSpecLimit.toFixed(2)} color="#D32F2F" />}
-            {series.lowerSpecLimit != null && <ChartStat label="LSL" value={series.lowerSpecLimit.toFixed(2)} color="#D32F2F" />}
-          </div>
-
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 6 }}>
             {series.characteristicName} — {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {series.points.length} points
           </div>
 
-          <ChartPlaceholder series={series} />
+          {series.points.length === 0 ? (
+            <div
+              style={{ padding: '24px 0', textAlign: 'center', color: 'var(--shell-fg-3)', fontSize: 12 }}
+              role="status"
+            >
+              No measurement data found for this characteristic.
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
+                <ChartStat label="UCL" value={series.upperControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />
+                <ChartStat label="CL" value={series.centerLine.toFixed(2)} color="var(--shell-fg-2)" />
+                <ChartStat label="LCL" value={series.lowerControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />
+                {series.upperSpecLimit != null && <ChartStat label="USL" value={series.upperSpecLimit.toFixed(2)} color="#D32F2F" />}
+                {series.lowerSpecLimit != null && <ChartStat label="LSL" value={series.lowerSpecLimit.toFixed(2)} color="#D32F2F" />}
+              </div>
 
-          <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
-            <LegendItem color={STATUS_COLOR['in-control']} label="In control" />
-            <LegendItem color={STATUS_COLOR['warning']} label="Warning" />
-            <LegendItem color={STATUS_COLOR['out-of-control']} label="Out of control" />
-          </div>
+              {series.points.length < 3 && (
+                <div
+                  style={{ padding: '4px 8px', marginBottom: 8, background: '#FFFBEB', border: '1px solid #D97706', borderRadius: 4, fontSize: 11, color: '#92400E' }}
+                  role="status"
+                >
+                  Fewer than 3 samples — control limits are indicative only.
+                </div>
+              )}
+
+              <ChartPlaceholder series={series} />
+
+              <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
+                <LegendItem color={STATUS_COLOR['in-control']} label="In control" />
+                <LegendItem color={STATUS_COLOR['warning']} label="Warning" />
+                <LegendItem color={STATUS_COLOR['out-of-control']} label="Out of control" />
+              </div>
+            </>
+          )}
         </div>
       )}
     </EvidencePanel>

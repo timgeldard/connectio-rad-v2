@@ -81,6 +81,10 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
                     {' · '}Chart: {signal.chartType.toUpperCase()}
                     {' · '}Batch: {signal.batchId}
                   </div>
+                  <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    Detected: {new Date(signal.detectedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {' · '}Plant: {signal.plantId}
+                  </div>
                   {signal.recommendedAction && (
                     <div style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginTop: 4, fontStyle: 'italic' }}>{signal.recommendedAction}</div>
                   )}

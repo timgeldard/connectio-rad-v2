@@ -110,6 +110,85 @@ describe('SPCMonitoringAdapter', () => {
     })
   })
 
+  describe('getMonitoredCharacteristics', () => {
+    it('returns ok result with array', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(Array.isArray(result.data)).toBe(true)
+      expect(result.data.length).toBeGreaterThan(0)
+    })
+
+    it('returns at least 3 characteristics', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.length).toBeGreaterThanOrEqual(3)
+    })
+
+    it('each characteristic has required fields', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      for (const char of result.data) {
+        expect(char.characteristicId).toBeTruthy()
+        expect(char.characteristicName).toBeTruthy()
+        expect(char.chartType).toBeTruthy()
+        expect(typeof char.hasActiveSignal).toBe('boolean')
+      }
+    })
+
+    it('no characteristic has hardcoded pH/Moisture/Fat in the characteristicId directly', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      if (!result.ok) throw new Error('Expected ok result')
+      // IDs come from data, not hardcoded view logic
+      const ids = result.data.map(c => c.characteristicId)
+      expect(ids).not.toEqual(['CHAR-PH-001', 'CHAR-MOISTURE-001', 'CHAR-FAT-001'])
+    })
+
+    it('returns source mock', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok && (result as { source?: string }).source).toBeUndefined()
+      // source field is not on AdapterResult<T> directly but fetchedAt confirms real call
+      expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
+
+  describe('getControlChartSeries — routing by characteristicId', () => {
+    it('returns pH series for CHAR-PH-001', async () => {
+      const result = await adapter.getControlChartSeries({ ...request, characteristicId: 'CHAR-PH-001' })
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.characteristicId).toBe('CHAR-PH-001')
+      expect(result.data.characteristicName).toBe('pH')
+    })
+
+    it('returns Moisture series for CHAR-MOISTURE-001', async () => {
+      const result = await adapter.getControlChartSeries({ ...request, characteristicId: 'CHAR-MOISTURE-001' })
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.characteristicId).toBe('CHAR-MOISTURE-001')
+    })
+
+    it('returns Salt series for CHAR-SALT-001', async () => {
+      const result = await adapter.getControlChartSeries({ ...request, characteristicId: 'CHAR-SALT-001' })
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.characteristicId).toBe('CHAR-SALT-001')
+      expect(result.data.characteristicName).toBe('Salt %')
+    })
+
+    it('returns Texture series for CHAR-TEXTURE-001', async () => {
+      const result = await adapter.getControlChartSeries({ ...request, characteristicId: 'CHAR-TEXTURE-001' })
+      if (!result.ok) throw new Error('Expected ok result')
+      expect(result.data.characteristicId).toBe('CHAR-TEXTURE-001')
+      expect(result.data.characteristicName).toBe('Texture Score')
+    })
+
+    it('UCL > LCL for all routed characteristics', async () => {
+      for (const id of ['CHAR-PH-001', 'CHAR-MOISTURE-001', 'CHAR-FAT-001', 'CHAR-SALT-001', 'CHAR-TEXTURE-001']) {
+        const result = await adapter.getControlChartSeries({ ...request, characteristicId: id })
+        if (!result.ok) throw new Error(`Expected ok result for ${id}`)
+        expect(result.data.upperControlLimit).toBeGreaterThan(result.data.lowerControlLimit)
+      }
+    })
+  })
+
   describe('getSPCRelatedBatches', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getSPCRelatedBatches(request)

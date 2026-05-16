@@ -28,6 +28,14 @@ export function useActiveSPCSignals(request: SPCMonitoringAdapterRequest) {
   })
 }
 
+export function useMonitoredCharacteristics(request: SPCMonitoringAdapterRequest) {
+  return useQuery({
+    queryKey: ['spc-monitored-characteristics', request.plantId ?? null, request.materialId ?? null, request.workCentreId ?? null],
+    queryFn: () => spcMonitoringAdapter.getMonitoredCharacteristics(request),
+    staleTime: STALE,
+  })
+}
+
 export function useControlChartSeries(request: SPCMonitoringAdapterRequest) {
   return useQuery({
     queryKey: ['spc-control-chart', request.plantId ?? null, request.characteristicId ?? null, request.batchId ?? null],

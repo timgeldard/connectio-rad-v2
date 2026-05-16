@@ -1,4 +1,5 @@
 import type {
+  MonitoredSPCCharacteristic,
   SPCMonitoringContext,
   SPCSummary,
   SPCSignal,
@@ -7,6 +8,61 @@ import type {
   SPCAlarmHistoryItem,
   SPCRelatedBatch,
 } from '@connectio/data-contracts'
+
+export const mockMonitoredCharacteristics: MonitoredSPCCharacteristic[] = [
+  {
+    characteristicId: 'CHAR-PH-001',
+    characteristicName: 'pH',
+    micId: 'MIC-PH-001',
+    chartType: 'xbar-r',
+    batchCount: 24,
+    avgSamplesPerBatch: 3.6,
+    hasActiveSignal: true,
+    highestSignalSeverity: 'high',
+    chartTypeSource: 'heuristic',
+  },
+  {
+    characteristicId: 'CHAR-MOISTURE-001',
+    characteristicName: 'Moisture %',
+    micId: 'MIC-MOIST-001',
+    chartType: 'individuals',
+    batchCount: 22,
+    avgSamplesPerBatch: 1.0,
+    hasActiveSignal: true,
+    highestSignalSeverity: 'medium',
+    chartTypeSource: 'heuristic',
+  },
+  {
+    characteristicId: 'CHAR-FAT-001',
+    characteristicName: 'Fat %',
+    micId: 'MIC-FAT-001',
+    chartType: 'xbar-r',
+    batchCount: 22,
+    avgSamplesPerBatch: 3.5,
+    hasActiveSignal: false,
+    chartTypeSource: 'heuristic',
+  },
+  {
+    characteristicId: 'CHAR-SALT-001',
+    characteristicName: 'Salt %',
+    micId: 'MIC-SALT-001',
+    chartType: 'individuals',
+    batchCount: 18,
+    avgSamplesPerBatch: 1.0,
+    hasActiveSignal: false,
+    chartTypeSource: 'heuristic',
+  },
+  {
+    characteristicId: 'CHAR-TEXTURE-001',
+    characteristicName: 'Texture Score',
+    micId: 'MIC-TEX-001',
+    chartType: 'individuals',
+    batchCount: 15,
+    avgSamplesPerBatch: 1.0,
+    hasActiveSignal: false,
+    chartTypeSource: 'heuristic',
+  },
+]
 
 export const mockSPCMonitoringContext: SPCMonitoringContext = {
   plantId: 'IE10',
@@ -142,6 +198,53 @@ export const mockFatChartSeries: ControlChartSeries = {
     { pointId: 'FP-007', timestamp: '2026-05-14T00:00:00.000Z', value: 31.5, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-F01', signalIds: [], status: 'in-control' },
     { pointId: 'FP-008', timestamp: '2026-05-14T03:00:00.000Z', value: 31.7, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-F02', signalIds: [], status: 'in-control' },
     { pointId: 'FP-009', timestamp: '2026-05-14T06:00:00.000Z', value: 31.4, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-F03', signalIds: [], status: 'in-control' },
+  ],
+}
+
+export const mockSaltChartSeries: ControlChartSeries = {
+  chartId: 'CHART-IE10-SALT-EMMENTAL-001',
+  chartType: 'individuals',
+  characteristicId: 'CHAR-SALT-001',
+  characteristicName: 'Salt %',
+  centerLine: 1.82,
+  upperControlLimit: 2.30,
+  lowerControlLimit: 1.34,
+  upperSpecLimit: 2.50,
+  lowerSpecLimit: 1.00,
+  unitOfMeasure: '%',
+  confidence: 0.89,
+  points: [
+    { pointId: 'SP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 1.85, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-S01', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 1.79, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-S02', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-003', timestamp: '2026-05-13T12:00:00.000Z', value: 1.88, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-S01', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-004', timestamp: '2026-05-13T15:00:00.000Z', value: 1.76, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-S02', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-005', timestamp: '2026-05-13T18:00:00.000Z', value: 1.83, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-S03', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-006', timestamp: '2026-05-14T00:00:00.000Z', value: 1.91, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-S01', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-007', timestamp: '2026-05-14T03:00:00.000Z', value: 1.78, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-S02', signalIds: [], status: 'in-control' },
+    { pointId: 'SP-008', timestamp: '2026-05-14T06:00:00.000Z', value: 1.84, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-S03', signalIds: [], status: 'in-control' },
+  ],
+}
+
+export const mockTextureChartSeries: ControlChartSeries = {
+  chartId: 'CHART-IE10-TEX-EMMENTAL-001',
+  chartType: 'individuals',
+  characteristicId: 'CHAR-TEXTURE-001',
+  characteristicName: 'Texture Score',
+  centerLine: 74.5,
+  upperControlLimit: 82.0,
+  lowerControlLimit: 67.0,
+  upperSpecLimit: 88.0,
+  lowerSpecLimit: 60.0,
+  unitOfMeasure: 'pts',
+  confidence: 0.86,
+  points: [
+    { pointId: 'TP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 75.2, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-T01', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 73.8, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-T02', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-003', timestamp: '2026-05-13T12:00:00.000Z', value: 76.1, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-T01', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-004', timestamp: '2026-05-13T15:00:00.000Z', value: 72.4, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-T02', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-005', timestamp: '2026-05-13T18:00:00.000Z', value: 74.9, batchId: 'CH-240307-0032', sampleId: 'SMP-0032-T03', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-006', timestamp: '2026-05-14T00:00:00.000Z', value: 75.6, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-T01', signalIds: [], status: 'in-control' },
+    { pointId: 'TP-007', timestamp: '2026-05-14T03:00:00.000Z', value: 73.1, batchId: 'CH-240308-0047', sampleId: 'SMP-0047-T02', signalIds: [], status: 'in-control' },
   ],
 }
 

@@ -13,6 +13,25 @@ const ChartTypeSchema = z.enum([
 ])
 
 // ---------------------------------------------------------------------------
+// MonitoredSPCCharacteristic
+// ---------------------------------------------------------------------------
+
+export const MonitoredSPCCharacteristicSchema = z.object({
+  characteristicId: z.string(),
+  characteristicName: z.string(),
+  micId: z.string().optional(),
+  chartType: ChartTypeSchema,
+  batchCount: z.number().int().min(0),
+  avgSamplesPerBatch: z.number().optional(),
+  hasActiveSignal: z.boolean(),
+  highestSignalSeverity: SeveritySchema.optional(),
+  operationId: z.string().optional(),
+  chartTypeSource: z.enum(['heuristic', 'override', 'manual']).optional(),
+})
+
+export type MonitoredSPCCharacteristic = z.infer<typeof MonitoredSPCCharacteristicSchema>
+
+// ---------------------------------------------------------------------------
 // SPCMonitoringContext
 // ---------------------------------------------------------------------------
 
