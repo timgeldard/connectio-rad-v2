@@ -21,3 +21,9 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+## Databricks Data-Access Security Rules
+
+- Production Databricks reads in V2 must use the authenticated end user's OAuth identity.
+- Do not introduce service-principal fallback paths for user-facing reads.
+- If user OAuth is unavailable, mark databricks-api mode as blocked rather than bypassing identity controls.
