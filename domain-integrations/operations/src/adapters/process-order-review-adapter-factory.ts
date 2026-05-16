@@ -5,7 +5,8 @@ const adapterMode = import.meta.env.VITE_ADAPTER_MODE ?? 'mock'
 const porBaseUrl = import.meta.env.VITE_POH_API_BASE_URL ?? ''
 
 function createProcessOrderReviewAdapter(): ProcessOrderReviewAdapter {
-  if (adapterMode === 'legacy-api' && porBaseUrl) {
+  // Empty porBaseUrl is intentional for same-origin Databricks Apps deployment.
+  if (adapterMode === 'legacy-api') {
     return new ProcessOrderReviewLegacyApiAdapter(porBaseUrl)
   }
   return new ProcessOrderReviewAdapter()

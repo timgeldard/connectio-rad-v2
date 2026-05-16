@@ -5,7 +5,9 @@ const adapterMode = import.meta.env.VITE_ADAPTER_MODE ?? 'mock'
 const traceBaseUrl = import.meta.env.VITE_TRACE_API_BASE_URL ?? ''
 
 function createTrace2Adapter(): Trace2Adapter {
-  if (adapterMode === 'legacy-api' && traceBaseUrl) {
+  // Empty traceBaseUrl is intentional for same-origin Databricks Apps deployment
+  // (fetch('/api/trace2/...') resolves against the current host).
+  if (adapterMode === 'legacy-api') {
     return new Trace2LegacyApiAdapter(traceBaseUrl)
   }
   return new Trace2Adapter()

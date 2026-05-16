@@ -1,6 +1,8 @@
 """ConnectIO V2 FastAPI application entry point."""
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from routes.health import router as health_router
 from routes.workspaces import router as workspaces_router
@@ -25,3 +27,9 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(trace2_router, prefix="/api")
 app.include_router(warehouse360_router, prefix="/api")
 app.include_router(process_order_router, prefix="/api")
+
+# Serve the React bundle as static files when deployed to Databricks Apps.
+# The static/ directory is absent in local development (Vite serves the frontend directly).
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="static")

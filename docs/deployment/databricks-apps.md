@@ -73,13 +73,21 @@ npm exec nx -- run web:build
 ```
 
 This produces a production bundle in `apps/web/dist/`.
-`VITE_ADAPTER_MODE` is baked into the bundle at build time — set it before
-building if you need a value other than the `.env` default.
+`VITE_ADAPTER_MODE` and the per-domain base URLs are baked into the bundle at
+build time — set them before building.
 
 ```bash
-# Build targeting the legacy-api adapter (typical for production)
-VITE_ADAPTER_MODE=legacy-api npm exec nx -- run web:build
+# Build targeting the legacy-api adapter for same-origin Databricks Apps deployment.
+# Leave the base URL vars empty so fetch calls resolve against the current host.
+VITE_ADAPTER_MODE=legacy-api \
+VITE_TRACE_API_BASE_URL="" \
+VITE_WH360_API_BASE_URL="" \
+VITE_POH_API_BASE_URL="" \
+npm exec nx -- run web:build
 ```
+
+If the React app and API are deployed to different origins (unusual), set the
+base URL vars to the full API host instead of leaving them empty.
 
 ### 3. Copy static files into the API directory
 
@@ -182,7 +190,12 @@ steps:
     run: npm install
 
   - name: Build frontend
-    run: VITE_ADAPTER_MODE=legacy-api npm exec nx -- run web:build
+    run: |
+      VITE_ADAPTER_MODE=legacy-api \
+      VITE_TRACE_API_BASE_URL="" \
+      VITE_WH360_API_BASE_URL="" \
+      VITE_POH_API_BASE_URL="" \
+      npm exec nx -- run web:build
 
   - name: Copy static files
     run: cp -r apps/web/dist apps/api/static

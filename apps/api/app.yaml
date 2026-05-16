@@ -2,7 +2,7 @@
 # Docs: https://docs.databricks.com/en/dev-tools/databricks-apps/index.html
 #
 # Deploy from the repo root:
-#   1. Build frontend:   npm exec nx -- run web:build
+#   1. Build frontend:   VITE_ADAPTER_MODE=legacy-api VITE_TRACE_API_BASE_URL="" VITE_WH360_API_BASE_URL="" VITE_POH_API_BASE_URL="" npm exec nx -- run web:build
 #   2. Copy static:      cp -r apps/web/dist apps/api/static
 #   3. Deploy app:       databricks apps deploy connectio-v2 --source-code-path apps/api
 #
