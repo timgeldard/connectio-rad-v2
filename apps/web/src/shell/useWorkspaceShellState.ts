@@ -68,6 +68,15 @@ interface ShellStateActions {
 }
 
 /**
+ * Updates the URL and notifies all `useWorkspaceShellState` hook instances.
+ * `history.replaceState` does not fire `popstate`, so we dispatch it manually.
+ */
+function replaceUrl(params: URLSearchParams): void {
+  history.replaceState(null, '', `?${params.toString()}`)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+/**
  * Reads `?workspace=X&view=Y&investigationId=Z` from `window.location.search`
  * and returns a parsed {@link ShellState}.
  *
@@ -145,29 +154,25 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
     params.delete('tab')
     params.delete('view')
     params.delete('investigationId')
-    history.replaceState(null, '', `?${params.toString()}`)
-    setState(readFromUrl())
+    replaceUrl(params)
   }, [])
 
   const setTab = useCallback((tabId: string) => {
     const params = new URLSearchParams(window.location.search)
     params.set('tab', tabId)
-    history.replaceState(null, '', `?${params.toString()}`)
-    setState(readFromUrl())
+    replaceUrl(params)
   }, [])
 
   const setView = useCallback((viewId: string) => {
     const params = new URLSearchParams(window.location.search)
     params.set('view', viewId)
-    history.replaceState(null, '', `?${params.toString()}`)
-    setState(readFromUrl())
+    replaceUrl(params)
   }, [])
 
   const setInvestigationId = useCallback((investigationId: string) => {
     const params = new URLSearchParams(window.location.search)
     params.set('investigationId', investigationId)
-    history.replaceState(null, '', `?${params.toString()}`)
-    setState(readFromUrl())
+    replaceUrl(params)
   }, [])
 
   const navigateToTraceInvestigation = useCallback(
@@ -176,8 +181,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       params.set('workspace', 'trace-investigation')
       params.set('investigationId', investigationId)
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -185,8 +189,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
   const setReleaseCaseId = useCallback((releaseCaseId: string) => {
     const params = new URLSearchParams(window.location.search)
     params.set('releaseCaseId', releaseCaseId)
-    history.replaceState(null, '', `?${params.toString()}`)
-    setState(readFromUrl())
+    replaceUrl(params)
   }, [])
 
   const navigateToBatchRelease = useCallback(
@@ -195,8 +198,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       params.set('workspace', 'quality-batch-release')
       params.set('releaseCaseId', releaseCaseId)
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -207,8 +209,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       params.set('workspace', 'operations-plan-risk')
       if (planDate) params.set('planDate', planDate)
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -218,8 +219,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       const params = new URLSearchParams()
       params.set('workspace', 'envmon-monitoring')
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -230,8 +230,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       params.set('workspace', 'production-staging')
       if (planDate) params.set('planDate', planDate)
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -241,8 +240,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       const params = new URLSearchParams()
       params.set('workspace', 'spc-monitoring')
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -252,8 +250,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       const params = new URLSearchParams()
       params.set('workspace', 'warehouse-360-overview')
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )
@@ -263,8 +260,7 @@ export function useWorkspaceShellState(): ShellState & ShellStateActions {
       const params = new URLSearchParams()
       params.set('workspace', 'maintenance-reliability')
       params.set('view', viewId)
-      history.replaceState(null, '', `?${params.toString()}`)
-      setState(readFromUrl())
+      replaceUrl(params)
     },
     [],
   )

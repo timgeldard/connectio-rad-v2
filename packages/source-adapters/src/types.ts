@@ -1,5 +1,8 @@
 import type { EvidencePanelDisplayState } from '@connectio/data-contracts'
 
+/** Identifies which data source backed an adapter response. */
+export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api'
+
 /** Structured error returned from a source adapter. */
 export interface AdapterError {
   readonly code: 'network' | 'unauthorized' | 'not-found' | 'timeout' | 'invalid-data' | 'unknown'
@@ -9,8 +12,8 @@ export interface AdapterError {
 
 /** The result of a source adapter fetch. */
 export type AdapterResult<T> =
-  | { readonly ok: true; readonly data: T; readonly fetchedAt: string }
-  | { readonly ok: false; readonly error: AdapterError; readonly displayState: EvidencePanelDisplayState }
+  | { readonly ok: true; readonly data: T; readonly fetchedAt: string; readonly source?: AdapterSource }
+  | { readonly ok: false; readonly error: AdapterError; readonly displayState: EvidencePanelDisplayState; readonly source?: AdapterSource }
 
 /** Data freshness metadata attached to an adapter response. */
 export interface SourceFreshness {

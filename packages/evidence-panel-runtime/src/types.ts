@@ -6,6 +6,9 @@ import type {
 } from '@connectio/data-contracts'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 
+/** Which data source backed this panel's last fetch. */
+export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api'
+
 /**
  * Props shared by all evidence panel components.
  *
@@ -32,4 +35,6 @@ export interface EvidencePanelProps {
   children?: ReactNode
   /** Optional extra class names applied to the root element. */
   className?: string
+  /** Which data source backed the last successful fetch; shown as a badge in the header. */
+  source?: AdapterSource
 }

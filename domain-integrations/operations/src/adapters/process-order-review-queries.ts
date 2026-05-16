@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { processOrderReviewAdapter } from './process-order-review-adapter.js'
+import { processOrderReviewAdapterInstance as processOrderReviewAdapter } from './process-order-review-adapter-factory.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
 
 const STALE = 5 * 60 * 1000

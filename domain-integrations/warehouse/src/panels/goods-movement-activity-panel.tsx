@@ -63,6 +63,7 @@ export function GoodsMovementActivityPanel({ request }: GoodsMovementActivityPan
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {movements.length === 0 && !isLoading && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--shell-fg-3)' }}>No recent movements.</p>

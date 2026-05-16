@@ -19,7 +19,7 @@ export { EvidencePanelStateRenderer } from './EvidencePanelStateRenderer.js'
 export { EvidencePanelErrorBoundary } from './EvidencePanelErrorBoundary.js'
 export { useEvidencePanel } from './hooks/useEvidencePanel.js'
 
-export type { EvidencePanelProps } from './types.js'
+export type { EvidencePanelProps, AdapterSource } from './types.js'
 export type { EvidencePanelHeaderProps } from './EvidencePanelHeader.js'
 export type { EvidencePanelBodyProps } from './EvidencePanelBody.js'
 export type { EvidencePanelFooterProps } from './EvidencePanelFooter.js'

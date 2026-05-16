@@ -13,8 +13,9 @@ import type {
   TraceExposureForRelease,
 } from "@connectio/data-contracts"
 import type { AdapterResult } from "@connectio/source-adapters"
-import { trace2Adapter, toAdapterError } from "./trace2-adapter.js"
+import { toAdapterError } from "./trace2-adapter.js"
 import type { Trace2AdapterRequest } from "./trace2-adapter.js"
+import { trace2Adapter } from "./trace2-adapter-factory.js"
 
 const TRACE_STALE_TIME_MS = 5 * 60 * 1000
 

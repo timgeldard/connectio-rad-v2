@@ -52,6 +52,7 @@ export function ReplenishmentNeedsPanel({ request }: ReplenishmentNeedsPanelProp
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {needs.length === 0 && !isLoading && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--shell-fg-3)' }}>No replenishment needs.</p>

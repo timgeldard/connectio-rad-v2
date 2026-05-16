@@ -25,6 +25,7 @@ export function EvidencePanel({
   onDrillThrough,
   children,
   className,
+  source,
 }: EvidencePanelProps) {
   return (
     <div
@@ -42,7 +43,7 @@ export function EvidencePanel({
         height: '100%',
       }}
     >
-      <EvidencePanelHeader registration={registration} />
+      <EvidencePanelHeader registration={registration} source={source} />
       <EvidencePanelErrorBoundary>
         <EvidencePanelBody
           displayState={displayState}

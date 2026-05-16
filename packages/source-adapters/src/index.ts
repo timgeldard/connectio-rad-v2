@@ -1,4 +1,5 @@
 export type {
+  AdapterSource,
   AdapterError,
   AdapterResult,
   SourceFreshness,

@@ -65,6 +65,7 @@ export function TraceInvestigationWorkspace({
     investigationId,
     batchId: scope.batchId,
     plantId: scope.plantId,
+    materialId: scope.materialId,
   }
 
   const { data: contextResult } = useTraceInvestigationContext(request)

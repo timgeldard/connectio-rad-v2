@@ -64,6 +64,7 @@ export function RelatedInvestigationsPanel({ request }: RelatedInvestigationsPan
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {investigations.length > 0 && (
         <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>

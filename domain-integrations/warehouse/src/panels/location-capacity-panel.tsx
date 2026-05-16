@@ -54,6 +54,7 @@ export function LocationCapacityPanel({ request }: LocationCapacityPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {locations.map(loc => (

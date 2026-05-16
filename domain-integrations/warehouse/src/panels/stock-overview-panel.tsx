@@ -57,6 +57,7 @@ export function StockOverviewPanel({ request }: StockOverviewPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

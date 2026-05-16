@@ -37,6 +37,7 @@ export interface Trace2AdapterRequest {
   readonly investigationId: string
   readonly batchId?: string
   readonly plantId?: string
+  readonly materialId?: string
 }
 
 /**

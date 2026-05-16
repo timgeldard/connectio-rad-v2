@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { isNavigable } from '@connectio/product-model'
+import { useAuthScope } from '@connectio/auth-scope'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
 
@@ -34,6 +35,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const [highlighted, setHighlighted] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const { setWorkspace, navigateToTraceInvestigation } = useWorkspaceShellState()
+  const { setActiveScope } = useAuthScope()
 
   /** Auto-focus the input on mount. */
   useEffect(() => {
@@ -101,11 +103,34 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     ...pilotAdminCommands,
     ...helpCommands,
     {
+      id: 'wh360-mock',
+      label: 'Open Warehouse 360 — WH-IE10-MAIN · Kerry Listowel',
+      description: 'Main warehouse · Plant IE10 · 347 stock lines',
+      category: 'Recent Investigations',
+      action: () => {
+        setActiveScope({ warehouseId: 'WH-IE10-MAIN', plantId: 'IE10' })
+        setWorkspace('warehouse-360-overview')
+        onClose()
+      },
+    },
+    {
+      id: 'por-mock',
+      label: 'Open Process Order — PO-240308-3847',
+      description: 'EMMENTAL BLOCK NATURAL 100KG · Batch CH-240308-0047 · Kerry Listowel',
+      category: 'Recent Investigations',
+      action: () => {
+        setActiveScope({ processOrderId: 'PO-240308-3847', plantId: 'IE10', batchId: 'CH-240308-0047' })
+        setWorkspace('process-order-review')
+        onClose()
+      },
+    },
+    {
       id: 'trace-inv-mock',
       label: 'Open Trace Investigation — INV-2024-003847',
       description: 'EMMENTAL BLOCK NATURAL 100KG · Batch CH-240308-0047 · Kerry Listowel',
       category: 'Recent Investigations',
       action: () => {
+        setActiveScope({ materialId: '100023847', batchId: 'CH-240308-0047', plantId: 'IE10' })
         navigateToTraceInvestigation('INV-2024-003847', 'overview')
         onClose()
       },
@@ -116,6 +141,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       description: 'Jump directly to recall readiness assessment',
       category: 'Recent Investigations',
       action: () => {
+        setActiveScope({ materialId: '100023847', batchId: 'CH-240308-0047', plantId: 'IE10' })
         navigateToTraceInvestigation('INV-2024-003847', 'recall-readiness')
         onClose()
       },
