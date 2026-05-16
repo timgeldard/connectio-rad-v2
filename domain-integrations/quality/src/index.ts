@@ -85,6 +85,29 @@ export type { QualityBlockersPanelProps } from './panels/quality-blockers-panel.
 export { ReleaseHoldImpactPanel } from './panels/release-hold-impact-panel.js'
 export type { ReleaseHoldImpactPanelProps } from './panels/release-hold-impact-panel.js'
 
+// Connected Quality Lab Board
+export {
+  ConnectedQualityLabAdapter,
+  toConnectedQualityLabAdapterError,
+} from './adapters/connected-quality-lab-adapter.js'
+export type {
+  ConnectedQualityLabAdapterRequest,
+  ConnectedQualityLabAdapterOptions,
+} from './adapters/connected-quality-lab-adapter.js'
+
+export { connectedQualityLabAdapterInstance } from './adapters/connected-quality-lab-adapter-factory.js'
+
+export {
+  useConnectedQualityLabFailures,
+  useConnectedQualityLabPlants,
+} from './adapters/connected-quality-lab-queries.js'
+
+export { ConnectedQualityLabBoardPanel } from './panels/connected-quality-lab-board-panel.js'
+export type { ConnectedQualityLabBoardPanelProps } from './panels/connected-quality-lab-board-panel.js'
+
+export { LabBoardView } from './views/lab-board-view.js'
+export type { LabBoardViewProps } from './views/lab-board-view.js'
+
 // Actions
 export { ReleaseActionsPanel, ActionSheet, Field, SheetActions, SuccessMessage, ActionButton } from './actions/release-actions-panel.js'
 export type { ReleaseActionsPanelProps, ActionButtonVariant, ActionButtonProps } from './actions/release-actions-panel.js'

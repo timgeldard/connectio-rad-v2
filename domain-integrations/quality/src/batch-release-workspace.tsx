@@ -8,6 +8,7 @@ import { QualityEvidenceView } from './views/quality-evidence-view.js'
 import { OperationsEvidenceView } from './views/operations-evidence-view.js'
 import { WarehouseTraceEvidenceView } from './views/warehouse-trace-evidence-view.js'
 import { DecisionHistoryView } from './views/decision-history-view.js'
+import { LabBoardView } from './views/lab-board-view.js'
 import { useReleaseContext } from './adapters/quality-release-queries.js'
 import type { QualityReleaseAdapterRequest } from './adapters/quality-release-adapter.js'
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
@@ -22,6 +23,7 @@ export type BatchReleaseViewId =
   | 'operations-evidence'
   | 'warehouse-trace-evidence'
   | 'decision-history'
+  | 'lab-board'
 
 /** Props for BatchReleaseWorkspace. */
 export interface BatchReleaseWorkspaceProps {
@@ -172,6 +174,8 @@ function resolveView(viewId: string, requests: ViewRequests): React.ReactNode {
       )
     case 'decision-history':
       return <DecisionHistoryView request={qualityRequest} />
+    case 'lab-board':
+      return <LabBoardView request={{ plantId: qualityRequest.plantId }} />
     default:
       return (
         <ReleaseQueueView
@@ -192,6 +196,7 @@ function isValidViewId(viewId: string): viewId is BatchReleaseViewId {
     'operations-evidence',
     'warehouse-trace-evidence',
     'decision-history',
+    'lab-board',
   ]
   return valid.includes(viewId as BatchReleaseViewId)
 }

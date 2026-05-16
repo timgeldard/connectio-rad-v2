@@ -258,3 +258,16 @@ export {
   ReliabilityMetricSchema,
   MaintenanceBacklogItemSchema,
 } from './schemas/maintenance-reliability.js'
+
+export type {
+  ConnectedQualityLabFailure,
+  ConnectedQualityLabFailuresResponse,
+  ConnectedQualityLabPlant,
+  ConnectedQualityLabPlantsResponse,
+} from './schemas/connected-quality-lab.js'
+export {
+  ConnectedQualityLabFailureSchema,
+  ConnectedQualityLabFailuresResponseSchema,
+  ConnectedQualityLabPlantSchema,
+  ConnectedQualityLabPlantsResponseSchema,
+} from './schemas/connected-quality-lab.js'

@@ -117,6 +117,15 @@ export const batchReleaseRegistration: WorkspaceRegistration = {
         { panelId: 'batch-release-summary', defaultVisible: true, defaultOrder: 2 },
       ],
     },
+    {
+      viewId: 'lab-board',
+      displayName: 'Lab Board',
+      lifecycle: 'pilot',
+      sortOrder: 6,
+      defaultPanels: [
+        { panelId: 'connected-quality-lab-board', defaultVisible: true, defaultOrder: 0 },
+      ],
+    },
   ],
   defaultPanels: [
     { panelId: 'release-queue', defaultVisible: true, defaultOrder: 0 },
@@ -133,6 +142,7 @@ export const batchReleaseRegistration: WorkspaceRegistration = {
     { panelId: 'risk-signals', defaultVisible: true, defaultOrder: 11 },
     { panelId: 'event-timeline', defaultVisible: true, defaultOrder: 12 },
     { panelId: 'related-investigations', defaultVisible: true, defaultOrder: 13 },
+    { panelId: 'connected-quality-lab-board', defaultVisible: true, defaultOrder: 14 },
   ],
   route: '/quality/batch-release',
   personalizationPolicy: {
