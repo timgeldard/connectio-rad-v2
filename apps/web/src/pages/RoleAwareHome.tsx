@@ -26,7 +26,7 @@ function riskStatusColor(status: string): string {
  */
 const MOCK_PLAN_RISK_ITEMS = [
   {
-    planDate: '2024-03-08',
+    planDate: '2026-05-14',
     plantId: 'IE10',
     plantName: 'Kerry Listowel',
     riskStatus: 'critical' as const,
@@ -36,7 +36,7 @@ const MOCK_PLAN_RISK_ITEMS = [
     supervisor: 'Aoife Murphy',
   },
   {
-    planDate: '2024-03-09',
+    planDate: '2026-05-15',
     plantId: 'IE10',
     plantName: 'Kerry Listowel',
     riskStatus: 'at-risk' as const,
@@ -60,7 +60,7 @@ const MOCK_PRIORITY_RELEASE_ITEMS = [
     plant: 'Kerry Listowel',
     priority: 'critical' as const,
     status: 'under-review' as const,
-    dueBy: '2024-03-09T12:00:00.000Z',
+    dueBy: '2026-05-15T12:00:00.000Z',
   },
   {
     releaseCaseId: 'RC-2024-001831',
@@ -69,7 +69,7 @@ const MOCK_PRIORITY_RELEASE_ITEMS = [
     plant: 'Kerry Listowel',
     priority: 'expedited' as const,
     status: 'awaiting-review' as const,
-    dueBy: '2024-03-09T18:00:00.000Z',
+    dueBy: '2026-05-15T18:00:00.000Z',
   },
 ] as const
 
@@ -137,7 +137,7 @@ const MOCK_SPC_SIGNALS = [
     lineId: 'LINE-02',
     ruleViolated: 'Rule 1 — Single point beyond 3σ',
     severity: 'critical' as const,
-    detectedAt: '2024-03-08T08:15:00.000Z',
+    detectedAt: '2026-05-14T08:15:00.000Z',
     acknowledgedAt: undefined as string | undefined,
   },
   {
@@ -147,8 +147,8 @@ const MOCK_SPC_SIGNALS = [
     lineId: 'LINE-01',
     ruleViolated: 'Rule 2 — 9 consecutive points same side of mean',
     severity: 'high' as const,
-    detectedAt: '2024-03-08T06:30:00.000Z',
-    acknowledgedAt: '2024-03-08T07:00:00.000Z',
+    detectedAt: '2026-05-14T06:30:00.000Z',
+    acknowledgedAt: '2026-05-14T07:00:00.000Z',
   },
 ] as const
 
@@ -220,6 +220,36 @@ function workOrderPriorityColor(priority: string): string {
   return 'var(--shell-fg-3)'
 }
 
+const MOCK_RECENT_INVESTIGATIONS = [
+  {
+    investigationId: 'INV-2026-00041',
+    batchId: 'CH-260514-0031',
+    material: 'Kerry Listowel Emmental',
+    plant: 'Kerry Listowel',
+    severity: 'critical' as const,
+    status: 'under-investigation' as const,
+    openedAt: '2026-05-14T10:15:00Z',
+    reason: 'Out-of-spec MIC result detected in batch CH-260514-0031 — supplier lot under review',
+  },
+  {
+    investigationId: 'INV-2026-00038',
+    batchId: 'GC-260512-0088',
+    material: 'Gouda Classic 5kg',
+    plant: 'Kerry Listowel',
+    severity: 'high' as const,
+    status: 'open' as const,
+    openedAt: '2026-05-12T14:30:00Z',
+    reason: 'Elevated moisture result — checking upstream supplier exposure',
+  },
+] as const
+
+function investigationSeverityColor(severity: string): string {
+  if (severity === 'critical') return '#DC2626'
+  if (severity === 'high') return '#D97706'
+  if (severity === 'medium') return '#CA8A04'
+  return 'var(--shell-fg-3)'
+}
+
 /**
  * Home screen rendered when no workspace is active in the URL.
  *
@@ -235,6 +265,7 @@ function workOrderPriorityColor(priority: string): string {
 export function RoleAwareHome() {
   const {
     setWorkspace,
+    navigateToTraceInvestigation,
     navigateToBatchRelease,
     navigateToOperationsPlanRisk,
     navigateToEnvMon,
@@ -249,6 +280,10 @@ export function RoleAwareHome() {
     w =>
       isNavigable(w.lifecycle) &&
       (pinnedWorkspaces === null || pinnedWorkspaces.includes(w.workspaceId)),
+  )
+
+  const hasTraceInvestigation = workspaceRegistry.some(
+    w => w.workspaceId === 'trace-investigation' && isNavigable(w.lifecycle),
   )
 
   const hasBatchRelease = workspaceRegistry.some(
@@ -417,6 +452,78 @@ export function RoleAwareHome() {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Trace Investigation section — shown when trace-investigation is navigable */}
+      {hasTraceInvestigation && (
+        <section style={{ marginTop: 32 }}>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Recent Investigations — Trace
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 680 }}>
+            {MOCK_RECENT_INVESTIGATIONS.map(inv => (
+              <button
+                key={inv.investigationId}
+                type="button"
+                onClick={() => navigateToTraceInvestigation(inv.investigationId, 'overview')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'var(--shell-surface)',
+                  border: '1px solid var(--shell-line)',
+                  borderLeft: `3px solid ${investigationSeverityColor(inv.severity)}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                aria-label={`Open trace investigation ${inv.investigationId} for batch ${inv.batchId}`}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--shell-fg)' }}>
+                    {inv.material}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {inv.batchId} · {inv.plant} · {inv.investigationId}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+                    {inv.reason}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: investigationSeverityColor(inv.severity),
+                    }}
+                  >
+                    {inv.severity}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--shell-fg-3)', textTransform: 'uppercase' }}>
+                    {inv.status.replace(/-/g, ' ')}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
+            Showing 2 recent investigations (mock data). Open Trace Investigation workspace for full view.
+          </p>
         </section>
       )}
 

@@ -66,7 +66,6 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
             {series.characteristicName} — {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {series.points.length} points
           </div>
 
-          {/* Production-shaped ASCII chart placeholder — upgrade path: replace with recharts/nivo */}
           <ChartPlaceholder series={series} />
 
           <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
@@ -98,59 +97,106 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   )
 }
 
+function formatPointDate(ts: string): string {
+  const d = new Date(ts)
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
 function ChartPlaceholder({ series }: { series: ControlChartSeries }) {
   const all = series.points.map(p => p.value)
-  const min = Math.min(...all, series.lowerControlLimit)
-  const max = Math.max(...all, series.upperControlLimit)
-  const range = max - min || 1
+  const rawMin = Math.min(...all, series.lowerControlLimit)
+  const rawMax = Math.max(...all, series.upperControlLimit)
+  const yPad = ((rawMax - rawMin) || 1) * 0.12
+  const yMin = rawMin - yPad
+  const yMax = rawMax + yPad
+  const yRange = yMax - yMin
 
-  const HEIGHT = 80
-  const WIDTH = 320
-  const PAD = 8
+  const W = 480
+  const H = 180
+  const PAD_L = 44
+  const PAD_R = 48
+  const PAD_T = 12
+  const PAD_B = 24
+  const plotW = W - PAD_L - PAD_R
+  const plotH = H - PAD_T - PAD_B
+  const n = series.points.length
 
-  function toY(v: number) {
-    return PAD + (1 - (v - min) / range) * (HEIGHT - PAD * 2)
+  function toX(i: number) {
+    return PAD_L + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2)
   }
 
-  const plotW = WIDTH - PAD * 2
-  const step = series.points.length > 1 ? plotW / (series.points.length - 1) : 0
+  function toY(v: number) {
+    return PAD_T + (1 - (v - yMin) / yRange) * plotH
+  }
+
+  const yTicks: number[] = Array.from({ length: 5 }, (_, i) => yMin + (yRange * i) / 4)
+
+  const labelStep = Math.max(1, Math.round((n - 1) / 5))
+  const xLabelSet = new Set<number>()
+  for (let i = 0; i < n; i += labelStep) xLabelSet.add(i)
+  if (n > 0) xLabelSet.add(n - 1)
 
   return (
     <div
-      style={{ background: 'var(--shell-surface-2)', borderRadius: 4, padding: 4, overflowX: 'auto' }}
+      style={{ background: 'var(--shell-surface-2)', borderRadius: 4, overflowX: 'auto' }}
       role="img"
-      aria-label={`Control chart for ${series.characteristicName} — ${series.points.length} data points, UCL ${series.upperControlLimit}, CL ${series.centerLine}, LCL ${series.lowerControlLimit}`}
+      aria-label={`Control chart for ${series.characteristicName} — ${n} data points, UCL ${series.upperControlLimit.toFixed(2)}, CL ${series.centerLine.toFixed(2)}, LCL ${series.lowerControlLimit.toFixed(2)}`}
     >
-      <svg width={WIDTH} height={HEIGHT} style={{ display: 'block' }}>
-        {/* UCL */}
-        <line x1={PAD} y1={toY(series.upperControlLimit)} x2={WIDTH - PAD} y2={toY(series.upperControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
-        {/* CL */}
-        <line x1={PAD} y1={toY(series.centerLine)} x2={WIDTH - PAD} y2={toY(series.centerLine)} stroke="var(--shell-fg-3)" strokeWidth={1} />
-        {/* LCL */}
-        <line x1={PAD} y1={toY(series.lowerControlLimit)} x2={WIDTH - PAD} y2={toY(series.lowerControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
+      <svg width={W} height={H} style={{ display: 'block' }}>
+        {/* Y-axis grid lines and value labels */}
+        {yTicks.map((tick, i) => (
+          <g key={i}>
+            <line x1={PAD_L} y1={toY(tick)} x2={PAD_L + plotW} y2={toY(tick)} stroke="var(--shell-line)" strokeWidth={0.5} />
+            <text x={PAD_L - 4} y={toY(tick) + 3} textAnchor="end" fontSize={9} fill="var(--shell-fg-3)">{tick.toFixed(1)}</text>
+          </g>
+        ))}
 
-        {/* Line connecting points */}
-        {series.points.length > 1 && (
+        {/* UCL */}
+        <line x1={PAD_L} y1={toY(series.upperControlLimit)} x2={PAD_L + plotW} y2={toY(series.upperControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
+        <text x={PAD_L + plotW + 3} y={toY(series.upperControlLimit) + 3} fontSize={8} fill="var(--sunset, #F24A00)">UCL {series.upperControlLimit.toFixed(1)}</text>
+
+        {/* CL */}
+        <line x1={PAD_L} y1={toY(series.centerLine)} x2={PAD_L + plotW} y2={toY(series.centerLine)} stroke="var(--shell-fg-3)" strokeWidth={1} />
+        <text x={PAD_L + plotW + 3} y={toY(series.centerLine) + 3} fontSize={8} fill="var(--shell-fg-3)">CL {series.centerLine.toFixed(1)}</text>
+
+        {/* LCL */}
+        <line x1={PAD_L} y1={toY(series.lowerControlLimit)} x2={PAD_L + plotW} y2={toY(series.lowerControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
+        <text x={PAD_L + plotW + 3} y={toY(series.lowerControlLimit) + 3} fontSize={8} fill="var(--sunset, #F24A00)">LCL {series.lowerControlLimit.toFixed(1)}</text>
+
+        {/* Spec limits */}
+        {series.upperSpecLimit != null && (
+          <line x1={PAD_L} y1={toY(series.upperSpecLimit)} x2={PAD_L + plotW} y2={toY(series.upperSpecLimit)} stroke="#D32F2F" strokeWidth={1} strokeDasharray="2 4" />
+        )}
+        {series.lowerSpecLimit != null && (
+          <line x1={PAD_L} y1={toY(series.lowerSpecLimit)} x2={PAD_L + plotW} y2={toY(series.lowerSpecLimit)} stroke="#D32F2F" strokeWidth={1} strokeDasharray="2 4" />
+        )}
+
+        {/* Data series line */}
+        {n > 1 && (
           <polyline
             fill="none"
             stroke="var(--shell-fg-2)"
             strokeWidth={1.5}
-            points={series.points.map((p, i) => `${PAD + i * step},${toY(p.value)}`).join(' ')}
+            points={series.points.map((p: ControlChartPoint, i: number) => `${toX(i)},${toY(p.value)}`).join(' ')}
           />
         )}
 
         {/* Data points */}
         {series.points.map((p: ControlChartPoint, i: number) => (
-          <circle
-            key={p.pointId}
-            cx={PAD + i * step}
-            cy={toY(p.value)}
-            r={4}
-            fill={STATUS_COLOR[p.status] ?? '#888'}
-          >
-            <title>{`${series.characteristicName}: ${p.value} (${p.status})`}</title>
+          <circle key={p.pointId} cx={toX(i)} cy={toY(p.value)} r={5} fill={STATUS_COLOR[p.status] ?? '#888'}>
+            <title>{`${formatPointDate(p.timestamp)} — ${series.characteristicName}: ${p.value} ${series.unitOfMeasure} (${p.status.replace(/-/g, ' ')})`}</title>
           </circle>
         ))}
+
+        {/* X-axis date labels */}
+        {series.points.map((p: ControlChartPoint, i: number) => {
+          if (!xLabelSet.has(i)) return null
+          return (
+            <text key={p.pointId} x={toX(i)} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--shell-fg-3)">
+              {formatPointDate(p.timestamp)}
+            </text>
+          )
+        })}
       </svg>
     </div>
   )
