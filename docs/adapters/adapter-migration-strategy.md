@@ -78,7 +78,7 @@ The databricks-api adapter extends the legacy-api adapter and overrides specific
 
 ### databricks-api override
 
-<!-- TODO: Document databricks-api override pattern once the first implementation is written. -->
+<!-- TODO: Document databricks-api override pattern once the first implementation is written. See ADR-024 (docs/adr/ADR-024-native-databricks-data-access-architecture.md) for the QuerySpec/QueryExecutor architecture, source badge contract, cache tier definitions, and module migration order (POH → Trace → SPC → Quality/Lab → EnvMon → Warehouse). -->
 
 ---
 
@@ -126,18 +126,20 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
 
 ---
 
-## Current state (as of context migration)
+## Current state (as of 2026-05-16)
 
-| Domain | Adapter class | Verified methods | Remaining on mock |
+| Domain | Adapter class | Legacy-api overrides | Remaining on mock |
 |---|---|---|---|
-| Traceability | `Trace2LegacyApiAdapter` | `getBatchHeaderSummary` | 9 methods |
-| Warehouse | `Warehouse360LegacyApiAdapter` | `getWarehouse360Summary` | 6 methods |
-| Operations (POR) | `ProcessOrderReviewLegacyApiAdapter` | `getProcessOrderHeader` | 6 methods |
+| Traceability | `Trace2LegacyApiAdapter` | `getBatchHeaderSummary` ¹ | 10 methods |
+| Warehouse | `Warehouse360LegacyApiAdapter` | `getWarehouse360Summary` | 8 methods |
+| Operations (POR) | `ProcessOrderReviewLegacyApiAdapter` | `getProcessOrderHeader` | 9 methods |
 | Operations (plan risk) | none — no legacy adapter yet | — | all 9 methods |
-| Quality | none — no legacy adapter yet | — | all methods |
-| SPC | none | — | all methods |
+| Quality | `ConnectedQualityLabLegacyApiAdapter` | `getLabFailures`, `getLabPlants` | 0 methods (all overridden) |
+| SPC | none | — | all 9 methods |
 | Maintenance | none | — | all methods |
 | EnvMon | none | — | all methods |
+
+¹ Browser-verified against a live V1 backend. All other legacy-api overrides are **wired** (proxy route + adapter code exist) but have not been tested end-to-end against a live V1 instance. Do not promote wired methods to "verified" in this table until browser-testing is complete.
 
 ---
 

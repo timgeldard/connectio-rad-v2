@@ -51,13 +51,22 @@ Methods that have been verified against V1 are overridden. All other methods fal
 
 **Source badge:** amber badge in every panel whose data came from this mode
 
-**Currently overridden methods (browser-verified):**
+**Browser-verified overrides** — tested end-to-end against a live V1 backend:
 
 | Domain | Adapter class | Method | FastAPI route |
 |---|---|---|---|
 | Traceability | `Trace2LegacyApiAdapter` | `getBatchHeaderSummary` | `POST /api/trace2/batch-header` |
+
+**Wired but not browser-verified** — proxy route and adapter override exist; live V1 testing not yet completed:
+
+| Domain | Adapter class | Method | FastAPI route |
+|---|---|---|---|
 | Warehouse | `Warehouse360LegacyApiAdapter` | `getWarehouse360Summary` | `POST /api/wh360/warehouse-summary` |
 | Operations | `ProcessOrderReviewLegacyApiAdapter` | `getProcessOrderHeader` | `POST /api/por/order-header` |
+| Quality | `ConnectedQualityLabLegacyApiAdapter` | `getLabFailures` | `GET /api/cq/lab/fails` |
+| Quality | `ConnectedQualityLabLegacyApiAdapter` | `getLabPlants` | `GET /api/cq/lab/plants` |
+
+Do not mark a method as browser-verified until it has been tested end-to-end in a browser with `VITE_ADAPTER_MODE=legacy-api` against a live V1 backend that returned real data.
 
 **Activation:**
 ```bash
@@ -132,5 +141,6 @@ All React Query hooks import from the factory, not the adapter class directly. T
 | `V1_TRACE_API_BASE_URL` | legacy-api (server) | — | V1 Trace2 backend URL (Databricks secret) |
 | `V1_WH360_API_BASE_URL` | legacy-api (server) | — | V1 WH360 backend URL (Databricks secret) |
 | `V1_POH_API_BASE_URL` | legacy-api (server) | — | V1 POH backend URL (Databricks secret) |
+| `V1_CQ_API_BASE_URL` | legacy-api (server) | — | V1 Connected Quality backend URL (Databricks secret) |
 
 Server-side variables (`V1_*`) are injected by Databricks Apps from the `connectio-v2` secret scope. They are never hardcoded in the repo.

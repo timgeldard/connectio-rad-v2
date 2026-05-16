@@ -131,12 +131,16 @@ src/
 
 The Python backend proxies requests from the React frontend to V1 backends. It uses secret-scope env vars (never hardcoded URLs).
 
-Currently verified proxy routes (browser-tested against V1):
+Browser-verified proxy routes (tested end-to-end against a live V1 backend):
 - `POST /api/trace2/batch-header` → V1 Trace2
+
+Wired but not browser-verified (proxy route + adapter override exist; V1 live testing not yet completed):
 - `POST /api/wh360/warehouse-summary` → V1 Warehouse 360
 - `POST /api/por/order-header` → V1 POH
+- `GET /api/cq/lab/fails` → V1 Connected Quality
+- `GET /api/cq/lab/plants` → V1 Connected Quality
 
-Do NOT add new routes without confirming the V1 endpoint exists and returns expected data.
+Do NOT add new routes without confirming the V1 endpoint exists and returns expected data. Do NOT claim a wired route is "verified" until browser-tested against live V1.
 
 ---
 
