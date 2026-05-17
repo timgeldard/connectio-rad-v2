@@ -1,36 +1,52 @@
 # EnvMon Native Databricks Groundwork Plan
 
-**Date:** 2026-05-17 (i.txt groundwork) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
-**Status:** SAP QM SOURCE RECOVERED (confirmed-v1) — DDL verification pending
-**Outcome:** V1 source model confirmed from SAP QM inspection lots. QuerySpec skeleton written for `getEnvMonSiteSummary`. Route deferred until DDL confirmed.
+**Date:** 2026-05-17 (i.txt groundwork) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery, l.txt hybrid framing)
+**Status:** SAP QM SOURCE RECOVERED (confirmed-v1); SPATIAL CONFIG MODEL RECOVERED (confirmed-v1); DDL verification pending
+**Outcome:** V1 is a hybrid domain. SAP QM source model confirmed. App-managed spatial configuration model confirmed (5 em_* tables). QuerySpec skeleton written for `getEnvMonSiteSummary`. Route deferred until DDL confirmed.
 
 ---
 
-## Correction (k.txt, 2026-05-17)
+## Corrections
+
+### k.txt correction (2026-05-17): LIMS → SAP QM
 
 The i.txt groundwork incorrectly concluded that EnvMon has "no source model" and should be treated as a LIMS-only app with zero gold views. This conclusion was wrong.
 
-**Corrected status:**
+**Corrected status (k.txt):**
 
 > EnvMon V1 was fully functional and used SAP Quality inspection lot/result data filtered to `INSPECTION_TYPE IN ('14', 'Z14')`. The V1 source model has been recovered from the ConnectIO-RAD repo. Gold views are confirmed-v1 but DDL has not yet been run in connected_plant_uat.
 
 The i.txt error occurred because the search used "LIMS" and "envmon" terminology instead of SAP QM terms (INSPECTION_TYPE, gold_inspection_lot, em_config). The V1 app is under `apps/envmon/` — but its data source is SAP QM inspection lots, not a standalone LIMS system.
 
+### l.txt correction (2026-05-17): SAP QM only → hybrid domain
+
+The k.txt correction over-indexed on the SAP QM side and did not document the spatial configuration sub-system. EnvMon V1 is a **hybrid domain** with two distinct data systems:
+
+1. **SAP QM read model** — inspection lots/results from the Databricks gold layer (data-engineering owned)
+2. **App-managed spatial configuration** — 5 Delta tables (`em_plant_floor`, `em_location_coordinates`, `em_layout_revision`, `em_location_zones`, `em_plant_geo`) owned by the V1 EnvMon app itself
+
+The spatial configuration enables: floor plan display, functional-location coordinate placement, L4 zone definitions, layout revision lifecycle (draft/publish/rollback), and the heatmap visualisation. It is **not optional decoration** — the heatmap and zone methods cannot function without it.
+
+**V1 spatial config DDL** has been recovered from V1 migration scripts (`apps/envmon/scripts/migrations/001b–007`) and is confirmed-v1. Whether these tables exist in connected_plant_uat is unknown.
+
+See `docs/audit/envmon-spatial-configuration-model.md` for the full spatial config model.
+
 ---
 
-## Current State (post k.txt, 2026-05-17)
+## Current State (post l.txt, 2026-05-17)
 
 | Item | Status |
 |---|---|
 | Adapter methods | 9 — all mock-only (no route wired) |
 | FastAPI routes | None |
 | Databricks QuerySpecs | **1** — `envmon.get_site_summary` (QuerySpec-only, no route) |
-| Source system | **SAP QM inspection lots** (INSPECTION_TYPE IN ('14','Z14')) |
+| Source system — SAP QM | INSPECTION_TYPE IN ('14','Z14') — TRACE_CATALOG/TRACE_SCHEMA |
 | Gold views confirmed-v1 | **3** — gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v |
 | Gold views confirmed-ddl | **0** — DDL not yet run in connected_plant_uat |
+| App-managed tables confirmed-v1 | **5** — em_plant_floor, em_location_coordinates, em_layout_revision, em_location_zones, em_plant_geo |
+| App-managed tables in UAT | **unknown** — run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` |
 | Object resolver | "envmon" domain key added → TRACE_CATALOG / TRACE_SCHEMA |
 | Legacy-api adapter | None — native Databricks will be first live path |
-| Source system (corrected) | SAP QM inspection lots via TRACE_CATALOG / TRACE_SCHEMA |
 
 ---
 
@@ -70,24 +86,35 @@ EnvMon data originates from SAP QM inspection lots (recurring environmental insp
 V1 `fetch_plant_kpis` (plants.py) uses only the three gold views — no app-managed em_* tables. This is the lowest-risk first slice. QuerySpec written in `apps/api/adapters/envmon/envmon_databricks_adapter.py`.
 
 **Finding 4 — Heatmap and zone-level methods blocked by app-managed tables.**
-The em_* tables (`em_location_coordinates`, `em_plant_floor`, etc.) are app-managed and may not exist in `connected_plant_uat`. Do not implement heatmap until existence confirmed via `SHOW TABLES`.
+The em_* tables are app-managed Delta tables owned by the V1 EnvMon app. Full DDL confirmed-v1 from V1 migration scripts. They may not exist in `connected_plant_uat`. Do not implement heatmap or zone methods until existence confirmed via `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`.
 
-**Finding 5 — Panel source badge concern remains.**
+**Finding 5 — hygieneZone and areaType are NOT in V1.**
+The V2 `EnvMonZone` and `EnvMonHeatmapCell` contracts have `hygieneZone: 'zone-1'|'zone-2'|'zone-3'|'zone-4'` and `areaType`. These fields have no V1 column equivalent. V1 zones are generic L4 spatial areas with `zone_name` and geometry only. Do not invent default values for these fields.
+
+**Finding 6 — CAPA is NOT in V1 EnvMon.**
+`getEnvMonCorrectiveActions` is entirely speculative. No CAPA tables, routes, or code exist in V1. Do not implement this method without a full new workflow design and identified data source.
+
+**Finding 7 — Panel source badge concern remains.**
 All 8 panels register `systemName: 'lims'`. When a native Databricks slice is wired, update `systemName` in each affected panel registration at the same time. Do not update the badge before wiring the route.
 
 ---
 
 ## Groundwork Documents
 
-| Document | Purpose | k.txt status |
+| Document | Purpose | Status |
 |---|---|---|
-| `docs/migration/envmon-v1-functional-recovery.md` | V1 source recovery report | **New — k.txt** |
-| `docs/audit/envmon-sap-qm-source-model.md` | SAP QM view/column documentation | **New — k.txt** |
-| `docs/audit/envmon-inspection-lot-type-filter.md` | INSPECTION_TYPE IN ('14','Z14') filter | **New — k.txt** |
+| `docs/migration/envmon-v1-deep-dive.md` | Full V1 architecture (A/B/C/D/E) — hybrid domain | **New — l.txt** |
+| `docs/audit/envmon-spatial-configuration-model.md` | App-managed spatial config — all 5 em_* tables with full DDL | **New — l.txt** |
+| `docs/audit/envmon-v1-functional-capability-map.md` | 15 V1 user capabilities with V2 parity status | **New — l.txt** |
+| `docs/audit/envmon-v1-to-v2-parity-gap.md` | Per-method V1→V2 parity gap analysis | **New — l.txt** |
+| `docs/migration/envmon-advisor-recommendation.md` | Phased migration recommendation (workstreams A/B/C/D) | **New — l.txt** |
+| `docs/migration/envmon-v1-functional-recovery.md` | V1 SAP QM source recovery report | New — k.txt |
+| `docs/audit/envmon-sap-qm-source-model.md` | SAP QM view/column documentation | New — k.txt |
+| `docs/audit/envmon-inspection-lot-type-filter.md` | INSPECTION_TYPE IN ('14','Z14') filter | New — k.txt |
 | `docs/domains/envmon-monitoring.md` | Adapter/contract/source reference | Updated — k.txt |
 | `docs/audit/envmon-contract-inventory.md` | Per-method fields + SAP QM mapping | Updated — k.txt |
 | `docs/audit/envmon-databricks-source-candidates.md` | Source candidates (confirmed-v1) | Updated — k.txt |
-| `docs/audit/envmon-native-column-verification-checklist.md` | DDL checks — SAP QM views | Updated — k.txt |
+| `docs/audit/envmon-native-column-verification-checklist.md` | DDL checks — Group A SAP QM + Group B em_* | Updated — l.txt |
 | `docs/migration/envmon-native-candidate-ranking.md` | Ranked candidates with V1 evidence | Updated — k.txt |
 | `docs/audit/envmon-native-architecture-check.md` | Architecture guardrail check | Updated — k.txt |
 

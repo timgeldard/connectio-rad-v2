@@ -1,9 +1,11 @@
 # EnvMon V1 Functional Recovery
 
-**Date:** 2026-05-17
-**Tranche:** k.txt — SAP QM source recovery
-**Status:** SOURCE RECOVERED (confirmed-v1) — DDL verification pending in connected_plant_uat
+**Date:** 2026-05-17 (k.txt) | **Updated:** 2026-05-17 (l.txt — hybrid framing, spatial config references added)  
+**Tranche:** k.txt — SAP QM source recovery; l.txt — hybrid domain framing  
+**Status:** SAP QM SOURCE RECOVERED (confirmed-v1); SPATIAL CONFIG MODEL RECOVERED (confirmed-v1); DDL verification pending  
 **References:**
+- `docs/migration/envmon-v1-deep-dive.md` — full V1 architecture (new l.txt)
+- `docs/audit/envmon-spatial-configuration-model.md` — app-managed spatial config model (new l.txt)
 - `docs/audit/envmon-sap-qm-source-model.md`
 - `docs/audit/envmon-inspection-lot-type-filter.md`
 - `docs/audit/envmon-native-column-verification-checklist.md`
@@ -12,9 +14,13 @@
 
 ## Summary
 
-EnvMon V1 was a fully functional application. It is **not** a LIMS-native app — it reads SAP Quality Management inspection lot data from the Databricks gold layer, filtering to inspection types `'14'` and `'Z14'` (recurring environmental inspection lots).
+EnvMon V1 was a fully functional **hybrid domain** application. It is **not** LIMS-only and **not** SAP-QM-only.
 
-The V1 source was recovered by searching the `ConnectIO-RAD` repo using SAP QM terminology (INSPECTION_TYPE, gold_inspection_lot, gold_inspection_point) rather than "LIMS" or "envmon" filenames.
+**SAP QM read model (k.txt recovery):** Reads SAP Quality Management inspection lot data from the Databricks gold layer, filtering to inspection types `'14'` and `'Z14'`. Three gold views: `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v`.
+
+**App-managed spatial configuration (l.txt recovery):** Maintains five Delta tables in the same TRACE_CATALOG/TRACE_SCHEMA: `em_plant_floor`, `em_location_coordinates`, `em_layout_revision`, `em_location_zones`, `em_plant_geo`. Full DDL confirmed-v1 from V1 migration scripts. These enable floor plan display, functional-location coordinate placement (x/y %), L4 zone definitions with polygon/rectangle geometry, and the heatmap visualisation.
+
+**This document covers the SAP QM side.** For spatial configuration detail see `docs/audit/envmon-spatial-configuration-model.md`. For full V1 architecture see `docs/migration/envmon-v1-deep-dive.md`.
 
 ---
 

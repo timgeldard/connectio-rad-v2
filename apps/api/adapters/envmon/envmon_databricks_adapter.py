@@ -172,10 +172,19 @@ def map_site_summary_rows(rows: list[dict], plant_id: str) -> dict:
         totalSamples     ← lots_tested (inspection lots = sampling events)
         positiveSamples  ← active_fails (locations with ≥1 FAIL valuation)
         positiveRate     ← computed: active_fails / total_locs (location-level rate)
-      Not available without additional joins (return defaults):
-        criticalZoneExposures ← 0  (needs zone/area-type classification source)
-        openCorrectiveActions ← 0  (no CAPA source confirmed in gold layer)
-        trendDirection        ← "stable"  (needs period-over-period comparison)
+
+      TEMPORARY CONTRACT PLACEHOLDERS — NOT FACTUAL BUSINESS VALUES:
+        criticalZoneExposures → 0
+          Source: requires em_location_zones zone classification join.
+          em_location_zones is an app-managed table (confirmed-v1 from V1 migrations)
+          that may not exist in connected_plant_uat. Do not treat 0 as "no exposures".
+        openCorrectiveActions → 0
+          Source: CAPA/corrective actions do not exist in V1 EnvMon at all — no tables,
+          no routes, no code. There is no SAP QM or gold-layer source for this field.
+          Do not treat 0 as "no open actions".
+        trendDirection → "stable"
+          Source: requires period-over-period rate comparison. Not implemented.
+          "stable" is a schema default, not a calculated business signal.
 
     Note: positiveRate is per-location (fraction of locations with a fail), not
     per-sample. This matches V1 KPI semantics. Update when swab-result-level
@@ -198,9 +207,12 @@ def map_site_summary_rows(rows: list[dict], plant_id: str) -> dict:
         "totalSamples": lots_tested,
         "positiveSamples": active_fails,
         "positiveRate": positive_rate,
-        "criticalZoneExposures": 0,   # not available — zone join required
-        "openCorrectiveActions": 0,   # not available — no CAPA source
-        "trendDirection": "stable",   # not available — period-over-period deferred
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: em_location_zones (may not exist in UAT)
+        "criticalZoneExposures": 0,
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: CAPA not present in V1 EnvMon
+        "openCorrectiveActions": 0,
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: period-over-period comparison not implemented
+        "trendDirection": "stable",
     }
 
 
@@ -210,7 +222,10 @@ def _default_site_summary(plant_id: str) -> dict:
         "totalSamples": 0,
         "positiveSamples": 0,
         "positiveRate": 0.0,
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: em_location_zones (may not exist in UAT)
         "criticalZoneExposures": 0,
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: CAPA not present in V1 EnvMon
         "openCorrectiveActions": 0,
+        # TEMPORARY PLACEHOLDER — not a business fact. Source: period-over-period comparison not implemented
         "trendDirection": "stable",
     }

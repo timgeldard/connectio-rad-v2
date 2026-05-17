@@ -1,8 +1,13 @@
 # EnvMon Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
-**Status:** CONFIRMED-V1 — DDL NOT YET RUN in connected_plant_uat
-**Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-databricks-source-candidates.md`
+**Date:** 2026-05-17 (i.txt) | **Updated:** 2026-05-17 (k.txt SAP QM recovery, l.txt hybrid split)  
+**Status:** Group A — CONFIRMED-V1, DDL NOT YET RUN; Group B — CONFIRMED-V1 DDL, EXISTENCE IN UAT UNKNOWN  
+**References:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-spatial-configuration-model.md`
+
+EnvMon is a **hybrid domain**. DDL verification falls into two separate groups:
+
+- **Group A — SAP QM read model:** Gold views for inspection lots, points, and results. These are data-engineering-owned and likely exist in connected_plant_uat alongside Trace2 views.
+- **Group B — App-managed spatial configuration:** The five `em_*` Delta tables owned by the V1 EnvMon app. These may or may not exist in connected_plant_uat. Confirm existence before designing any spatial feature.
 
 **Legend:**
 - `confirmed-v1` — confirmed from V1 ConnectIO-RAD source code or entities.yaml; not yet DDL-verified
@@ -16,7 +21,12 @@ Do not mark any field `confirmed-ddl` unless you have run the DDL command and se
 
 ---
 
-## Primary Views (confirmed-v1 — DDL pending)
+## Group A — SAP QM Read Model
+
+All three views in TRACE_CATALOG / TRACE_SCHEMA (default `connected_plant_uat.gold`).  
+All are `confirmed-v1` — DDL not yet run in connected_plant_uat.
+
+---
 
 ### `gold_inspection_lot` (TRACE_CATALOG.TRACE_SCHEMA)
 
@@ -25,12 +35,12 @@ DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_lot;
 
 SELECT * FROM connected_plant_uat.gold.gold_inspection_lot LIMIT 5;
 
--- Confirm filter values
+-- Confirm inspection type filter values
 SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS n
 FROM connected_plant_uat.gold.gold_inspection_lot
 GROUP BY INSPECTION_TYPE ORDER BY n DESC;
 
--- Confirm plant-level data exists
+-- Confirm plant-level data exists for EnvMon lot types
 SELECT PLANT_ID, INSPECTION_TYPE, COUNT(*) AS n
 FROM connected_plant_uat.gold.gold_inspection_lot
 WHERE INSPECTION_TYPE IN ('14','Z14')
@@ -57,7 +67,7 @@ DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_point;
 
 SELECT * FROM connected_plant_uat.gold.gold_inspection_point LIMIT 5;
 
--- Confirm functional location is populated
+-- Confirm functional location is populated for EnvMon lots
 SELECT COUNT(*) AS n, COUNT(FUNCTIONAL_LOCATION) AS with_loc
 FROM connected_plant_uat.gold.gold_inspection_point
 WHERE INSPECTION_LOT_ID IN (
@@ -89,7 +99,7 @@ SELECT DISTINCT INSPECTION_RESULT_VALUATION, COUNT(*) AS n
 FROM connected_plant_uat.gold.gold_batch_quality_result_v
 GROUP BY INSPECTION_RESULT_VALUATION ORDER BY n DESC;
 
--- Confirm MIC names (organism/test types)
+-- Confirm MIC names (organism/test types) for EnvMon lots
 SELECT DISTINCT MIC_NAME, COUNT(*) AS n
 FROM connected_plant_uat.gold.gold_batch_quality_result_v
 WHERE INSPECTION_LOT_ID IN (
@@ -111,6 +121,7 @@ GROUP BY MIC_NAME ORDER BY n DESC;
 | Lower specification limit | `LOWER_TOLERANCE` | `confirmed-v1` |
 
 **Valuation mapping (confirmed-v1):**
+
 | Raw value | V2 contract result |
 |---|---|
 | `R`, `REJ`, `REJECT` | `positive` (fail) |
@@ -120,51 +131,7 @@ GROUP BY MIC_NAME ORDER BY n DESC;
 
 ---
 
-## App-Managed Tables (existence UNKNOWN in connected_plant_uat)
-
-Run this first:
-```sql
-SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
-```
-
-If em_* tables exist, run DDL. If not, heatmap and zone methods remain blocked.
-
-### `em_location_coordinates` (EM_CATALOG.EM_SCHEMA — if exists)
-
-```sql
-DESCRIBE TABLE connected_plant_uat.gold.em_location_coordinates;
-SELECT * FROM connected_plant_uat.gold.em_location_coordinates LIMIT 20;
-```
-
-| Field | Column | Status |
-|---|---|---|
-| Location (TPLNR) link | `func_loc_id` | `confirmed-v1` (V1 entities.yaml) |
-| Floor | `floor_id` | `confirmed-v1` |
-| X position (%) | `x_pos` | `confirmed-v1` |
-| Y position (%) | `y_pos` | `confirmed-v1` |
-| Plant | `plant_id` | `confirmed-v1` |
-| View existence in UAT | — | **blocked — run `SHOW TABLES` first** |
-
-### `em_plant_floor` (EM_CATALOG.EM_SCHEMA — if exists)
-
-```sql
-DESCRIBE TABLE connected_plant_uat.gold.em_plant_floor;
-SELECT * FROM connected_plant_uat.gold.em_plant_floor LIMIT 20;
-```
-
-| Field | Column | Status |
-|---|---|---|
-| Plant | `plant_id` | `confirmed-v1` |
-| Floor | `floor_id` | `confirmed-v1` |
-| Floor name | `floor_name` | `confirmed-v1` |
-| SVG URL | `svg_url` | `confirmed-v1` |
-| SVG dimensions | `svg_width`, `svg_height` | `confirmed-v1` |
-| Active revision | `active_revision_id` | `confirmed-v1` |
-| View existence in UAT | — | **blocked — run `SHOW TABLES` first** |
-
----
-
-## Lot-Type Filter Verification
+### Lot-Type Filter Verification
 
 ```sql
 -- Step 1: Confirm INSPECTION_TYPE column exists and has '14'/'Z14' values
@@ -183,12 +150,11 @@ Update `docs/audit/envmon-inspection-lot-type-filter.md` status after running st
 
 ---
 
-## Site Summary End-to-End Test
+### Group A End-to-End Test
 
-Once all three primary views are confirmed-ddl, run the full site summary query:
+Once all three views are `confirmed-ddl`, run the full site summary query:
 
 ```sql
--- Test the full site summary query for a known plant (replace C061 with real plant)
 WITH base AS (
     SELECT
         ip.FUNCTIONAL_LOCATION        AS func_loc_id,
@@ -218,16 +184,180 @@ SELECT COUNT(*) AS total_locs, SUM(is_fail) AS active_fails, SUM(lot_count) AS l
 FROM loc_status;
 ```
 
-If this returns rows, the QuerySpec is ready for route wiring. Update `adapter-source-status-matrix.md` and `domain-source-truth-matrix.md` status accordingly.
+If this returns rows, the QuerySpec for `getEnvMonSiteSummary` is ready for route wiring.
+
+---
+
+## Group B — App-Managed Spatial Configuration
+
+All five `em_*` tables are in TRACE_CATALOG / TRACE_SCHEMA (same catalog as Group A).  
+DDL is **confirmed-v1** from V1 migration scripts (`ConnectIO-RAD/apps/envmon/scripts/migrations/`).  
+Existence in `connected_plant_uat` is **unknown** — run `SHOW TABLES` first.
+
+**If em_* tables do not exist:** heatmap, zone, and spatial configuration methods remain blocked. SAP QM methods (Group A) are unaffected.
+
+---
+
+### Step 0: Check em_* table existence
+
+```sql
+-- Run this first. If empty: all Group B methods are blocked.
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
+```
+
+---
+
+### `em_plant_floor`
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_plant_floor;
+
+-- Check floor coverage by plant
+SELECT plant_id, COUNT(*) AS floor_count
+FROM connected_plant_uat.gold.em_plant_floor
+GROUP BY plant_id ORDER BY floor_count DESC;
+
+-- Check revision linkage
+SELECT plant_id, floor_id, floor_name, active_revision_id IS NOT NULL AS has_active_revision
+FROM connected_plant_uat.gold.em_plant_floor;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Plant | `plant_id` | `confirmed-v1` (migration 001c) |
+| Floor | `floor_id` | `confirmed-v1` |
+| Floor name | `floor_name` | `confirmed-v1` |
+| Legacy SVG URL | `svg_url` | `confirmed-v1` |
+| Legacy SVG dimensions | `svg_width`, `svg_height` | `confirmed-v1` |
+| Sort order | `sort_order` | `confirmed-v1` |
+| Canvas type | `canvas_type` | `confirmed-v1` (migration 006) |
+| Canvas dimensions | `canvas_width`, `canvas_height`, `canvas_units` | `confirmed-v1` (migration 006) |
+| Background image URL | `background_image_url` | `confirmed-v1` (migration 006) |
+| Background type | `background_image_type` | `confirmed-v1` (migration 006) |
+| Background checksum | `background_checksum` | `confirmed-v1` (migration 006) |
+| Active revision FK | `active_revision_id` | `confirmed-v1` (migration 006) |
+| Existence in UAT | — | **UNKNOWN — run SHOW TABLES** |
+
+---
+
+### `em_location_coordinates`
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_location_coordinates;
+
+-- Check coordinate coverage
+SELECT plant_id, floor_id, COUNT(*) AS coord_count
+FROM connected_plant_uat.gold.em_location_coordinates
+GROUP BY plant_id, floor_id ORDER BY plant_id, floor_id;
+
+-- Check zone assignment rate
+SELECT
+    COUNT(*) AS total_points,
+    COUNT(parent_zone_id) AS zone_assigned,
+    COUNT(revision_id) AS revision_linked
+FROM connected_plant_uat.gold.em_location_coordinates;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Plant | `plant_id` | `confirmed-v1` (migration 001b) |
+| SAP TPLNR | `func_loc_id` | `confirmed-v1` |
+| Floor | `floor_id` | `confirmed-v1` |
+| X position (%) | `x_pos` | `confirmed-v1` |
+| Y position (%) | `y_pos` | `confirmed-v1` |
+| Zone FK | `parent_zone_id` | `confirmed-v1` (migration 007) |
+| Placement source | `placement_source` | `confirmed-v1` (migration 007) |
+| Revision FK | `revision_id` | `confirmed-v1` (migration 007) |
+| Validation status | `validation_status` | `confirmed-v1` (migration 007) |
+| Existence in UAT | — | **UNKNOWN — run SHOW TABLES** |
+
+---
+
+### `em_layout_revision`
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_layout_revision;
+
+-- Check revision states
+SELECT plant_id, floor_id, state, COUNT(*) AS n
+FROM connected_plant_uat.gold.em_layout_revision
+GROUP BY plant_id, floor_id, state ORDER BY plant_id, floor_id, state;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Revision ID (PK) | `revision_id` | `confirmed-v1` (migration 004) |
+| Plant | `plant_id` | `confirmed-v1` |
+| Floor | `floor_id` | `confirmed-v1` |
+| Revision number | `revision_number` | `confirmed-v1` |
+| State | `state` | `confirmed-v1` (draft/published/superseded/rolled_back) |
+| Change reason | `change_reason` | `confirmed-v1` |
+| Published by/at | `published_by`, `published_at` | `confirmed-v1` |
+| Existence in UAT | — | **UNKNOWN — run SHOW TABLES** |
+
+---
+
+### `em_location_zones`
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_location_zones;
+
+-- Check zone geometry types and statuses
+SELECT geometry_type, status, COUNT(*) AS n
+FROM connected_plant_uat.gold.em_location_zones
+GROUP BY geometry_type, status ORDER BY n DESC;
+
+-- Check L4 functional location assignment rate
+SELECT
+    COUNT(*) AS total_zones,
+    COUNT(functional_location_id) AS with_l4_loc,
+    COUNT(parent_zone_id) AS nested_zones
+FROM connected_plant_uat.gold.em_location_zones;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Zone ID (PK) | `zone_id` | `confirmed-v1` (migration 005) |
+| Plant | `plant_id` | `confirmed-v1` |
+| Floor | `floor_id` | `confirmed-v1` |
+| L4 functional location | `functional_location_id` | `confirmed-v1` |
+| Zone name | `zone_name` | `confirmed-v1` |
+| Geometry type | `geometry_type` | `confirmed-v1` (polygon/rectangle) |
+| Geometry JSON | `geometry_json` | `confirmed-v1` |
+| Centroid | `centroid_x`, `centroid_y` | `confirmed-v1` |
+| Revision FK | `revision_id` | `confirmed-v1` |
+| Status | `status` | `confirmed-v1` (draft/published/archived) |
+| `hygiene_zone` | — | **MISSING** — not in V1 DDL; V2 contract has this; requires new design |
+| `area_type` | — | **MISSING** — not in V1 DDL; V2 contract has this; requires new design |
+| Existence in UAT | — | **UNKNOWN — run SHOW TABLES** |
+
+---
+
+### `em_plant_geo`
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_plant_geo;
+
+SELECT plant_id, lat, lon FROM connected_plant_uat.gold.em_plant_geo;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Plant | `plant_id` | `confirmed-v1` (migration 003) |
+| Latitude | `lat` | `confirmed-v1` |
+| Longitude | `lon` | `confirmed-v1` |
+| Existence in UAT | — | **UNKNOWN — run SHOW TABLES** |
 
 ---
 
 ## How to Update This Checklist
 
-1. Run `DESCRIBE TABLE` for each view in the Databricks SQL Editor.
-2. For each column found, change status from `confirmed-v1` to `confirmed-ddl` and record the date.
-3. For enums, run `SELECT DISTINCT` and verify values match expectations.
-4. If a column is not found, mark `missing` and note the date — do not wire that field.
-5. Do not wire any QuerySpec or route until all required fields for that slice are `confirmed-ddl`.
+1. Run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` first.
+2. If `em_*` tables exist: run `DESCRIBE TABLE` for each and mark `confirmed-ddl`.
+3. For `gold_inspection_lot` etc.: run `DESCRIBE TABLE` for each and mark `confirmed-ddl`.
+4. For enums (INSPECTION_TYPE, INSPECTION_RESULT_VALUATION, state, geometry_type): run `SELECT DISTINCT` and verify values match expectations.
+5. If a column is not found, mark `missing` and note the date — do not wire that field.
+6. If `em_*` tables do not exist, mark Group B as `blocked — tables not in UAT` and create a missing-artifact request.
+7. Do not wire any QuerySpec or route until all required columns for that slice are `confirmed-ddl`.
 
-After DDL confirmation, update `docs/audit/envmon-databricks-source-candidates.md` statuses and `docs/migration/envmon-native-candidate-ranking.md`.
+After DDL confirmation, update `docs/audit/envmon-databricks-source-candidates.md` and `docs/migration/envmon-native-candidate-ranking.md`.

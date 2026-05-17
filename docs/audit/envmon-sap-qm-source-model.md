@@ -1,10 +1,12 @@
 # EnvMon SAP QM Source Model
 
-**Date:** 2026-05-17
-**Tranche:** k.txt — SAP QM source recovery
-**Status:** CONFIRMED-V1 — DDL verification pending in connected_plant_uat
-**Evidence source:** V1 ConnectIO-RAD repo (`apps/envmon/backend/envmon_backend/`), `ai-context/semantic-model/entities.yaml`
-**Reference:** `docs/migration/envmon-v1-functional-recovery.md`
+**Date:** 2026-05-17 (k.txt) | **Updated:** 2026-05-17 (l.txt — hybrid framing, EM_CATALOG correction)  
+**Tranche:** k.txt — SAP QM source recovery  
+**Status:** CONFIRMED-V1 — DDL verification pending in connected_plant_uat  
+**Evidence source:** V1 ConnectIO-RAD repo (`apps/envmon/backend/envmon_backend/`), `ai-context/semantic-model/entities.yaml`, migration scripts 001b–007  
+**Reference:** `docs/migration/envmon-v1-functional-recovery.md`, `docs/audit/envmon-spatial-configuration-model.md`
+
+**Scope note:** This document covers the SAP QM read model only. For the app-managed spatial configuration (em_* tables), see `docs/audit/envmon-spatial-configuration-model.md`. EnvMon V1 is a hybrid domain — both sides are required for full parity.
 
 ---
 
@@ -130,15 +132,17 @@ EnvMon V1 reads SAP Quality Management inspection lot data from the same Databri
 
 These tables are owned and populated by the V1 EnvMon app, not by data engineering. They may not exist in `connected_plant_uat`.
 
-| Table | Catalog/schema in V1 | Confirmed-v1 columns | Role | Risk |
-|---|---|---|---|---|
-| `em_location_coordinates` | `EM_CATALOG.EM_SCHEMA` | `func_loc_id`, `floor_id`, `x_pos`, `y_pos` (%), `plant_id` | Maps FUNCTIONAL_LOCATION to floor plan coordinates for heatmap | HIGH — may not exist in connected_plant_uat |
-| `em_plant_floor` | `EM_CATALOG.EM_SCHEMA` | `plant_id`, `floor_id`, `floor_name`, `svg_url`, `svg_width`, `svg_height`, `active_revision_id` | Floor plan SVG definition per plant | HIGH — may not exist |
-| `em_plant_geo` | `EM_CATALOG.EM_SCHEMA` | `plant_id`, `lat`, `lon` | Plant geographic coordinates for site map | HIGH — may not exist |
-| `em_location_zones` | `EM_CATALOG.EM_SCHEMA` | unknown | Zone/hygiene zone classification per FUNCTIONAL_LOCATION | HIGH — may not exist |
-| `em_layout_revision` | `EM_CATALOG.EM_SCHEMA` | unknown | SVG revision tracking | HIGH — may not exist |
+**Correction (l.txt):** These tables use **TRACE_CATALOG / TRACE_SCHEMA** — the same catalog as the SAP QM gold views. There is no separate EM_CATALOG. Full DDL is confirmed-v1 from V1 migration scripts 001b–007. See `docs/audit/envmon-spatial-configuration-model.md` for complete column-level documentation.
 
-**Do not implement heatmap or zone-level queries without confirming em_* table existence via `SHOW TABLES`.**
+| Table | Catalog/schema | Summary columns | Role | Risk |
+|---|---|---|---|---|
+| `em_location_coordinates` | `TRACE_CATALOG.TRACE_SCHEMA` | plant_id, func_loc_id, floor_id, x_pos (%), y_pos (%), + zone/revision cols (007) | Maps FUNCTIONAL_LOCATION to floor plan coordinates for heatmap | HIGH — may not exist |
+| `em_plant_floor` | `TRACE_CATALOG.TRACE_SCHEMA` | plant_id, floor_id, floor_name, svg_url, background_image_url, active_revision_id, canvas config | Floor plan background, canvas config, active revision FK | HIGH — may not exist |
+| `em_plant_geo` | `TRACE_CATALOG.TRACE_SCHEMA` | plant_id, lat, lon | Plant geographic coordinates (lat/lon WGS-84) | MEDIUM — optional for V2 |
+| `em_location_zones` | `TRACE_CATALOG.TRACE_SCHEMA` | zone_id (PK), plant_id, floor_id, zone_name, geometry_type (polygon\|rectangle), geometry_json, revision_id | L4 spatial zones with polygon/rectangle geometry in % coords | HIGH — may not exist |
+| `em_layout_revision` | `TRACE_CATALOG.TRACE_SCHEMA` | revision_id (PK), plant_id, floor_id, revision_number, state (draft\|published\|superseded\|rolled_back) | Layout revision lifecycle | HIGH — may not exist |
+
+**Do not implement heatmap or zone-level queries without confirming em_* table existence via `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`.**
 
 ---
 
