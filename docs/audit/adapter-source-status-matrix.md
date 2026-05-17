@@ -177,17 +177,24 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getEnvMonContext` | ✓ | — | — | — | none | After BV confirmed |
 | `getEnvMonSiteSummary` | ✓ | — | — | **✓ E** | green when databricks | Route wired (n.txt); DDL confirmed; 99 tests; browser verification pending |
-| `getEnvMonZones` | ✓ | — | — | — | none | Blocked — em_location_zones may not exist in UAT |
+| `getEnvMonSwabResults` | ✓ | — | — | — | none | Planned — Rank 2, after site summary BV |
+| `getEnvMonTrends` | ✓ | — | — | — | none | Planned — Rank 3, after site summary BV |
+| `getEnvMonZones` | ✓ | — | — | — | none | Planned — depends on em_location_zones in UAT |
 | `getEnvMonAlerts` | ✓ | — | — | — | none | Deferred — alert derivation rules undefined |
-| `getEnvMonSwabResults` | ✓ | — | — | — | none | Rank 2 — next after site summary BV |
-| `getEnvMonTrends` | ✓ | — | — | — | none | Rank 3 — after site summary BV |
-| `getEnvMonHeatmap` | ✓ | — | — | — | none | Blocked — em_location_coordinates may not exist in UAT |
+| `getEnvMonHeatmap` | ✓ | — | — | — | none | Planned — depends on em_location_coordinates + em_plant_floor in UAT |
 | `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Out of scope — CAPA/corrective actions not a V2 EnvMon parity requirement; intentionally not migrated |
 | `getEnvMonSwabVectors` | ✓ | — | — | — | none | Deferred indefinitely — business rules undefined |
+| `getEnvMonPlantMap` (**PROPOSED**) | — | — | — | — | none | Planned — contract not yet designed; depends on em_plant_geo in UAT + site-summary BV |
+| `getEnvMonPlantHotspots` (**PROPOSED**) | — | — | — | — | none | Planned — contract not yet designed; depends on getEnvMonPlantMap + site-summary aggregate |
+| `GET /api/envmon/floors` (proposed route) | — | — | — | — | none | Planned — depends on em_plant_floor in UAT |
+| `GET /api/envmon/floorplan` (proposed route) | — | — | — | — | none | Planned — depends on em_layout_revision in UAT |
+| `GET /api/envmon/location-coordinates` (proposed route) | — | — | — | — | none | Planned — depends on em_location_coordinates in UAT |
+| `GET /api/envmon/heatmap` (proposed route) | — | — | — | — | none | Planned — depends on em_* tables + all SAP QM views |
 
-**Summary:** 9 methods — 1 executable (`getEnvMonSiteSummary`: route wired, DDL confirmed, awaiting BV), 8 mock only. No legacy-api adapter.  
+**Summary:** 9 adapter methods — 1 executable (`getEnvMonSiteSummary`: route wired, DDL confirmed, awaiting BV), 8 mock only. 6 additional candidate routes planned (not yet in adapter or contracts). No legacy-api adapter.
 **Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` wired and tested. Browser verification pending. Frontend wiring deferred until BV.
 
+**o.txt docs (2026-05-17):** DDD model updated to 4-BC structure; Estate Monitoring BC added; plant geo elevated; candidate routes added to matrices  
 **n.txt docs (2026-05-17):** `apps/api/routes/envmon.py` · `tests/routes/test_envmon_routes.py` · all matrix and deployment docs updated  
 **m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md`  
 **Deep-dive docs (l.txt, 2026-05-17):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md`  
@@ -291,5 +298,12 @@ Gold views: None identified
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
 | `/api/envmon/site-summary` | GET | EnvMon | `getEnvMonSiteSummary` | Databricks-api only — **executable, not browser-verified** — Group A DDL confirmed 2026-05-17 (n.txt); 99 tests passing |
+| `/api/envmon/plant-map` | GET | EnvMon | `getEnvMonPlantMap` (PROPOSED) | **Planned** — depends on em_plant_geo in UAT + contract design; NOT wired |
+| `/api/envmon/plant-hotspots` | GET | EnvMon | `getEnvMonPlantHotspots` (PROPOSED) | **Planned** — depends on em_plant_geo + site-summary BV; NOT wired |
+| `/api/envmon/floors` | GET | EnvMon | *(not yet designed)* | **Planned** — depends on em_plant_floor in UAT; NOT wired |
+| `/api/envmon/floorplan` | GET | EnvMon | *(not yet designed)* | **Planned** — depends on em_layout_revision in UAT; NOT wired |
+| `/api/envmon/location-coordinates` | GET | EnvMon | *(not yet designed)* | **Planned** — depends on em_location_coordinates in UAT; NOT wired |
+| `/api/envmon/zones` | GET | EnvMon | `getEnvMonZones` | **Planned** — depends on em_location_zones in UAT; NOT wired |
+| `/api/envmon/heatmap` | GET | EnvMon | `getEnvMonHeatmap` | **Planned** — depends on observations + spatial config; NOT wired |
 
-No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend.
+No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend. Planned routes are documented targets only — NOT wired.

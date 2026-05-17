@@ -12,11 +12,19 @@
 > "blocked" or "missing-source" framing for CAPA items. Future CAPA belongs to a separate
 > Quality Actions / Deviation / CAPA bounded context.
 
+> **Status update (o.txt, 2026-05-17):** Estate Map / Plant Hotspot View section added.
+> Plant geolocation (`em_plant_geo`) is part of EnvMon Spatial Configuration — maintained with plant floor/spatial data.
+> `getEnvMonPlantMap` and `getEnvMonPlantHotspots` are **proposed** contract additions — not yet in envmon-adapter.ts.
+> Estate Monitoring BC depends on `em_plant_geo` (UAT existence unknown) + `getEnvMonSiteSummary` (route wired, BV pending).
+> See drill-down chain in each spatial section: estate map → plant summary → floor list → floorplan → heatmap → swab point detail.
+
 ---
 
 ## Overview
 
 EnvMon V1 is a hybrid domain. The V2 contracts largely cover the SAP QM monitoring data side — lot counts, fail valuations, MIC time-series — and this mapping is mostly viable once DDL is confirmed. The spatial configuration side (floorplans, coordinates, zones, heatmap) is partially designed in V2 contracts but cannot be implemented until `em_plant_floor`, `em_location_coordinates`, and `em_location_zones` existence is confirmed in `connected_plant_uat`.
+
+V1 also included a **high-level geographic estate map** — a multi-plant geographic overview with plant pins and hot spot markers. This requires `em_plant_geo` (lat/lon per plant) from Spatial Configuration + plant-level observation aggregates. No V2 contract method (`getEnvMonPlantMap`, `getEnvMonPlantHotspots`) exists yet — these are proposed additions.
 
 CAPA/corrective actions are designed in V2 (`getEnvMonCorrectiveActions`, `EnvMonCorrectiveAction`) but have no V1 equivalent and no identified data source anywhere in the V1 codebase or SAP QM gold layer.
 
@@ -33,6 +41,67 @@ The V2 contract also introduces hygiene zone classification (`hygieneZone: zone-
 | `blocked` | Requires a table (`em_*`) whose existence in UAT is unconfirmed |
 | `overdesigned` | Field exists in V2 contract but has no V1 or SAP QM equivalent — represents new scope |
 | `missing-source` | Contract field has no plausible data source in V1 or SAP QM |
+
+---
+
+## Estate Map / Plant Hotspot View (proposed — not yet in contracts)
+
+**V1 capability:** V1 EnvMon included a high-level geographic map of all plants. Plant pins were shown on a geographic map and coloured by risk/fail status. Clicking a plant pin navigated to the plant summary (site-level KPIs), which then allowed drill-down to the floor list and floorplan heatmap.
+
+**V2 current status:** No equivalent routes or contract methods exist. `getEnvMonPlantMap` and `getEnvMonPlantHotspots` do not appear in `domain-integrations/envmon/src/adapters/envmon-adapter.ts` or `packages/data-contracts/src/schemas/environmental-monitoring.ts`. These are **proposed** future contract additions.
+
+### Source dependencies
+
+| Source | Purpose | Status |
+|---|---|---|
+| `em_plant_geo` (Spatial Configuration) | Plant lat/lon for map pins | confirmed-v1 DDL; UAT existence unknown |
+| `GET /api/envmon/site-summary` (Observations BC) | Plant-level fail/warn/pass aggregate for hot spot colour | Route wired; BV pending |
+
+### Proposed read models
+
+| Route (proposed) | Method (proposed) | Description |
+|---|---|---|
+| `GET /api/envmon/plant-map` | `getEnvMonPlantMap` | Plant lat/lon from em_plant_geo; one row per plant |
+| `GET /api/envmon/plant-hotspots` | `getEnvMonPlantHotspots` | Plant hot spot status (fail/warn/pass) from observation aggregate |
+
+Both routes are **planned / proposed only**. Do not implement until:
+1. `em_plant_geo` confirmed present in connected_plant_uat
+2. `GET /api/envmon/site-summary` browser-verified
+3. New contract types designed for `getEnvMonPlantMap` / `getEnvMonPlantHotspots`
+
+### Missing contract fields (proposed)
+
+To support the estate map, new contract types would need at minimum:
+
+| Field | Source | Note |
+|---|---|---|
+| `plantId` | `em_plant_geo.plant_id` | Links to observation aggregate |
+| `lat` | `em_plant_geo.lat` | WGS-84 latitude |
+| `lon` | `em_plant_geo.lon` | WGS-84 longitude |
+| `hotspotStatus` | Derived from observation aggregate (`riskStatus`) | fail/warn/compliant/unknown |
+| `activeFails` | Derived from site-summary `positiveCount` | — |
+| `zonesMonitored` | Derived from site-summary `zonesMonitored` | — |
+
+### Drill-down chain
+
+The estate map is the entry point of the full navigation hierarchy:
+
+```
+estate map (em_plant_geo + hot spot aggregate)
+  → plant summary (GET /api/envmon/site-summary — route wired)
+    → plant floor list (GET /api/envmon/floors — planned)
+      → active floorplan (GET /api/envmon/floorplan — planned)
+        → floor heatmap (GET /api/envmon/heatmap — planned)
+          → swab point detail (GET /api/envmon/swab-results — planned)
+```
+
+### Proposed next slice
+
+1. Confirm `em_plant_geo` in UAT (`SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`)
+2. Browser-verify `GET /api/envmon/site-summary`
+3. Design `getEnvMonPlantMap` + `getEnvMonPlantHotspots` contract types
+4. Implement read-only `GET /api/envmon/plant-map` (em_plant_geo read)
+5. Implement `GET /api/envmon/plant-hotspots` combining em_plant_geo + observation aggregate
 
 ---
 
@@ -251,7 +320,7 @@ The V2 contract also introduces hygiene zone classification (`hygieneZone: zone-
 | `lastTestDate` | `MAX(CREATED_DATE)` per zone | `blocked` | Same dependency |
 | `status` | Derived from zone fail rate | `blocked` | Same dependency |
 
-**V1 equivalent:** `GET /api/em/heatmap` — fully implemented in V1 using `gold_inspection_lot JOIN gold_inspection_point JOIN gold_batch_quality_result_v` with `em_location_coordinates` for x/y position and `em_plant_floor` for floor context. V1 heatmap was **point-level**: each marker represented an individual functional location (`func_loc_id`) with its x/y coordinate. Markers were coloured by INSPECTION_RESULT_VALUATION status.
+**V1 equivalent:** `GET /api/em/heatmap` — fully implemented in V1. The heatmap was the terminal step in the drill-down chain: estate map → plant summary → plant floor list → active floorplan → floor heatmap → swab point detail. V1 used `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` for results, and `em_location_coordinates` for x/y position, `em_plant_floor` for floor context. V1 heatmap was **point-level**: each marker represented an individual functional location (`func_loc_id`) with its x/y coordinate. Markers were coloured by INSPECTION_RESULT_VALUATION status.
 
 **Design mismatch — V1 point-level vs V2 zone-level:** The V2 contract aggregates results to `zoneId` (zone-aggregate level). V1 displayed results at the individual inspection point level. This is a fundamental design difference, not merely a field-mapping gap. V2 would display fewer, larger cells on the heatmap surface compared to V1's granular point markers. This mismatch must be a conscious design decision, not an accidental contract choice.
 
@@ -347,5 +416,7 @@ The V2 contract also introduces hygiene zone classification (`hygieneZone: zone-
 | `getEnvMonSwabResults` | `GET /api/em/lots` + `GET /api/em/lots/{lot_id}` | GOOD | `em_location_zones` for zone fields | GOOD (core); zone fields blocked | HIGH — Rank 2; SAP QM core after DDL |
 | `getEnvMonTrends` | `GET /api/em/trends` | GOOD (core time-series) | `em_location_zones` for `complianceRate` | PARTIAL — alert counts missing-source | MEDIUM — Rank 3; alert counts must be omitted not zeroed |
 | `getEnvMonHeatmap` | `GET /api/em/heatmap` | GOOD (counts/results) | `em_location_coordinates`, `em_plant_floor`, `em_location_zones` — all required | BLOCKED + OVERDESIGNED (point vs zone mismatch; `hygieneZone`/`areaType`) | BLOCKED — all spatial tables unconfirmed; design mismatch unresolved |
-| `getEnvMonCorrectiveActions` | NOT IN V1 | NONE | None applicable | MISSING-SOURCE (all fields) | NOT IN V1 — do not implement without CAPA design |
+| `getEnvMonCorrectiveActions` | NOT IN V1 | NONE | None | OUT OF SCOPE — CAPA is not a V2 EnvMon parity requirement; intentionally not migrated | NOT IN V1 |
 | `getEnvMonSwabVectors` | NOT IN V1 | NONE | `em_location_zones` for `zoneIds` | MISSING-SOURCE (scheduling concept) | DEFERRED INDEFINITELY — business rules undefined |
+| `getEnvMonPlantMap` (proposed) | `GET /api/em/plants` + `em_plant_geo` | PARTIAL (KPIs); em_plant_geo required | `em_plant_geo` — UAT existence unknown | NOT IN CONTRACTS — proposed addition | Planned — after em_plant_geo confirmed + site-summary BV |
+| `getEnvMonPlantHotspots` (proposed) | Derived from plant-level observation aggregate | GOOD (valuation counts) | None (uses observation aggregate) | NOT IN CONTRACTS — proposed addition | Planned — after getEnvMonPlantMap designed |

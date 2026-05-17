@@ -8,6 +8,11 @@
 > **Status update (n.txt, 2026-05-17):** CAPA/corrective actions (capability #12) are **out of scope** for EnvMon V2 parity.
 > `getEnvMonCorrectiveActions` is intentionally not migrated. Future CAPA belongs to a separate Quality Actions bounded context.
 
+> **Status update (o.txt, 2026-05-17):** Estate map / plant geolocation capabilities added (#16–#20).
+> Plant geolocation is part of EnvMon Spatial Configuration (maintained with plant floor/spatial data).
+> Estate Monitoring is a composed read model BC depending on `em_plant_geo` + plant-level observation aggregates.
+> `getEnvMonPlantMap` and `getEnvMonPlantHotspots` are **proposed** — not yet in envmon-adapter.ts or data-contracts.
+
 ---
 
 ## Legend
@@ -266,6 +271,83 @@
 
 ---
 
+---
+
+## 16. Estate / Multi-Plant Map View
+
+| Attribute | Detail |
+|---|---|
+| Exists in V1 | YES |
+| UI evidence | `GlobalView.tsx` — high-level geographic map showing all plants as pins; plant markers coloured by risk status |
+| Route / API evidence | `GET /api/em/plants` returns plant-level KPIs including coordinates for map placement; estate map view was part of V1 GlobalView |
+| Data-source evidence | `em_plant_geo` (lat/lon per plant — confirmed-v1 DDL); plant-level KPI from `gold_inspection_lot` + SAP QM gold views |
+| Source files | `spatial_config/router.py` (em_plant_geo read); `inspection_analysis/plants.py` (KPI aggregates) |
+| V2 equivalent | `getEnvMonPlantMap` → `EnvMonPlantMap` (PROPOSED — not yet in envmon-adapter.ts or data-contracts) |
+| V2 parity status | NOT DESIGNED — `getEnvMonPlantMap` does not exist in V2 adapter or contracts; em_plant_geo existence in UAT unknown |
+| Next action | Confirm em_plant_geo in UAT; design `getEnvMonPlantMap` contract combining lat/lon + plant-level observation aggregate |
+
+---
+
+## 17. Plant Geolocation Maintenance
+
+| Attribute | Detail |
+|---|---|
+| Exists in V1 | YES |
+| UI evidence | `SpatialStudio.tsx` or `GlobalView.tsx` admin interface — setting lat/lon for each plant as part of spatial configuration |
+| Route / API evidence | `spatial_config/router.py` — plant-geo CRUD endpoint (set/update plant lat/lon) |
+| Data-source evidence | `em_plant_geo` (plant_id, lat, lon, updated_at, updated_by — confirmed-v1 DDL from `003_create_em_plant_geo.sql`) |
+| Source files | `spatial_config/router.py` |
+| V2 equivalent | `setPlantGeoLocation` command (PROPOSED — not yet in V2 adapter) |
+| V2 parity status | NOT DESIGNED — plant geolocation write API not designed in V2; em_plant_geo existence in UAT unknown |
+| Next action | Confirm em_plant_geo in UAT; implement read-only `GET /api/envmon/plant-map` first; defer write API (setPlantGeoLocation) to spatial configuration maintenance workstream |
+
+---
+
+## 18. Plant Hot Spot Status on Map
+
+| Attribute | Detail |
+|---|---|
+| Exists in V1 | YES |
+| UI evidence | `GlobalView.tsx` — plant map markers coloured/sized by hot spot status (fail = red, warn = amber, clean = green) |
+| Route / API evidence | Plant-level observation aggregate from `GET /api/em/plants`; status derived from INSPECTION_RESULT_VALUATION counts |
+| Data-source evidence | `em_plant_geo` (coordinates) + `gold_inspection_lot` + SAP QM gold views (observation counts) |
+| Source files | `inspection_analysis/plants.py`, `spatial_config/router.py` |
+| V2 equivalent | `getEnvMonPlantHotspots` (PROPOSED — not yet in envmon-adapter.ts or data-contracts) |
+| V2 parity status | NOT DESIGNED — no `getEnvMonPlantHotspots` contract; hot spot derivation logic would mirror site-summary valuation rules |
+| Next action | Design contract for plant hot spot summary; implement after `em_plant_geo` confirmed and `GET /api/envmon/site-summary` browser-verified |
+
+---
+
+## 19. Drill-Down: Estate Map → Plant Summary
+
+| Attribute | Detail |
+|---|---|
+| Exists in V1 | YES |
+| UI evidence | `GlobalView.tsx` plant pin click → `SiteView.tsx` plant summary (KPIs, floor list) |
+| Route / API evidence | Navigation from plant map to `GET /api/em/plants/{plant_id}` or equivalent plant-summary endpoint |
+| Data-source evidence | `em_plant_geo` (for map entry point); `gold_inspection_lot` + SAP QM gold views (for plant-level KPIs) |
+| Source files | `inspection_analysis/router.py`, `inspection_analysis/plants.py` |
+| V2 equivalent | Plant pin click → `getEnvMonSiteSummary` for selected plant |
+| V2 parity status | PARTIAL — `getEnvMonSiteSummary` exists (route wired, DDL confirmed); estate map entry point (`getEnvMonPlantMap`) not yet designed |
+| Next action | Estate map entry point requires `getEnvMonPlantMap` contract; plant summary already implemented (`GET /api/envmon/site-summary`) |
+
+---
+
+## 20. Drill-Down: Plant Summary → Floorplan / Floor Heatmap
+
+| Attribute | Detail |
+|---|---|
+| Exists in V1 | YES |
+| UI evidence | `SiteView.tsx` floor selector rail → `FloorView.tsx` → `FloorPlan.tsx` heatmap |
+| Route / API evidence | `GET /api/em/floors` → `GET /api/em/heatmap?plant_id=…&floor_id=…` |
+| Data-source evidence | `em_plant_floor` (floor list) + `em_location_coordinates` + SAP QM gold views (heatmap values) |
+| Source files | `spatial_config/router.py` (floors), `inspection_analysis/heatmap.py` |
+| V2 equivalent | `GET /api/envmon/floors` (PROPOSED) → `GET /api/envmon/heatmap` (PROPOSED) |
+| V2 parity status | NOT DESIGNED — floor list and heatmap routes not yet implemented; depends on em_* in UAT |
+| Next action | Confirm em_plant_floor and em_location_coordinates in UAT; implement `GET /api/envmon/floors` read model; implement floorplan heatmap last in sequence |
+
+---
+
 ## Summary Table
 
 | # | Capability | Exists in V1 | V2 parity status | Priority |
@@ -281,7 +363,12 @@
 | 9 | Functional-location coordinate placement | YES | BLOCKED — `em_location_coordinates` needed | HIGH |
 | 10 | L4 / hygiene zone maintenance | YES (generic zones, no hygiene classification) | PARITY GAP — V2 contract overdesigned | HIGH gap |
 | 11 | Heatmap / spatial result display | YES | BLOCKED — `em_*` tables needed | HIGH |
-| 12 | Corrective actions / CAPA | NOT IN V1 | ZERO — no V1 source | NOT IN V1 |
+| 12 | Corrective actions / CAPA | NOT IN V1 | OUT OF SCOPE — not a V2 EnvMon parity requirement | NOT IN V1 |
 | 13 | Drill-through: map point → result | YES | NOT DESIGNED as combined method | MEDIUM |
 | 14 | Plant / date / type filters | YES | GOOD — contract matches V1 | LOW |
 | 15 | Admin / configuration workflows | YES (full Spatial Studio) | NOT DESIGNED | BLOCKED |
+| 16 | Estate / multi-plant map view | YES | NOT DESIGNED — `getEnvMonPlantMap` proposed, not in contracts | HIGH |
+| 17 | Plant geolocation maintenance | YES | NOT DESIGNED — write API not designed; em_plant_geo UAT unknown | MEDIUM |
+| 18 | Plant hot spot status on map | YES | NOT DESIGNED — `getEnvMonPlantHotspots` proposed, not in contracts | HIGH |
+| 19 | Drill-down: estate map → plant summary | YES | PARTIAL — plant summary exists; estate map entry point not yet designed | MEDIUM |
+| 20 | Drill-down: plant summary → floorplan | YES | NOT DESIGNED — floor list + heatmap routes not implemented | MEDIUM |

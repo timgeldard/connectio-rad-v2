@@ -1,7 +1,7 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired, status updated)  
+**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired; o.txt — candidate routes added)
 **Status:** EXECUTABLE — route wired, DDL confirmed (2026-05-17); browser verification pending
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
@@ -118,8 +118,31 @@ not V1 business semantics.
 
 ## History
 
+---
+
+## Candidate Future Routes (o.txt — not yet wired)
+
+The following routes are documented targets. None are wired. Do not attempt to browser-verify them.
+
+| Proposed route | Method | Source dependency | Gate before wiring |
+|---|---|---|---|
+| `GET /api/envmon/plant-map` | `getEnvMonPlantMap` (PROPOSED) | `em_plant_geo` | em_plant_geo confirmed in UAT + contract designed + site-summary BV |
+| `GET /api/envmon/plant-hotspots` | `getEnvMonPlantHotspots` (PROPOSED) | `em_plant_geo` + observation aggregate | plant-map implemented + site-summary BV |
+| `GET /api/envmon/floors` | *(not yet designed)* | `em_plant_floor` | em_plant_floor confirmed in UAT |
+| `GET /api/envmon/floorplan` | *(not yet designed)* | `em_layout_revision` | em_layout_revision confirmed in UAT |
+| `GET /api/envmon/location-coordinates` | *(not yet designed)* | `em_location_coordinates` | em_location_coordinates confirmed in UAT |
+| `GET /api/envmon/zones` | `getEnvMonZones` | `em_location_zones` | em_location_zones confirmed in UAT |
+| `GET /api/envmon/heatmap` | `getEnvMonHeatmap` | SAP QM gold views + `em_location_coordinates` + `em_plant_floor` | All em_* confirmed + site-summary BV |
+
+plant geo and floorplan routes both depend on `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` returning rows.
+
+---
+
+## History
+
 | Date | Tranche | Change |
 |---|---|---|
 | 2026-05-17 | j.txt | Created with placeholder routes `/api/envmon/locations` and `/api/envmon/swab-results` (pre-source-recovery) |
 | 2026-05-17 | m.txt | Replaced with correct route `/api/envmon/site-summary`; marked BLOCKED by DDL; added required params, expected body shape, partial coverage note, full troubleshooting guide |
 | 2026-05-17 | n.txt | DDL confirmed; route wired; status EXECUTABLE; body shape updated to V2 contract (EnvMonSiteSummarySchema); placeholder/derivation distinction clarified |
+| 2026-05-17 | o.txt | Candidate future routes section added (plant-map, plant-hotspots, floors, floorplan, location-coordinates, zones, heatmap); all marked planned/not wired |

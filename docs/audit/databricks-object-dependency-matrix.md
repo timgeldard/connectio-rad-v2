@@ -119,8 +119,9 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 | `em_location_coordinates` | plant_id, func_loc_id, floor_id, x_pos (%), y_pos (%), parent_zone_id, revision_id, validation_status | `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
 | `em_layout_revision` | revision_id (PK), plant_id, floor_id, revision_number, state (draft/published/superseded/rolled_back) | Floor/zone read queries | ❌ app-managed — existence unknown in UAT |
 | `em_location_zones` | zone_id (PK), plant_id, floor_id, zone_name, geometry_type (polygon/rectangle), geometry_json, centroid_x/y, revision_id, status | `getEnvMonZones`, `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
-| `em_plant_geo` | plant_id, lat, lon | Site map (not yet designed) | ❌ app-managed — existence unknown in UAT |
+| `em_plant_geo` | plant_id, lat, lon, updated_at, updated_by | `getEnvMonPlantMap` (PROPOSED), `getEnvMonPlantHotspots` (PROPOSED) — estate map + hot spot markers | ❌ app-managed — existence unknown in UAT |
 
+**o.txt (2026-05-17):** em_plant_geo elevated from "site map not yet designed" to required dependency for Estate Monitoring BC; `getEnvMonPlantMap` and `getEnvMonPlantHotspots` added as proposed candidate routes.  
 **n.txt (2026-05-17):** DDL confirmed for all three Group A views; route wired in `apps/api/routes/envmon.py`; registered in `main.py`; 99 tests passing.  
 **m.txt:** QuerySpec hardened (LIMIT 1 fix); 56 tests added; DDD model + route plan created.  
 **Key gaps (unchanged):**
@@ -128,7 +129,7 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 - CAPA/corrective actions are out of scope for EnvMon V2 parity — `getEnvMonCorrectiveActions` is intentionally not migrated; future CAPA belongs to a separate Quality Actions / Deviation / CAPA bounded context
 - `plantName: ""` in `map_site_summary_rows` is a PLACEHOLDER (no gold_plant JOIN); `openCorrectiveActions: 0` and `overdueActions: 0` are contract-compatibility fixed zeros (not business facts)
 
-**Next action:** Deploy to UAT; run browser verification in `docs/deployment/envmon-native-browser-verification.md`. Heatmap/zone deferred until Group B em_* existence confirmed.
+**Next action:** Deploy to UAT; run browser verification in `docs/deployment/envmon-native-browser-verification.md`. After BV: confirm em_* tables (including em_plant_geo) then implement estate map read model. Heatmap/zone deferred until Group B em_* existence confirmed.
 
 **Full spatial config model:** `docs/audit/envmon-spatial-configuration-model.md`
 

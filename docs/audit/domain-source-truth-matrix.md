@@ -182,10 +182,14 @@
 | `getEnvMonHeatmap` | lot + point + result_v + `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* existence unknown) |
 | `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Out of scope (CAPA not a V2 EnvMon parity requirement; belongs to separate Quality Actions / Deviation / CAPA bounded context) |
 | `getEnvMonSwabVectors` | — | Mock — Deferred indefinitely |
+| `getEnvMonPlantMap` **(PROPOSED)** | `em_plant_geo` | Not in adapter/contracts — Planned: depends on em_plant_geo in UAT + contract design + site-summary BV |
+| `getEnvMonPlantHotspots` **(PROPOSED)** | `em_plant_geo` + site-summary observation aggregate | Not in adapter/contracts — Planned: depends on getEnvMonPlantMap + site-summary BV |
 
-**Total: 9 methods — 1 executable (✓ E), 8 mock**  
-**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` wired and tested (n.txt). Browser verification pending. Spatial config (em_*) deferred — UAT existence unknown.
+**Total: 9 adapter methods — 1 executable (✓ E), 8 mock. 2 additional proposed methods not yet in contracts.**  
+**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` wired and tested (n.txt). Browser verification pending. Estate Monitoring BC added (o.txt). Spatial config (em_*) deferred — UAT existence unknown.
 
+**o.txt docs (2026-05-17):** `docs/architecture/envmon-ddd-model.md` (4-BC) · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md` · candidate routes in matrices  
+**n.txt docs (2026-05-17):** `apps/api/routes/envmon.py` · route tests · all matrices  
 **m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md` · `docs/deployment/envmon-native-browser-verification.md` (updated)  
 **Deep-dive docs (l.txt):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md`  
 **Source recovery docs (k.txt):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
