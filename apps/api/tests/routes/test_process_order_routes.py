@@ -476,8 +476,8 @@ _FAKE_CONF_ROWS = [
         "confirmed_yield": 950.0,
         "uom": "KG",
         "confirmed_at": "2024-03-08T08:00:00",
-        "setup_duration_s": 900,       # 15 minutes × 60
-        "machine_duration_s": 7200,    # 120 minutes × 60
+        "setup_duration_s": 900,       # 15 minutes x 60
+        "machine_duration_s": 7200,    # 120 minutes x 60
         "cleaning_duration_s": None,
     },
 ]

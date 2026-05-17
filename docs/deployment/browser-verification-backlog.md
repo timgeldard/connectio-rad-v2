@@ -18,12 +18,12 @@ These routes are fully implemented and DDL-confirmed. No implementation work req
 **Status:** [ ] not yet verified  
 **Prerequisite:** UAT app RUNNING; authenticated as Databricks user with `sql` scope
 
-```
+```http
 GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-confirmations?process_order_id=7006965038
 ```
 
 **Expected response headers:**
-```
+```http
 X-Data-Source: databricks-api
 X-Adapter-Mode: databricks-api
 X-Query-Name: poh.get_order_confirmations
@@ -68,12 +68,12 @@ X-Query-Name: poh.get_order_confirmations
 **Status:** [ ] not yet verified  
 **Prerequisite:** BV-01 not required first, but run in sequence
 
-```
+```http
 GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-goods-movements?process_order_id=7006965038
 ```
 
 **Expected response headers:**
-```
+```http
 X-Data-Source: databricks-api
 X-Adapter-Mode: databricks-api
 X-Query-Name: poh.get_order_goods_movements
@@ -128,7 +128,7 @@ These routes cannot be wired until DDL verification completes. After DDL is conf
 **Prerequisite:** Complete `docs/audit/trace-native-column-verification-checklist.md` (items 1–2)
 
 When implemented:
-```
+```http
 POST .../api/trace2/batch-header
 Content-Type: application/json
 { "material_id": "000000000020052009", "batch_id": "0008602411" }
@@ -150,7 +150,7 @@ Pass checklist: see `docs/deployment/trace-native-browser-verification.md` (Chec
 **Prerequisite:** BV-03 must pass first (language_id confirmed as part of BV-03 work)
 
 When implemented:
-```
+```http
 POST .../api/trace2/trace-graph
 Content-Type: application/json
 { "material_id": "000000000020052009", "batch_id": "0008602411" }
@@ -172,7 +172,7 @@ Pass checklist: see `docs/deployment/trace-native-browser-verification.md` (Chec
 **Prerequisite:** `DESCRIBE TABLE gold_batch_mass_balance_v` confirms WHERE column names
 
 When implemented:
-```
+```http
 POST .../api/trace2/mass-balance
 Content-Type: application/json
 { "material_id": "000000000020052009", "batch_id": "0008602411" }
@@ -196,7 +196,7 @@ These routes are V1 proxies that have never been browser-verified in the current
 
 **Status:** [ ] not yet verified (V1 STOPPED)
 
-```
+```http
 POST .../api/trace2/batch-header
 Content-Type: application/json
 { "material_id": "000000000020052009", "batch_id": "0008602411" }
@@ -219,7 +219,7 @@ Content-Type: application/json
 
 **Status:** [ ] not yet verified (V1 STOPPED)
 
-```
+```http
 GET .../api/cq/lab/fails?plant_id=C061
 ```
 
@@ -235,7 +235,7 @@ GET .../api/cq/lab/fails?plant_id=C061
 
 **Status:** [ ] not yet verified (V1 STOPPED)
 
-```
+```http
 POST .../api/wh360/warehouse-summary
 Content-Type: application/json
 { "plant_id": "C061" }

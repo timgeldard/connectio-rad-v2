@@ -1,7 +1,7 @@
 # Trace Native — Column Verification Checklist
 
 **Date:** 2026-05-17  
-**Status:** Not yet verified — all items require manual execution in Databricks SQL editor or notebook.  
+**Status:** Partially verified — some items confirmed from V1 source inspection; blocking items still require manual execution in Databricks SQL editor or notebook.  
 **Catalog:** `connected_plant_uat`  
 **Schema:** `gold`  
 **Reference:** `docs/migration/trace-native-batch-header-lineage-plan.md`

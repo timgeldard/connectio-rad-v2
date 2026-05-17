@@ -7,6 +7,7 @@ business logic or SQL here.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 
 from fastapi import HTTPException, Response
 
@@ -62,11 +63,11 @@ def build_user_identity(
 
 
 async def run_query(
-    spec_factory: "Callable[[], QuerySpec]",
+    spec_factory: Callable[[], QuerySpec],
     identity: UserIdentity,
     databricks_host: str,
     warehouse_id: str,
-) -> "tuple[list[dict], QuerySpec]":
+) -> tuple[list[dict], QuerySpec]:
     """Create a QuerySpec, execute it, and translate errors into HTTP exceptions.
 
     Accepts a zero-argument factory so that spec-creation errors (e.g.
@@ -75,8 +76,6 @@ async def run_query(
 
     Returns (rows, spec) so the caller can set response headers from the spec.
     """
-    from collections.abc import Callable  # local import avoids circular issues
-
     try:
         spec: QuerySpec = spec_factory()
         client = StatementApiDatabricksClient(host=databricks_host)
@@ -96,4 +95,4 @@ async def run_query(
     except DatabricksQueryTimeoutError as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(status_code=502, detail="Databricks query execution failed") from exc

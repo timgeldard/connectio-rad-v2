@@ -294,7 +294,7 @@ class TestNoDatabricksApiMockFallback:
 
 _TOKEN_LOG_PATTERNS = [
     re.compile(r"\b(logger|logging|print)\b.*raw_oauth_token"),
-    re.compile(r"\b(logger|logging|print)\b.*x.forwarded.access.token"),
+    re.compile(r"\b(logger|logging|print)\b.*x.forwarded.access.token", re.IGNORECASE),
     re.compile(r"console\.(log|error|warn|debug).*x.forwarded.access.token", re.IGNORECASE),
 ]
 

@@ -266,6 +266,8 @@
 | Quality Release | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
 | **Total** | **82** | **3** | **2** | **3** | **1** | **71** | **2** |
 
-**3 of 82 methods (3.7%) are browser-verified with live Databricks data.**  
-**5 of 82 methods (6.1%) have wired Databricks or legacy-api routes.**  
-**71 of 82 methods (86.6%) are mock-only.**
+**3 of 82 methods (3.7%) are browser-verified with live Databricks data (BV).**  
+**2 of 82 methods (2.4%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E).**  
+**1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
+**71 of 82 methods (86.6%) are mock-only — no wired route of any kind.**  
+*(The remaining 5 methods: 3 have a databricks-api QuerySpec written but no route wired; 2 are blocked by missing view or undefined business rules.)*

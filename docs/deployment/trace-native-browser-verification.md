@@ -39,7 +39,7 @@ If this anchor has no rows, identify an alternate batch from `gold_batch_stock_v
 **UI route:** Navigate to Trace Investigation workspace → enter material/batch → Batch Header panel.
 
 **Direct API call:**
-```
+```http
 POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/trace2/batch-header
 Content-Type: application/json
 
@@ -50,7 +50,7 @@ Content-Type: application/json
 ```
 
 **Expected response headers (databricks-api mode):**
-```
+```http
 X-Data-Source: databricks-api
 X-Adapter-Mode: databricks-api
 X-Query-Name: trace2.get_batch_header_summary
@@ -114,7 +114,7 @@ X-Query-Name: trace2.get_batch_header_summary
 **UI route:** Navigate to Trace Investigation workspace → enter material/batch → Trace Graph panel.
 
 **Direct API call:**
-```
+```http
 POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/trace2/trace-graph
 Content-Type: application/json
 
@@ -125,7 +125,7 @@ Content-Type: application/json
 ```
 
 **Expected response headers:**
-```
+```http
 X-Data-Source: databricks-api
 X-Adapter-Mode: databricks-api
 X-Query-Name: trace2.get_trace_graph
@@ -214,7 +214,7 @@ DESCRIBE TABLE connected_plant_uat.gold.gold_batch_mass_balance_v;
 ```
 
 When wired, test:
-```
+```http
 POST /api/trace2/mass-balance
 { "material_id": "000000000020052009", "batch_id": "0008602411" }
 ```

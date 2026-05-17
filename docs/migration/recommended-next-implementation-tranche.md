@@ -31,7 +31,7 @@
 
 ### H-02: Browser-verify GET /api/por/order-confirmations
 
-```
+```http
 GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-confirmations?process_order_id=7006965038
 ```
 
@@ -65,7 +65,7 @@ GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/orde
 
 ### H-03: Browser-verify GET /api/por/order-goods-movements
 
-```
+```http
 GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-goods-movements?process_order_id=7006965038
 ```
 

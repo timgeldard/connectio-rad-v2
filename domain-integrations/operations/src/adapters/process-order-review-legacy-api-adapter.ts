@@ -283,7 +283,10 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
           return {
             movementId: String(r.movementId ?? ''),
             movementType: String(r.movementType ?? ''),
-            direction: (r.direction as 'input' | 'output' | 'unknown') ?? 'unknown',
+            direction:
+              r.direction === 'input' || r.direction === 'output' || r.direction === 'unknown'
+                ? r.direction
+                : 'unknown',
             materialId: String(r.materialId ?? ''),
             materialDescription: r.materialDescription !== undefined ? String(r.materialDescription) : undefined,
             batchId: r.batchId !== undefined ? String(r.batchId) : undefined,
