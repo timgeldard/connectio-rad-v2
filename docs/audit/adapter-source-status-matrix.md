@@ -184,6 +184,8 @@ Gold views: None identified
 
 **Summary:** 9 methods — all mock only. No legacy-api adapter. No Databricks adapter. No source views confirmed. Domain owner must identify Databricks data source before any migration work.
 
+**Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/domains/envmon-monitoring.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md` · `docs/audit/envmon-native-architecture-check.md`
+
 ---
 
 ## Maintenance and Reliability

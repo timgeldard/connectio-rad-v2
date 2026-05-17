@@ -180,6 +180,8 @@
 **Total: 9 methods — all mock**  
 **Status:** No gold views confirmed. No planning path identified. Requires domain owner to identify Databricks source.
 
+**Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`
+
 ---
 
 ### 8. Maintenance and Reliability

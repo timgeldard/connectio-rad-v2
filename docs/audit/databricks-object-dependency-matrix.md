@@ -90,6 +90,22 @@ All WH360 objects are planned only. The schema (`wh360`) is separate from `gold`
 
 ---
 
+## EnvMon — No objects identified
+
+**Groundwork date:** 2026-05-17 (i.txt)
+**Source system:** LIMS
+**Catalog:** Unknown — no EnvMon gold views found in this repo or in Unity Catalog docs
+
+Zero Databricks objects have been identified for EnvMon. The candidates in `docs/audit/envmon-databricks-source-candidates.md` are entirely speculative — none are confirmed by DDL. No objects can be added to this matrix until the domain owner identifies the source views.
+
+| Object | Used by | Status |
+|---|---|---|
+| (none identified) | — | Domain owner must name source views before DDL verification |
+
+**Next action:** Run exploratory `SHOW TABLES IN connected_plant_uat.<schema>` after domain owner identifies the relevant schema. Then run `DESCRIBE TABLE` on each candidate and add confirmed objects to this section.
+
+---
+
 ## DDL Verification Queue
 
 Items that must be manually verified in Databricks before routes can be wired:
