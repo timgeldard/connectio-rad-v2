@@ -110,18 +110,16 @@ These tests confirm V2 can query Databricks directly using end-user OAuth.
 - [x] `gap-auth` response header confirms authenticated user identity
 - [x] `ENABLE_AUTH_DIAGNOSTICS` removed from `app.yaml` (disabled 2026-05-17)
 
-### C3 — CQ lab plants (native Databricks)
-
-Open the app in a browser (authenticated Databricks session), then:
+### C3 — CQ lab plants (native Databricks) ✓ PASSED 2026-05-17
 
 ```
-GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/cq/lab/plants
+GET /api/cq/lab/plants
 ```
 
-- [ ] Returns HTTP 200 with plant list
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Adapter-Mode: databricks-api` present
-- [ ] No SPN/PAT token used — query executes as the end user's identity
+- [x] Returns HTTP 200 with plant list
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Adapter-Mode: databricks-api` present
+- [x] No SPN/PAT token used — query executes as the end user's identity
 
 ### C4 — POH order header (native Databricks)
 
