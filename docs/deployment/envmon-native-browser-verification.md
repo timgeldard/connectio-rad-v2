@@ -1,37 +1,33 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-17 (m.txt — corrected route; added site-summary shape and params)  
-**Status:** BLOCKED — DDL not confirmed; route not wired
+**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired, status updated)  
+**Status:** EXECUTABLE — route wired, DDL confirmed (2026-05-17); browser verification pending
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
 
 ## Current Status
 
-**Route `GET /api/envmon/site-summary` is NOT WIRED.**
+**Route `GET /api/envmon/site-summary` is WIRED (n.txt, 2026-05-17).**
 
-The route was not wired in m.txt because UAT DDL has not been confirmed for the required
-SAP QM gold views. Per m.txt §6 and §12, the route may only be wired after
-`DESCRIBE TABLE` verification in connected_plant_uat.
+DDL confirmed for all three Group A views via `DESCRIBE TABLE` in `connected_plant_uat` on
+2026-05-17. Route implemented in `apps/api/routes/envmon.py`, registered in `main.py`.
+99 backend tests passing. Browser verification pending — requires deployment to UAT.
 
-**Blocker:** DDL for `gold_inspection_lot`, `gold_inspection_point`, and
-`gold_batch_quality_result_v` has not been run. See required SQL in
-`docs/audit/envmon-native-column-verification-checklist.md`.
+Previously blocking items (all resolved):
 
-No browser verification items can be checked until:
-
-- [ ] DDL confirmed for all three Group A views
-- [ ] `apps/api/routes/envmon.py` implemented
-- [ ] Route registered in FastAPI app
-- [ ] All backend tests passing
-- [ ] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api`
+- [x] DDL confirmed for all three Group A views (2026-05-17)
+- [x] `apps/api/routes/envmon.py` implemented (n.txt, 2026-05-17)
+- [x] Route registered in FastAPI app (`main.py`)
+- [x] All backend tests passing (99 tests)
+- [ ] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api` — **pending**
 
 ---
 
 ## Route: `GET /api/envmon/site-summary`
 
-**Status: NOT WIRED — blocked by DDL**
+**Status: EXECUTABLE — route wired, DDL confirmed; browser verification pending**
 
 ```
 GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17
@@ -60,19 +56,25 @@ GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=20
 ```json
 {
   "plantId": "C061",
-  "totalSamples": 142,
-  "positiveSamples": 3,
-  "positiveRate": 0.021,
-  "criticalZoneExposures": 0,
+  "plantName": "",
+  "zonesMonitored": 50,
+  "zonesWithAlerts": 3,
+  "positiveCount": 3,
+  "positiveRate": 6.0,
   "openCorrectiveActions": 0,
-  "trendDirection": "stable"
+  "overdueActions": 0,
+  "complianceRate": 88.0,
+  "riskStatus": "non-compliant",
+  "highestSeverity": "high",
+  "confidence": 1.0
 }
 ```
 
-**Important:** `criticalZoneExposures`, `openCorrectiveActions`, and `trendDirection` are
-TEMPORARY CONTRACT PLACEHOLDERS — not business facts. `0` does not mean "no exposures" or
-"no open actions"; `"stable"` is a schema default, not a calculated signal. These fields
-will remain placeholders until em_* spatial tables and CAPA sources are confirmed.
+**Note on placeholder fields:** `plantName` returns `""` (no gold_plant JOIN in current SQL)
+and `openCorrectiveActions`/`overdueActions` return `0` (no CAPA source in V1 EnvMon). These
+are TEMPORARY PLACEHOLDERS — not business facts. The remaining fields (`riskStatus`,
+`highestSeverity`, `complianceRate`, `confidence`) are V2-contract derivations computed from
+inspection-lot aggregate counts — not V1 business semantics.
 
 ### Expected: error cases
 
@@ -99,7 +101,7 @@ will remain placeholders until em_* spatial tables and CAPA sources are confirme
 | 504 Gateway Timeout | SQL timeout | Check warehouse availability; increase timeout in QuerySpec if needed |
 | 200 with zeros | No data for plant_id / period | Run `SELECT DISTINCT PLANT_ID FROM connected_plant_uat.gold.gold_inspection_lot WHERE INSPECTION_TYPE IN ('14','Z14')` to find valid plant IDs |
 | `X-Data-Source` absent | Route not implementing header set | Verify `set_databricks_response_headers` is called in route |
-| `criticalZoneExposures` non-zero | Unexpected — placeholder should return 0 | Investigate mapper; placeholder must not vary |
+| `openCorrectiveActions` or `overdueActions` non-zero | Unexpected — CAPA placeholders must return 0 | Investigate mapper; these placeholders must not vary |
 
 ---
 
@@ -107,7 +109,7 @@ will remain placeholders until em_* spatial tables and CAPA sources are confirme
 
 | Date | Tester | Route | HTTP | `X-Data-Source` | `X-Query-Name` | Data returned | Notes |
 |---|---|---|---|---|---|---|---|
-| (pending) | — | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17` | — | — | — | — | Route not wired — DDL pending |
+| (pending) | — | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17` | — | — | — | — | Route wired (n.txt); DDL confirmed; browser verification pending |
 
 **Do not mark any item above as verified without live UAT testing in Databricks Apps.**  
 **Do not claim browser verification unless actually tested in Databricks Apps.**
@@ -120,3 +122,4 @@ will remain placeholders until em_* spatial tables and CAPA sources are confirme
 |---|---|---|
 | 2026-05-17 | j.txt | Created with placeholder routes `/api/envmon/locations` and `/api/envmon/swab-results` (pre-source-recovery) |
 | 2026-05-17 | m.txt | Replaced with correct route `/api/envmon/site-summary`; marked BLOCKED by DDL; added required params, expected body shape, partial coverage note, full troubleshooting guide |
+| 2026-05-17 | n.txt | DDL confirmed; route wired; status EXECUTABLE; body shape updated to V2 contract (EnvMonSiteSummarySchema); placeholder/derivation distinction clarified |

@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — m.txt: EnvMon QuerySpec hardened (LIMIT 1 fix), 56 tests added, DDD model created, route NOT wired (DDL not confirmed); docs/deployment/envmon-native-browser-verification.md updated with correct route  
+**Last updated:** 2026-05-17 — n.txt: EnvMon DDL confirmed, route wired (`GET /api/envmon/site-summary`), 99 tests passing; docs updated  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -167,31 +167,32 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 ## Environmental Monitoring (EnvMon)
 
 Adapter class: `domain-integrations/envmon/src/adapters/envmon-adapter.ts`  
-ADR-024 migration priority: **Not assigned** — DDL pending  
+ADR-024 migration priority: **Not assigned** — frontend wiring pending BV  
 Source: **SAP QM inspection lots** (`INSPECTION_TYPE IN ('14','Z14')`) — `TRACE_CATALOG / TRACE_SCHEMA`  
-Gold views confirmed-v1: `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v`  
-Gold views confirmed-ddl: **Zero** — DDL not yet run  
-QuerySpec adapter: `apps/api/adapters/envmon/envmon_databricks_adapter.py`
+Gold views confirmed-ddl (2026-05-17): `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v`  
+QuerySpec adapter: `apps/api/adapters/envmon/envmon_databricks_adapter.py`  
+FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
-| `getEnvMonContext` | ✓ | — | — | — | none | After site summary DDL confirmed |
-| `getEnvMonSiteSummary` | ✓ | — | — | — | none | **QuerySpec hardened (m.txt)** — LIMIT 1 fix applied; 56 tests added; route NOT wired (DDL not confirmed) |
+| `getEnvMonContext` | ✓ | — | — | — | none | After BV confirmed |
+| `getEnvMonSiteSummary` | ✓ | — | — | **✓ E** | green when databricks | Route wired (n.txt); DDL confirmed; 99 tests; browser verification pending |
 | `getEnvMonZones` | ✓ | — | — | — | none | Blocked — em_location_zones may not exist in UAT |
 | `getEnvMonAlerts` | ✓ | — | — | — | none | Deferred — alert derivation rules undefined |
-| `getEnvMonSwabResults` | ✓ | — | — | — | none | Rank 2 — after site summary DDL confirmed |
-| `getEnvMonTrends` | ✓ | — | — | — | none | Rank 3 — after site summary DDL confirmed |
+| `getEnvMonSwabResults` | ✓ | — | — | — | none | Rank 2 — next after site summary BV |
+| `getEnvMonTrends` | ✓ | — | — | — | none | Rank 3 — after site summary BV |
 | `getEnvMonHeatmap` | ✓ | — | — | — | none | Blocked — em_location_coordinates may not exist in UAT |
 | `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Blocked — no CAPA source confirmed |
 | `getEnvMonSwabVectors` | ✓ | — | — | — | none | Deferred indefinitely — business rules undefined |
 
-**Summary:** 9 methods — all mock only. No legacy-api adapter. QuerySpec hardened for `getEnvMonSiteSummary` (confirmed-v1, LIMIT 1 fix, 56 tests). Route NOT wired — DDL not confirmed. DDD model created.  
-**Status:** V1 functional — hybrid domain. SAP QM source + spatial config model recovered. DDL pending in connected_plant_uat. Route wiring blocked.
+**Summary:** 9 methods — 1 executable (`getEnvMonSiteSummary`: route wired, DDL confirmed, awaiting BV), 8 mock only. No legacy-api adapter.  
+**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` wired and tested. Browser verification pending. Frontend wiring deferred until BV.
 
-**m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md` · `docs/deployment/envmon-native-browser-verification.md` (updated)  
-**Deep-dive docs (l.txt, 2026-05-17):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md`  
+**n.txt docs (2026-05-17):** `apps/api/routes/envmon.py` · `tests/routes/test_envmon_routes.py` · all matrix and deployment docs updated  
+**m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md`  
+**Deep-dive docs (l.txt, 2026-05-17):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md`  
 **Source recovery docs (k.txt, 2026-05-17):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
-**Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/domains/envmon-monitoring.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md` · `docs/audit/envmon-native-architecture-check.md`
+**Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`
 
 ---
 
@@ -267,11 +268,11 @@ Gold views: None identified
 | POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
-| EnvMon | 9 | 0 | 0 | 0 | 9 | 0 |
+| EnvMon | 9 | 0 | **1** | 0 | 8 | **1 E** |
 | Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
 | Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **2** | **2** | **74** | **5** (3 BV + 2 E) |
+| **Total** | **82** | **3** | **3** | **2** | **73** | **6** (3 BV + 3 E) |
 
 > Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
@@ -289,5 +290,6 @@ Gold views: None identified
 | `/api/por/order-goods-movements` | GET | POH | `getOrderGoodsMovements` | Databricks-api only — **executable, not browser-verified** — `vw_gold_adp_movement` DDL confirmed 2026-05-17; Tulip movement types mapped; `materialDescription` absent from view |
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
+| `/api/envmon/site-summary` | GET | EnvMon | `getEnvMonSiteSummary` | Databricks-api only — **executable, not browser-verified** — Group A DDL confirmed 2026-05-17 (n.txt); 99 tests passing |
 
 No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend.

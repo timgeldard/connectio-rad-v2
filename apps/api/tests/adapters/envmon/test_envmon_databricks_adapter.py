@@ -1,10 +1,13 @@
 """Tests for the EnvMon Databricks adapter — QuerySpec factory and row mapper.
 
-Column names are confirmed-v1 (recovered from V1 ConnectIO-RAD source code and
-entities.yaml, k.txt 2026-05-17). DDL not yet verified in connected_plant_uat.
+Column names are confirmed-ddl (DESCRIBE TABLE run in connected_plant_uat, 2026-05-17).
+All three Group A SAP QM views verified: gold_inspection_lot, gold_inspection_point,
+gold_batch_quality_result_v.
 
-Route NOT wired — DDL must be confirmed before route tests are added.
-See docs/migration/envmon-site-summary-native-route-plan.md.
+Mapper output matches EnvMonSiteSummarySchema (packages/data-contracts/src/schemas/
+environmental-monitoring.ts). Placeholder fields are documented in adapter module docstring.
+
+Route wired: apps/api/routes/envmon.py (n.txt, 2026-05-17).
 """
 import pytest
 
@@ -120,7 +123,7 @@ class TestGetSiteSummarySpec:
         assert "FROM gold_batch_quality_result_v" not in spec.sql
 
     def test_sql_has_inspection_type_filter(self) -> None:
-        """EnvMon domain boundary filter must be present — confirmed-v1 from V1 em_config.py."""
+        """EnvMon domain boundary filter must be present — confirmed-v1+ddl from em_config.py."""
         spec = get_site_summary_spec(self._request())
         assert "INSPECTION_TYPE" in spec.sql
         assert "IN" in spec.sql
@@ -146,7 +149,7 @@ class TestGetSiteSummarySpec:
         assert ":period_end" in spec.sql
 
     def test_sql_uses_functional_location_column(self) -> None:
-        """FUNCTIONAL_LOCATION is the grouping key — confirmed-v1."""
+        """FUNCTIONAL_LOCATION is the grouping key — confirmed-v1+ddl."""
         spec = get_site_summary_spec(self._request())
         assert "FUNCTIONAL_LOCATION" in spec.sql
 
@@ -156,14 +159,14 @@ class TestGetSiteSummarySpec:
         assert "INSPECTION_RESULT_VALUATION" in spec.sql
 
     def test_sql_uses_fail_valuations(self) -> None:
-        """R, REJ, REJECT must all be in the fail classification CASE — confirmed-v1."""
+        """R, REJ, REJECT must all be in the fail classification CASE — confirmed-v1+ddl."""
         spec = get_site_summary_spec(self._request())
         assert "'R'" in spec.sql
         assert "'REJ'" in spec.sql
         assert "'REJECT'" in spec.sql
 
     def test_sql_uses_warn_valuations(self) -> None:
-        """W and WARN must both be in the warning classification CASE — confirmed-v1."""
+        """W and WARN must both be in the warning classification CASE — confirmed-v1+ddl."""
         spec = get_site_summary_spec(self._request())
         assert "'W'" in spec.sql
         assert "'WARN'" in spec.sql
@@ -188,7 +191,7 @@ class TestGetSiteSummarySpec:
 
 class TestMapSiteSummaryRows:
     def _full_row(self) -> dict:
-        """Aggregate row from get_site_summary_spec SQL (confirmed-v1 column aliases)."""
+        """Aggregate row from get_site_summary_spec SQL (confirmed-ddl column aliases)."""
         return {
             "total_locs": 50,
             "active_fails": 3,
@@ -198,95 +201,234 @@ class TestMapSiteSummaryRows:
             "lots_tested": 142,
         }
 
+    def _warn_only_row(self) -> dict:
+        """Row with warnings but no fails — riskStatus=elevated."""
+        return {
+            "total_locs": 20,
+            "active_fails": 0,
+            "warnings": 5,
+            "pending": 0,
+            "pass_locs": 15,
+            "lots_tested": 40,
+        }
+
+    def _all_pass_row(self) -> dict:
+        """Row with all locations passing — riskStatus=compliant."""
+        return {
+            "total_locs": 30,
+            "active_fails": 0,
+            "warnings": 0,
+            "pending": 0,
+            "pass_locs": 30,
+            "lots_tested": 60,
+        }
+
+    def _zero_locs_row(self) -> dict:
+        """Aggregate row where total_locs=0 — no data in period."""
+        return {
+            "total_locs": 0,
+            "active_fails": 0,
+            "warnings": 0,
+            "pending": 0,
+            "pass_locs": 0,
+            "lots_tested": 0,
+        }
+
+    # --- empty rows delegates to _default_site_summary ---
+
     def test_empty_rows_returns_default(self) -> None:
         result = map_site_summary_rows([], "C061")
         assert isinstance(result, dict)
         assert result["plantId"] == "C061"
 
-    def test_default_has_zero_total_samples(self) -> None:
-        result = map_site_summary_rows([], "C061")
-        assert result["totalSamples"] == 0
-
-    def test_default_has_zero_positive_samples(self) -> None:
-        result = map_site_summary_rows([], "C061")
-        assert result["positiveSamples"] == 0
-
-    def test_default_has_zero_positive_rate(self) -> None:
-        result = map_site_summary_rows([], "C061")
-        assert result["positiveRate"] == 0.0
+    # --- plantId ---
 
     def test_representative_row_maps_plant_id(self) -> None:
         result = map_site_summary_rows([self._full_row()], "C061")
         assert result["plantId"] == "C061"
 
-    def test_representative_row_maps_total_samples_from_lots_tested(self) -> None:
-        """totalSamples ← lots_tested (inspection lots = sampling events)."""
-        result = map_site_summary_rows([self._full_row()], "C061")
-        assert result["totalSamples"] == 142
+    # --- plantName is placeholder ---
 
-    def test_representative_row_maps_positive_samples_from_active_fails(self) -> None:
-        """positiveSamples ← active_fails (locations with ≥1 fail valuation)."""
+    def test_plant_name_is_empty_string(self) -> None:
+        """plantName is '' — PLACEHOLDER; requires gold_plant JOIN not yet in SQL."""
         result = map_site_summary_rows([self._full_row()], "C061")
-        assert result["positiveSamples"] == 3
+        assert result["plantName"] == ""
 
-    def test_positive_rate_calculated_as_fails_over_total_locs(self) -> None:
-        """positiveRate = active_fails / total_locs (location-level, not sample-level)."""
+    def test_default_plant_name_is_empty_string(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["plantName"] == ""
+
+    # --- zonesMonitored ← total_locs ---
+
+    def test_zones_monitored_maps_to_total_locs(self) -> None:
         result = map_site_summary_rows([self._full_row()], "C061")
-        assert result["positiveRate"] == pytest.approx(3 / 50, rel=1e-4)
+        assert result["zonesMonitored"] == 50
 
-    def test_positive_rate_rounded_to_4_decimal_places(self) -> None:
+    def test_default_zones_monitored_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["zonesMonitored"] == 0
+
+    # --- zonesWithAlerts ← active_fails ---
+
+    def test_zones_with_alerts_maps_to_active_fails(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["zonesWithAlerts"] == 3
+
+    def test_default_zones_with_alerts_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["zonesWithAlerts"] == 0
+
+    # --- positiveCount ← active_fails ---
+
+    def test_positive_count_maps_to_active_fails(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["positiveCount"] == 3
+
+    def test_default_positive_count_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["positiveCount"] == 0
+
+    # --- positiveRate (0–100 percentage) ---
+
+    def test_positive_rate_is_percentage(self) -> None:
+        """positiveRate = active_fails / total_locs × 100, not a 0–1 fraction."""
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["positiveRate"] == pytest.approx(6.0, rel=1e-4)
+
+    def test_positive_rate_bounded_0_to_100(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert 0.0 <= result["positiveRate"] <= 100.0
+
+    def test_positive_rate_rounded_to_2_decimal_places(self) -> None:
         row = {**self._full_row(), "total_locs": 3, "active_fails": 1}
         result = map_site_summary_rows([row], "C061")
-        assert result["positiveRate"] == pytest.approx(round(1 / 3, 4), abs=1e-5)
+        assert result["positiveRate"] == pytest.approx(round(1 / 3 * 100, 2), abs=1e-4)
 
     def test_zero_total_locs_gives_zero_positive_rate(self) -> None:
-        row = {**self._full_row(), "total_locs": 0, "active_fails": 0}
-        result = map_site_summary_rows([row], "C061")
+        result = map_site_summary_rows([self._zero_locs_row()], "C061")
         assert result["positiveRate"] == 0.0
 
-    def test_uses_first_row_only(self) -> None:
-        row1 = {**self._full_row(), "lots_tested": 100}
-        row2 = {**self._full_row(), "lots_tested": 200}
-        result = map_site_summary_rows([row1, row2], "C061")
-        assert result["totalSamples"] == 100
-
-    def test_none_values_in_row_coerced_to_zero(self) -> None:
-        row = {**self._full_row(), "total_locs": None, "active_fails": None, "lots_tested": None}
-        result = map_site_summary_rows([row], "C061")
-        assert result["totalSamples"] == 0
-        assert result["positiveSamples"] == 0
+    def test_default_positive_rate_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
         assert result["positiveRate"] == 0.0
 
-    # Placeholder field tests — these assert the placeholder values are present
-    # and correctly labelled. They must NOT be removed when the route is wired;
-    # they document that these fields are temporary placeholders, not business facts.
+    # --- complianceRate (0–100 percentage) ---
 
-    def test_critical_zone_exposures_is_placeholder_zero(self) -> None:
-        """criticalZoneExposures is 0 — PLACEHOLDER; requires em_location_zones join."""
+    def test_compliance_rate_is_percentage_of_pass_locs(self) -> None:
+        """complianceRate = pass_locs / total_locs × 100."""
         result = map_site_summary_rows([self._full_row()], "C061")
-        assert result["criticalZoneExposures"] == 0
+        assert result["complianceRate"] == pytest.approx(88.0, rel=1e-4)
+
+    def test_compliance_rate_bounded_0_to_100(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert 0.0 <= result["complianceRate"] <= 100.0
+
+    def test_zero_total_locs_gives_zero_compliance_rate(self) -> None:
+        result = map_site_summary_rows([self._zero_locs_row()], "C061")
+        assert result["complianceRate"] == 0.0
+
+    def test_all_pass_gives_100_compliance_rate(self) -> None:
+        result = map_site_summary_rows([self._all_pass_row()], "C061")
+        assert result["complianceRate"] == pytest.approx(100.0, rel=1e-4)
+
+    def test_default_compliance_rate_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["complianceRate"] == 0.0
+
+    # --- riskStatus derivation ---
+
+    def test_risk_status_non_compliant_when_fails(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["riskStatus"] == "non-compliant"
+
+    def test_risk_status_elevated_when_warns_no_fails(self) -> None:
+        result = map_site_summary_rows([self._warn_only_row()], "C061")
+        assert result["riskStatus"] == "elevated"
+
+    def test_risk_status_compliant_when_all_pass(self) -> None:
+        result = map_site_summary_rows([self._all_pass_row()], "C061")
+        assert result["riskStatus"] == "compliant"
+
+    def test_risk_status_unknown_when_zero_locs(self) -> None:
+        """No data in period → unknown, not compliant."""
+        result = map_site_summary_rows([self._zero_locs_row()], "C061")
+        assert result["riskStatus"] == "unknown"
+
+    def test_default_risk_status_is_unknown(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["riskStatus"] == "unknown"
+
+    # --- highestSeverity derivation ---
+
+    def test_highest_severity_high_when_fails(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["highestSeverity"] == "high"
+
+    def test_highest_severity_medium_when_warns_no_fails(self) -> None:
+        result = map_site_summary_rows([self._warn_only_row()], "C061")
+        assert result["highestSeverity"] == "medium"
+
+    def test_highest_severity_low_when_all_pass(self) -> None:
+        result = map_site_summary_rows([self._all_pass_row()], "C061")
+        assert result["highestSeverity"] == "low"
+
+    def test_highest_severity_low_when_zero_locs(self) -> None:
+        result = map_site_summary_rows([self._zero_locs_row()], "C061")
+        assert result["highestSeverity"] == "low"
+
+    def test_default_highest_severity_is_low(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["highestSeverity"] == "low"
+
+    # --- confidence ---
+
+    def test_confidence_one_when_data_present(self) -> None:
+        result = map_site_summary_rows([self._full_row()], "C061")
+        assert result["confidence"] == 1.0
+
+    def test_confidence_zero_when_no_locs(self) -> None:
+        result = map_site_summary_rows([self._zero_locs_row()], "C061")
+        assert result["confidence"] == 0.0
+
+    def test_default_confidence_is_zero(self) -> None:
+        result = map_site_summary_rows([], "C061")
+        assert result["confidence"] == 0.0
+
+    # --- placeholder fields ---
 
     def test_open_corrective_actions_is_placeholder_zero(self) -> None:
         """openCorrectiveActions is 0 — PLACEHOLDER; CAPA not present in V1 at all."""
         result = map_site_summary_rows([self._full_row()], "C061")
         assert result["openCorrectiveActions"] == 0
 
-    def test_trend_direction_is_placeholder_stable(self) -> None:
-        """trendDirection is 'stable' — PLACEHOLDER; period-over-period not implemented."""
+    def test_overdue_actions_is_placeholder_zero(self) -> None:
+        """overdueActions is 0 — PLACEHOLDER; CAPA not present in V1 at all."""
         result = map_site_summary_rows([self._full_row()], "C061")
-        assert result["trendDirection"] == "stable"
-
-    def test_default_critical_zone_exposures_is_placeholder_zero(self) -> None:
-        result = map_site_summary_rows([], "C061")
-        assert result["criticalZoneExposures"] == 0
+        assert result["overdueActions"] == 0
 
     def test_default_open_corrective_actions_is_placeholder_zero(self) -> None:
         result = map_site_summary_rows([], "C061")
         assert result["openCorrectiveActions"] == 0
 
-    def test_default_trend_direction_is_placeholder_stable(self) -> None:
+    def test_default_overdue_actions_is_placeholder_zero(self) -> None:
         result = map_site_summary_rows([], "C061")
-        assert result["trendDirection"] == "stable"
+        assert result["overdueActions"] == 0
+
+    # --- misc ---
+
+    def test_uses_first_row_only(self) -> None:
+        row1 = {**self._full_row(), "total_locs": 10, "active_fails": 1, "pass_locs": 9}
+        row2 = {**self._full_row(), "total_locs": 20, "active_fails": 2, "pass_locs": 18}
+        result = map_site_summary_rows([row1, row2], "C061")
+        assert result["zonesMonitored"] == 10
+
+    def test_none_values_in_row_coerced_to_zero(self) -> None:
+        row = {**self._full_row(), "total_locs": None, "active_fails": None, "warnings": None, "pass_locs": None}
+        result = map_site_summary_rows([row], "C061")
+        assert result["zonesMonitored"] == 0
+        assert result["positiveCount"] == 0
+        assert result["positiveRate"] == 0.0
+        assert result["complianceRate"] == 0.0
 
     def test_plant_id_propagated_to_default(self) -> None:
         result = map_site_summary_rows([], "IE01")
@@ -306,17 +448,29 @@ class TestDefaultSiteSummary:
         result = _default_site_summary("C061")
         assert result["plantId"] == "C061"
 
-    def test_total_samples_zero(self) -> None:
+    def test_plant_name_empty(self) -> None:
         result = _default_site_summary("C061")
-        assert result["totalSamples"] == 0
+        assert result["plantName"] == ""
 
-    def test_positive_samples_zero(self) -> None:
+    def test_zones_monitored_zero(self) -> None:
         result = _default_site_summary("C061")
-        assert result["positiveSamples"] == 0
+        assert result["zonesMonitored"] == 0
+
+    def test_positive_count_zero(self) -> None:
+        result = _default_site_summary("C061")
+        assert result["positiveCount"] == 0
 
     def test_positive_rate_zero(self) -> None:
         result = _default_site_summary("C061")
         assert result["positiveRate"] == 0.0
+
+    def test_risk_status_unknown(self) -> None:
+        result = _default_site_summary("C061")
+        assert result["riskStatus"] == "unknown"
+
+    def test_confidence_zero(self) -> None:
+        result = _default_site_summary("C061")
+        assert result["confidence"] == 0.0
 
     def test_placeholder_fields_match_map_rows_default(self) -> None:
         """_default_site_summary and map_site_summary_rows([]) must produce identical shapes."""

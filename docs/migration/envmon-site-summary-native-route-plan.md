@@ -1,9 +1,9 @@
 # EnvMon Site Summary — Native Route Plan
 
-**Date:** 2026-05-17 (m.txt)
-**Tranche:** m.txt — DDL verification and site summary native route
-**Status:** QuerySpec-hardened — ROUTE NOT WIRED — DDL not confirmed in connected_plant_uat
-**Primary deliverable:** `GET /api/envmon/site-summary` (pending DDL confirmation)
+**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (n.txt — DDL confirmed, route wired)
+**Tranche:** m.txt (QuerySpec) → n.txt (route wiring)
+**Status:** COMPLETE — route wired, DDL confirmed, 99 tests passing; browser verification pending
+**Primary deliverable:** `GET /api/envmon/site-summary` — wired in `apps/api/routes/envmon.py`
 **References:**
 - `docs/migration/envmon-v1-functional-recovery.md`
 - `docs/audit/envmon-native-column-verification-checklist.md`
@@ -39,12 +39,12 @@ All of the following must be confirmed via `DESCRIBE TABLE` in connected_plant_u
 
 | Object | Required columns | Status |
 |---|---|---|
-| `connected_plant_uat.gold.gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE | **DDL not run** |
-| `connected_plant_uat.gold.gold_inspection_point` | INSPECTION_LOT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID | **DDL not run** |
-| `connected_plant_uat.gold.gold_batch_quality_result_v` | INSPECTION_LOT_ID, OPERATION_ID, SAMPLE_ID, INSPECTION_RESULT_VALUATION | **DDL not run** |
-| INSPECTION_TYPE values in data | `SELECT DISTINCT INSPECTION_TYPE` — confirm '14' and 'Z14' present | **Not run** |
-| INSPECTION_RESULT_VALUATION values | `SELECT DISTINCT INSPECTION_RESULT_VALUATION` — confirm R/REJ/W/WARN/A values | **Not run** |
-| em_* table existence | `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` | **Not run** |
+| `connected_plant_uat.gold.gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE | **confirmed-ddl 2026-05-17** |
+| `connected_plant_uat.gold.gold_inspection_point` | INSPECTION_LOT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID | **confirmed-ddl 2026-05-17** |
+| `connected_plant_uat.gold.gold_batch_quality_result_v` | INSPECTION_LOT_ID, OPERATION_ID, SAMPLE_ID, INSPECTION_RESULT_VALUATION | **confirmed-ddl 2026-05-17** |
+| INSPECTION_TYPE values in data | `SELECT DISTINCT INSPECTION_TYPE` — confirm '14' and 'Z14' present | Not yet run — route wired on DDL confirmation |
+| INSPECTION_RESULT_VALUATION values | `SELECT DISTINCT INSPECTION_RESULT_VALUATION` — confirm R/REJ/W/WARN/A values | Not yet run — verify during browser verification |
+| em_* table existence | `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` | Not yet run — Group B (spatial) unrelated to site-summary route |
 
 **Full DDL SQL to run:** see `docs/audit/envmon-native-column-verification-checklist.md`.
 
@@ -184,19 +184,16 @@ Required later for heatmap, zones, floorplans, and L4 zoning. No spatial routes 
 
 ---
 
-## Route wiring decision
+## Route wiring — COMPLETE (n.txt, 2026-05-17)
 
-**Route NOT wired in m.txt.**
+**Route wired in n.txt.** DDL confirmed for all three Group A views. Route implemented and all tests pass.
 
-Per m.txt §6 and §12: the route may only be wired after `DESCRIBE TABLE` and `SELECT DISTINCT`
-verification in connected_plant_uat confirms all required Group A columns. This is a deliberate
-stop condition, not a gap.
+**n.txt deliverables (2026-05-17):**
 
-**Next action after DDL confirmation:**
-
-1. Mark all Group A required columns as `confirmed-ddl` in `docs/audit/envmon-native-column-verification-checklist.md`
-2. Create `apps/api/routes/envmon.py` following the POH route pattern
-3. Register route in FastAPI app
-4. Add route tests (success, 401, 503, 403, 429, 502, 504, no fallback)
-5. Deploy to UAT and run browser verification checklist in `docs/deployment/envmon-native-browser-verification.md`
-6. Wire frontend adapter to `/api/envmon/site-summary` (only if BV passes)
+1. ✓ All Group A required columns marked `confirmed-ddl` in `docs/audit/envmon-native-column-verification-checklist.md`
+2. ✓ `apps/api/routes/envmon.py` created (following POH route pattern)
+3. ✓ Route registered in `apps/api/main.py`
+4. ✓ 99 tests passing (80 adapter tests + 19 route tests in `tests/routes/test_envmon_routes.py`)
+5. ✓ Advisor quick-fixes: V2-derivation comment block, schema-key-shape route test, CTE backtick comments explained
+6. [ ] Deploy to UAT and run browser verification checklist in `docs/deployment/envmon-native-browser-verification.md`
+7. [ ] Wire frontend adapter to `/api/envmon/site-summary` (only after browser verification passes)

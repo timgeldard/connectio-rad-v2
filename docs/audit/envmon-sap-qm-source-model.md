@@ -1,8 +1,8 @@
 # EnvMon SAP QM Source Model
 
-**Date:** 2026-05-17 (k.txt) | **Updated:** 2026-05-17 (l.txt — hybrid framing, EM_CATALOG correction)  
+**Date:** 2026-05-17 (k.txt) | **Updated:** 2026-05-17 (l.txt — hybrid framing, EM_CATALOG correction; n.txt — DDL confirmed, route wired)  
 **Tranche:** k.txt — SAP QM source recovery  
-**Status:** CONFIRMED-V1 — DDL verification pending in connected_plant_uat  
+**Status:** CONFIRMED-DDL (2026-05-17) — route wired, `apps/api/routes/envmon.py` (n.txt)  
 **Evidence source:** V1 ConnectIO-RAD repo (`apps/envmon/backend/envmon_backend/`), `ai-context/semantic-model/entities.yaml`, migration scripts 001b–007  
 **Reference:** `docs/migration/envmon-v1-functional-recovery.md`, `docs/audit/envmon-spatial-configuration-model.md`
 
@@ -180,7 +180,7 @@ em_plant_floor  (svg_url, svg_width, svg_height)
 
 | V2 method | Required views | app-managed? | Safe now? |
 |---|---|---|---|
-| `getEnvMonSiteSummary` | lot + point + result_v | No | **Yes** — V1 KPI query confirmed |
+| `getEnvMonSiteSummary` | lot + point + result_v | No | **✓ E** — DDL confirmed; route wired (n.txt, 2026-05-17); browser verification pending |
 | `getEnvMonSwabResults` | lot + point + result_v | No | After DDL verification |
 | `getEnvMonTrends` | lot + point + result_v | No | After DDL verification |
 | `getEnvMonZones` | lot + point + em_location_zones | **Yes** | Blocked — em_location_zones may not exist |
@@ -216,4 +216,4 @@ GROUP BY INSPECTION_RESULT_VALUATION ORDER BY n DESC;
 SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
 ```
 
-Update `docs/audit/envmon-native-column-verification-checklist.md` after running DDL.
+DDL confirmed 2026-05-17 — `docs/audit/envmon-native-column-verification-checklist.md` updated.

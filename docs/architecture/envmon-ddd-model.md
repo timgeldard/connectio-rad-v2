@@ -1,8 +1,8 @@
 # EnvMon Domain-Driven Design Model
 
-**Date:** 2026-05-17 (m.txt)
-**Tranche:** m.txt — EnvMon DDD framing
-**Status:** Framing only — Observations BC first safe slice (QuerySpec hardened, route not wired); Spatial Configuration and Spatial Analysis deferred
+**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (n.txt — route wired, DDL confirmed)
+**Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (route wired)
+**Status:** Observations BC first slice COMPLETE — route wired, DDL confirmed, 99 tests; Spatial Configuration and Spatial Analysis deferred
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/audit/envmon-spatial-configuration-model.md`
@@ -53,7 +53,7 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 
 | Read model | Source query | Status |
 |---|---|---|
-| `EnvMonSiteSummary` | Aggregate KPI: total/fail/warn locations per plant per period | QuerySpec written; route not wired (DDL pending) |
+| `EnvMonSiteSummary` | Aggregate KPI: total/fail/warn locations per plant per period | **✓ E** — route wired (`apps/api/routes/envmon.py`); DDL confirmed; 99 tests passing; BV pending |
 | `EnvMonSwabResults` | Detail list: per-location results with valuation | Deferred — after DDL confirmed |
 | `EnvMonTrends` | Time-series: positive rate per period | Deferred — requires period-over-period query |
 | `EnvMonAlerts` | Derived: lots breaching thresholds | Deferred — alert rules undefined |
@@ -72,11 +72,12 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 - **Positive rate semantics:** location-level fraction (fraction of locations with ≥1 fail),
   not sample-level. Matches V1 KPI semantics.
 
-### What this tranche implements
+### What m.txt + n.txt implement
 
-- QuerySpec hardened for `getEnvMonSiteSummary` (LIMIT :max_rows bug fixed → LIMIT 1)
-- Route `GET /api/envmon/site-summary` **deferred** — DDL not confirmed in connected_plant_uat
-- Tests for QuerySpec and mapper added
+- QuerySpec hardened for `getEnvMonSiteSummary` (LIMIT :max_rows bug fixed → LIMIT 1) [m.txt]
+- DDL confirmed for all three Group A views (2026-05-17) [n.txt]
+- Route `GET /api/envmon/site-summary` **wired** in `apps/api/routes/envmon.py` [n.txt]
+- 99 tests passing (80 adapter + 19 route) [n.txt]
 
 ### Deferred in Observations BC
 
@@ -167,19 +168,22 @@ Only after:
 
 ---
 
-## What this tranche (m.txt) delivers
+## What m.txt + n.txt deliver
 
 | Deliverable | Status |
 |---|---|
-| DDD framing document (this file) | Created |
-| QuerySpec hardened (LIMIT 1 fix) | Done |
-| QuerySpec + mapper tests | Added |
-| Route plan document | Created |
-| DDL verification checklist updated | Updated |
-| Browser verification checklist updated | Updated |
-| Matrix docs updated | Updated |
-| Route `GET /api/envmon/site-summary` | **NOT WIRED** — DDL not confirmed (deliberate stop) |
-| Frontend wiring | **NOT DONE** — depends on route |
+| DDD framing document (this file) | Created (m.txt) |
+| QuerySpec hardened (LIMIT 1 fix) | Done (m.txt) |
+| QuerySpec + mapper tests | Added (m.txt) |
+| Route plan document | Created (m.txt) |
+| DDL confirmed for all three Group A views | Done (n.txt, 2026-05-17) |
+| Route `GET /api/envmon/site-summary` | **WIRED** — `apps/api/routes/envmon.py` (n.txt) |
+| Route tests (19 tests) | Added (n.txt) |
+| 99 tests total passing | Done (n.txt) |
+| DDL verification checklist updated (confirmed-ddl) | Updated (n.txt) |
+| Matrix docs updated | Updated (n.txt) |
+| Browser verification checklist updated | Updated (n.txt) |
+| Frontend wiring | **NOT DONE** — deferred until BV passes |
 | Spatial Configuration (BC2) | Deferred |
 | Spatial Analysis (BC3) | Deferred |
 
@@ -189,8 +193,9 @@ Only after:
 
 | Feature | Blocked by |
 |---|---|
-| Route wiring | Group A DDL not confirmed |
-| getEnvMonSwabResults | Group A DDL not confirmed |
+| Browser verification | UAT deployment not yet done |
+| Frontend wiring | Browser verification not yet done |
+| getEnvMonSwabResults | Next candidate — DDL already confirmed for views |
 | getEnvMonTrends | Group A DDL; period-over-period query not designed |
 | getEnvMonAlerts | Alert rules undefined |
 | getEnvMonZones | em_* existence in UAT unknown |
