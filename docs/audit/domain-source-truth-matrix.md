@@ -162,23 +162,33 @@
 
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`  
 **FastAPI:** None  
-**Databricks views:** None confirmed  
+**Databricks adapter:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` (QuerySpec-only)  
+**Source A (SAP QM):** Inspection lots — `INSPECTION_TYPE IN ('14','Z14')` — TRACE_CATALOG/TRACE_SCHEMA  
+**Source B (app-managed):** 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA — existence in UAT unknown  
+**Gold views confirmed-v1:** `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v`  
+**Gold views confirmed-ddl:** Zero — DDL not yet run  
+**App-managed tables confirmed-v1:** `em_plant_floor`, `em_location_coordinates`, `em_layout_revision`, `em_location_zones`, `em_plant_geo` (full DDL from V1 migration scripts)  
+**App-managed tables in UAT:** Unknown — run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`  
 **ADR-024 priority:** Not assigned
 
 | Method | Source | Status |
 |---|---|---|
 | `getEnvMonContext` | — | Mock |
-| `getEnvMonSiteSummary` | — | Mock |
-| `getEnvMonZones` | — | Mock |
-| `getEnvMonAlerts` | — | Mock |
-| `getEnvMonSwabResults` | — | Mock |
-| `getEnvMonTrends` | — | Mock |
-| `getEnvMonHeatmap` | — | Mock |
-| `getEnvMonCorrectiveActions` | — | Mock |
-| `getEnvMonSwabVectors` | — | Mock |
+| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | Mock — **QuerySpec written** (confirmed-v1); DDL pending; route not wired |
+| `getEnvMonZones` | `em_location_zones` (confirmed-v1 DDL) | Mock — Blocked (em_* existence in UAT unknown) |
+| `getEnvMonAlerts` | lot + point + result_v (derivable) | Mock — Deferred (alert rules undefined) |
+| `getEnvMonSwabResults` | lot + point + result_v | Mock — Rank 2; after DDL confirmed |
+| `getEnvMonTrends` | lot + point + result_v | Mock — Rank 3; after DDL confirmed |
+| `getEnvMonHeatmap` | lot + point + result_v + `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* existence unknown) |
+| `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Blocked (no source; CAPA not in V1) |
+| `getEnvMonSwabVectors` | — | Mock — Deferred indefinitely |
 
 **Total: 9 methods — all mock**  
-**Status:** No gold views confirmed. No planning path identified. Requires domain owner to identify Databricks source.
+**Status:** V1 functional — hybrid domain. SAP QM source recovered (confirmed-v1). Spatial config model recovered (confirmed-v1 from V1 migrations). DDL pending for all. `getEnvMonSiteSummary` QuerySpec written.
+
+**Deep-dive docs (l.txt):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md`  
+**Source recovery docs (k.txt):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
+**Groundwork docs (i.txt):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`
 
 ---
 
@@ -270,4 +280,6 @@
 **2 of 82 methods (2.4%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E).**  
 **1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
 **71 of 82 methods (86.6%) are mock-only — no wired route of any kind.**  
-*(The remaining 5 methods: 3 have a databricks-api QuerySpec written but no route wired; 2 are blocked by missing view or undefined business rules.)*
+*(4 methods have a databricks-api QuerySpec written but no route wired — 3 Trace + 1 EnvMon; 2 are blocked by missing view or undefined business rules.)*
+
+**EnvMon correction (k.txt + l.txt, 2026-05-17):** EnvMon is a **hybrid domain** — SAP QM inspection lots (k.txt) plus app-managed spatial configuration — 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA (l.txt). Three gold views confirmed-v1. QuerySpec written for `getEnvMonSiteSummary`. All five em_* tables confirmed-v1 from V1 migrations. DDL for all pending in UAT. See `docs/audit/envmon-spatial-configuration-model.md`.

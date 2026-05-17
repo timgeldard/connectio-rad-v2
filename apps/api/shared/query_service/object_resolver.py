@@ -7,6 +7,8 @@ V1-compatible fallback chains (verified from ConnectIO-RAD source):
   POH_SCHEMA  → defaults to "csm_process_order_history"
   TRACE_CATALOG → no fallback (empty string if unset)
   TRACE_SCHEMA  → defaults to "gold"
+  ENVMON domain → shares TRACE_CATALOG / TRACE_SCHEMA (confirmed from V1 em_config.py:
+    LOT_TBL_NAME, POINT_TBL_NAME, RESULT_TBL_NAME all use f"{TRACE_CATALOG}.{TRACE_SCHEMA}.*")
 
 Object names passed to these functions must be code constants — never user-supplied
 request parameters. Caller is responsible for this invariant.
@@ -21,12 +23,14 @@ _CATALOG_ENV: dict[str, str] = {
     "poh": "POH_CATALOG",
     "cq": "CQ_CATALOG",
     "trace2": "TRACE_CATALOG",
+    "envmon": "TRACE_CATALOG",
 }
 
 _SCHEMA_ENV: dict[str, tuple[str, str]] = {
     "poh": ("POH_SCHEMA", "csm_process_order_history"),
     "cq": ("CQ_SCHEMA", "csm_process_order_history"),
     "trace2": ("TRACE_SCHEMA", "gold"),
+    "envmon": ("TRACE_SCHEMA", "gold"),
 }
 
 
@@ -57,7 +61,7 @@ def resolve_domain_object(
     catalog cannot be resolved (missing env var and no override).
 
     Args:
-        domain: One of "poh", "cq", "trace2".
+        domain: One of "poh", "cq", "trace2", "envmon".
         object_name: Code constant — the table/view name without qualification.
             Must never be a user-supplied value.
         schema_override: When set, bypasses the schema env var (e.g., "gold" for
@@ -72,17 +76,17 @@ def resolve_domain_object(
         ValueError: Unknown domain.
     """
     if domain not in _CATALOG_ENV:
-        raise ValueError(f"Unknown domain: {domain!r}")
+        raise ValueError(f"Unknown domain: {domain!r}. Known domains: {sorted(_CATALOG_ENV)}")
 
     catalog_env = _CATALOG_ENV[domain]
     catalog = catalog_override or os.getenv(catalog_env, "")
 
     # CQ_CATALOG falls back to TRACE_CATALOG (V1 behaviour — CQ and Trace share workspace)
-    if not catalog and domain == "cq":
+    if not catalog and domain in ("cq", "envmon"):
         catalog = os.getenv("TRACE_CATALOG", "")
 
     if not catalog:
-        fallback_note = " (or TRACE_CATALOG for cq domain)" if domain == "cq" else ""
+        fallback_note = " (or TRACE_CATALOG for cq/envmon domain)" if domain in ("cq", "envmon") else ""
         raise DatabricksConfigError(
             [catalog_env],
             detail=(

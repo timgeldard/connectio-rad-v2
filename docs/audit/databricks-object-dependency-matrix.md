@@ -90,6 +90,48 @@ All WH360 objects are planned only. The schema (`wh360`) is separate from `gold`
 
 ---
 
+## EnvMon — `connected_plant_uat.gold` (TRACE_CATALOG / TRACE_SCHEMA) — Hybrid Domain
+
+**Source recovery:** 2026-05-17 (k.txt SAP QM; l.txt spatial config)  
+**Source A — SAP QM:** Inspection lots (INSPECTION_TYPE IN ('14','Z14'))  
+**Source B — App-managed:** 5 em_* Delta tables (same TRACE_CATALOG/TRACE_SCHEMA)  
+**Catalog:** `TRACE_CATALOG` (same as Trace2 — default `connected_plant_uat`)  
+**Schema:** `TRACE_SCHEMA` (default `gold`)
+
+Gold views confirmed-v1 from V1 source code + entities.yaml. em_* table DDL confirmed-v1 from V1 migration scripts 001b–007. DDL not yet run in connected_plant_uat for any object.
+
+### Group A — SAP QM Gold Views
+
+| Object | Columns confirmed-v1 | Used by | Status |
+|---|---|---|---|
+| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+
+### Group B — App-Managed Spatial Configuration (em_* tables)
+
+All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in connected_plant_uat is **unknown**. Run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` first.
+
+| Object | Key columns confirmed-v1 | Used by | Status |
+|---|---|---|---|
+| `em_plant_floor` | plant_id, floor_id, floor_name, svg_url, background_image_url, active_revision_id, canvas_type, canvas_width, canvas_height | `getEnvMonHeatmap`, floor list | ❌ app-managed — existence unknown in UAT |
+| `em_location_coordinates` | plant_id, func_loc_id, floor_id, x_pos (%), y_pos (%), parent_zone_id, revision_id, validation_status | `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
+| `em_layout_revision` | revision_id (PK), plant_id, floor_id, revision_number, state (draft/published/superseded/rolled_back) | Floor/zone read queries | ❌ app-managed — existence unknown in UAT |
+| `em_location_zones` | zone_id (PK), plant_id, floor_id, zone_name, geometry_type (polygon/rectangle), geometry_json, centroid_x/y, revision_id, status | `getEnvMonZones`, `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
+| `em_plant_geo` | plant_id, lat, lon | Site map (not yet designed) | ❌ app-managed — existence unknown in UAT |
+
+**EnvMon QuerySpec written:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` — `get_site_summary_spec`  
+**Key gaps:**
+- `hygieneZone` / `areaType` have no V1 column equivalent — em_location_zones has no hygiene classification
+- CAPA/corrective actions not in V1 at all — `getEnvMonCorrectiveActions` has no source
+- Silent defaults in `map_site_summary_rows` (`criticalZoneExposures: 0`, `openCorrectiveActions: 0`, `trendDirection: 'stable'`) are **temporary placeholders, not business facts**
+
+**Next action:** Run `DESCRIBE TABLE` for all three Group A views, then `SHOW TABLES LIKE 'em_%'` for Group B. Route wiring deferred until Group A DDL confirmed. Heatmap/zone deferred until Group B existence confirmed.
+
+**Full spatial config model:** `docs/audit/envmon-spatial-configuration-model.md`
+
+---
+
 ## DDL Verification Queue
 
 Items that must be manually verified in Databricks before routes can be wired:

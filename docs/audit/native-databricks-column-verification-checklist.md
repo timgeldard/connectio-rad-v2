@@ -148,7 +148,7 @@ SELECT * FROM connected_plant_uat.vw_gold_process_order LIMIT 1;
 | 999 | — | Goods Movements | unmapped |
 | null | Productions / Write-On/Off / null | — | unmapped |
 
-Rows with unmapped MOVEMENT_TYPE are returned without a `direction` field; the frontend adapter filters them. These are Tulip ADP movements, not standard SAP MIGO.
+Rows with unmapped MOVEMENT_TYPE return `direction: "unknown"` and are included in the response — never dropped. Frontend renders them as "Unclassified" with a grey badge. These are Tulip ADP movements, not standard SAP MIGO.
 
 **Schema relaxation (2026-05-17):** `materialDescription` changed from `z.string()` to `.optional()` in `ProcessOrderGoodsMovementSchema`. Re-require once a material master join is available.
 
