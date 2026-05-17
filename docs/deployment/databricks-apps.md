@@ -132,18 +132,30 @@ not add `shared-db` to `requirements.txt`.
 
 ## Deploy
 
-```bash
-# First deploy — creates the app
-databricks apps deploy connectio-v2 \
-  --source-code-path apps/api
+The repo root contains a `databricks.yml` bundle configuration. Use it for all deploys:
 
-# Subsequent deploys
+```bash
+# 1. Build and package the frontend
+npm run prepare:databricks
+
+# 2. Upload source to workspace and create/update the app resource
+databricks bundle deploy --target uat
+
+# 3. Start the app compute (first deploy only — it starts stopped)
+databricks apps start connectio-v2
+
+# 4. Deploy source code to the running compute
 databricks apps deploy connectio-v2 \
-  --source-code-path apps/api
+  --source-code-path "/Workspace/Shared/.bundle/connectio-v2/uat/files/apps/api"
 ```
 
-Databricks Apps reads `apps/api/app.yaml` automatically.
-The app name (`connectio-v2`) must be consistent across deploys.
+For subsequent deploys (compute already running), steps 3–4 only:
+
+```bash
+npm run prepare:databricks && databricks bundle deploy --target uat
+databricks apps deploy connectio-v2 \
+  --source-code-path "/Workspace/Shared/.bundle/connectio-v2/uat/files/apps/api"
+```
 
 ### Verify
 
@@ -153,6 +165,8 @@ databricks apps get connectio-v2
 
 The `url` field in the response is the public HTTPS endpoint.
 Open `<url>/health` — it should return `{"status": "ok"}`.
+
+**Live UAT URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`
 
 ---
 
@@ -294,21 +308,15 @@ databricks secrets put-secret connectio-v2 sql-warehouse-id \
   --string-value "<warehouse-id>"
 ```
 
-In `app.yaml`:
+In `app.yaml` (use the `scope/key` string format — nested YAML is not supported):
 ```yaml
 env:
   - name: BACKEND_ADAPTER_MODE
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: backend-adapter-mode
+    valueFrom: connectio-v2/backend-adapter-mode
   - name: DATABRICKS_HOST
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: databricks-host
+    valueFrom: connectio-v2/databricks-host
   - name: SQL_WAREHOUSE_ID
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: sql-warehouse-id
+    valueFrom: connectio-v2/sql-warehouse-id
 ```
 
 ### Databricks Apps OAuth headers (identity forwarding)

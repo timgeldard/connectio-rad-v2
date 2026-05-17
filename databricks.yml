@@ -1,0 +1,18 @@
+bundle:
+  name: connectio-v2
+
+workspace:
+  host: https://adb-604667594731808.8.azuredatabricks.net
+  profile: uat
+  root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+
+targets:
+  uat:
+    default: true
+
+resources:
+  apps:
+    connectio_v2:
+      name: connectio-v2
+      description: ConnectIO V2 — process-domain RAD with FastAPI backend and React frontend
+      source_code_path: apps/api

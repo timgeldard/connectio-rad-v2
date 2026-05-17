@@ -2,8 +2,8 @@
 # Docs: https://docs.databricks.com/en/dev-tools/databricks-apps/index.html
 #
 # Deploy from the repo root:
-#   1. Prepare artifact: npm run prepare:databricks  (builds frontend + copies to apps/api/static/)
-#   2. Deploy app:       databricks apps deploy connectio-v2 --source-code-path apps/api
+#   1. Prepare artifact: npm run prepare:databricks
+#   2. Bundle deploy:    databricks bundle deploy --target uat
 #
 # Secret scope "connectio-v2" must exist in the target workspace before deployment.
 # See docs/deployment/databricks-apps.md for full setup instructions.
@@ -19,118 +19,56 @@ command:
   - "2"
 
 env:
-  # ── V1 backend URLs ──────────────────────────────────────────────────────
-  # Store each value in the secret scope; never commit the real URLs.
+  # V1 backend URLs — format: valueFrom: scope/key
   - name: V1_TRACE_API_BASE_URL
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: v1-trace-api-base-url
+    valueFrom: connectio-v2/v1-trace-api-base-url
 
   - name: V1_WH360_API_BASE_URL
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: v1-wh360-api-base-url
+    valueFrom: connectio-v2/v1-wh360-api-base-url
 
   - name: V1_POH_API_BASE_URL
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: v1-poh-api-base-url
+    valueFrom: connectio-v2/v1-poh-api-base-url
 
   - name: V1_CQ_API_BASE_URL
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: v1-cq-api-base-url
+    valueFrom: connectio-v2/v1-cq-api-base-url
 
-  # ── Backend adapter mode ──────────────────────────────────────────────────
-  # Controls whether POH and CQ Lab routes query Databricks directly or proxy
-  # to V1. Default is "legacy-api" — do not change without also setting
-  # DATABRICKS_HOST and SQL_WAREHOUSE_ID below.
-  # To switch to databricks-api: store "databricks-api" in the secret scope
-  # and replace the literal value here with a valueFrom.secretScope reference:
-  #
-  #   - name: BACKEND_ADAPTER_MODE
-  #     valueFrom:
-  #       secretScope: connectio-v2
-  #       secretKey: backend-adapter-mode
+  # Backend adapter mode: "legacy-api" (proxy to V1) or "databricks-api" (native reads).
+  # To switch to databricks-api, store "databricks-api" in the secret scope and use:
+  #   valueFrom: connectio-v2/backend-adapter-mode
   - name: BACKEND_ADAPTER_MODE
     value: legacy-api
 
-  # ── Databricks connection (required for BACKEND_ADAPTER_MODE=databricks-api) ──
-  # DATABRICKS_HOST: workspace hostname WITHOUT https:// prefix.
-  #   Example: myworkspace.azuredatabricks.net
-  #   StatementApiDatabricksClient strips any https:// prefix if present —
-  #   but always store without scheme to be explicit.
-  #   Set via secret scope; placeholder shown below — do not commit real values.
-  #
-  # SQL_WAREHOUSE_ID: SQL Warehouse ID (not a cluster ID).
-  #   Find it in the Databricks UI under SQL > SQL Warehouses > <name> > Overview.
-  #   Set via secret scope; placeholder shown below.
-  #
+  # Databricks connection — required when BACKEND_ADAPTER_MODE=databricks-api.
   # Uncomment and populate when switching to databricks-api mode:
   #
   # - name: DATABRICKS_HOST
-  #   valueFrom:
-  #     secretScope: connectio-v2
-  #     secretKey: databricks-host
+  #   valueFrom: connectio-v2/databricks-host
   #
   # - name: SQL_WAREHOUSE_ID
-  #   valueFrom:
-  #     secretScope: connectio-v2
-  #     secretKey: sql-warehouse-id
+  #   valueFrom: connectio-v2/sql-warehouse-id
 
-  # ── App behaviour ─────────────────────────────────────────────────────────
-  # "legacy-api" proxies to V1; "mock" returns fixture data (useful for demos
-  # when V1 is unavailable). The value is baked into the frontend build, so
-  # changing it here has no effect on the React bundle — rebuild the frontend.
+  # App behaviour
   - name: ADAPTER_MODE
     value: legacy-api
 
-  # ── Domain catalog/schema (required for BACKEND_ADAPTER_MODE=databricks-api) ──
-  # Each domain reads its own catalog/schema env vars for SQL object qualification.
+  # Domain catalog/schema — required when BACKEND_ADAPTER_MODE=databricks-api.
   # CQ_CATALOG falls back to TRACE_CATALOG if unset (CQ and Trace share a workspace).
-  # CQ_SCHEMA, POH_SCHEMA, TRACE_SCHEMA have sensible V1-compatible defaults and are
-  # optional unless the Unity Catalog layout differs from those defaults.
-  #
-  # Defaults (if env var is absent):
-  #   POH_SCHEMA   = "csm_process_order_history"
-  #   CQ_SCHEMA    = "csm_process_order_history"  (falls back to POH_SCHEMA)
-  #   TRACE_SCHEMA = "gold"
-  #
-  # Required (no default):
-  #   POH_CATALOG, CQ_CATALOG (or TRACE_CATALOG), TRACE_CATALOG
+  # Schema env vars are optional; defaults: POH=csm_process_order_history, TRACE=gold.
   #
   # - name: POH_CATALOG
-  #   valueFrom:
-  #     secretScope: connectio-v2
-  #     secretKey: poh-catalog
-  #
-  # - name: POH_SCHEMA
-  #   value: csm_process_order_history
+  #   valueFrom: connectio-v2/poh-catalog
   #
   # - name: CQ_CATALOG
-  #   valueFrom:
-  #     secretScope: connectio-v2
-  #     secretKey: cq-catalog
-  #
-  # - name: CQ_SCHEMA
-  #   value: csm_process_order_history
+  #   valueFrom: connectio-v2/cq-catalog
   #
   # - name: TRACE_CATALOG
-  #   valueFrom:
-  #     secretScope: connectio-v2
-  #     secretKey: trace-catalog
-  #
-  # - name: TRACE_SCHEMA
-  #   value: gold
+  #   valueFrom: connectio-v2/trace-catalog
 
-  # ── Auth diagnostics (non-production only) ────────────────────────────────
-  # Set to "true" to enable GET /api/diagnostics/auth-headers.
-  # This endpoint returns OAuth header presence metadata (never the token value)
-  # and is used to verify that Databricks Apps injects the expected headers.
-  # Must be "false" or absent in production.
+  # Auth diagnostics — set "true" to enable GET /api/diagnostics/auth-headers.
+  # Must be absent or "false" in production.
   # - name: ENABLE_AUTH_DIAGNOSTICS
   #   value: "true"
 
-  # ── Python runtime ────────────────────────────────────────────────────────
+  # Python runtime
   - name: PYTHONUNBUFFERED
     value: "1"
