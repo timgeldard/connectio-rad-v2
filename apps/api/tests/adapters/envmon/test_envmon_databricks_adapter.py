@@ -394,15 +394,15 @@ class TestMapSiteSummaryRows:
         result = map_site_summary_rows([], "C061")
         assert result["confidence"] == 0.0
 
-    # --- placeholder fields ---
+    # --- contract compatibility fixed-zero fields (CAPA out of scope) ---
 
-    def test_open_corrective_actions_is_placeholder_zero(self) -> None:
-        """openCorrectiveActions is 0 — PLACEHOLDER; CAPA not present in V1 at all."""
+    def test_open_corrective_actions_is_contract_compat_zero(self) -> None:
+        """openCorrectiveActions is 0 — contract compatibility fixed zero; CAPA is out of scope for EnvMon V2 parity."""
         result = map_site_summary_rows([self._full_row()], "C061")
         assert result["openCorrectiveActions"] == 0
 
-    def test_overdue_actions_is_placeholder_zero(self) -> None:
-        """overdueActions is 0 — PLACEHOLDER; CAPA not present in V1 at all."""
+    def test_overdue_actions_is_contract_compat_zero(self) -> None:
+        """overdueActions is 0 — contract compatibility fixed zero; CAPA is out of scope for EnvMon V2 parity."""
         result = map_site_summary_rows([self._full_row()], "C061")
         assert result["overdueActions"] == 0
 

@@ -5,6 +5,9 @@
 **Domain:** Environmental Monitoring (EnvMon)
 **Purpose:** Authoritative record of every V1 capability, its data sources, and its current V2 parity status. Use this as the reference when prioritising EnvMon implementation work.
 
+> **Status update (n.txt, 2026-05-17):** CAPA/corrective actions (capability #12) are **out of scope** for EnvMon V2 parity.
+> `getEnvMonCorrectiveActions` is intentionally not migrated. Future CAPA belongs to a separate Quality Actions bounded context.
+
 ---
 
 ## Legend

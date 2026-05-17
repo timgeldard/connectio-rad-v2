@@ -182,7 +182,7 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 | `getEnvMonSwabResults` | ✓ | — | — | — | none | Rank 2 — next after site summary BV |
 | `getEnvMonTrends` | ✓ | — | — | — | none | Rank 3 — after site summary BV |
 | `getEnvMonHeatmap` | ✓ | — | — | — | none | Blocked — em_location_coordinates may not exist in UAT |
-| `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Blocked — no CAPA source confirmed |
+| `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Out of scope — CAPA/corrective actions not a V2 EnvMon parity requirement; intentionally not migrated |
 | `getEnvMonSwabVectors` | ✓ | — | — | — | none | Deferred indefinitely — business rules undefined |
 
 **Summary:** 9 methods — 1 executable (`getEnvMonSiteSummary`: route wired, DDL confirmed, awaiting BV), 8 mock only. No legacy-api adapter.  

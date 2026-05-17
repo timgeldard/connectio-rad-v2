@@ -186,7 +186,7 @@ em_plant_floor  (svg_url, svg_width, svg_height)
 | `getEnvMonZones` | lot + point + em_location_zones | **Yes** | Blocked — em_location_zones may not exist |
 | `getEnvMonAlerts` | lot + point + result_v (derived) | No | Deferred — alert derivation rules undefined |
 | `getEnvMonHeatmap` | lot + point + result_v + em_location_coordinates + em_plant_floor | **Yes** | Blocked — em_* may not exist |
-| `getEnvMonCorrectiveActions` | CAPA source unknown | — | Blocked — no CAPA source confirmed |
+| `getEnvMonCorrectiveActions` | Not applicable | — | Out of scope — CAPA/corrective actions not a V2 EnvMon parity requirement |
 | `getEnvMonSwabVectors` | complex derivation | — | Deferred indefinitely — business rules undefined |
 | `getEnvMonContext` | contextual (aggregation) | No | After site summary confirmed |
 

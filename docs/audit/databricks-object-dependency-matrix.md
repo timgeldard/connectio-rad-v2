@@ -125,8 +125,8 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 **m.txt:** QuerySpec hardened (LIMIT 1 fix); 56 tests added; DDD model + route plan created.  
 **Key gaps (unchanged):**
 - `hygieneZone` / `areaType` have no V1 column equivalent — em_location_zones has no hygiene classification
-- CAPA/corrective actions not in V1 at all — `getEnvMonCorrectiveActions` has no source
-- `plantName: ""`, `openCorrectiveActions: 0`, `overdueActions: 0` in `map_site_summary_rows` are **TEMPORARY PLACEHOLDERS, not business facts**
+- CAPA/corrective actions are out of scope for EnvMon V2 parity — `getEnvMonCorrectiveActions` is intentionally not migrated; future CAPA belongs to a separate Quality Actions / Deviation / CAPA bounded context
+- `plantName: ""` in `map_site_summary_rows` is a PLACEHOLDER (no gold_plant JOIN); `openCorrectiveActions: 0` and `overdueActions: 0` are contract-compatibility fixed zeros (not business facts)
 
 **Next action:** Deploy to UAT; run browser verification in `docs/deployment/envmon-native-browser-verification.md`. Heatmap/zone deferred until Group B em_* existence confirmed.
 

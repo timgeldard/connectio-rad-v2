@@ -35,9 +35,11 @@ Column verification status (n.txt, 2026-05-17):
 
   Site summary partial coverage — fields not derivable from V1 KPI query:
     plantName              — no plant_name in gold_inspection_lot; gold_plant lookup not in SQL (PLACEHOLDER "")
-    openCorrectiveActions  — no CAPA source in V1 EnvMon at all (PLACEHOLDER 0)
-    overdueActions         — no CAPA source in V1 EnvMon at all (PLACEHOLDER 0)
-  These return default/empty values until the respective sources are confirmed.
+    openCorrectiveActions  — fixed 0; CAPA is out of scope for EnvMon V2 parity (contract compatibility only)
+    overdueActions         — fixed 0; CAPA is out of scope for EnvMon V2 parity (contract compatibility only)
+  plantName returns "" until a gold_plant lookup is added. openCorrectiveActions/overdueActions are fixed at 0
+  for EnvMonSiteSummarySchema contract compatibility; these fields should be removed from the schema in a
+  future contract cleanup (see docs/architecture/envmon-ddd-model.md — Future contract cleanup).
 """
 from __future__ import annotations
 
@@ -166,10 +168,11 @@ def map_site_summary_rows(rows: list[dict], plant_id: str) -> dict:
         highestSeverity ← derived: fails→high, warns→medium, clean/none→low
         confidence      ← 1.0 if any locations sampled, 0.0 if no data
 
-      TEMPORARY PLACEHOLDERS — not business facts:
-        plantName → "" (no plant_name in gold_inspection_lot; gold_plant lookup not in current SQL)
-        openCorrectiveActions → 0 (CAPA not in V1 EnvMon; no gold-layer source)
-        overdueActions → 0 (CAPA not in V1 EnvMon; no gold-layer source)
+      Partial coverage:
+        plantName → "" (no plant_name in gold_inspection_lot; gold_plant lookup not in SQL — PLACEHOLDER)
+        openCorrectiveActions → 0 (contract compatibility only — CAPA is out of scope for EnvMon V2 parity;
+                                    fixed at 0; propose removing from EnvMonSiteSummarySchema in future cleanup)
+        overdueActions → 0 (contract compatibility only — see openCorrectiveActions)
 
     Returns default shape if rows is empty (no data for plant/period).
     """
@@ -211,9 +214,9 @@ def map_site_summary_rows(rows: list[dict], plant_id: str) -> dict:
         "zonesWithAlerts": active_fails,
         "positiveCount": active_fails,
         "positiveRate": positive_rate,
-        # PLACEHOLDER — CAPA not present in V1 EnvMon; no gold-layer source
+        # Contract compatibility only — CAPA is out of scope for EnvMon V2 parity; fixed 0
         "openCorrectiveActions": 0,
-        # PLACEHOLDER — CAPA not present in V1 EnvMon; no gold-layer source
+        # Contract compatibility only — CAPA is out of scope for EnvMon V2 parity; fixed 0
         "overdueActions": 0,
         "complianceRate": compliance_rate,
         "riskStatus": risk_status,

@@ -6,6 +6,12 @@
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`
 **Contracts:** `packages/data-contracts/src/schemas/environmental-monitoring.ts`
 
+> **Status update (n.txt, 2026-05-17):** CAPA/corrective actions have been formally scoped out of EnvMon V2 parity.
+> `getEnvMonCorrectiveActions` is **intentionally not migrated** — not blocked, not missing a source.
+> The CAPA analysis below is preserved as historical context. The scope decision supersedes any
+> "blocked" or "missing-source" framing for CAPA items. Future CAPA belongs to a separate
+> Quality Actions / Deviation / CAPA bounded context.
+
 ---
 
 ## Overview

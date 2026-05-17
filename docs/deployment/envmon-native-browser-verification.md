@@ -70,11 +70,11 @@ GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=20
 }
 ```
 
-**Note on placeholder fields:** `plantName` returns `""` (no gold_plant JOIN in current SQL)
-and `openCorrectiveActions`/`overdueActions` return `0` (no CAPA source in V1 EnvMon). These
-are TEMPORARY PLACEHOLDERS — not business facts. The remaining fields (`riskStatus`,
-`highestSeverity`, `complianceRate`, `confidence`) are V2-contract derivations computed from
-inspection-lot aggregate counts — not V1 business semantics.
+**Note on partial coverage fields:** `plantName` returns `""` (no gold_plant JOIN in current SQL — PLACEHOLDER).
+`openCorrectiveActions`/`overdueActions` return `0` — contract compatibility only; CAPA is out of scope for
+EnvMon V2 parity and these values are fixed at 0. The remaining fields (`riskStatus`, `highestSeverity`,
+`complianceRate`, `confidence`) are V2-contract derivations computed from inspection-lot aggregate counts —
+not V1 business semantics.
 
 ### Expected: error cases
 
@@ -101,7 +101,7 @@ inspection-lot aggregate counts — not V1 business semantics.
 | 504 Gateway Timeout | SQL timeout | Check warehouse availability; increase timeout in QuerySpec if needed |
 | 200 with zeros | No data for plant_id / period | Run `SELECT DISTINCT PLANT_ID FROM connected_plant_uat.gold.gold_inspection_lot WHERE INSPECTION_TYPE IN ('14','Z14')` to find valid plant IDs |
 | `X-Data-Source` absent | Route not implementing header set | Verify `set_databricks_response_headers` is called in route |
-| `openCorrectiveActions` or `overdueActions` non-zero | Unexpected — CAPA placeholders must return 0 | Investigate mapper; these placeholders must not vary |
+| `openCorrectiveActions` or `overdueActions` non-zero | Unexpected — contract compatibility fixed zeros must not vary | Investigate mapper; CAPA is out of scope, these values are always 0 |
 
 ---
 

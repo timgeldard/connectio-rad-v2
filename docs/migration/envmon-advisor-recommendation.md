@@ -3,6 +3,11 @@
 **Date:** 2026-05-17
 **Tranche:** l.txt — post spatial-config recovery
 **Perspective:** Senior manufacturing quality / environmental monitoring product advisor
+
+> **Status update (n.txt, 2026-05-17):** CAPA/corrective actions have been formally scoped out of EnvMon V2 parity.
+> `getEnvMonCorrectiveActions` is intentionally not migrated — not blocked, not deferred. The CAPA risk items
+> and recommendations below are preserved as historical analysis context; the scope decision supersedes them.
+> Future CAPA capability belongs to a separate Quality Actions / Deviation / CAPA bounded context.
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/migration/envmon-v1-functional-recovery.md`

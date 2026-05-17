@@ -51,10 +51,10 @@ async def envmon_site_summary(
       gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v
       INSPECTION_TYPE IN ('14','Z14') — EnvMon domain boundary filter
 
-    Partial coverage — placeholder fields in response (not business facts):
-      plantName: "" — requires gold_plant JOIN not yet in SQL
-      openCorrectiveActions: 0 — CAPA not present in V1 EnvMon
-      overdueActions: 0 — CAPA not present in V1 EnvMon
+    Partial coverage:
+      plantName: "" — requires gold_plant JOIN not yet in SQL (PLACEHOLDER)
+      openCorrectiveActions: 0 — contract compatibility only; CAPA is out of scope for EnvMon V2 parity
+      overdueActions: 0 — contract compatibility only; CAPA is out of scope for EnvMon V2 parity
     """
     backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if backend_mode != "databricks-api":

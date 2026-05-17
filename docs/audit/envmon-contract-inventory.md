@@ -50,7 +50,7 @@
 | `positiveSamples` | Location count where `INSPECTION_RESULT_VALUATION IN ('R','REJ','REJECT')` | confirmed-v1 | Location-level fail count from V1 `plants.py` |
 | `positiveRate` | `active_fails / total_locs` (computed in mapper) | confirmed-v1 | |
 | `criticalZoneExposures` | Fails in `zone-1` — needs em_location_zones join | blocked | em_location_zones may not exist in UAT |
-| `openCorrectiveActions` | No CAPA source confirmed | blocked | |
+| `openCorrectiveActions` | Fixed 0 — contract compatibility only; CAPA out of scope for EnvMon V2 parity | contract-compat | |
 | `trendDirection` | Period-over-period comparison — deferred | blocked | |
 
 **V2 native recommendation:** **First safe slice.** Implement after DDL confirmed.
@@ -179,9 +179,9 @@
 
 | Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| All fields | No CAPA source identified in gold layer | missing |
+| All fields | Not applicable — CAPA is out of scope for EnvMon V2 parity | out-of-scope |
 
-**V2 native recommendation:** **Blocked** — no source. SAP QM usage decisions are in the lot but do not contain CAPA workflow data.
+**V2 native recommendation:** **Out of scope** — CAPA/corrective actions are not a V2 EnvMon parity requirement. `getEnvMonCorrectiveActions` is intentionally not migrated. Future CAPA capability belongs to a separate Quality Actions / Deviation / CAPA bounded context.
 
 ---
 
@@ -216,5 +216,5 @@
 | `getEnvMonSwabResults` | Confirmed-v1 (most fields) | lot + point + result_v | None | After DDL — Rank 2 |
 | `getEnvMonTrends` | Confirmed-v1 | lot + point + result_v | None | After DDL — Rank 3 |
 | `getEnvMonHeatmap` | Confirmed-v1 (contingent on em_*) | lot + point + result_v + em_* | em_location_coordinates, em_plant_floor | Blocked — em_* unknown |
-| `getEnvMonCorrectiveActions` | No source | — | — | Blocked — no CAPA source |
+| `getEnvMonCorrectiveActions` | Not applicable | — | — | Out of scope — CAPA not a V2 EnvMon parity requirement |
 | `getEnvMonSwabVectors` | Partial (no adjacency rules) | lot + point + result_v | None | Deferred indefinitely |

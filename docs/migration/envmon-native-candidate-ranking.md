@@ -41,7 +41,8 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 - `totalSamples` ← `lots_tested` (lot-level count; not swab-level)
 - `positiveSamples` ← `active_fails` (location-level fail count)
 - `positiveRate` ← computed
-- `criticalZoneExposures`, `openCorrectiveActions`, `trendDirection` ← defaults (em_* / CAPA source not confirmed)
+- `criticalZoneExposures`, `trendDirection` ← defaults (em_* source not confirmed; period-over-period not implemented)
+- `openCorrectiveActions` ← contract compatibility fixed 0 (CAPA out of scope for EnvMon V2 parity)
 
 **Status:** QuerySpec written (confirmed-v1) — **DDL required before route wiring**
 
@@ -122,16 +123,14 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 
 ---
 
-## Rank 6 — Corrective Actions
+## Rank 6 — Corrective Actions (Out of scope)
 
 **Adapter method:** `getEnvMonCorrectiveActions`
 **Returns:** `EnvMonCorrectiveAction[]` — CAPA records
 
-**Why sixth:**
-- No CAPA/corrective action source identified in the gold layer
-- V1 app may have managed CAPAs in a separate app-managed table
-
-**Status:** **Blocked** — no source identified
+**Status:** **Out of scope** — CAPA/corrective actions are not a V2 EnvMon parity requirement.
+`getEnvMonCorrectiveActions` is intentionally not migrated. Any future CAPA capability belongs
+to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do not implement.
 
 ---
 
@@ -185,6 +184,6 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 | 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Deferred until Rank 1 DDL confirmed |
 | 4 | Zones | `getEnvMonZones` | assumed | em_location_zones | Blocked — em_* unknown |
 | 5 | Alerts | `getEnvMonAlerts` | partial (derivable) | None | Deferred — alert rules undefined |
-| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | none | unknown | Blocked — no CAPA source |
+| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | none | N/A | Out of scope — CAPA not a V2 EnvMon parity requirement |
 | 7 | Heatmap | `getEnvMonHeatmap` | confirmed-v1 for views; app tables unknown | em_location_coordinates, em_plant_floor | Blocked — em_* unknown |
 | 8 | Swab Vectors | `getEnvMonSwabVectors` | none | partial | Deferred indefinitely — business rules undefined |

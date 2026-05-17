@@ -122,7 +122,7 @@ mapped by `map_site_summary_rows` in `envmon_databricks_adapter.py`.
 | Floorplan maintenance | Spatial write API — out of scope |
 | Coordinate maintenance | Spatial write API — out of scope |
 | L4/hygiene zoning maintenance | No V1 source; requires new schema design |
-| Corrective actions/CAPA (`getEnvMonCorrectiveActions`) | No source in V1 at all (no tables, no routes) |
+| Corrective actions/CAPA (`getEnvMonCorrectiveActions`) | Out of scope — CAPA/corrective actions not a V2 EnvMon parity requirement; intentionally not migrated |
 
 ---
 
@@ -137,7 +137,7 @@ V1 KPI query alone. They return placeholder values in `map_site_summary_rows`.
 | `positiveSamples` | Full | No placeholder | `active_fails` from aggregate |
 | `positiveRate` | Full | No placeholder | `active_fails / total_locs` |
 | `criticalZoneExposures` | **Not available** | `0` — NOT a factual count | Requires `em_location_zones` join; UAT existence unknown |
-| `openCorrectiveActions` | **Not available** | `0` — NOT a factual count | No CAPA source in V1 at all |
+| `openCorrectiveActions` | **Contract compat only** | `0` — fixed; CAPA out of scope for EnvMon V2 parity | Not applicable — CAPA is intentionally not migrated |
 | `trendDirection` | **Not available** | `"stable"` — NOT a calculated signal | Requires period-over-period rate comparison |
 
 Placeholder labels are in `apps/api/adapters/envmon/envmon_databricks_adapter.py`

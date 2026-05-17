@@ -180,7 +180,7 @@
 | `getEnvMonSwabResults` | lot + point + result_v | Mock — Rank 2; next after site summary BV |
 | `getEnvMonTrends` | lot + point + result_v | Mock — Rank 3; after site summary BV |
 | `getEnvMonHeatmap` | lot + point + result_v + `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* existence unknown) |
-| `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Blocked (no source; CAPA not in V1) |
+| `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Out of scope (CAPA not a V2 EnvMon parity requirement; belongs to separate Quality Actions / Deviation / CAPA bounded context) |
 | `getEnvMonSwabVectors` | — | Mock — Deferred indefinitely |
 
 **Total: 9 methods — 1 executable (✓ E), 8 mock**  

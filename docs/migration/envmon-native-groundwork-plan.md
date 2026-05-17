@@ -4,6 +4,10 @@
 **Status:** SAP QM SOURCE RECOVERED (confirmed-v1); SPATIAL CONFIG MODEL RECOVERED (confirmed-v1); DDL verification pending
 **Outcome:** V1 is a hybrid domain. SAP QM source model confirmed. App-managed spatial configuration model confirmed (5 em_* tables). QuerySpec skeleton written for `getEnvMonSiteSummary`. Route deferred until DDL confirmed.
 
+> **Status update (n.txt, 2026-05-17):** CAPA/corrective actions are **out of scope** for EnvMon V2 parity.
+> Finding 6 below is preserved as historical analysis; the scope decision supersedes the "do not implement without workflow design" framing.
+> `getEnvMonCorrectiveActions` is intentionally not migrated — not deferred pending design.
+
 ---
 
 ## Corrections

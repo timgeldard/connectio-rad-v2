@@ -1,8 +1,8 @@
 # EnvMon Domain-Driven Design Model
 
-**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (n.txt — route wired, DDL confirmed)
-**Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (route wired)
-**Status:** Observations BC first slice COMPLETE — route wired, DDL confirmed, 99 tests; Spatial Configuration and Spatial Analysis deferred
+**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (n.txt — CAPA out-of-scope decision)
+**Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (route wired, DDL confirmed, CAPA scoped out)
+**Status:** Observations BC first slice COMPLETE — route wired, DDL confirmed, 99 tests; Spatial Configuration and Spatial Analysis deferred; CAPA/corrective actions out of scope for EnvMon V2 parity
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/audit/envmon-spatial-configuration-model.md`
@@ -132,7 +132,6 @@ These commands do not exist in V2 yet. Do not implement in this tranche.
 - `em_layout_revision.state` lifecycle: `draft` → `published` → `superseded` / `rolled_back`
 - `em_location_zones` has NO `hygiene_zone` or `area_type` columns in V1 DDL. These V2
   contract fields require new schema design.
-- `getEnvMonCorrectiveActions` has no source in V1 at all — no CAPA tables, routes, or code.
 
 ### Existence in UAT
 
@@ -201,11 +200,53 @@ Only after:
 | getEnvMonZones | em_* existence in UAT unknown |
 | getEnvMonHeatmap | em_* existence unknown + spatial coordinate placement |
 | criticalZoneExposures (real value) | em_location_zones existence + zone classification schema |
-| openCorrectiveActions | No CAPA source in V1; new data source required |
 | trendDirection (real value) | Period-over-period query not implemented |
 | Floorplan upload | No V1 upload handler; new command API required |
 | L4/hygiene zoning | hygiene_zone/area_type not in V1 DDL; new schema design required |
-| CAPA/corrective actions | No source in V1 at all |
+
+---
+
+## What is NOT in EnvMon
+
+### CAPA / Corrective Actions — out of scope for EnvMon V2 parity
+
+CAPA (Corrective and Preventive Actions) and corrective action tracking are **not part of
+EnvMon V2 parity**. V1 ConnectIO-RAD had no CAPA tables, no CAPA routes, and no CAPA
+code in the EnvMon domain. There is no gold-layer source for corrective actions in
+TRACE_CATALOG / TRACE_SCHEMA or any other confirmed Databricks catalog.
+
+`getEnvMonCorrectiveActions` is intentionally not migrated. Its status is **out of scope**,
+not blocked, deferred, or missing a source.
+
+Any future CAPA or deviation management capability belongs in a **separate Quality Actions /
+Deviation / CAPA bounded context** — not in EnvMon Observations, EnvMon Spatial
+Configuration, or EnvMon Spatial Analysis. That bounded context does not exist in V2 and
+requires its own domain analysis, data source identification, and contract design.
+
+**Do not:**
+- Add CAPA routes to `apps/api/routes/envmon.py`
+- Add CAPA source discovery for EnvMon
+- Block EnvMon site-summary or any Observations BC feature on CAPA
+- Model `CorrectiveAction` as an EnvMon aggregate
+
+---
+
+## Future contract cleanup
+
+The following fields in `EnvMonSiteSummarySchema` (packages/data-contracts) exist only for
+backwards contract compatibility with V1-era consumers. They carry no business facts in V2:
+
+| Field | Current value | Reason to remove |
+|---|---|---|
+| `openCorrectiveActions` | Fixed 0 | No source; CAPA is out of scope for EnvMon V2 parity |
+| `overdueActions` | Fixed 0 | No source; CAPA is out of scope for EnvMon V2 parity |
+
+Proposal: remove these fields from `EnvMonSiteSummarySchema` in the next breaking-contract
+cleanup tranche, or move them to a future Quality Actions bounded context schema. Also remove
+`getEnvMonCorrectiveActions` from `envmon-adapter.ts` at that time.
+
+This cleanup requires a coordinated contract change (Zod schema + TypeScript frontend
+adapter + any downstream consumers) and is NOT part of this tranche.
 
 ---
 
