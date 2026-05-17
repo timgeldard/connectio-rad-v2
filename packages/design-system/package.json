@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./tokens": "./src/tokens/tokens.css",
-    "./shell": "./src/tokens/shell.css"
+    "./shell": "./src/tokens/shell.css",
+    "./assets/*": "./src/assets/*"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
