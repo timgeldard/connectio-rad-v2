@@ -288,3 +288,52 @@ class TestNoDatabricksApiMockFallback:
             "databricks-api config is missing — not silently return mock data.\n"
             + "\n".join(violations)
         )
+
+
+# ── 7. No raw OAuth token in log calls ───────────────────────────────────────
+
+_TOKEN_LOG_PATTERNS = [
+    re.compile(r"\b(logger|logging|print)\b.*raw_oauth_token"),
+    re.compile(r"\b(logger|logging|print)\b.*x.forwarded.access.token"),
+    re.compile(r"console\.(log|error|warn|debug).*x.forwarded.access.token", re.IGNORECASE),
+]
+
+_FRONTEND_DIRS = [
+    _REPO_ROOT / "apps" / "web" / "src",
+    _REPO_ROOT / "domain-integrations",
+]
+
+
+class TestNoRawTokenLogging:
+    def test_no_raw_token_in_python_logs(self) -> None:
+        files = _QUERY_PATH_FILES
+        violations: list[str] = []
+        for path in files:
+            content = _read(path)
+            for pattern in _TOKEN_LOG_PATTERNS[:2]:
+                if pattern.search(content):
+                    violations.append(
+                        f"{path.relative_to(_REPO_ROOT)}: possible raw token in log call"
+                    )
+        assert not violations, (
+            "Raw OAuth token may be logged in server-side code. "
+            "Log token_present (bool) instead of the raw token value.\n"
+            + "\n".join(violations)
+        )
+
+    def test_no_raw_token_in_frontend_logs(self) -> None:
+        violations: list[str] = []
+        for root in _FRONTEND_DIRS:
+            if not root.exists():
+                continue
+            for path in _ts_files(root):
+                content = _read(path)
+                if _TOKEN_LOG_PATTERNS[2].search(content):
+                    violations.append(
+                        f"{path.relative_to(_REPO_ROOT)}: console log with x-forwarded-access-token"
+                    )
+        assert not violations, (
+            "x-forwarded-access-token logged in frontend code. "
+            "Do not log raw OAuth token values in browser console.\n"
+            + "\n".join(violations)
+        )

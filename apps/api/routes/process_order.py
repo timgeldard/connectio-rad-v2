@@ -203,8 +203,7 @@ async def order_goods_movements(
 
     Source view: vw_gold_adp_movement (connected_plant_uat.csm_process_order_history)
     DDL confirmed 2026-05-17. materialDescription absent from view.
-    direction derived from MOVEMENT_TYPE — update _MOVEMENT_DIRECTION_MAP once
-    confirmed ADP movement type values are known.
+    direction: 'unknown' for unmapped MOVEMENT_TYPE values (711/712/999/null).
     """
     backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if backend_mode != "databricks-api":
