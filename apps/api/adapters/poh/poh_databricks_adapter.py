@@ -4,11 +4,16 @@ Implemented slices:
   - get_process_order_header_spec / map_process_order_header_rows
   - get_order_operations_spec (QuerySpec only — row mapper deferred)
 
-IMPORTANT: All SQL column names are unverified. They are inferred from SAP PP
-naming conventions (AUFNR, AUART, MATNR, etc.) and ADR-024 schema notes.
-Every column alias is marked with a TODO comment. Do not remove TODOs until the
-column has been confirmed by inspecting the live view DDL or running a test query
-against connected_plant_uat.
+Column verification status (2026-05-17, connected_plant_uat):
+  vw_gold_process_order columns confirmed via live DDL:
+    PROCESS_ORDER_ID, STATUS, MATERIAL_ID, INSPECTION_LOT_ID, MATERIAL_DESCRIPTION, PLANT_ID
+  vw_gold_process_order_phase columns confirmed via live DDL:
+    PROCESS_ORDER_PHASE_ID, PROCESS_ORDER_ID, PHASE_ID, PHASE_DESCRIPTION, PHASE_TEXT,
+    START_USER, END_USER, OPERATION_QUANTITY, OPERATION_QUANTITY_UOM, SORT_NUMBER
+
+  Fields NOT available in these views (no corresponding columns):
+    order_type, batch_id, production_line, planned/confirmed quantities, planned/actual dates
+  These fields return empty/default values until a richer view is available.
 """
 from __future__ import annotations
 
@@ -20,30 +25,29 @@ from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
 # ---------------------------------------------------------------------------
-# Status/type mapping tables — all TODO-marked (unverified SAP values)
+# Status mapping — confirmed against live vw_gold_process_order (2026-05-17)
+# The view uses text STATUS values consistent with V1 (not SAP technical codes).
 # ---------------------------------------------------------------------------
 
-# TODO: Verify AUART values against live vw_gold_process_order.
-# SAP AUART → V2 contract enum ('process-order' | 'production-order' | 'maintenance-order' | 'planned-order')
-_ORDER_TYPE_MAP: dict[str, str] = {
-    "PI01": "process-order",
-    "PP01": "production-order",
-    "PM01": "maintenance-order",
-    "PR": "planned-order",
-    "PP": "production-order",
-}
-
-# TODO: Verify status string values against live vw_gold_process_order data.
-# SAP order status keywords → V2 contract enum
+# STATUS text values → V2 contract enum
 # ('created' | 'released' | 'in-process' | 'confirmed' | 'partially-confirmed' | 'closed' | 'cancelled')
+# V1 reference: STATUS values include 'IN PROGRESS', 'COMPLETED', 'CLOSED', 'NOT STARTED'
+# TODO: verify exact STATUS enum values from live data (DESCRIBE extended or sample query)
 _ORDER_STATUS_MAP: dict[str, str] = {
+    "NOT STARTED": "created",
+    "RELEASED": "released",
+    "IN PROGRESS": "in-process",
+    "CONFIRMED": "confirmed",
+    "PARTIALLY CONFIRMED": "partially-confirmed",
+    "COMPLETED": "confirmed",
+    "CLOSED": "closed",
+    "CANCELLED": "cancelled",
+    # SAP technical fallbacks (in case view exposes AUOBJ codes)
     "CRTD": "created",
     "REL": "released",
     "PCNF": "partially-confirmed",
     "CNF": "confirmed",
     "CLSD": "closed",
-    "DLT": "cancelled",
-    "CANCEL": "cancelled",
     "TECO": "closed",
 }
 
@@ -68,33 +72,25 @@ def get_process_order_header_spec(request: ProcessOrderHeaderRequest) -> QuerySp
 
     Raises DatabricksConfigError if POH_CATALOG is not set.
 
-    Column note: V1 POH db.py ORDER_STATUS_EXPR uses `po.STATUS` with values
-    'IN PROGRESS', 'COMPLETED', 'CLOSED', 'NOT STARTED'. The V2 spec uses
-    `objnr` (SAP status object number). TODO: verify which column the gold view
-    exposes — status text or SAP objnr.
+    Column names confirmed from live DDL (2026-05-17, connected_plant_uat):
+      Available: PROCESS_ORDER_ID, STATUS, MATERIAL_ID, INSPECTION_LOT_ID,
+                 MATERIAL_DESCRIPTION, PLANT_ID
+      Missing from this view: order_type, batch_id, production_line, quantities, dates.
+      Those fields return empty/default until a richer view is confirmed.
     """
     order_view = resolve_domain_object("poh", "vw_gold_process_order")
-    plant_clause = "AND werks = :plant_id" if request.plant_id else ""
+    plant_clause = "AND PLANT_ID = :plant_id" if request.plant_id else ""
 
     sql = f"""
     SELECT
-        aufnr          AS process_order_id,  -- TODO: verify column name (SAP order number)
-        auart          AS order_type,         -- TODO: verify; map AUART code → V2 enum
-        matnr          AS material_id,        -- TODO: verify (leading zeros stripped in gold view?)
-        maktx          AS material_description,  -- TODO: verify (may be joined from MARA/MAKT)
-        charg          AS batch_id,           -- TODO: verify (output batch; may be null for planned orders)
-        werks          AS plant_id,           -- TODO: verify
-        arbpl          AS production_line,    -- TODO: verify (may need join to CRHD for full description)
-        gamng          AS planned_quantity,   -- TODO: verify (total planned order quantity)
-        gmein          AS uom,               -- TODO: verify (base unit of measure)
-        wemng          AS confirmed_quantity, -- TODO: verify (goods receipt quantity)
-        gstrp          AS planned_start,      -- TODO: verify date column (basic start date)
-        gltrp          AS planned_finish,     -- TODO: verify date column (basic finish date)
-        gstri          AS actual_start,       -- TODO: verify (actual start; null if not started)
-        getri          AS actual_finish,      -- TODO: verify (actual finish; null if not complete)
-        objnr          AS order_status_raw    -- TODO: verify; V1 uses STATUS text col, not objnr
+        PROCESS_ORDER_ID    AS process_order_id,
+        STATUS              AS order_status_raw,
+        MATERIAL_ID         AS material_id,
+        MATERIAL_DESCRIPTION AS material_description,
+        PLANT_ID            AS plant_id,
+        INSPECTION_LOT_ID   AS inspection_lot_id
     FROM {order_view}
-    WHERE aufnr = :process_order_id
+    WHERE PROCESS_ORDER_ID = :process_order_id
     {plant_clause}
     LIMIT :max_rows
     """
@@ -119,9 +115,10 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
 
     Returns ``None`` if *rows* is empty (caller should return 404).
 
-    All field mappings are based on SQL aliases in ``get_process_order_header_spec``.
-    Status and type mappings are TODO-marked and will need verification against
-    live vw_gold_process_order data before production use.
+    Field coverage (2026-05-17): vw_gold_process_order provides PROCESS_ORDER_ID,
+    STATUS, MATERIAL_ID, MATERIAL_DESCRIPTION, PLANT_ID, INSPECTION_LOT_ID only.
+    Fields not in the view (orderType, quantities, dates, batchId, productionLine)
+    return empty/zero defaults. These will be populated once a richer view is available.
     """
     if not rows:
         return None
@@ -129,34 +126,22 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
 
     result: dict[str, object] = {
         "processOrderId": str(row.get("process_order_id") or ""),
-        "orderType": _map_order_type(row.get("order_type")),
+        "orderType": "process-order",  # not in view — default
         "materialId": str(row.get("material_id") or ""),
         "materialDescription": str(row.get("material_description") or ""),
         "plantId": str(row.get("plant_id") or ""),
-        "plannedQuantity": _safe_float(row.get("planned_quantity")),
-        "confirmedQuantity": _safe_float(row.get("confirmed_quantity")),
-        "uom": str(row.get("uom") or ""),
-        "plannedStart": _format_datetime(row.get("planned_start")),
-        "plannedFinish": _format_datetime(row.get("planned_finish")),
+        "plannedQuantity": 0.0,   # not in view
+        "confirmedQuantity": 0.0, # not in view
+        "uom": "",                # not in view
+        "plannedStart": "",       # not in view
+        "plannedFinish": "",      # not in view
         "orderStatus": _map_order_status(row.get("order_status_raw")),
     }
 
-    if row.get("batch_id"):
-        result["batchId"] = str(row["batch_id"])
-    if row.get("production_line"):
-        result["productionLine"] = str(row["production_line"])
-    if row.get("actual_start"):
-        result["actualStart"] = _format_datetime(row["actual_start"])
-    if row.get("actual_finish"):
-        result["actualFinish"] = _format_datetime(row["actual_finish"])
+    if row.get("inspection_lot_id"):
+        result["inspectionLotId"] = str(row["inspection_lot_id"])
 
     return result
-
-
-def _map_order_type(raw: object) -> str:
-    if not raw:
-        return "process-order"
-    return _ORDER_TYPE_MAP.get(str(raw).upper(), "process-order")
 
 
 def _map_order_status(raw: object) -> str:
@@ -199,27 +184,30 @@ def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:
     Contract: ProcessOrderOperationSchema[] (packages/data-contracts)
     Cache: PER_USER_60S — operation confirmations post during the shift.
 
+    Column names confirmed from live DDL (2026-05-17, connected_plant_uat):
+      PROCESS_ORDER_PHASE_ID, PROCESS_ORDER_ID, PHASE_ID, PHASE_DESCRIPTION,
+      PHASE_TEXT, START_USER, END_USER, OPERATION_QUANTITY, OPERATION_QUANTITY_UOM,
+      SORT_NUMBER
+    Note: no start/finish date columns in this view. Dates not available until a
+    richer operations view is confirmed.
+
     Raises DatabricksConfigError if POH_CATALOG is not set.
     """
     ops_view = resolve_domain_object("poh", "vw_gold_process_order_phase")
 
     sql = f"""
     SELECT
-        vornr          AS operation_number,          -- TODO: verify (SAP op sequence, AFVO.VORNR)
-        ltxa1          AS operation_text,            -- TODO: verify (short op description, AFVO.LTXA1)
-        arbpl          AS work_centre,               -- TODO: verify (work centre ID, AFVO.ARBPL)
-        arbpl          AS resource,                  -- TODO: verify resource separately; may require join to CRHD
-        fsavd          AS planned_start,             -- TODO: verify (forecast start date, AFVO.FSAVD)
-        fsaed          AS planned_finish,            -- TODO: verify (forecast end date, AFVO.FSAED)
-        isdd           AS actual_start,              -- TODO: verify (actual start date, AFVO.ISDD)
-        iedd           AS actual_finish,             -- TODO: verify (actual end date, AFVO.IEDD)
-        stat           AS status_raw,                -- TODO: verify; map to V2 enum (pending/in-progress/confirmed/skipped)
-        dauno          AS planned_duration_minutes,  -- TODO: verify units (AFVO.DAUNO may be in hours or minutes)
-        iauno          AS actual_duration_minutes,   -- TODO: verify units (AFVO.IAUNO)
-        rueck          AS has_confirmation           -- TODO: verify (AFVO.RUECK confirmation counter; > 0 means confirmed)
+        PHASE_ID                AS operation_number,
+        PHASE_DESCRIPTION       AS operation_text,
+        PHASE_TEXT              AS operation_detail,
+        OPERATION_QUANTITY      AS planned_quantity,
+        OPERATION_QUANTITY_UOM  AS uom,
+        SORT_NUMBER             AS sort_number,
+        START_USER              AS start_user,
+        END_USER                AS end_user
     FROM {ops_view}
-    WHERE aufnr = :process_order_id
-    ORDER BY vornr
+    WHERE PROCESS_ORDER_ID = :process_order_id
+    ORDER BY SORT_NUMBER
     LIMIT :max_rows
     """
 

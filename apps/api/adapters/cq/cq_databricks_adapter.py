@@ -14,8 +14,9 @@ Route wiring deferred: the existing proxy route GET /api/cq/lab/plants in
 apps/api/routes/connected_quality_lab.py forwards to V1. Databricks route wiring
 requires column names verified against live gold_plant table in connected_plant_uat.
 
-Column name alignment: PLANT_ID / PLANT_NAME confirmed from V1 source
-(apps/connectedquality/backend/connectedquality_backend/dal/lab.py — fetch_lab_plants).
+Column name alignment: PLANT_ID / PLANT_NAME confirmed from BOTH:
+  - V1 source (apps/connectedquality/backend/.../dal/lab.py — fetch_lab_plants)
+  - Live DDL: connected_plant_uat.gold.gold_plant (verified 2026-05-17)
 Table qualification uses CQ_CATALOG + gold schema (V1 behaviour: gold.gold_plant).
 """
 from __future__ import annotations

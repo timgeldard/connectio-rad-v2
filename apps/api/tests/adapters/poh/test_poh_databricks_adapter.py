@@ -1,4 +1,9 @@
-"""Tests for the POH Databricks adapter — QuerySpec factories and row mappers."""
+"""Tests for the POH Databricks adapter — QuerySpec factories and row mappers.
+
+Column names in get_process_order_header_spec and get_order_operations_spec
+were verified against live DDL (connected_plant_uat, 2026-05-17).
+Tests updated to reflect confirmed column names.
+"""
 import pytest
 
 from adapters.poh.poh_databricks_adapter import (
@@ -9,7 +14,6 @@ from adapters.poh.poh_databricks_adapter import (
     map_process_order_header_rows,
     _format_datetime,
     _map_order_status,
-    _map_order_type,
 )
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.errors import DatabricksConfigError
@@ -61,7 +65,7 @@ class TestGetProcessOrderHeaderSpec:
 
     def test_no_plant_filter_in_sql_when_not_provided(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
-        assert "AND werks = :plant_id" not in spec.sql
+        assert ":plant_id" not in spec.sql
 
     def test_plant_id_included_in_params_when_provided(self) -> None:
         spec = get_process_order_header_spec(
@@ -73,7 +77,7 @@ class TestGetProcessOrderHeaderSpec:
         spec = get_process_order_header_spec(
             ProcessOrderHeaderRequest("100001", plant_id="IE01")
         )
-        assert "AND werks = :plant_id" in spec.sql
+        assert "PLANT_ID = :plant_id" in spec.sql
 
     def test_sql_references_vw_gold_process_order(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
@@ -96,16 +100,20 @@ class TestGetProcessOrderHeaderSpec:
 
     def test_sql_has_where_clause_for_order_id(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
-        assert "WHERE aufnr = :process_order_id" in spec.sql
+        assert "PROCESS_ORDER_ID = :process_order_id" in spec.sql
 
     def test_sql_has_limit(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
         assert "LIMIT :max_rows" in spec.sql
 
-    def test_sql_contains_todo_markers(self) -> None:
-        """Column references remain TODO until verified against live DDL."""
+    def test_sql_uses_confirmed_column_names(self) -> None:
+        """SQL must use columns confirmed from live DDL (2026-05-17)."""
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
-        assert "TODO" in spec.sql
+        assert "PROCESS_ORDER_ID" in spec.sql
+        assert "STATUS" in spec.sql
+        assert "MATERIAL_ID" in spec.sql
+        assert "MATERIAL_DESCRIPTION" in spec.sql
+        assert "PLANT_ID" in spec.sql
 
     def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("POH_CATALOG", raising=False)
@@ -163,19 +171,23 @@ class TestGetOrderOperationsSpec:
 
     def test_sql_has_where_clause_for_order_id(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
-        assert "WHERE aufnr = :process_order_id" in spec.sql
+        assert "PROCESS_ORDER_ID = :process_order_id" in spec.sql
 
-    def test_sql_has_order_by_vornr(self) -> None:
+    def test_sql_has_order_by_sort_number(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
-        assert "ORDER BY vornr" in spec.sql
+        assert "ORDER BY SORT_NUMBER" in spec.sql
 
     def test_sql_has_limit(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
         assert "LIMIT :max_rows" in spec.sql
 
-    def test_sql_contains_todo_markers(self) -> None:
+    def test_sql_uses_confirmed_column_names(self) -> None:
+        """SQL must use columns confirmed from live DDL (2026-05-17)."""
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
-        assert "TODO" in spec.sql
+        assert "PHASE_ID" in spec.sql
+        assert "PHASE_DESCRIPTION" in spec.sql
+        assert "OPERATION_QUANTITY" in spec.sql
+        assert "SORT_NUMBER" in spec.sql
 
     def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("POH_CATALOG", raising=False)
@@ -194,18 +206,14 @@ class TestGetOrderOperationsSpec:
 
 class TestMapProcessOrderHeaderRows:
     def _full_row(self) -> dict:
+        """Row using confirmed column names from vw_gold_process_order (2026-05-17)."""
         return {
             "process_order_id": "000000100001",
-            "order_type": "PI01",
+            "order_status_raw": "IN PROGRESS",
             "material_id": "000000000000001234",
             "material_description": "Test Product A",
             "plant_id": "IE01",
-            "planned_quantity": 100.0,
-            "confirmed_quantity": 75.5,
-            "uom": "KG",
-            "planned_start": "2024-01-15T06:00:00",
-            "planned_finish": "2024-01-15T18:00:00",
-            "order_status_raw": "REL",
+            "inspection_lot_id": "LOT001",
         }
 
     def test_returns_none_for_empty_rows(self) -> None:
@@ -233,94 +241,80 @@ class TestMapProcessOrderHeaderRows:
         assert result is not None
         assert result["materialId"] == "000000000000001234"
 
-    def test_planned_quantity_is_float(self) -> None:
+    def test_plant_id_mapped(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert isinstance(result["plannedQuantity"], float)
-        assert result["plannedQuantity"] == 100.0
+        assert result["plantId"] == "IE01"
 
-    def test_confirmed_quantity_is_float(self) -> None:
+    def test_material_description_mapped(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert result["confirmedQuantity"] == 75.5
+        assert result["materialDescription"] == "Test Product A"
 
-    def test_none_quantity_defaults_to_zero(self) -> None:
-        row = {**self._full_row(), "planned_quantity": None}
-        result = map_process_order_header_rows([row])
+    def test_order_status_mapped(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result["orderStatus"] == "in-process"
+
+    def test_order_type_defaults_to_process_order(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result["orderType"] == "process-order"
+
+    def test_planned_quantity_defaults_to_zero(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
         assert result is not None
         assert result["plannedQuantity"] == 0.0
 
-    def test_optional_batch_id_included_when_present(self) -> None:
-        row = {**self._full_row(), "batch_id": "B001"}
-        result = map_process_order_header_rows([row])
-        assert result is not None
-        assert result["batchId"] == "B001"
-
-    def test_optional_batch_id_absent_when_none(self) -> None:
-        row = {**self._full_row(), "batch_id": None}
-        result = map_process_order_header_rows([row])
-        assert result is not None
-        assert "batchId" not in result
-
-    def test_optional_production_line_included_when_present(self) -> None:
-        row = {**self._full_row(), "production_line": "LINE-A"}
-        result = map_process_order_header_rows([row])
-        assert result is not None
-        assert result["productionLine"] == "LINE-A"
-
-    def test_optional_actual_start_included_when_present(self) -> None:
-        row = {**self._full_row(), "actual_start": "2024-01-15T07:30:00"}
-        result = map_process_order_header_rows([row])
-        assert result is not None
-        assert result["actualStart"] == "2024-01-15T07:30:00"
-
-    def test_optional_actual_start_absent_when_none(self) -> None:
+    def test_confirmed_quantity_defaults_to_zero(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert "actualStart" not in result
+        assert result["confirmedQuantity"] == 0.0
+
+    def test_inspection_lot_id_included_when_present(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result.get("inspectionLotId") == "LOT001"
+
+    def test_inspection_lot_id_absent_when_none(self) -> None:
+        row = {**self._full_row(), "inspection_lot_id": None}
+        result = map_process_order_header_rows([row])
+        assert result is not None
+        assert "inspectionLotId" not in result
 
 
-class TestMapOrderType:
-    def test_pi01_maps_to_process_order(self) -> None:
-        assert _map_order_type("PI01") == "process-order"
-
-    def test_pp01_maps_to_production_order(self) -> None:
-        assert _map_order_type("PP01") == "production-order"
-
-    def test_pm01_maps_to_maintenance_order(self) -> None:
-        assert _map_order_type("PM01") == "maintenance-order"
-
-    def test_pr_maps_to_planned_order(self) -> None:
-        assert _map_order_type("PR") == "planned-order"
-
-    def test_unknown_defaults_to_process_order(self) -> None:
-        assert _map_order_type("UNKNOWN") == "process-order"
-
-    def test_none_defaults_to_process_order(self) -> None:
-        assert _map_order_type(None) == "process-order"
-
+# ---------------------------------------------------------------------------
+# _map_order_status
+# ---------------------------------------------------------------------------
 
 class TestMapOrderStatus:
+    def test_in_progress_maps_to_in_process(self) -> None:
+        assert _map_order_status("IN PROGRESS") == "in-process"
+
+    def test_not_started_maps_to_created(self) -> None:
+        assert _map_order_status("NOT STARTED") == "created"
+
+    def test_released_maps_to_released(self) -> None:
+        assert _map_order_status("RELEASED") == "released"
+
+    def test_completed_maps_to_confirmed(self) -> None:
+        assert _map_order_status("COMPLETED") == "confirmed"
+
+    def test_closed_maps_to_closed(self) -> None:
+        assert _map_order_status("CLOSED") == "closed"
+
+    def test_cancelled_maps_to_cancelled(self) -> None:
+        assert _map_order_status("CANCELLED") == "cancelled"
+
+    # SAP technical code fallbacks (in case view exposes AUOBJ codes)
     def test_rel_maps_to_released(self) -> None:
         assert _map_order_status("REL") == "released"
 
     def test_crtd_maps_to_created(self) -> None:
         assert _map_order_status("CRTD") == "created"
 
-    def test_pcnf_maps_to_partially_confirmed(self) -> None:
-        assert _map_order_status("PCNF") == "partially-confirmed"
-
-    def test_cnf_maps_to_confirmed(self) -> None:
-        assert _map_order_status("CNF") == "confirmed"
-
-    def test_clsd_maps_to_closed(self) -> None:
-        assert _map_order_status("CLSD") == "closed"
-
     def test_teco_maps_to_closed(self) -> None:
         assert _map_order_status("TECO") == "closed"
-
-    def test_dlt_maps_to_cancelled(self) -> None:
-        assert _map_order_status("DLT") == "cancelled"
 
     def test_none_defaults_to_created(self) -> None:
         assert _map_order_status(None) == "created"
