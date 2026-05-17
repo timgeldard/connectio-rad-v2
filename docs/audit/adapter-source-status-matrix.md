@@ -1,8 +1,8 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — getOrderConfirmations + getOrderGoodsMovements implemented (DDL confirmed); browser verification pending deployment  
-**Scope:** All domain-integration adapter methods across Trace2, SPC, Warehouse360, POH (Process Order Review), and Quality/Lab  
+**Last updated:** 2026-05-17 — g.txt audit: added EnvMon (9), Maintenance (7), Production Staging (9), Quality Batch Release (7); total updated to 82 methods  
+**Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
 ---
@@ -164,6 +164,90 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 
 ---
 
+## Environmental Monitoring (EnvMon)
+
+Adapter class: `domain-integrations/envmon/src/adapters/envmon-adapter.ts`  
+ADR-024 migration priority: **Not assigned** — no gold views confirmed  
+Gold views: None identified
+
+| Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
+|--------|------|-----------|-----------------|----------------|-------------|-------------|
+| `getEnvMonContext` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonSiteSummary` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonZones` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonAlerts` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonSwabResults` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonTrends` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonHeatmap` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Identify source view |
+| `getEnvMonSwabVectors` | ✓ | — | — | — | none | Identify source view |
+
+**Summary:** 9 methods — all mock only. No legacy-api adapter. No Databricks adapter. No source views confirmed. Domain owner must identify Databricks data source before any migration work.
+
+---
+
+## Maintenance and Reliability
+
+Adapter class: `domain-integrations/maintenance/src/adapters/maintenance-reliability-adapter.ts`  
+ADR-024 migration priority: **Not assigned** — no gold views confirmed  
+Gold views: None identified
+
+| Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
+|--------|------|-----------|-----------------|----------------|-------------|-------------|
+| `getMaintenanceReliabilityContext` | ✓ | — | — | — | none | Identify EAM source view |
+| `getMaintenanceKpiSummary` | ✓ | — | — | — | none | Identify EAM source view |
+| `getWorkOrders` | ✓ | — | — | — | none | Identify EAM source view |
+| `getPreventiveMaintenanceTasks` | ✓ | — | — | — | none | Identify EAM source view |
+| `getEquipmentAvailability` | ✓ | — | — | — | none | Identify EAM source view |
+| `getReliabilityMetrics` | ✓ | — | — | — | none | Identify EAM source view |
+| `getMaintenanceBacklog` | ✓ | — | — | — | none | Identify EAM source view |
+
+**Summary:** 7 methods — all mock only. No legacy-api adapter. No Databricks adapter. No source views confirmed. Requires EAM/maintenance gold views.
+
+---
+
+## Production Staging
+
+Adapter class: `domain-integrations/warehouse/src/adapters/production-staging-adapter.ts`  
+ADR-024 migration priority: **Not assigned** — no gold views confirmed  
+Gold views: None identified
+
+| Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
+|--------|------|-----------|-----------------|----------------|-------------|-------------|
+| `getProductionStagingContext` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingReadinessSummary` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingOrderSummaries` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingPickTasks` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingZoneCapacity` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingShortfalls` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingMoveRequests` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingPickingWaves` | ✓ | — | — | — | none | Identify WMS source views |
+| `getStagingAlerts` | ✓ | — | — | — | none | Identify WMS source views |
+
+**Summary:** 9 methods — all mock only. No legacy-api adapter. No Databricks adapter. No WMS gold views confirmed.
+
+---
+
+## Quality Batch Release
+
+Adapter class: `domain-integrations/quality/src/adapters/quality-release-adapter.ts`  
+ADR-024 migration priority: **Not assigned** — no gold views confirmed; business rules undefined  
+Gold views: None identified
+
+| Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
+|--------|------|-----------|-----------------|----------------|-------------|-------------|
+| `getReleaseContext` | ✓ | — | — | — | none | Identify release management source |
+| `getReleaseQueue` | ✓ | — | — | — | none | Identify release management source |
+| `getReleaseSummary` | ✓ | — | — | — | none | Identify release management source |
+| `getQualityResults` | ✓ | — | — | — | none | Identify quality results source |
+| `getCoAReadiness` | ✓ | — | — | — | none | Identify CoA source |
+| `getDeviations` | ✓ | — | — | — | none | Identify deviation management source |
+| `getDecisionHistory` | ✓ | — | — | — | none | Identify release audit source |
+
+**Summary:** 7 methods — all mock only. No legacy-api adapter. No Databricks adapter. Business rules (release criteria, severity thresholds) are undefined. Domain owner must engage before any migration planning.
+
+---
+
 ## Cross-Domain Totals
 
 | Domain | Total methods | Browser-verified (databricks-api) | Executable (not verified) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
@@ -174,7 +258,13 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
-| **Total** | **50** | **3** | **2** | **2** | **42** | **5** (3 BV + 2 E) |
+| EnvMon | 9 | 0 | 0 | 0 | 9 | 0 |
+| Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
+| Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
+| Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
+| **Total** | **82** | **3** | **2** | **2** | **74** | **5** (3 BV + 2 E) |
+
+> Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
 ---
 
