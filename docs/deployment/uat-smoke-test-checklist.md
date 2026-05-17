@@ -135,15 +135,15 @@ POST /api/por/order-header
 - [x] Response header `X-Query-Name: poh.get_process_order_header` present
 - [x] Fields not in the view (`plannedQuantity`, `confirmedQuantity`, `uom`, dates) return zero/empty defaults — expected, by design
 
-### C5 — Auth failure cases
+### C5 — Auth failure cases ✓ PASSED 2026-05-17
 
-- [ ] Without auth (no cookie / expired session): returns HTTP 401 — not a silent fallback to mock
-- [ ] Confirm no 200 with mock data when token is absent
+- [x] Without auth (no cookie / expired session): returns HTTP 401 — Databricks Apps gateway rejects before reaching FastAPI
+- [x] Confirmed no 200 with mock data when token is absent
 
-### C6 — No SPN/PAT fallback
+### C6 — No SPN/PAT fallback ✓ PASSED 2026-05-17
 
-- [ ] Check `databricks apps logs connectio-v2` — no log entries containing `service_principal`, `client_secret`, or `DATABRICKS_TOKEN`
-- [ ] Confirm `X-Data-Source` header is `databricks-api`, not `mock` or `legacy-api`
+- [x] `databricks apps logs connectio-v2` — zero entries containing `service_principal`, `client_secret`, or `DATABRICKS_TOKEN`
+- [x] `X-Data-Source` header confirmed `databricks-api` on C3 and C4
 
 ---
 
