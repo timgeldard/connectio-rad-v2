@@ -121,19 +121,19 @@ GET /api/cq/lab/plants
 - [x] Response header `X-Adapter-Mode: databricks-api` present
 - [x] No SPN/PAT token used — query executes as the end user's identity
 
-### C4 — POH order header (native Databricks)
+### C4 — POH order header (native Databricks) ✓ PASSED 2026-05-17
 
-From a browser session with a known process order ID:
+Tested with process order `7006965038` (plant C113, MIXED BERRY FLV LQD 70373871, status: closed).
 
 ```
-POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-header
-{"process_order_id": "<known-id>"}
+POST /api/por/order-header
+{"process_order_id": "7006965038"}
 ```
 
-- [ ] Returns HTTP 200 with order data
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: poh.get_process_order_header` present
-- [ ] Fields not yet in the view (`plannedQuantity`, `confirmedQuantity`, dates) return zero/empty defaults — expected until a richer view is available
+- [x] Returns HTTP 200 with order data
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Query-Name: poh.get_process_order_header` present
+- [x] Fields not in the view (`plannedQuantity`, `confirmedQuantity`, `uom`, dates) return zero/empty defaults — expected, by design
 
 ### C5 — Auth failure cases
 
