@@ -1,7 +1,7 @@
 # POH Native Slices — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Status:** Not yet verified — complete each item below in the UAT environment before marking done  
+**Status:** C7 (order-operations) PASSED 2026-05-17; C8 (confirmations) and C9 (goods-movements) IMPLEMENTED — executable, awaiting browser verification  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:** `docs/audit/adapter-source-status-matrix.md`
 
@@ -17,7 +17,7 @@ Before running any check:
 
 ---
 
-## 1. `GET /api/por/order-operations` — NOT YET VERIFIED
+## 1. `GET /api/por/order-operations` — PASSED 2026-05-17
 
 **UI route:** Navigate to a process order in Process Order Review, then to the Operations/Phases tab.
 
@@ -75,6 +75,141 @@ X-Query-Name: poh.get_order_operations
 | [ ] failed 502 | | |
 | [ ] failed 503 | | |
 | [ ] failed 504 | | |
+
+---
+
+---
+
+## 2. `GET /api/por/order-confirmations` — IMPLEMENTED, NOT BROWSER-VERIFIED
+
+**Status: IMPLEMENTED** — route exists; DDL confirmed 2026-05-17. Awaiting browser verification in UAT.
+
+**UI navigation path:** Would appear in the Execution Timeline view → Confirmations panel (`OrderConfirmationsPanel`).
+
+**Direct API call:**
+```
+GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-confirmations?process_order_id=7006965038
+```
+
+**Expected response headers:**
+```
+X-Data-Source: databricks-api
+X-Adapter-Mode: databricks-api
+X-Query-Name: poh.get_order_confirmations
+```
+
+**Expected response body shape:**
+```json
+[
+  {
+    "confirmationId": "<string — from CONFIRMATION_ID>",
+    "operationId": "<string — from PROCESS_ORDER_PHASE_ID>",
+    "confirmedYield": "<number — from CONFIRMED_QUANTITY>",
+    "uom": "<string — from CONFIRMED_QUANTITY_UOM>",
+    "confirmedAt": "<ISO datetime — from COALESCE(END_TIMESTAMP, START_TIMESTAMP, __CREATED_ON)>",
+    "setupDurationMinutes": "<number — SET_UP_DURATION_S ÷ 60, if not null>",
+    "machineDurationMinutes": "<number — MACHINE_DURATION_S ÷ 60, if not null>",
+    "cleaningDurationMinutes": "<number — CLEANING_DURATION_S ÷ 60, if not null>"
+  }
+]
+```
+
+**Known acceptable gaps (not errors):**
+- `operationText` — absent from `vw_gold_confirmation`; field omitted from response; schema relaxed to optional
+- `isFinalConfirmation` — absent from `vw_gold_confirmation`; field omitted from response; schema relaxed to optional
+- `scrapQuantity`, `reworkQuantity`, `confirmedBy`, `variancePercent` — absent from view; optional fields omitted
+
+**Pass criteria:**
+- [ ] HTTP 200
+- [ ] `X-Data-Source: databricks-api` header present
+- [ ] `X-Query-Name: poh.get_order_confirmations` header present
+- [ ] Response is a JSON array (may be empty)
+- [ ] If non-empty: `confirmationId`, `operationId`, `confirmedYield`, `uom`, `confirmedAt` are present
+- [ ] No 401/403/502/503
+
+**Troubleshooting:**
+
+| Status | Likely cause | Fix |
+|--------|-------------|-----|
+| 401 | OAuth token missing or `sql` scope not in user token | Re-deploy bundle |
+| 403 | User lacks SELECT on `vw_gold_confirmation` | `GRANT SELECT ON VIEW connected_plant_uat.csm_process_order_history.vw_gold_confirmation TO <user>` |
+| 503 | `BACKEND_ADAPTER_MODE` not `databricks-api` | Check `app.yaml` |
+| 502 | Databricks query error | Check `databricks apps logs connectio-v2` |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|--------|------|-------|
+| [ ] not yet tested | — | Awaiting UAT deployment |
+
+---
+
+## 3. `GET /api/por/order-goods-movements` — IMPLEMENTED, NOT BROWSER-VERIFIED
+
+**Status: IMPLEMENTED** — route exists; DDL confirmed 2026-05-17; Tulip movement types confirmed. Awaiting browser verification in UAT.
+
+**UI navigation path:** Would appear in the Execution Timeline view → Goods Movements panel (`ProcessOrderGoodsMovementsPanel`).
+
+**Direct API call:**
+```
+GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-goods-movements?process_order_id=7006965038
+```
+
+**Expected response headers:**
+```
+X-Data-Source: databricks-api
+X-Adapter-Mode: databricks-api
+X-Query-Name: poh.get_order_goods_movements
+```
+
+**Expected response body shape:**
+```json
+[
+  {
+    "movementId": "<string — from ID>",
+    "movementType": "<string — Tulip code e.g. '101', '261', '531'>",
+    "direction": "input" | "output",
+    "materialId": "<string — from MATERIAL_ID; leading zeros preserved>",
+    "quantity": "<number — from QUANTITY>",
+    "uom": "<string — from UOM>",
+    "postedAt": "<ISO datetime — from DATE_TIME_OF_ENTRY>",
+    "batchId": "<string — if present>",
+    "postedBy": "<string — if present>",
+    "referenceDocument": "<string — if present>",
+    "storageLocation": "<string — if present>"
+  }
+]
+```
+
+**Known acceptable gaps (not errors):**
+- `materialDescription` — absent from `vw_gold_adp_movement` (no material master join); field omitted from response; schema relaxed to optional
+- Rows with MOVEMENT_TYPE 711, 712, 999, or null are excluded from the response (direction unknown; filtered by frontend adapter)
+- An empty array is valid if PO 7006965038 has only unmapped movement types
+
+**Pass criteria:**
+- [ ] HTTP 200
+- [ ] `X-Data-Source: databricks-api` header present
+- [ ] `X-Query-Name: poh.get_order_goods_movements` header present
+- [ ] Response is a JSON array (may be empty)
+- [ ] If non-empty: `movementId`, `movementType`, `direction`, `materialId`, `quantity`, `uom`, `postedAt` are present
+- [ ] `direction` is `"input"` or `"output"` for all items
+- [ ] No 401/403/502/503
+
+**Troubleshooting:**
+
+| Status | Likely cause | Fix |
+|--------|-------------|-----|
+| 401 | OAuth token missing or `sql` scope not in user token | Re-deploy bundle |
+| 403 | User lacks SELECT on `vw_gold_adp_movement` | `GRANT SELECT ON VIEW connected_plant_uat.csm_process_order_history.vw_gold_adp_movement TO <user>` |
+| 503 | `BACKEND_ADAPTER_MODE` not `databricks-api` | Check `app.yaml` |
+| 502 | Databricks query error | Check `databricks apps logs connectio-v2` |
+| Empty array | All movements for PO 7006965038 have unmapped MOVEMENT_TYPE (711/712/999/null) | Run `SELECT DISTINCT MOVEMENT_TYPE FROM ... WHERE PROCESS_ORDER_ID = '7006965038'` to verify |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|--------|------|-------|
+| [ ] not yet tested | — | Awaiting UAT deployment |
 
 ---
 

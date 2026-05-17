@@ -1,7 +1,7 @@
 # Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17 (updated — POH operations DDL confirmed, confirmations/movements blocked)
-**Status:** POH header + operations columns confirmed-ddl; CQ lab plants confirmed-v1; confirmations + movements blocked (no DDL)
+**Date:** 2026-05-17 (updated — confirmations + movements DDL confirmed; all four POH slices implemented)
+**Status:** POH header + operations + confirmations + goods movements columns confirmed-ddl; CQ lab plants confirmed-v1
 **Reference:** ADR-025, `apps/api/adapters/poh/poh_databricks_adapter.py`, `apps/api/adapters/cq/cq_databricks_adapter.py`
 
 **Legend:**
@@ -74,51 +74,83 @@ SELECT * FROM connected_plant_uat.vw_gold_process_order LIMIT 1;
 
 **Status inference logic:** `END_USER` populated → `confirmed` / `final-confirmed`; `START_USER` only → `in-progress` / `partially-confirmed`; neither → `pending` / `unconfirmed`. This is a conservative inference, not a direct SAP status field.
 
-**Browser verification:** Not yet done. Required before claiming route is production-ready. Use process order 7006965038.
+**Browser verification:** PASSED 2026-05-17 — 11 operations returned for PO 7006965038; `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_operations` confirmed in response headers.
 
 ---
 
-## POH — `getOrderConfirmations` — BLOCKED
+## POH — `getOrderConfirmations`
 
-**Candidate view:** `vw_gold_confirmation`
-**FastAPI route:** Not implemented
-**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_confirmation` in connected_plant_uat. Cannot confirm column names.
+**QuerySpec:** `poh.get_order_confirmations` in `apps/api/adapters/poh/poh_databricks_adapter.py`
+**Source view:** `connected_plant_uat.csm_process_order_history.vw_gold_confirmation`
+**FastAPI route:** `GET /api/por/order-confirmations?process_order_id=...`
+**Implementation status:** Implemented 2026-05-17 — executable, **not yet browser-verified**
 
-| Required contract field | Assumed source column | Status |
-|------------------------|----------------------|--------|
-| `confirmationId` | unknown | **blocked** |
-| `operationId` | unknown | **blocked** |
-| `operationNumber` | unknown | **blocked** |
-| `confirmedYield` | unknown | **blocked** |
-| `scrapQuantity` | unknown | **blocked** |
-| `confirmationDateTime` | unknown | **blocked** |
-| `postedBy` | unknown | **blocked** |
-| `finalConfirmationFlag` | unknown | **blocked** |
+**DDL evidence:** `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` run 2026-05-17. View has 16 columns.
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
+| Contract field | SQL alias | Source column | Status | Notes |
+|---------------|-----------|--------------|--------|-------|
+| `confirmationId` | `confirmation_id` | `CONFIRMATION_ID` | **confirmed-ddl** | 2026-05-17 |
+| `operationId` | `operation_id` | `PROCESS_ORDER_PHASE_ID` | **confirmed-ddl** | 2026-05-17 — matches `getOrderOperations` operationId key |
+| `operationText` | — | not in view | **missing — schema relaxed to optional** | No description column; re-require when view exposes PHASE_DESCRIPTION join |
+| `confirmedYield` | `confirmed_yield` | `CONFIRMED_QUANTITY` | **confirmed-ddl** | 2026-05-17 — decimal(13,3) cast to float |
+| `uom` | `uom` | `CONFIRMED_QUANTITY_UOM` | **confirmed-ddl** | 2026-05-17 |
+| `confirmedAt` | `confirmed_at` | `COALESCE(END_TIMESTAMP, START_TIMESTAMP, __CREATED_ON)` | **confirmed-ddl** | 2026-05-17 — coalesce guards against null END_TIMESTAMP on in-progress confirmations |
+| `isFinalConfirmation` | — | not in view | **missing — schema relaxed to optional** | No final-confirmation flag; re-require when view exposes it |
+| `scrapQuantity` | — | not in view | optional — missing | |
+| `reworkQuantity` | — | not in view | optional — missing | |
+| `confirmedBy` | — | not in view | optional — missing | |
+| `setupDurationMinutes` | `setup_duration_s` ÷ 60 | `SET_UP_DURATION_S` | **confirmed-ddl** | 2026-05-17 — int seconds converted to float minutes |
+| `machineDurationMinutes` | `machine_duration_s` ÷ 60 | `MACHINE_DURATION_S` | **confirmed-ddl** | 2026-05-17 |
+| `cleaningDurationMinutes` | `cleaning_duration_s` ÷ 60 | `CLEANING_DURATION_S` | **confirmed-ddl** | 2026-05-17 |
+| `variancePercent` | — | not in view | optional — missing | |
+
+**Additional confirmed columns (not in contract, not selected):** `PHASE_ID`, `PLANT_ID`, `GROSS_DURATION_S`, `__BATCH_ID`, `__CREATED_ON`, `__UPDATED_ON`
+
+**Schema relaxations (2026-05-17):** `operationText` and `isFinalConfirmation` changed from `z.string()` / `z.boolean()` to `.optional()` in `ProcessOrderConfirmationSchema`. Re-require once the upstream view exposes these fields.
 
 ---
 
-## POH — `getOrderGoodsMovements` — BLOCKED
+## POH — `getOrderGoodsMovements`
 
-**Candidate view:** `vw_gold_adp_movement`
-**FastAPI route:** Not implemented
-**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_adp_movement` in connected_plant_uat. Cannot confirm column names.
+**QuerySpec:** `poh.get_order_goods_movements` in `apps/api/adapters/poh/poh_databricks_adapter.py`
+**Source view:** `connected_plant_uat.csm_process_order_history.vw_gold_adp_movement`
+**FastAPI route:** `GET /api/por/order-goods-movements?process_order_id=...`
+**Implementation status:** Implemented 2026-05-17 — executable, **not yet browser-verified**
 
-| Required contract field | Assumed source column | Status |
-|------------------------|----------------------|--------|
-| `movementType` | unknown | **blocked** |
-| `materialId` | unknown | **blocked** |
-| `materialDescription` | unknown | **blocked** |
-| `batchId` | unknown | **blocked** |
-| `quantity` | unknown | **blocked** |
-| `unit` | unknown | **blocked** |
-| `postingDate` | unknown | **blocked** |
-| `processOrderId` | unknown | **blocked** |
-| `storageLocation` | unknown | **blocked** |
-| `movementCategory` | unknown | **blocked** |
+**DDL evidence:** `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` run 2026-05-17. View has 39 columns (ADP / Tulip movements — not standard SAP MIGO).
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
+| Contract field | SQL alias | Source column | Status | Notes |
+|---------------|-----------|--------------|--------|-------|
+| `movementId` | `movement_id` | `ID` | **confirmed-ddl** | 2026-05-17 |
+| `movementType` | `movement_type` | `MOVEMENT_TYPE` | **confirmed-ddl** | 2026-05-17 — Tulip codes, not standard SAP BWART |
+| `direction` | derived | `MOVEMENT_TYPE` via map | **confirmed-ddl** | 2026-05-17 — mapped codes: 101→output, 261→input, 262→input, 531→output; 711/712/999/null → direction absent |
+| `materialId` | `material_id` | `MATERIAL_ID` | **confirmed-ddl** | 2026-05-17 — string; leading zeros preserved |
+| `materialDescription` | — | not in view | **missing — schema relaxed to optional** | No material master join in this view; re-require when available |
+| `quantity` | `quantity` | `QUANTITY` | **confirmed-ddl** | 2026-05-17 — decimal(18,6) cast to float |
+| `uom` | `uom` | `UOM` | **confirmed-ddl** | 2026-05-17 |
+| `postedAt` | `posted_at` | `DATE_TIME_OF_ENTRY` | **confirmed-ddl** | 2026-05-17 — timestamp |
+| `batchId` | `batch_id` | `BATCH_ID` | **confirmed-ddl** | 2026-05-17 — optional; omitted when null |
+| `postedBy` | `posted_by` | `USER` | **confirmed-ddl** | 2026-05-17 — optional; omitted when null |
+| `referenceDocument` | `reference_document` | `MATERIAL_DOCUMENT` | **confirmed-ddl** | 2026-05-17 — optional; omitted when null |
+| `storageLocation` | `storage_location` | `STORAGE_ID` | **confirmed-ddl** | 2026-05-17 — optional; omitted when null |
+
+**Confirmed MOVEMENT_TYPE values (from `SELECT DISTINCT MOVEMENT_TYPE, MOVEMENT, ITEM_TYPE`, 2026-05-17):**
+
+| MOVEMENT_TYPE | MOVEMENT | ITEM_TYPE | direction |
+|---|---|---|---|
+| 101 | Goods Receipts | — | `output` |
+| 261 | Goods Issues | — | `input` |
+| 261 | Unplanned Goods Issues | — | `input` |
+| 262 | Goods Issues | — | `input` |
+| 531 | Goods Receipts | B (by-product) | `output` |
+| 711 | Write-On/Off | — | unmapped — direction ambiguous |
+| 712 | Write-On/Off | — | unmapped — direction ambiguous |
+| 999 | — | Goods Movements | unmapped |
+| null | Productions / Write-On/Off / null | — | unmapped |
+
+Rows with unmapped MOVEMENT_TYPE are returned without a `direction` field; the frontend adapter filters them. These are Tulip ADP movements, not standard SAP MIGO.
+
+**Schema relaxation (2026-05-17):** `materialDescription` changed from `z.string()` to `.optional()` in `ProcessOrderGoodsMovementSchema`. Re-require once a material master join is available.
 
 ---
 

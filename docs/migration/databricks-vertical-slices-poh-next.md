@@ -55,63 +55,74 @@ Sample process order for testing: **7006965038**
 
 ---
 
-## 2. `getOrderConfirmations` — DEFERRED (BLOCKED)
+## 2. `getOrderConfirmations` — IMPLEMENTED
 
 | Field | Value |
 |---|---|
 | V2 panel | Process Order Review — Confirmations tab |
 | Mock method | `ProcessOrderReviewAdapter.getOrderConfirmations` |
 | Contract | `ProcessOrderConfirmation[]` |
-| Candidate view | `vw_gold_confirmation` |
-| FastAPI route | Not implemented |
+| Source view | `vw_gold_confirmation` |
+| QuerySpec | `poh.get_order_confirmations` |
+| FastAPI route | `GET /api/por/order-confirmations?process_order_id=...` |
+| Frontend wiring | `ProcessOrderReviewLegacyApiAdapter.getOrderConfirmations` |
 
-**Blocker:** No `DESCRIBE TABLE` output available for `vw_gold_confirmation`. Column names unknown. Without DDL confirmation, implementation risks silent data mapping errors.
+**Source columns confirmed from DDL (2026-05-17):**
 
-**Required fields to verify before implementing:**
-- `confirmationId` — source column unknown
-- `operationId` / `operationNumber` — likely FK to `vw_gold_process_order_phase`
-- `confirmedYield` — source column unknown
-- `scrapQuantity` — source column unknown
-- `reworkQuantity` — source column unknown
-- `confirmationDateTime` — source column unknown
-- `postedBy` — source column unknown
-- `finalConfirmationFlag` — source column unknown
-- `varianceVsPlan` — source column unknown
+| Column | Maps to | Status |
+|--------|---------|--------|
+| `CONFIRMATION_ID` | `confirmationId` | confirmed-ddl |
+| `PROCESS_ORDER_PHASE_ID` | `operationId` | confirmed-ddl — matches operations operationId |
+| `CONFIRMED_QUANTITY` | `confirmedYield` | confirmed-ddl |
+| `CONFIRMED_QUANTITY_UOM` | `uom` | confirmed-ddl |
+| `COALESCE(END_TIMESTAMP, START_TIMESTAMP, __CREATED_ON)` | `confirmedAt` | confirmed-ddl |
+| `SET_UP_DURATION_S` ÷ 60 | `setupDurationMinutes` | confirmed-ddl |
+| `MACHINE_DURATION_S` ÷ 60 | `machineDurationMinutes` | confirmed-ddl |
+| `CLEANING_DURATION_S` ÷ 60 | `cleaningDurationMinutes` | confirmed-ddl |
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` in the Databricks workspace. Update `docs/audit/native-databricks-column-verification-checklist.md` with confirmed column names, then implement.
+**Contract fields not in view (schema relaxed to optional):**
+- `operationText` → absent; `z.string()` → `.optional()` — re-require when view exposes phase description
+- `isFinalConfirmation` → absent; `z.boolean()` → `.optional()` — re-require when view exposes flag
+- `scrapQuantity`, `reworkQuantity`, `confirmedBy`, `variancePercent` → absent (already optional)
 
-**Decision: DEFERRED — blocked on DDL confirmation.**
+**Decision: IMPLEMENTED.** Browser verification required — see `docs/deployment/poh-native-slices-browser-verification.md`.
 
 ---
 
-## 3. `getOrderGoodsMovements` — DEFERRED (BLOCKED)
+## 3. `getOrderGoodsMovements` — IMPLEMENTED
 
 | Field | Value |
 |---|---|
 | V2 panel | Process Order Review — Goods Movements tab |
 | Mock method | `ProcessOrderReviewAdapter.getOrderGoodsMovements` |
 | Contract | `ProcessOrderGoodsMovement[]` |
-| Candidate view | `vw_gold_adp_movement` |
-| FastAPI route | Not implemented |
+| Source view | `vw_gold_adp_movement` |
+| QuerySpec | `poh.get_order_goods_movements` |
+| FastAPI route | `GET /api/por/order-goods-movements?process_order_id=...` |
+| Frontend wiring | `ProcessOrderReviewLegacyApiAdapter.getOrderGoodsMovements` |
 
-**Blocker:** No `DESCRIBE TABLE` output available for `vw_gold_adp_movement`. Column names unknown.
+**Source columns confirmed from DDL (2026-05-17):** 39 columns — ADP (Tulip) movements, not standard SAP MIGO.
 
-**Required fields to verify before implementing:**
-- `movementType` — SAP BWART code — source column unknown
-- `materialId` — source column unknown
-- `materialDescription` — source column unknown
-- `batchId` — source column unknown
-- `quantity` — source column unknown
-- `unit` — source column unknown
-- `postingDate` — source column unknown
-- `debitCreditIndicator` — source column unknown (optional)
-- `processOrderId` — FK to order — source column unknown
-- `storageLocation` — source column unknown (optional)
-- `movementCategory` — business logic (input/output/receipt/issue) — derivation unknown
+| Column | Maps to | Status |
+|--------|---------|--------|
+| `ID` | `movementId` | confirmed-ddl |
+| `MOVEMENT_TYPE` | `movementType` | confirmed-ddl — Tulip codes |
+| `MOVEMENT_TYPE` via map | `direction` | confirmed-ddl — 101/261/262/531 mapped; 711/712/999/null direction-unknown |
+| `MATERIAL_ID` | `materialId` | confirmed-ddl — string; leading zeros preserved |
+| `QUANTITY` | `quantity` | confirmed-ddl |
+| `UOM` | `uom` | confirmed-ddl |
+| `DATE_TIME_OF_ENTRY` | `postedAt` | confirmed-ddl |
+| `BATCH_ID` | `batchId` | confirmed-ddl — optional |
+| `USER` | `postedBy` | confirmed-ddl — optional |
+| `MATERIAL_DOCUMENT` | `referenceDocument` | confirmed-ddl — optional |
+| `STORAGE_ID` | `storageLocation` | confirmed-ddl — optional |
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` in the Databricks workspace. Note that `movementCategory` may require a mapping from BWART codes (261 = goods issue, 101 = goods receipt) — confirm the view's BWART values before implementing the category map.
+**Contract fields not in view (schema relaxed to optional):**
+- `materialDescription` → absent (no material master join); `z.string()` → `.optional()` — re-require when available
 
-**Decision: DEFERRED — blocked on DDL confirmation.**
+**Confirmed MOVEMENT_TYPE values (2026-05-17 live query):** 101 (Goods Receipts), 261 (Goods Issues + Unplanned), 262 (reversal), 531 (by-product, ITEM_TYPE=B), 711/712 (Write-On/Off — unmapped), 999 (unmapped), null (unmapped). Rows without a mapped direction are excluded by the frontend adapter filter.
+
+**Decision: IMPLEMENTED.** Browser verification required — see `docs/deployment/poh-native-slices-browser-verification.md`.
 
 ---
 
@@ -129,10 +140,10 @@ No date columns exist in `vw_gold_process_order_phase`. Without `plannedStart`/`
 
 ## Implementation Order
 
-1. ~~`getOrderOperations`~~ — **DONE** (2026-05-17)
-2. `getOrderConfirmations` — blocked; implement after DDL confirmed
-3. `getOrderGoodsMovements` — blocked; implement after DDL confirmed
-4. `getExecutionTimeline` — deferred; blocked on date columns
+1. ~~`getOrderOperations`~~ — **DONE** (2026-05-17) — browser-verified
+2. ~~`getOrderConfirmations`~~ — **DONE** (2026-05-17) — executable, awaiting browser verification
+3. ~~`getOrderGoodsMovements`~~ — **DONE** (2026-05-17) — executable, awaiting browser verification
+4. `getExecutionTimeline` — deferred; blocked on date columns in phase view
 
 ---
 

@@ -17,10 +17,16 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from adapters.poh.poh_databricks_adapter import (
+    OrderConfirmationsRequest,
+    OrderGoodsMovementsRequest,
     OrderOperationsRequest,
     ProcessOrderHeaderRequest,
+    get_order_confirmations_spec,
+    get_order_goods_movements_spec,
     get_order_operations_spec,
     get_process_order_header_spec,
+    map_order_confirmations_rows,
+    map_order_goods_movements_rows,
     map_order_operations_rows,
     map_process_order_header_rows,
 )
@@ -198,3 +204,117 @@ async def order_operations(
     operations = map_order_operations_rows(rows)
     set_databricks_response_headers(response, spec)
     return operations
+
+
+@router.get("/por/order-confirmations")
+async def order_confirmations(
+    process_order_id: str,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> list:
+    """Process order confirmations — databricks-api only.
+
+    No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
+    is not databricks-api. Missing OAuth → 401. Missing config → 503.
+
+    Source view: vw_gold_confirmation (connected_plant_uat.csm_process_order_history)
+    DDL confirmed 2026-05-17. operationText and isFinalConfirmation absent from view.
+    """
+    backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if backend_mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="Order confirmations require BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    databricks_host, warehouse_id = require_databricks_config()
+
+    identity = UserIdentity(
+        user_id=x_forwarded_user or "unknown",
+        email=x_forwarded_email,
+        raw_oauth_token=x_forwarded_access_token,
+    )
+
+    try:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest(process_order_id=process_order_id))
+        client = StatementApiDatabricksClient(host=databricks_host)
+        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
+        rows = await executor.execute(spec, identity)
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksAuthRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except DatabricksQueryTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except DatabricksQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    confirmations = map_order_confirmations_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return confirmations
+
+
+@router.get("/por/order-goods-movements")
+async def order_goods_movements(
+    process_order_id: str,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> list:
+    """Process order goods movements (ADP) — databricks-api only.
+
+    No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
+    is not databricks-api. Missing OAuth → 401. Missing config → 503.
+
+    Source view: vw_gold_adp_movement (connected_plant_uat.csm_process_order_history)
+    DDL confirmed 2026-05-17. materialDescription absent from view.
+    direction derived from MOVEMENT_TYPE — update _MOVEMENT_DIRECTION_MAP once
+    confirmed ADP movement type values are known.
+    """
+    backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if backend_mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="Order goods movements require BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    databricks_host, warehouse_id = require_databricks_config()
+
+    identity = UserIdentity(
+        user_id=x_forwarded_user or "unknown",
+        email=x_forwarded_email,
+        raw_oauth_token=x_forwarded_access_token,
+    )
+
+    try:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest(process_order_id=process_order_id))
+        client = StatementApiDatabricksClient(host=databricks_host)
+        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
+        rows = await executor.execute(spec, identity)
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksAuthRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except DatabricksQueryTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except DatabricksQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    movements = map_order_goods_movements_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return movements
