@@ -1,8 +1,8 @@
 # EnvMon Domain-Driven Design Model
 
-**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (n.txt — CAPA out-of-scope; o.txt — Estate Monitoring BC added, plant geolocation elevated)
-**Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (route wired, DDL confirmed, CAPA scoped out) → o.txt (4-BC structure, Estate Monitoring, plant geo)
-**Status:** Observations BC first slice COMPLETE — route wired, DDL confirmed, 99 tests; Spatial Configuration, Estate Monitoring, and Spatial Analysis deferred; CAPA/corrective actions out of scope for EnvMon V2 parity
+**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (p.txt — swab-results route wired, EnvMonSwabResults ✓ E)
+**Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (site-summary route wired) → o.txt (4-BC structure) → p.txt (swab-results route wired)
+**Status:** Observations BC — 2 routes wired (site-summary + swab-results), DDL confirmed, 608 tests; Spatial Configuration, Estate Monitoring, and Spatial Analysis deferred; CAPA/corrective actions out of scope for EnvMon V2 parity
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/audit/envmon-spatial-configuration-model.md`
@@ -88,7 +88,7 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 | Read model | Source query | Status |
 |---|---|---|
 | `EnvMonSiteSummary` | Aggregate KPI: total/fail/warn locations per plant per period | **✓ E** — route wired (`apps/api/routes/envmon.py`); DDL confirmed; 99 tests passing; BV pending |
-| `EnvMonSwabResults` | Detail list: per-location results with valuation | Deferred — after BV passes |
+| `EnvMonSwabResults` | Detail list: per-MIC result per sample point with valuation + derived status | **✓ E** — route wired (`apps/api/routes/envmon.py`, p.txt); DDL confirmed (same Group A views); 56 new tests; BV pending; frontend wiring deferred (zoneId unavailable) |
 | `EnvMonTrends` | Time-series: positive rate per period | Deferred — requires period-over-period query |
 | `EnvMonAlerts` | Derived: lots breaching thresholds | Deferred — alert rules undefined |
 
@@ -106,16 +106,19 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 - **Positive rate semantics:** location-level fraction (fraction of locations with ≥1 fail),
   not sample-level. Matches V1 KPI semantics.
 
-### What m.txt + n.txt implement
+### What m.txt + n.txt + p.txt implement
 
 - QuerySpec hardened for `getEnvMonSiteSummary` (LIMIT 1 fix) [m.txt]
 - DDL confirmed for all three Group A views (2026-05-17) [n.txt]
 - Route `GET /api/envmon/site-summary` **wired** in `apps/api/routes/envmon.py` [n.txt]
-- 99 tests passing (80 adapter + 19 route) [n.txt]
+- 99 tests passing for site-summary (80 adapter + 19 route) [n.txt]
+- Route `GET /api/envmon/swab-results` **wired** in `apps/api/routes/envmon.py` [p.txt]
+- 56 new tests for swab-results (adapter QuerySpec + mapper + route tests) [p.txt]
+- 608 total tests passing [p.txt]
 
 ### Deferred in Observations BC
 
-- `getEnvMonSwabResults` — Rank 2; after BV passes
+- `getEnvMonSwabResults` frontend wiring — deferred until BV passes AND zoneId/zoneName sourced
 - `getEnvMonTrends` — Rank 3
 - `getEnvMonAlerts` — Alert rules undefined
 
@@ -304,7 +307,7 @@ Only after:
 
 ---
 
-## What m.txt + n.txt + o.txt deliver
+## What m.txt + n.txt + o.txt + p.txt deliver
 
 | Deliverable | Status |
 |---|---|
@@ -314,16 +317,21 @@ Only after:
 | Route plan document | Created (m.txt) |
 | DDL confirmed for all three Group A views | Done (n.txt, 2026-05-17) |
 | Route `GET /api/envmon/site-summary` | **WIRED** — `apps/api/routes/envmon.py` (n.txt) |
-| Route tests (19 tests) | Added (n.txt) |
-| 99 tests total passing | Done (n.txt) |
+| Route tests for site-summary (19 tests) | Added (n.txt) |
+| 99 tests passing (site-summary) | Done (n.txt) |
 | CAPA scoped out explicitly | Done (n.txt) |
 | DDD model updated to 4-BC structure | Done (o.txt) |
 | Estate Monitoring BC (BC C) added | Done (o.txt) |
 | Plant geolocation elevated to BC B core | Done (o.txt) |
 | Two-scale spatial distinction documented | Done (o.txt) |
 | Drill-down chain documented | Done (o.txt) |
-| Browser verification checklist updated | Updated (n.txt) |
-| Frontend wiring | **NOT DONE** — deferred until BV passes |
+| Browser verification checklist updated | Updated (n.txt, p.txt) |
+| Route `GET /api/envmon/swab-results` | **WIRED** — `apps/api/routes/envmon.py` (p.txt) |
+| Adapter QuerySpec + mapper for swab-results | Done (p.txt) |
+| Route + adapter tests for swab-results (56 new) | Added (p.txt) |
+| 608 total tests passing | Done (p.txt) |
+| Frontend wiring (site-summary) | **NOT DONE** — deferred until BV passes |
+| Frontend wiring (swab-results) | **NOT DONE** — deferred; zoneId unavailable + adapter mock-only |
 | Spatial Configuration (BC B) routes | Deferred — em_* not confirmed in UAT |
 | Estate Monitoring (BC C) routes | Deferred — em_plant_geo not confirmed in UAT |
 | Spatial Analysis (BC D) routes | Deferred — em_* not confirmed in UAT |
@@ -334,10 +342,11 @@ Only after:
 
 | Feature | Blocked by |
 |---|---|
-| Browser verification | UAT deployment not yet done |
-| Frontend wiring | Browser verification not yet done |
-| getEnvMonSwabResults | Next candidate — DDL already confirmed for views |
-| getEnvMonTrends | Group A DDL; period-over-period query not designed |
+| Browser verification (both routes) | UAT deployment not yet done |
+| Frontend wiring (site-summary) | Browser verification not yet done |
+| Frontend wiring (swab-results) | BV not done AND zoneId/zoneName unavailable (em_location_zones); adapter is mock-only with no fetch infrastructure |
+| getEnvMonSwabResults zoneId/zoneName | em_location_zones existence in UAT unknown |
+| getEnvMonTrends | Period-over-period query not designed |
 | getEnvMonAlerts | Alert rules undefined |
 | getEnvMonPlantMap / getEnvMonPlantHotspots | em_plant_geo in UAT + contract design required |
 | getEnvMonZones | em_* existence in UAT unknown |

@@ -353,3 +353,326 @@ class TestEnvMonSiteSummaryDatabricksMode:
                 )
 
         assert response.status_code == 429
+
+    async def test_timeout_returns_504(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksQueryTimeoutError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryTimeoutError("envmon.get_site_summary"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SITE_SUMMARY_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 504
+
+    async def test_no_raw_token_in_error_response(self, monkeypatch) -> None:
+        """OAuth token must never appear in any response body — including error responses."""
+        from shared.query_service.errors import DatabricksQueryError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryError("envmon.get_site_summary", "Test error"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SITE_SUMMARY_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert "user-bearer-token" not in response.text
+
+
+# ---------------------------------------------------------------------------
+# Swab results route — shared fixtures
+# ---------------------------------------------------------------------------
+
+_SWAB_RESULTS_URL = (
+    "/api/envmon/swab-results"
+    "?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17"
+)
+
+_SWAB_RESULTS_URL_HIGH_LIMIT = (
+    "/api/envmon/swab-results"
+    "?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=1000"
+)
+
+_FAKE_SWAB_ROW = {
+    "inspection_lot_id": "LOT001",
+    "inspection_point_id": "PT001",
+    "sample_id": "S001",
+    "operation_id": "0010",
+    "functional_location": "LOC-001",
+    "sample_summary": None,
+    "sample_hour": None,
+    "plant_id": "C061",
+    "inspection_type": "14",
+    "created_date": "2026-01-15",
+    "inspection_end_date": "2026-01-16",
+    "process_order_id": None,
+    "material_id": None,
+    "batch_id": None,
+    "mic_id": "MIC001",
+    "mic_name": "TVC",
+    "mic_code": None,
+    "result": None,
+    "quantitative_result": None,
+    "qualitative_result": None,
+    "target_value": None,
+    "upper_tolerance": 200.0,
+    "lower_tolerance": None,
+    "unit_of_measure": None,
+    "valuation": "A",
+    "inspector": None,
+    "inspection_method": None,
+}
+
+
+# ---------------------------------------------------------------------------
+# Wrong adapter mode
+# ---------------------------------------------------------------------------
+
+class TestEnvMonSwabResultsWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.get(_SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_mode_is_default(self, monkeypatch) -> None:
+        """Default mode (no env var) must return 503 — no silent mode switch."""
+        monkeypatch.delenv("BACKEND_ADAPTER_MODE", raising=False)
+        async with _make_client() as client:
+            response = await client.get(_SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# Databricks-api mode
+# ---------------------------------------------------------------------------
+
+class TestEnvMonSwabResultsDatabricksMode:
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+        ):
+            async with _make_client() as client:
+                response = await client.get(_SWAB_RESULTS_URL)
+        assert response.status_code == 401
+
+    async def test_returns_503_when_databricks_host_missing(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.delenv("DATABRICKS_HOST", raising=False)
+        monkeypatch.delenv("SQL_WAREHOUSE_ID", raising=False)
+
+        async with _make_client() as client:
+            response = await client.get(_SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_trace_catalog_missing(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+
+        async with _make_client() as client:
+            response = await client.get(_SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_200_with_list_shape(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    async def test_empty_result_returns_empty_list(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.headers.get("x-data-source") == "databricks-api"
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_query_name_header(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        query_name = response.headers.get("x-query-name", "")
+        assert "envmon" in query_name
+        assert "swab_results" in query_name
+
+    async def test_permission_error_returns_403(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksPermissionError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksPermissionError("envmon.get_swab_results"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 403
+
+    async def test_rate_limit_error_returns_429(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksRateLimitError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksRateLimitError("envmon.get_swab_results"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 429
+
+    async def test_query_error_returns_502(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksQueryError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryError("envmon.get_swab_results", "Warehouse offline"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 502
+
+    async def test_timeout_returns_504(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksQueryTimeoutError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryTimeoutError("envmon.get_swab_results"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 504
+
+    async def test_no_raw_token_in_error_response(self, monkeypatch) -> None:
+        """OAuth token must never appear in any error response body."""
+        from shared.query_service.errors import DatabricksQueryError
+
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryError("envmon.get_swab_results", "Test error"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert "user-bearer-token" not in response.text
+
+    async def test_limit_above_max_returns_200(self, monkeypatch) -> None:
+        """limit=1000 is clamped to 500 at route level — must not return 422."""
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL_HIGH_LIMIT, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert response.status_code == 200

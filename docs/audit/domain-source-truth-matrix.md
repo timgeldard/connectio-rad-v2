@@ -4,7 +4,7 @@
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
 **Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
-**Last updated:** 2026-05-17 (n.txt) — EnvMon DDL confirmed, route wired, 99 tests passing
+**Last updated:** 2026-05-17 (p.txt) — EnvMon swab-results route wired, 56 new tests, 608 total
 
 ---
 
@@ -162,7 +162,7 @@
 ### 7. Environmental Monitoring (EnvMon)
 
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`  
-**FastAPI:** `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**  
+**FastAPI:** `apps/api/routes/envmon.py` — **wired (n.txt + p.txt, 2026-05-17)** — site-summary + swab-results  
 **Databricks adapter:** `apps/api/adapters/envmon/envmon_databricks_adapter.py`  
 **Source A (SAP QM):** Inspection lots — `INSPECTION_TYPE IN ('14','Z14')` — TRACE_CATALOG/TRACE_SCHEMA  
 **Source B (app-managed):** 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA — existence in UAT unknown  
@@ -177,7 +177,7 @@
 | `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ E** — route wired (n.txt); DDL confirmed 2026-05-17; 99 tests; BV pending |
 | `getEnvMonZones` | `em_location_zones` (confirmed-v1 DDL) | Mock — Blocked (em_* existence in UAT unknown) |
 | `getEnvMonAlerts` | lot + point + result_v (derivable) | Mock — Deferred (alert rules undefined) |
-| `getEnvMonSwabResults` | lot + point + result_v | Mock — Rank 2; next after site summary BV |
+| `getEnvMonSwabResults` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ E** — route wired (p.txt); DDL confirmed (same Group A views); 56 new tests; BV pending; frontend wiring deferred (`zoneId` unavailable from SAP QM) |
 | `getEnvMonTrends` | lot + point + result_v | Mock — Rank 3; after site summary BV |
 | `getEnvMonHeatmap` | lot + point + result_v + `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* existence unknown) |
 | `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Out of scope (CAPA not a V2 EnvMon parity requirement; belongs to separate Quality Actions / Deviation / CAPA bounded context) |
@@ -185,9 +185,10 @@
 | `getEnvMonPlantMap` **(PROPOSED)** | `em_plant_geo` | Not in adapter/contracts — Planned: depends on em_plant_geo in UAT + contract design + site-summary BV |
 | `getEnvMonPlantHotspots` **(PROPOSED)** | `em_plant_geo` + site-summary observation aggregate | Not in adapter/contracts — Planned: depends on getEnvMonPlantMap + site-summary BV |
 
-**Total: 9 adapter methods — 1 executable (✓ E), 8 mock. 2 additional proposed methods not yet in contracts.**  
-**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` wired and tested (n.txt). Browser verification pending. Estate Monitoring BC added (o.txt). Spatial config (em_*) deferred — UAT existence unknown.
+**Total: 9 adapter methods — 2 executable (✓ E), 7 mock. 2 additional proposed methods not yet in contracts.**  
+**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired and tested (n.txt + p.txt). Browser verification pending. Estate Monitoring BC added (o.txt). Spatial config (em_*) deferred — UAT existence unknown.
 
+**p.txt docs (2026-05-17):** `apps/api/routes/envmon.py` (swab-results) · `apps/api/adapters/envmon/envmon_databricks_adapter.py` · 56 new tests · all matrices updated  
 **o.txt docs (2026-05-17):** `docs/architecture/envmon-ddd-model.md` (4-BC) · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md` · candidate routes in matrices  
 **n.txt docs (2026-05-17):** `apps/api/routes/envmon.py` · route tests · all matrices  
 **m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md` · `docs/deployment/envmon-native-browser-verification.md` (updated)  
@@ -275,16 +276,16 @@
 | SPC | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | WH360 | 9 | 0 | 0 | 0 | 1 | 8 | 0 |
 | CQ Lab | 2 | 1 | 0 | 0 | 0 | 0 | 1 |
-| EnvMon | 9 | 0 | **1** | 0 | 0 | 8 | 0 |
+| EnvMon | 9 | 0 | **2** | 0 | 0 | 7 | 0 |
 | Maintenance | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
 | Prod Staging | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | Quality Release | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **3** | **3** | **1** | **70** | **2** |
+| **Total** | **82** | **3** | **4** | **3** | **1** | **69** | **2** |
 
 **3 of 82 methods (3.7%) are browser-verified with live Databricks data (BV).**  
-**3 of 82 methods (3.7%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`.**  
+**4 of 82 methods (4.9%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`, `getEnvMonSwabResults`.**  
 **1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
-**70 of 82 methods (85.4%) are mock-only — no wired route of any kind.**  
+**69 of 82 methods (84.1%) are mock-only — no wired route of any kind.**  
 *(3 methods have a databricks-api QuerySpec written but no route wired — 3 Trace; 2 are blocked by missing view or undefined business rules.)*
 
 **EnvMon correction (k.txt + l.txt, 2026-05-17):** EnvMon is a **hybrid domain** — SAP QM inspection lots (k.txt) plus app-managed spatial configuration — 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA (l.txt). Three gold views confirmed-v1. QuerySpec written for `getEnvMonSiteSummary`. All five em_* tables confirmed-v1 from V1 migrations. DDL for all pending in UAT. See `docs/audit/envmon-spatial-configuration-model.md`.

@@ -14,6 +14,12 @@
 > Recommended sequencing updated to include estate map after site-summary BV.
 > `getEnvMonPlantMap` and `getEnvMonPlantHotspots` are proposed contract additions — not yet in envmon-adapter.ts.
 
+> **Status update (p.txt, 2026-05-17):** `getEnvMonSwabResults` route wired — Recommended Next Tranche step 7 (wire swab-results route) is COMPLETE.
+> `GET /api/envmon/swab-results` implemented in `apps/api/routes/envmon.py`; same Group A SAP QM views as site-summary;
+> 56 new adapter + route tests; frontend wiring deferred (EnvMonSwabResultSchema requires `zoneId`/`zoneName`
+> unavailable from SAP QM alone; adapter is mock-only with no fetch infrastructure).
+> Next: deploy to UAT and browser-verify both site-summary and swab-results.
+
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/migration/envmon-v1-functional-recovery.md`
@@ -46,11 +52,11 @@ Join keys are three-column composite for result data: `INSPECTION_LOT_ID + OPERA
 
 ### V2 Current Status
 
-- `getEnvMonSiteSummary`: QuerySpec written, confirmed-v1. No route wired. DDL not yet run.
-- `getEnvMonSwabResults`: QuerySpec not yet written. Deferred until site summary DDL confirmed.
+- `getEnvMonSiteSummary`: **Route wired (n.txt, 2026-05-17)** — DDL confirmed; 99 tests; BV pending.
+- `getEnvMonSwabResults`: **Route wired (p.txt, 2026-05-17)** — same Group A DDL; 56 new tests; BV pending; frontend wiring deferred (zoneId unavailable).
 - `getEnvMonTrends`: QuerySpec not yet written. Deferred.
 - `getEnvMonAlerts`: No V1 "alert" concept — alerts would be derived from failing valuations. Alert rules (severity classification, `alertType` enum) are undefined. Deferred.
-- `getEnvMonCorrectiveActions`: No CAPA source in gold layer or app-managed tables. Blocked — no source.
+- `getEnvMonCorrectiveActions`: Out of scope — CAPA is not a V2 EnvMon parity requirement; intentionally not migrated.
 
 ### Required Data Objects
 
@@ -71,14 +77,17 @@ Join keys are three-column composite for result data: `INSPECTION_LOT_ID + OPERA
 
 ### Recommended Next Tranche
 
-1. Run `DESCRIBE TABLE` for all three gold views in connected_plant_uat SQL Editor
-2. Run `SELECT DISTINCT INSPECTION_TYPE FROM gold_inspection_lot LIMIT 100` — confirm `'14'` and `'Z14'` are present
-3. Run `SELECT DISTINCT INSPECTION_RESULT_VALUATION FROM gold_batch_quality_result_v LIMIT 50` — confirm valuation values
-4. Update `docs/audit/envmon-native-column-verification-checklist.md` to `confirmed-ddl`
-5. Wire `GET /api/envmon/site-summary`
-6. Browser-verify in UAT
-7. Write QuerySpec for `getEnvMonSwabResults` and wire route
-8. Write QuerySpec for `getEnvMonTrends` and wire route
+Steps 1–7 are COMPLETE (n.txt + p.txt, 2026-05-17):
+
+1. ~~Run `DESCRIBE TABLE` for all three gold views~~ — DONE (n.txt)
+2. ~~Confirm `INSPECTION_TYPE IN ('14','Z14')`~~ — DONE (confirmed-v1)
+3. ~~Confirm `INSPECTION_RESULT_VALUATION` values~~ — done (confirmed-v1 valuation mapping)
+4. ~~Update column verification checklist to `confirmed-ddl`~~ — DONE (n.txt)
+5. ~~Wire `GET /api/envmon/site-summary`~~ — DONE (n.txt)
+6. Browser-verify `GET /api/envmon/site-summary` in UAT — **PENDING**
+7. ~~Wire `GET /api/envmon/swab-results`~~ — DONE (p.txt)
+8. Browser-verify `GET /api/envmon/swab-results` in UAT — **PENDING**
+9. Write QuerySpec for `getEnvMonTrends` and wire route (after BV)
 
 ### Stop Conditions
 

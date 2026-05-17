@@ -1,7 +1,7 @@
 # EnvMon Native Databricks — Candidate Slice Ranking
 
-**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery) | **Updated:** 2026-05-17 (o.txt — estate map / plant hotspot candidates added)
-**Status:** SITE SUMMARY first (QuerySpec written, route wired, DDL confirmed); estate map candidates after BV; all others deferred
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery) | **Updated:** 2026-05-17 (p.txt — swab-results route wired)
+**Status:** Rank 1 route wired, BV pending; Rank 2 route wired (p.txt), BV pending; estate map candidates after BV; all others deferred
 **Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/migration/envmon-v1-functional-recovery.md`
 
 ---
@@ -68,17 +68,28 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 - Enriches `positiveSamples` count with individual result rows and organism details
 
 **Partial coverage:**
-- `sampleId` ← `SAMPLE_ID` (confirmed-v1)
-- `testType` ← `MIC_NAME` (confirmed-v1)
-- `result` ← derived from `INSPECTION_RESULT_VALUATION` (confirmed-v1 valuation mapping)
-- `resultValue` ← `QUANTITATIVE_RESULT` (confirmed-v1)
-- `specification` ← `UPPER_TOLERANCE` (confirmed-v1)
-- `locationId` ← `FUNCTIONAL_LOCATION` (confirmed-v1) — maps to V2 contract as location identifier
-- `zoneId` ← **not available** without em_location_zones
+- `inspectionLotId` ← `INSPECTION_LOT_ID` (confirmed-v1)
+- `functionalLocation` ← `FUNCTIONAL_LOCATION` (confirmed-v1) — location identifier
+- `micId`, `micName`, `micCode` ← from `gold_batch_quality_result_v` (confirmed-v1)
+- `valuation` ← raw `INSPECTION_RESULT_VALUATION` (confirmed-v1)
+- `status` ← derived from `valuation`: R/REJ/REJECT→fail; W/WARN→warning; null→pending; other→pass
+- `result` ← raw `RESULT` column (distinct from INSPECTION_RESULT_VALUATION)
+- `quantitativeResult`, `targetValue`, `upperTolerance`, `lowerTolerance` ← confirmed columns
+- `zoneId` ← **not available** without em_location_zones — frontend wiring deferred
 - `hygieneZone` ← **not available** without em_location_zones
-- `sampledBy`, `analysedBy` ← **not available** from gold views (V1 did not expose these)
+- `sampledBy`, `analysedBy` ← not available from gold views (V1 did not expose these)
 
-**Status:** QuerySpec not yet written — deferred until DDL confirmed for site summary
+**Status:** Route wired (p.txt, 2026-05-17) — DDL confirmed for all three Group A views — browser verification pending
+
+| Item | Status |
+|---|---|
+| Source views | confirmed-ddl (DESCRIBE TABLE, 2026-05-17) |
+| V1 SQL recovered | Yes (lots.py DAL per-MIC result pattern) |
+| em_* dependency | None (zoneId deferred) |
+| DDL run | Yes (same views as site-summary) |
+| Route wired | Yes — `GET /api/envmon/swab-results` in `apps/api/routes/envmon.py` (p.txt) |
+| Browser-verified | No — pending UAT deployment |
+| Frontend wired | No — deferred; `zoneId`/`zoneName` unavailable; adapter is mock-only with no fetch infrastructure |
 
 ---
 
@@ -197,8 +208,8 @@ to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do
 
 1. ~~Run DDL for all three primary views~~ — DONE (n.txt, confirmed-ddl 2026-05-17)
 2. ~~Wire `GET /api/envmon/site-summary`~~ — DONE (n.txt, route wired)
-3. Browser-verify `GET /api/envmon/site-summary` in UAT
-4. Implement Rank 2 QuerySpec (`envmon.get_swab_results`); wire `GET /api/envmon/swab-results`
+3. ~~Implement Rank 2 QuerySpec (`envmon.get_swab_results`); wire `GET /api/envmon/swab-results`~~ — DONE (p.txt, route wired)
+4. Browser-verify `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` in UAT
 5. `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` — gate for Rank 3b, 4, 7
 6. Design `getEnvMonPlantMap` contract; implement `GET /api/envmon/plant-map` (Rank 3b)
 7. Design `getEnvMonPlantHotspots` contract; implement `GET /api/envmon/plant-hotspots` (Rank 3c)
@@ -212,7 +223,7 @@ to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do
 | Rank | Slice | Method | Source confidence | em_* dependency | Status |
 |---|---|---|---|---|---|
 | 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-ddl | None | **Route wired — BV pending** |
-| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-v1 | None | Planned — after Rank 1 BV |
+| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-ddl | None | **Route wired — BV pending** |
 | 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Planned — after Rank 1 BV |
 | 3b | Plant Map | `getEnvMonPlantMap` (PROPOSED) | confirmed-v1 | em_plant_geo | Planned — em_plant_geo in UAT unknown; contract not designed |
 | 3c | Plant Hotspots | `getEnvMonPlantHotspots` (PROPOSED) | confirmed-v1 | em_plant_geo (read) | Planned — depends on Rank 3b + Rank 1 BV |

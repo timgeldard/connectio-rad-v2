@@ -219,6 +219,27 @@ See `docs/deployment/envmon-native-browser-verification.md` for full pass criter
 
 ---
 
+### C11 — EnvMon swab results (native Databricks) — EXECUTABLE, awaiting browser verification
+
+`GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=100`
+
+**Status: IMPLEMENTED** — route wired (p.txt, 2026-05-17), DDL confirmed for same three Group A SAP QM views as site-summary, 56 new adapter + route tests passing. Browser verification pending.
+
+- [ ] Returns HTTP 200 with JSON array (may be `[]` if no data for plant/period)
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Adapter-Mode: databricks-api` present
+- [ ] Response header `X-Query-Name: envmon.get_swab_results` present
+- [ ] Each item has `inspectionLotId`, `functionalLocation`, `micId`, `micName`, `valuation`, `status`, `createdDate`, `plantId`
+- [ ] `status` is derived: `null` valuation → `pending`; `R`/`REJ`/`REJECT` → `fail`; `W`/`WARN` → `warning`; other non-null → `pass`
+- [ ] `result` field is raw SAP QM RESULT column (distinct from valuation)
+- [ ] `zoneId` / `zoneName` absent — not available from SAP QM without em_location_zones
+- [ ] No SPN/PAT token used — query executes as end-user identity
+- [ ] `limit=5` clamps to 5 results; `limit=600` clamps to 500 results
+
+See `docs/deployment/envmon-native-browser-verification.md` (swab-results section) for full pass criteria and troubleshooting.
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.

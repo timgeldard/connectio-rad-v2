@@ -16,7 +16,7 @@
 ## What is confirmed-v1
 
 All three SAP QM gold views are confirmed from V1 ConnectIO-RAD source code and entities.yaml
-(k.txt, 2026-05-17). DDL has not been run against connected_plant_uat for any of these.
+(k.txt, 2026-05-17). DDL confirmed for all three in connected_plant_uat (n.txt, 2026-05-17).
 
 | Object | Status | Evidence |
 |---|---|---|
