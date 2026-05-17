@@ -7,9 +7,22 @@ business logic or SQL here.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 
 from fastapi import HTTPException, Response
 
+from shared.query_service.databricks_client import StatementApiDatabricksClient
+from shared.query_service.errors import (
+    DatabricksAuthRequiredError,
+    DatabricksConfigError,
+    DatabricksPermissionError,
+    DatabricksQueryError,
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
+)
+from shared.query_service.identity import UserIdentity
+from shared.query_service.query_executor import QueryExecutor
 from shared.query_service.query_spec import QuerySpec
 
 _MISSING_CONFIG_DETAIL = (
@@ -36,3 +49,50 @@ def set_databricks_response_headers(response: Response, spec: QuerySpec) -> None
     response.headers["X-Data-Source"] = spec.source_badge
     response.headers["X-Adapter-Mode"] = "databricks-api"
     response.headers["X-Query-Name"] = spec.name
+
+
+def build_user_identity(
+    token: str | None, user: str | None, email: str | None
+) -> UserIdentity:
+    """Construct a UserIdentity from forwarded OAuth headers."""
+    return UserIdentity(
+        user_id=user or "unknown",
+        email=email,
+        raw_oauth_token=token,
+    )
+
+
+async def run_query(
+    spec_factory: Callable[[], QuerySpec],
+    identity: UserIdentity,
+    databricks_host: str,
+    warehouse_id: str,
+) -> tuple[list[dict], QuerySpec]:
+    """Create a QuerySpec, execute it, and translate errors into HTTP exceptions.
+
+    Accepts a zero-argument factory so that spec-creation errors (e.g.
+    DatabricksConfigError from a missing catalog env var) are caught alongside
+    execution errors and mapped to the appropriate HTTP status code.
+
+    Returns (rows, spec) so the caller can set response headers from the spec.
+    """
+    try:
+        spec: QuerySpec = spec_factory()
+        client = StatementApiDatabricksClient(host=databricks_host)
+        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
+        rows = await executor.execute(spec, identity)
+        return rows, spec
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksAuthRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except DatabricksQueryTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except DatabricksQueryError as exc:
+        raise HTTPException(status_code=502, detail="Databricks query execution failed") from exc

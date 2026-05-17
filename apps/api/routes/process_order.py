@@ -30,19 +30,12 @@ from adapters.poh.poh_databricks_adapter import (
     map_order_operations_rows,
     map_process_order_header_rows,
 )
-from routes._databricks import require_databricks_config, set_databricks_response_headers
-from shared.query_service.databricks_client import StatementApiDatabricksClient
-from shared.query_service.errors import (
-    DatabricksAuthRequiredError,
-    DatabricksConfigError,
-    DatabricksPermissionError,
-    DatabricksQueryError,
-    DatabricksQueryTimeoutError,
-    DatabricksRateLimitError,
-    DatabricksWarehouseConfigError,
+from routes._databricks import (
+    build_user_identity,
+    require_databricks_config,
+    run_query,
+    set_databricks_response_headers,
 )
-from shared.query_service.identity import UserIdentity
-from shared.query_service.query_executor import QueryExecutor
 
 router = APIRouter()
 
@@ -111,38 +104,17 @@ async def _order_header_databricks(
     user: str | None,
     email: str | None,
 ) -> dict:
-    databricks_host, warehouse_id = require_databricks_config()
-
-    identity = UserIdentity(
-        user_id=user or "unknown",
-        email=email,
-        raw_oauth_token=token,
-    )
-
-    try:
-        spec = get_process_order_header_spec(
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(token, user, email)
+    rows, spec = await run_query(
+        lambda: get_process_order_header_spec(
             ProcessOrderHeaderRequest(
                 process_order_id=body.process_order_id,
                 plant_id=body.plant_id,
             )
-        )
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
-    except DatabricksConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksAuthRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except DatabricksPermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except DatabricksWarehouseConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksRateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except DatabricksQueryTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        ),
+        identity, host, warehouse_id,
+    )
 
     result = map_process_order_header_rows(rows)
     if result is None:
@@ -173,37 +145,14 @@ async def order_operations(
             detail="Order operations require BACKEND_ADAPTER_MODE=databricks-api",
         )
 
-    databricks_host, warehouse_id = require_databricks_config()
-
-    identity = UserIdentity(
-        user_id=x_forwarded_user or "unknown",
-        email=x_forwarded_email,
-        raw_oauth_token=x_forwarded_access_token,
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    rows, spec = await run_query(
+        lambda: get_order_operations_spec(OrderOperationsRequest(process_order_id=process_order_id)),
+        identity, host, warehouse_id,
     )
-
-    try:
-        spec = get_order_operations_spec(OrderOperationsRequest(process_order_id=process_order_id))
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
-    except DatabricksConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksAuthRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except DatabricksPermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except DatabricksWarehouseConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksRateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except DatabricksQueryTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    operations = map_order_operations_rows(rows)
     set_databricks_response_headers(response, spec)
-    return operations
+    return map_order_operations_rows(rows)
 
 
 @router.get("/por/order-confirmations")
@@ -229,37 +178,14 @@ async def order_confirmations(
             detail="Order confirmations require BACKEND_ADAPTER_MODE=databricks-api",
         )
 
-    databricks_host, warehouse_id = require_databricks_config()
-
-    identity = UserIdentity(
-        user_id=x_forwarded_user or "unknown",
-        email=x_forwarded_email,
-        raw_oauth_token=x_forwarded_access_token,
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    rows, spec = await run_query(
+        lambda: get_order_confirmations_spec(OrderConfirmationsRequest(process_order_id=process_order_id)),
+        identity, host, warehouse_id,
     )
-
-    try:
-        spec = get_order_confirmations_spec(OrderConfirmationsRequest(process_order_id=process_order_id))
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
-    except DatabricksConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksAuthRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except DatabricksPermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except DatabricksWarehouseConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksRateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except DatabricksQueryTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    confirmations = map_order_confirmations_rows(rows)
     set_databricks_response_headers(response, spec)
-    return confirmations
+    return map_order_confirmations_rows(rows)
 
 
 @router.get("/por/order-goods-movements")
@@ -277,8 +203,7 @@ async def order_goods_movements(
 
     Source view: vw_gold_adp_movement (connected_plant_uat.csm_process_order_history)
     DDL confirmed 2026-05-17. materialDescription absent from view.
-    direction derived from MOVEMENT_TYPE — update _MOVEMENT_DIRECTION_MAP once
-    confirmed ADP movement type values are known.
+    direction: 'unknown' for unmapped MOVEMENT_TYPE values (711/712/999/null).
     """
     backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if backend_mode != "databricks-api":
@@ -287,34 +212,11 @@ async def order_goods_movements(
             detail="Order goods movements require BACKEND_ADAPTER_MODE=databricks-api",
         )
 
-    databricks_host, warehouse_id = require_databricks_config()
-
-    identity = UserIdentity(
-        user_id=x_forwarded_user or "unknown",
-        email=x_forwarded_email,
-        raw_oauth_token=x_forwarded_access_token,
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    rows, spec = await run_query(
+        lambda: get_order_goods_movements_spec(OrderGoodsMovementsRequest(process_order_id=process_order_id)),
+        identity, host, warehouse_id,
     )
-
-    try:
-        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest(process_order_id=process_order_id))
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
-    except DatabricksConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksAuthRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except DatabricksPermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except DatabricksWarehouseConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksRateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except DatabricksQueryTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    movements = map_order_goods_movements_rows(rows)
     set_databricks_response_headers(response, spec)
-    return movements
+    return map_order_goods_movements_rows(rows)

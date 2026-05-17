@@ -714,17 +714,17 @@ class TestMapMovementDirection:
     def test_531_maps_to_output(self) -> None:
         assert _map_movement_direction("531") == "output"
 
-    def test_711_is_unmapped(self) -> None:
-        assert _map_movement_direction("711") is None
+    def test_711_returns_unknown(self) -> None:
+        assert _map_movement_direction("711") == "unknown"
 
-    def test_712_is_unmapped(self) -> None:
-        assert _map_movement_direction("712") is None
+    def test_712_returns_unknown(self) -> None:
+        assert _map_movement_direction("712") == "unknown"
 
-    def test_999_is_unmapped(self) -> None:
-        assert _map_movement_direction("999") is None
+    def test_999_returns_unknown(self) -> None:
+        assert _map_movement_direction("999") == "unknown"
 
-    def test_none_returns_none(self) -> None:
-        assert _map_movement_direction(None) is None
+    def test_none_returns_unknown(self) -> None:
+        assert _map_movement_direction(None) == "unknown"
 
     def test_whitespace_stripped(self) -> None:
         assert _map_movement_direction(" 261 ") == "input"
@@ -774,10 +774,10 @@ class TestMapOrderGoodsMovementsRows:
         result = map_order_goods_movements_rows([row])
         assert result[0]["direction"] == "output"
 
-    def test_direction_absent_for_unknown_movement_type(self) -> None:
+    def test_direction_unknown_for_unmapped_movement_type(self) -> None:
         row = {**self._full_row(), "movement_type": "999"}
         result = map_order_goods_movements_rows([row])
-        assert "direction" not in result[0]
+        assert result[0]["direction"] == "unknown"
 
     def test_material_id_mapped_preserving_leading_zeros(self) -> None:
         result = map_order_goods_movements_rows([self._full_row()])

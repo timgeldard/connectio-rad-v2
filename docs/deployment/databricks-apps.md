@@ -116,8 +116,10 @@ deploy regardless of whether the backend is in `legacy-api` or `databricks-api`
 mode. There is no `databricks-api` mode on the frontend; Databricks is always
 accessed through the FastAPI layer.
 
-> **Note:** `apps/api/static/` is git-ignored. Rebuild and re-copy whenever
-> the frontend changes.
+> **Note:** `apps/api/static/` is **committed to git** so that `databricks bundle deploy`
+> can include the compiled React bundle without a build step in the deploy pipeline.
+> Run `npm run prepare:databricks` and commit the updated `apps/api/static/` before
+> each deploy whenever the frontend changes.
 
 ### 3. Python dependencies
 

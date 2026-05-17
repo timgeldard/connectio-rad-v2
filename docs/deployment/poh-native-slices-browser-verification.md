@@ -168,7 +168,7 @@ X-Query-Name: poh.get_order_goods_movements
   {
     "movementId": "<string — from ID>",
     "movementType": "<string — Tulip code e.g. '101', '261', '531'>",
-    "direction": "input" | "output",
+    "direction": "input" | "output" | "unknown",
     "materialId": "<string — from MATERIAL_ID; leading zeros preserved>",
     "quantity": "<number — from QUANTITY>",
     "uom": "<string — from UOM>",
@@ -183,8 +183,8 @@ X-Query-Name: poh.get_order_goods_movements
 
 **Known acceptable gaps (not errors):**
 - `materialDescription` — absent from `vw_gold_adp_movement` (no material master join); field omitted from response; schema relaxed to optional
-- Rows with MOVEMENT_TYPE 711, 712, 999, or null are excluded from the response (direction unknown; filtered by frontend adapter)
-- An empty array is valid if PO 7006965038 has only unmapped movement types
+- Rows with MOVEMENT_TYPE 711, 712, 999, or null return `direction: "unknown"` and are displayed in the panel as "unclassified"
+- An empty array is valid if PO 7006965038 has no movements at all
 
 **Pass criteria:**
 - [ ] HTTP 200
@@ -192,7 +192,8 @@ X-Query-Name: poh.get_order_goods_movements
 - [ ] `X-Query-Name: poh.get_order_goods_movements` header present
 - [ ] Response is a JSON array (may be empty)
 - [ ] If non-empty: `movementId`, `movementType`, `direction`, `materialId`, `quantity`, `uom`, `postedAt` are present
-- [ ] `direction` is `"input"` or `"output"` for all items
+- [ ] `direction` is `"input"`, `"output"`, or `"unknown"` for all items
+- [ ] If any `direction: "unknown"` rows: panel shows grey `?` badge and "N unclassified" count
 - [ ] No 401/403/502/503
 
 **Troubleshooting:**
@@ -203,7 +204,8 @@ X-Query-Name: poh.get_order_goods_movements
 | 403 | User lacks SELECT on `vw_gold_adp_movement` | `GRANT SELECT ON VIEW connected_plant_uat.csm_process_order_history.vw_gold_adp_movement TO <user>` |
 | 503 | `BACKEND_ADAPTER_MODE` not `databricks-api` | Check `app.yaml` |
 | 502 | Databricks query error | Check `databricks apps logs connectio-v2` |
-| Empty array | All movements for PO 7006965038 have unmapped MOVEMENT_TYPE (711/712/999/null) | Run `SELECT DISTINCT MOVEMENT_TYPE FROM ... WHERE PROCESS_ORDER_ID = '7006965038'` to verify |
+| All movements `direction: "unknown"` | PO 7006965038 only has 711/712/999/null movement types | Extend `_MOVEMENT_DIRECTION_MAP` when direction is confirmed; panel shows "N unclassified" |
+| Empty array | No movements at all for this PO | Verify PO has been processed using Tulip ADP |
 
 **Manual result:**
 

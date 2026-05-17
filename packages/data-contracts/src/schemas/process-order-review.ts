@@ -190,7 +190,7 @@ export type ProcessOrderConfirmation = z.infer<typeof ProcessOrderConfirmationSc
 export const ProcessOrderGoodsMovementSchema = z.object({
   movementId: z.string(),
   movementType: z.string(),
-  direction: z.enum(['input', 'output']),
+  direction: z.enum(['input', 'output', 'unknown']),
   materialId: z.string(),
   // Not in vw_gold_adp_movement — re-require once material master join is available (2026-05-17)
   materialDescription: z.string().optional(),

@@ -26,11 +26,13 @@ export interface ProcessOrderGoodsMovementsPanelProps {
 const DIRECTION_COLOR: Record<string, string> = {
   input: '#7B61FF',
   output: '#388E3C',
+  unknown: '#888',
 }
 
 const DIRECTION_LABEL: Record<string, string> = {
   input: 'GI',
   output: 'GR',
+  unknown: '?',
 }
 
 export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMovementsPanelProps) {
@@ -51,6 +53,7 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
   const movements: ProcessOrderGoodsMovement[] = result?.ok ? result.data : []
   const inputCount = movements.filter(m => m.direction === 'input').length
   const outputCount = movements.filter(m => m.direction === 'output').length
+  const unknownCount = movements.filter(m => m.direction === 'unknown').length
 
   return (
     <EvidencePanel
@@ -72,6 +75,11 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
                 <span style={{ fontSize: 10, color: '#388E3C', fontWeight: 600 }}>
                   {outputCount} receipt{outputCount !== 1 ? 's' : ''} (output)
                 </span>
+                {unknownCount > 0 && (
+                  <span style={{ fontSize: 10, color: '#888', fontWeight: 600 }}>
+                    {unknownCount} unclassified
+                  </span>
+                )}
               </div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {movements.map(mov => {
