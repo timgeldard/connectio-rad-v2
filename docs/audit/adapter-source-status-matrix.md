@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — g.txt audit: added EnvMon (9), Maintenance (7), Production Staging (9), Quality Batch Release (7); total updated to 82 methods  
+**Last updated:** 2026-05-17 — m.txt: EnvMon QuerySpec hardened (LIMIT 1 fix), 56 tests added, DDD model created, route NOT wired (DDL not confirmed); docs/deployment/envmon-native-browser-verification.md updated with correct route  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -176,7 +176,7 @@ QuerySpec adapter: `apps/api/adapters/envmon/envmon_databricks_adapter.py`
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getEnvMonContext` | ✓ | — | — | — | none | After site summary DDL confirmed |
-| `getEnvMonSiteSummary` | ✓ | — | — | — | none | **QuerySpec written (confirmed-v1)** — run DDL, then wire route |
+| `getEnvMonSiteSummary` | ✓ | — | — | — | none | **QuerySpec hardened (m.txt)** — LIMIT 1 fix applied; 56 tests added; route NOT wired (DDL not confirmed) |
 | `getEnvMonZones` | ✓ | — | — | — | none | Blocked — em_location_zones may not exist in UAT |
 | `getEnvMonAlerts` | ✓ | — | — | — | none | Deferred — alert derivation rules undefined |
 | `getEnvMonSwabResults` | ✓ | — | — | — | none | Rank 2 — after site summary DDL confirmed |
@@ -185,9 +185,11 @@ QuerySpec adapter: `apps/api/adapters/envmon/envmon_databricks_adapter.py`
 | `getEnvMonCorrectiveActions` | ✓ | — | — | — | none | Blocked — no CAPA source confirmed |
 | `getEnvMonSwabVectors` | ✓ | — | — | — | none | Deferred indefinitely — business rules undefined |
 
-**Summary:** 9 methods — all mock only. No legacy-api adapter. QuerySpec skeleton written for `getEnvMonSiteSummary` (confirmed-v1, no route wired). Source model recovered from V1 SAP QM data.  
-**Status:** V1 functional — SAP QM source recovered; DDL pending in connected_plant_uat.
+**Summary:** 9 methods — all mock only. No legacy-api adapter. QuerySpec hardened for `getEnvMonSiteSummary` (confirmed-v1, LIMIT 1 fix, 56 tests). Route NOT wired — DDL not confirmed. DDD model created.  
+**Status:** V1 functional — hybrid domain. SAP QM source + spatial config model recovered. DDL pending in connected_plant_uat. Route wiring blocked.
 
+**m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md` · `docs/deployment/envmon-native-browser-verification.md` (updated)  
+**Deep-dive docs (l.txt, 2026-05-17):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md`  
 **Source recovery docs (k.txt, 2026-05-17):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
 **Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/domains/envmon-monitoring.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md` · `docs/audit/envmon-native-architecture-check.md`
 

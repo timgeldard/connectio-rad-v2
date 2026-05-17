@@ -146,7 +146,7 @@ def get_site_summary_spec(request: SiteSummaryRequest) -> QuerySpec:
         SUM(CASE WHEN is_fail = 0 AND is_warn = 0 AND is_pending = 0 THEN 1 ELSE 0 END) AS pass_locs,
         SUM(lot_count)                                                                   AS lots_tested
     FROM loc_status
-    LIMIT :max_rows
+    LIMIT 1
     """
 
     return QuerySpec(

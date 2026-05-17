@@ -3,7 +3,8 @@
 **Date:** 2026-05-17  
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
-**Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024
+**Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
+**Last updated:** 2026-05-17 (m.txt) — EnvMon QuerySpec hardened, DDD model created, route not wired, 56 tests added
 
 ---
 
@@ -174,7 +175,7 @@
 | Method | Source | Status |
 |---|---|---|
 | `getEnvMonContext` | — | Mock |
-| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | Mock — **QuerySpec written** (confirmed-v1); DDL pending; route not wired |
+| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | Mock — **QuerySpec hardened (m.txt)**; LIMIT 1 fix; 56 tests added; DDL pending; route NOT wired |
 | `getEnvMonZones` | `em_location_zones` (confirmed-v1 DDL) | Mock — Blocked (em_* existence in UAT unknown) |
 | `getEnvMonAlerts` | lot + point + result_v (derivable) | Mock — Deferred (alert rules undefined) |
 | `getEnvMonSwabResults` | lot + point + result_v | Mock — Rank 2; after DDL confirmed |
@@ -184,8 +185,9 @@
 | `getEnvMonSwabVectors` | — | Mock — Deferred indefinitely |
 
 **Total: 9 methods — all mock**  
-**Status:** V1 functional — hybrid domain. SAP QM source recovered (confirmed-v1). Spatial config model recovered (confirmed-v1 from V1 migrations). DDL pending for all. `getEnvMonSiteSummary` QuerySpec written.
+**Status:** V1 functional — hybrid domain. SAP QM source recovered (confirmed-v1). Spatial config model recovered (confirmed-v1 from V1 migrations). DDL pending for all. QuerySpec hardened (m.txt, LIMIT 1 fix). 56 tests added. Route NOT wired — DDL not confirmed (deliberate stop per m.txt §12). DDD model created.
 
+**m.txt docs (2026-05-17):** `docs/migration/envmon-site-summary-native-route-plan.md` · `docs/architecture/envmon-ddd-model.md` · `docs/deployment/envmon-native-browser-verification.md` (updated)  
 **Deep-dive docs (l.txt):** `docs/migration/envmon-v1-deep-dive.md` · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md`  
 **Source recovery docs (k.txt):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
 **Groundwork docs (i.txt):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`

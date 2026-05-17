@@ -1,8 +1,8 @@
 # EnvMon Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17 (i.txt) | **Updated:** 2026-05-17 (k.txt SAP QM recovery, l.txt hybrid split)  
-**Status:** Group A — CONFIRMED-V1, DDL NOT YET RUN; Group B — CONFIRMED-V1 DDL, EXISTENCE IN UAT UNKNOWN  
-**References:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-spatial-configuration-model.md`
+**Date:** 2026-05-17 (i.txt) | **Updated:** 2026-05-17 (k.txt, l.txt hybrid split, m.txt DDL SQL and site-summary classification)  
+**Status:** Group A — CONFIRMED-V1, DDL NOT YET RUN — **ROUTE WIRING BLOCKED**; Group B — CONFIRMED-V1 DDL, EXISTENCE IN UAT UNKNOWN  
+**References:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-spatial-configuration-model.md`, `docs/migration/envmon-site-summary-native-route-plan.md`
 
 EnvMon is a **hybrid domain**. DDL verification falls into two separate groups:
 
@@ -25,6 +25,98 @@ Do not mark any field `confirmed-ddl` unless you have run the DDL command and se
 
 All three views in TRACE_CATALOG / TRACE_SCHEMA (default `connected_plant_uat.gold`).  
 All are `confirmed-v1` — DDL not yet run in connected_plant_uat.
+
+**Route wiring is blocked until all required columns below are confirmed-ddl.**  
+See `docs/migration/envmon-site-summary-native-route-plan.md` for stop condition details.
+
+---
+
+### Required DDL checks for site-summary route (m.txt §2)
+
+Run in Databricks SQL Editor in order. Do not wire the route until all pass.
+
+```sql
+-- Step 1: Verify object existence and column DDL
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_lot;
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_point;
+DESCRIBE TABLE connected_plant_uat.gold.gold_batch_quality_result_v;
+
+-- Step 2: Confirm inspection type filter values ('14' and 'Z14' must be present)
+SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS lot_count
+FROM connected_plant_uat.gold.gold_inspection_lot
+GROUP BY INSPECTION_TYPE
+ORDER BY lot_count DESC;
+
+-- Step 3: Confirm valuation field values (R, REJ, REJECT, W, WARN, A, NULL expected)
+SELECT DISTINCT INSPECTION_RESULT_VALUATION, COUNT(*) AS result_count
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+GROUP BY INSPECTION_RESULT_VALUATION
+ORDER BY result_count DESC;
+
+-- Step 4: Sample lot data for EnvMon inspection types at plant C061
+SELECT *
+FROM connected_plant_uat.gold.gold_inspection_lot
+WHERE PLANT_ID = 'C061'
+  AND INSPECTION_TYPE IN ('14','Z14')
+LIMIT 20;
+
+-- Step 5: Sample inspection points for those lots
+SELECT *
+FROM connected_plant_uat.gold.gold_inspection_point
+WHERE INSPECTION_LOT_ID IN (
+  SELECT INSPECTION_LOT_ID
+  FROM connected_plant_uat.gold.gold_inspection_lot
+  WHERE PLANT_ID = 'C061'
+    AND INSPECTION_TYPE IN ('14','Z14')
+  LIMIT 20
+)
+LIMIT 20;
+
+-- Step 6: Sample quality results
+SELECT *
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+LIMIT 20;
+
+-- Step 7: Check em_* spatial tables (Group B)
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
+```
+
+---
+
+### Site Summary Required Columns — Classification (m.txt §2)
+
+Update each column status after running the DDL checks above.
+
+#### `gold_inspection_lot`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key | `confirmed-v1` |
+| `PLANT_ID` | Yes — filter | `confirmed-v1` |
+| `INSPECTION_TYPE` | Yes — domain filter IN ('14','Z14') | `confirmed-v1` |
+| `CREATED_DATE` | Yes — period_start / period_end filter | `confirmed-v1` |
+
+#### `gold_inspection_point`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key | `confirmed-v1` |
+| `FUNCTIONAL_LOCATION` | Yes — location grouping | `confirmed-v1` |
+| `OPERATION_ID` | Yes — join key to result_v | `confirmed-v1` |
+| `SAMPLE_ID` | Yes — join key to result_v | `confirmed-v1` |
+
+#### `gold_batch_quality_result_v`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key (part 1) | `confirmed-v1` |
+| `OPERATION_ID` | Yes — join key (part 2) | `confirmed-v1` |
+| `SAMPLE_ID` | Yes — join key (part 3) | `confirmed-v1` |
+| `INSPECTION_RESULT_VALUATION` | Yes — fail/warn/pass classification | `confirmed-v1` |
+
+**Stop condition:** If any `confirmed-v1` column above is found to be `missing` or `renamed` after
+running DDL, do not wire the route. Update this table with `missing` / `renamed` status and
+document the exact blocker.
 
 ---
 

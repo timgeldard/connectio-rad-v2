@@ -3,7 +3,8 @@
 **Date:** 2026-05-17  
 **Scope:** All Databricks views and materialised views referenced by current or planned native adapters  
 **Catalog (default):** `connected_plant_uat`  
-**Reference:** `docs/audit/adapter-source-status-matrix.md`, `docs/audit/current-state-after-native-databricks-work.md`
+**Reference:** `docs/audit/adapter-source-status-matrix.md`, `docs/audit/current-state-after-native-databricks-work.md`  
+**Last updated:** 2026-05-17 (m.txt) — EnvMon QuerySpec hardened, DDD model created, route not wired
 
 ---
 
@@ -120,13 +121,15 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 | `em_location_zones` | zone_id (PK), plant_id, floor_id, zone_name, geometry_type (polygon/rectangle), geometry_json, centroid_x/y, revision_id, status | `getEnvMonZones`, `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
 | `em_plant_geo` | plant_id, lat, lon | Site map (not yet designed) | ❌ app-managed — existence unknown in UAT |
 
-**EnvMon QuerySpec written:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` — `get_site_summary_spec`  
+**EnvMon QuerySpec hardened (m.txt):** `apps/api/adapters/envmon/envmon_databricks_adapter.py` — `get_site_summary_spec`  
+**m.txt changes:** LIMIT :max_rows bug fixed → LIMIT 1; 56 tests added; DDD model created (`docs/architecture/envmon-ddd-model.md`); route plan created (`docs/migration/envmon-site-summary-native-route-plan.md`)  
+**Route NOT wired:** DDL not confirmed in this session — deliberate stop per m.txt §12.  
 **Key gaps:**
 - `hygieneZone` / `areaType` have no V1 column equivalent — em_location_zones has no hygiene classification
 - CAPA/corrective actions not in V1 at all — `getEnvMonCorrectiveActions` has no source
-- Silent defaults in `map_site_summary_rows` (`criticalZoneExposures: 0`, `openCorrectiveActions: 0`, `trendDirection: 'stable'`) are **temporary placeholders, not business facts**
+- `criticalZoneExposures: 0`, `openCorrectiveActions: 0`, `trendDirection: 'stable'` in `map_site_summary_rows` are **TEMPORARY CONTRACT PLACEHOLDERS, not business facts**
 
-**Next action:** Run `DESCRIBE TABLE` for all three Group A views, then `SHOW TABLES LIKE 'em_%'` for Group B. Route wiring deferred until Group A DDL confirmed. Heatmap/zone deferred until Group B existence confirmed.
+**Next action:** Run DDL checks in `docs/audit/envmon-native-column-verification-checklist.md`. When all Group A columns confirmed-ddl, wire `apps/api/routes/envmon.py`. Heatmap/zone deferred until Group B em_* existence confirmed.
 
 **Full spatial config model:** `docs/audit/envmon-spatial-configuration-model.md`
 
