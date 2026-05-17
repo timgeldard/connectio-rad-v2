@@ -65,7 +65,17 @@ X-Query-Name: poh.get_order_operations
 - [ ] If non-empty: `operationId`, `operationNumber`, `operationText` are non-empty strings
 - [ ] No 401/403/502/503
 
-**Result:** `[ ] PASS` / `[ ] FAIL` — Date: ___________
+**Manual result:**
+
+| Status | Date | Notes |
+|--------|------|-------|
+| [ ] not tested | | |
+| [ ] passed | | |
+| [ ] failed 401 | | |
+| [ ] failed 403 | | |
+| [ ] failed 502 | | |
+| [ ] failed 503 | | |
+| [ ] failed 504 | | |
 
 ---
 

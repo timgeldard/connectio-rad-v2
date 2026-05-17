@@ -147,8 +147,24 @@ POST /api/por/order-header
 
 ---
 
+### C7 — POH order operations (native Databricks) — NOT YET VERIFIED
+
+`GET /api/por/order-operations?process_order_id=7006965038`
+
+- [ ] Returns HTTP 200 with array (may be empty if PO has no phase rows)
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: poh.get_order_operations` present
+- [ ] If non-empty: `operationId`, `operationNumber`, `operationText` are strings
+- [ ] `workCentre`, `plannedStart`, `plannedFinish` are empty strings — expected, by design
+- [ ] No SPN/PAT token used — query executes as end-user identity
+
+See `docs/deployment/poh-native-slices-browser-verification.md` for full checklist and troubleshooting.
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
-- SQL column names for POH and CQ adapters are confirmed from live DDL (2026-05-17). No column-name blockers remain.
+- `vw_gold_process_order_phase` DDL is confirmed (2026-05-17). No column-name blockers for order-operations route.
+- `vw_gold_confirmation` and `vw_gold_adp_movement` DDL not captured — confirmations and goods movements routes are blocked until DDL is confirmed.
 - All tests in this checklist require a human in the loop with valid Databricks workspace access. Do not attempt to automate against live Databricks in CI.
