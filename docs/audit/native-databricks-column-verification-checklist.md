@@ -1,7 +1,7 @@
 # Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17
-**Status:** CQ lab plants columns confirmed-v1; all others ASSUMED — none confirmed from live DDL
+**Date:** 2026-05-17 (updated — POH operations DDL confirmed, confirmations/movements blocked)
+**Status:** POH header + operations columns confirmed-ddl; CQ lab plants confirmed-v1; confirmations + movements blocked (no DDL)
 **Reference:** ADR-025, `apps/api/adapters/poh/poh_databricks_adapter.py`, `apps/api/adapters/cq/cq_databricks_adapter.py`
 
 **Legend:**
@@ -26,57 +26,99 @@ DESCRIBE TABLE connected_plant_uat.vw_gold_process_order;
 SELECT * FROM connected_plant_uat.vw_gold_process_order LIMIT 1;
 ```
 
-| Contract field | SQL alias | Assumed source column | Status | Verified date |
-|---------------|-----------|----------------------|--------|--------------|
-| `processOrderId` | `process_order_id` | `aufnr` | **assumed** | — |
-| `orderType` | `order_type` | `auart` | **assumed** | — |
-| `materialId` | `material_id` | `matnr` | **assumed** | — |
-| `materialDescription` | `material_description` | `maktx` | **assumed** | — |
-| `plantId` | `plant_id` | `werks` | **assumed** | — |
-| `productionLine` | `production_line` | `arbpl` | **assumed** | — |
-| `plannedQuantity` | `planned_quantity` | `gamng` | **assumed** | — |
-| `uom` | `uom` | `gmein` | **assumed** | — |
-| `confirmedQuantity` | `confirmed_quantity` | `wemng` | **assumed** | — |
-| `plannedStart` | `planned_start` | `gstrp` | **assumed** | — |
-| `plannedFinish` | `planned_finish` | `gltrp` | **assumed** | — |
-| `actualStart` | `actual_start` | `gstri` | **assumed** | — |
-| `actualFinish` | `actual_finish` | `getri` | **assumed** | — |
-| `orderStatusRaw` | `order_status_raw` | `objnr` | **assumed** | — |
-| `batch` | `batch` | `charg` | **assumed** | — |
+| Contract field | SQL alias | Source column | Status | Verified date |
+|---------------|-----------|--------------|--------|--------------|
+| `processOrderId` | `process_order_id` | `PROCESS_ORDER_ID` | **confirmed-ddl** | 2026-05-17 |
+| `orderType` | — | not in view | **missing** | 2026-05-17 |
+| `materialId` | `material_id` | `MATERIAL_ID` | **confirmed-ddl** | 2026-05-17 |
+| `materialDescription` | `material_description` | `MATERIAL_DESCRIPTION` | **confirmed-ddl** | 2026-05-17 |
+| `plantId` | `plant_id` | `PLANT_ID` | **confirmed-ddl** | 2026-05-17 |
+| `productionLine` | — | not in view | **missing** | 2026-05-17 |
+| `plannedQuantity` | — | not in view | **missing** | 2026-05-17 |
+| `uom` | — | not in view | **missing** | 2026-05-17 |
+| `confirmedQuantity` | — | not in view | **missing** | 2026-05-17 |
+| `plannedStart` | — | not in view | **missing** | 2026-05-17 |
+| `plannedFinish` | — | not in view | **missing** | 2026-05-17 |
+| `actualStart` | — | not in view | **missing** | 2026-05-17 |
+| `actualFinish` | — | not in view | **missing** | 2026-05-17 |
+| `orderStatus` | `order_status_raw` → mapped | `STATUS` | **confirmed-ddl** | 2026-05-17 |
+| `inspectionLotId` | `inspection_lot_id` | `INSPECTION_LOT_ID` | **confirmed-ddl** | 2026-05-17 |
 
-**Status mapping note:** `order_status_raw` → `orderStatus` is computed in `map_process_order_header_rows()` via `_ORDER_STATUS_MAP`. The raw value in `vw_gold_process_order` may be a text status code (REL, CRTD, CNF...) or an SAP object number (`objnr`). Verify by inspecting sample rows — the gold view may already expose a decoded status field.
+**DDL evidence:** `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_process_order` run 2026-05-17. Columns present: `PROCESS_ORDER_ID`, `STATUS`, `MATERIAL_ID`, `MATERIAL_DESCRIPTION`, `PLANT_ID`, `INSPECTION_LOT_ID`. Missing fields return empty/zero defaults by design until a richer view is available.
 
-**Verification SQL to run:**
-```sql
--- Step 1: confirm columns exist
-DESCRIBE TABLE connected_plant_uat.vw_gold_process_order;
+**Status mapping:** `STATUS` text values (e.g. `"IN PROGRESS"`, `"CLOSED"`) → V2 enum via `_ORDER_STATUS_MAP`. Browser-verified: `"CLOSED"` returned as `"closed"` for process order 7006965038 (2026-05-17).
 
--- Step 2: inspect status values for the mapping
-SELECT DISTINCT order_status_raw
-FROM connected_plant_uat.vw_gold_process_order
-LIMIT 20;
+---
 
--- Step 3: test the full query with a known process order
-SELECT
-    aufnr AS process_order_id,
-    auart AS order_type,
-    matnr AS material_id,
-    maktx AS material_description,
-    werks AS plant_id,
-    arbpl AS production_line,
-    gamng AS planned_quantity,
-    gmein AS uom,
-    wemng AS confirmed_quantity,
-    gstrp AS planned_start,
-    gltrp AS planned_finish,
-    gstri AS actual_start,
-    getri AS actual_finish,
-    objnr AS order_status_raw,
-    charg AS batch
-FROM connected_plant_uat.vw_gold_process_order
-WHERE aufnr = '<known-order-id>'
-LIMIT 1;
-```
+## POH — `getOrderOperations`
+
+**QuerySpec:** `poh.get_order_operations` in `apps/api/adapters/poh/poh_databricks_adapter.py`
+**Source view:** `connected_plant_uat.csm_process_order_history.vw_gold_process_order_phase`
+**FastAPI route:** `GET /api/por/order-operations?process_order_id=...`
+
+**DDL evidence:** `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_process_order_phase` run 2026-05-17. All columns below are confirmed-ddl.
+
+| Contract field | SQL alias | Source column | Status | Verified date |
+|---------------|-----------|--------------|--------|--------------|
+| `operationId` | `operation_id` | `PROCESS_ORDER_PHASE_ID` | **confirmed-ddl** | 2026-05-17 |
+| `operationNumber` | `operation_number` | `PHASE_ID` | **confirmed-ddl** | 2026-05-17 |
+| `operationText` | `operation_text` | `PHASE_DESCRIPTION` | **confirmed-ddl** | 2026-05-17 |
+| `workCentre` | — | not in view | **missing** | 2026-05-17 |
+| `plannedStart` | — | not in view | **missing** | 2026-05-17 |
+| `plannedFinish` | — | not in view | **missing** | 2026-05-17 |
+| `plannedDurationMinutes` | — | not in view | **missing** | 2026-05-17 |
+| `status` | inferred | `START_USER` + `END_USER` | **confirmed-ddl** | 2026-05-17 |
+| `confirmationStatus` | inferred | `START_USER` + `END_USER` | **confirmed-ddl** | 2026-05-17 |
+| `confirmed` | inferred | `END_USER` presence | **confirmed-ddl** | 2026-05-17 |
+| `hasException` | — | not in view | **missing** | 2026-05-17 |
+
+**Status inference logic:** `END_USER` populated → `confirmed` / `final-confirmed`; `START_USER` only → `in-progress` / `partially-confirmed`; neither → `pending` / `unconfirmed`. This is a conservative inference, not a direct SAP status field.
+
+**Browser verification:** Not yet done. Required before claiming route is production-ready. Use process order 7006965038.
+
+---
+
+## POH — `getOrderConfirmations` — BLOCKED
+
+**Candidate view:** `vw_gold_confirmation`
+**FastAPI route:** Not implemented
+**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_confirmation` in connected_plant_uat. Cannot confirm column names.
+
+| Required contract field | Assumed source column | Status |
+|------------------------|----------------------|--------|
+| `confirmationId` | unknown | **blocked** |
+| `operationId` | unknown | **blocked** |
+| `operationNumber` | unknown | **blocked** |
+| `confirmedYield` | unknown | **blocked** |
+| `scrapQuantity` | unknown | **blocked** |
+| `confirmationDateTime` | unknown | **blocked** |
+| `postedBy` | unknown | **blocked** |
+| `finalConfirmationFlag` | unknown | **blocked** |
+
+**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
+
+---
+
+## POH — `getOrderGoodsMovements` — BLOCKED
+
+**Candidate view:** `vw_gold_adp_movement`
+**FastAPI route:** Not implemented
+**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_adp_movement` in connected_plant_uat. Cannot confirm column names.
+
+| Required contract field | Assumed source column | Status |
+|------------------------|----------------------|--------|
+| `movementType` | unknown | **blocked** |
+| `materialId` | unknown | **blocked** |
+| `materialDescription` | unknown | **blocked** |
+| `batchId` | unknown | **blocked** |
+| `quantity` | unknown | **blocked** |
+| `unit` | unknown | **blocked** |
+| `postingDate` | unknown | **blocked** |
+| `processOrderId` | unknown | **blocked** |
+| `storageLocation` | unknown | **blocked** |
+| `movementCategory` | unknown | **blocked** |
+
+**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
 
 ---
 

@@ -18,22 +18,22 @@ The `ProcessOrderReviewLegacyApiAdapter` class extends `ProcessOrderReviewAdapte
 
 ---
 
-## Current State (2026-05-16, updated k.txt)
+## Current State (2026-05-17, updated a.txt/b.txt tranche)
 
 ### ProcessOrderReviewAdapter
 
-| Method | V2 tier | V1 endpoint | Proxy route | Browser verified | Databricks QuerySpec | Row mapper |
-|---|---|---|---|---|---|---|
-| `getProcessOrderReviewContext` | mock | `GET /por/order-context` | No | No | No | No |
-| `getProcessOrderHeader` | legacy-api / **databricks-api** (mode-gated) | `POST /por/order-header` | Yes | No | **Yes** — `get_process_order_header_spec` | **Yes** — `map_process_order_header_rows` |
-| `getOrderProgressSummary` | mock | `GET /por/order-progress` | No | No |
-| `getExecutionTimeline` | mock | `GET /por/execution-events` | No | No |
-| `getOrderQualityContext` | mock | `GET /por/quality-context` | No | No |
-| `getOrderStagingContext` | mock | `GET /por/staging-context` | No | No |
-| `getRelatedBatchContext` | mock | `GET /por/related-batches` | No | No |
-| `getOrderOperations` | mock | `GET /por/order-phases` | No | No |
-| `getOrderConfirmations` | mock | `GET /por/confirmations` | No | No |
-| `getOrderGoodsMovements` | mock | `GET /por/goods-movements` | No | No |
+| Method | V2 tier | Databricks route | Browser verified | QuerySpec | Row mapper |
+|---|---|---|---|---|---|
+| `getProcessOrderReviewContext` | mock | — | No | No | No |
+| `getProcessOrderHeader` | **databricks-api** (mode-gated) | `POST /api/por/order-header` | **Yes 2026-05-17** (PO 7006965038) | `get_process_order_header_spec` | `map_process_order_header_rows` |
+| `getOrderProgressSummary` | mock | — | No | No | No |
+| `getExecutionTimeline` | mock | — | No | No | No |
+| `getOrderQualityContext` | mock | — | No | No | No |
+| `getOrderStagingContext` | mock | — | No | No | No |
+| `getRelatedBatchContext` | mock | — | No | No | No |
+| `getOrderOperations` | **databricks-api** (mode-gated) | `GET /api/por/order-operations` | **Not yet** | `get_order_operations_spec` | `map_order_operations_rows` |
+| `getOrderConfirmations` | mock | — | — | — **BLOCKED** — `vw_gold_confirmation` DDL unconfirmed | — |
+| `getOrderGoodsMovements` | mock | — | — | — **BLOCKED** — `vw_gold_adp_movement` DDL unconfirmed | — |
 
 ### OperationsPlanRiskAdapter
 
@@ -134,34 +134,26 @@ Priority order for V1 wiring:
 
 ---
 
-## FastAPI Proxy Routes (current state)
+## FastAPI Routes (current state)
 
 ```python
 # apps/api/routes/process_order.py
-POST /api/por/order-header   # mode-gated: legacy-api (proxy) or databricks-api (StatementApi)
+POST /api/por/order-header      # mode-gated: legacy-api (proxy) or databricks-api (StatementApi) — browser-verified 2026-05-17
+GET  /api/por/order-operations  # databricks-api only (no V1 endpoint) — implemented 2026-05-17, browser verification pending
 ```
 
-Routes not yet created (require V1 endpoint shape confirmation first):
+Routes not yet created (require V1 endpoint confirmation or DDL confirmation first):
 ```python
-GET /por/order-phases
-GET /por/confirmations
-GET /por/goods-movements
-GET /por/related-batches
-GET /por/quality-context
-GET /por/staging-context
-GET /por/execution-events
-GET /por/order-context
-GET /por/order-progress
+GET /api/por/order-confirmations   # blocked — vw_gold_confirmation DDL not captured
+GET /api/por/order-goods-movements # blocked — vw_gold_adp_movement DDL not captured
+# All others (related-batches, quality-context, staging-context, etc.) — mock only
 ```
 
-## Databricks Column Verification Required
+## Databricks Column Verification Status
 
-All column names in `get_process_order_header_spec` are TODO-marked. Verify before production use:
-
-```sql
-DESCRIBE TABLE connected_plant_uat.vw_gold_process_order;
-```
-
-Columns to confirm: `aufnr`, `auart`, `matnr`, `maktx`, `charg`, `werks`, `arbpl`, `gamng`, `gmein`, `wemng`, `gstrp`, `gltrp`, `gstri`, `getri`, `objnr`.
-
-The `objnr` → `order_status_raw` mapping is approximate. The gold view may expose a dedicated status column with text values rather than the SAP status object number. Verify by inspecting sample rows.
+| View | Columns | Status |
+|------|---------|--------|
+| `vw_gold_process_order` | `PROCESS_ORDER_ID`, `STATUS`, `MATERIAL_ID`, `MATERIAL_DESCRIPTION`, `PLANT_ID`, `INSPECTION_LOT_ID` | **confirmed-ddl 2026-05-17** |
+| `vw_gold_process_order_phase` | `PROCESS_ORDER_PHASE_ID`, `PHASE_ID`, `PHASE_DESCRIPTION`, `PHASE_TEXT`, `OPERATION_QUANTITY`, `OPERATION_QUANTITY_UOM`, `SORT_NUMBER`, `START_USER`, `END_USER` | **confirmed-ddl 2026-05-17** |
+| `vw_gold_confirmation` | unknown | **blocked** — run `DESCRIBE TABLE` |
+| `vw_gold_adp_movement` | unknown | **blocked** — run `DESCRIBE TABLE` |

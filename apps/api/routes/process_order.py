@@ -17,8 +17,11 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from adapters.poh.poh_databricks_adapter import (
+    OrderOperationsRequest,
     ProcessOrderHeaderRequest,
+    get_order_operations_spec,
     get_process_order_header_spec,
+    map_order_operations_rows,
     map_process_order_header_rows,
 )
 from routes._databricks import require_databricks_config, set_databricks_response_headers
@@ -141,3 +144,57 @@ async def _order_header_databricks(
 
     set_databricks_response_headers(response, spec)
     return result
+
+
+@router.get("/por/order-operations")
+async def order_operations(
+    process_order_id: str,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> list:
+    """Process order operations (phases) — databricks-api only.
+
+    No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
+    is not databricks-api. Missing OAuth → 401. Missing config → 503.
+    No silent fallback.
+    """
+    backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if backend_mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="Order operations require BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    databricks_host, warehouse_id = require_databricks_config()
+
+    identity = UserIdentity(
+        user_id=x_forwarded_user or "unknown",
+        email=x_forwarded_email,
+        raw_oauth_token=x_forwarded_access_token,
+    )
+
+    try:
+        spec = get_order_operations_spec(OrderOperationsRequest(process_order_id=process_order_id))
+        client = StatementApiDatabricksClient(host=databricks_host)
+        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
+        rows = await executor.execute(spec, identity)
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksAuthRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except DatabricksQueryTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except DatabricksQueryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    operations = map_order_operations_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return operations
