@@ -22,9 +22,13 @@ command:
   - --workers
   - "2"
 
-# SQL warehouse resource — declares that the app executes queries on behalf of users.
-# This causes Databricks to include the "sql" scope in the forwarded OAuth token,
-# which is required for the token to be accepted by the SQL statement API.
+# OAuth scopes included in the forwarded user token (x-forwarded-access-token).
+# "sql" is required for the token to be accepted by the SQL statement API.
+# The resources block grants the service principal warehouse access but does NOT
+# add sql to the user's forwarded token — user_api_scopes does that.
+user_api_scopes:
+  - sql
+
 resources:
   - name: connectio-warehouse
     description: SQL warehouse for Databricks native reads
