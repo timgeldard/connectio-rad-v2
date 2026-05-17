@@ -83,9 +83,8 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
   }
 
   /**
-   * Tier: legacy-api — wired to native Databricks GET /api/por/order-operations.
-   * No V1 endpoint exists for this data. Not yet browser-verified.
-   * Falls back to mock on any error until verified.
+   * Tier: databricks-api — wired to native Databricks GET /api/por/order-operations.
+   * No V1 endpoint exists for this data. Browser-verified 2026-05-17 (PO 7006965038, 11 ops).
    *
    * Known gaps from vw_gold_process_order_phase (2026-05-17):
    *   workCentre, plannedStart, plannedFinish, plannedDurationMinutes not in view — returned empty/zero.
@@ -116,11 +115,19 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
           ok: false,
           error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
-          source: 'legacy-api',
+          source: 'databricks-api',
         }
       }
 
-      const raw: unknown[] = await response.json()
+      const raw: unknown = await response.json()
+      if (!Array.isArray(raw)) {
+        return {
+          ok: false,
+          error: { code: 'invalid-data', message: 'Order operations response was not an array', retryable: false },
+          displayState: 'error',
+          source: 'databricks-api',
+        }
+      }
 
       const operations: ProcessOrderOperation[] = raw.map((item: unknown) => {
         const r = item as Record<string, unknown>
@@ -139,14 +146,14 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
         }
       })
 
-      return { ok: true, data: operations, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
+      return { ok: true, data: operations, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
         ok: false,
         error: { code: 'unknown', message, retryable: true },
         displayState: 'error',
-        source: 'legacy-api',
+        source: 'databricks-api',
       }
     }
   }
