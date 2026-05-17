@@ -2,7 +2,7 @@
 
 Implemented slices:
   - get_process_order_header_spec / map_process_order_header_rows
-  - get_order_operations_spec (QuerySpec only — row mapper deferred)
+  - get_order_operations_spec / map_order_operations_rows
 
 Column verification status (2026-05-17, connected_plant_uat):
   vw_gold_process_order columns confirmed via live DDL:
@@ -197,6 +197,7 @@ def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:
 
     sql = f"""
     SELECT
+        PROCESS_ORDER_PHASE_ID  AS operation_id,
         PHASE_ID                AS operation_number,
         PHASE_DESCRIPTION       AS operation_text,
         PHASE_TEXT              AS operation_detail,
@@ -214,9 +215,59 @@ def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:
     return QuerySpec(
         name="poh.get_order_operations",
         module="poh",
-        endpoint="/api/por/order-header",
+        endpoint="/api/por/order-operations",
         sql=sql,
         params={"process_order_id": request.process_order_id},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["poh", "process-order", "operations"],
     )
+
+
+def map_order_operations_rows(rows: list[dict]) -> list[dict]:
+    """Map raw Databricks rows to a list of ProcessOrderOperation contract shapes.
+
+    Field coverage (2026-05-17): vw_gold_process_order_phase provides
+    PROCESS_ORDER_PHASE_ID, PHASE_ID, PHASE_DESCRIPTION, PHASE_TEXT,
+    OPERATION_QUANTITY, OPERATION_QUANTITY_UOM, SORT_NUMBER, START_USER, END_USER.
+
+    Fields not in the view (workCentre, plannedStart, plannedFinish,
+    plannedDurationMinutes, resource, actualStart, actualFinish, actualDurationMinutes)
+    return empty/zero defaults until a richer view is confirmed.
+
+    Status and confirmationStatus are inferred from START_USER / END_USER presence:
+      - END_USER populated → confirmed / final-confirmed
+      - START_USER only → in-progress / partially-confirmed
+      - neither → pending / unconfirmed
+    """
+    result = []
+    for row in rows:
+        start_user = row.get("start_user")
+        end_user = row.get("end_user")
+
+        if end_user:
+            status = "confirmed"
+            confirmation_status = "final-confirmed"
+            confirmed = True
+        elif start_user:
+            status = "in-progress"
+            confirmation_status = "partially-confirmed"
+            confirmed = False
+        else:
+            status = "pending"
+            confirmation_status = "unconfirmed"
+            confirmed = False
+
+        result.append({
+            "operationId": str(row.get("operation_id") or ""),
+            "operationNumber": str(row.get("operation_number") or ""),
+            "operationText": str(row.get("operation_text") or ""),
+            "workCentre": "",              # not in view
+            "plannedStart": "",            # not in view
+            "plannedFinish": "",           # not in view
+            "plannedDurationMinutes": 0,   # not in view
+            "status": status,
+            "confirmationStatus": confirmation_status,
+            "confirmed": confirmed,
+            "hasException": False,         # not in view
+        })
+    return result

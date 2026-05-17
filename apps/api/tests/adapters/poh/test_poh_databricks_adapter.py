@@ -11,6 +11,7 @@ from adapters.poh.poh_databricks_adapter import (
     ProcessOrderHeaderRequest,
     get_order_operations_spec,
     get_process_order_header_spec,
+    map_order_operations_rows,
     map_process_order_header_rows,
     _format_datetime,
     _map_order_status,
@@ -141,7 +142,7 @@ class TestGetOrderOperationsSpec:
 
     def test_endpoint(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
-        assert spec.endpoint == "/api/por/order-header"
+        assert spec.endpoint == "/api/por/order-operations"
 
     def test_cache_policy_is_per_user(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
@@ -184,6 +185,7 @@ class TestGetOrderOperationsSpec:
     def test_sql_uses_confirmed_column_names(self) -> None:
         """SQL must use columns confirmed from live DDL (2026-05-17)."""
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
+        assert "PROCESS_ORDER_PHASE_ID" in spec.sql
         assert "PHASE_ID" in spec.sql
         assert "PHASE_DESCRIPTION" in spec.sql
         assert "OPERATION_QUANTITY" in spec.sql
@@ -335,3 +337,122 @@ class TestFormatDatetime:
 
     def test_none_returns_empty_string(self) -> None:
         assert _format_datetime(None) == ""
+
+
+# ---------------------------------------------------------------------------
+# map_order_operations_rows
+# ---------------------------------------------------------------------------
+
+class TestMapOrderOperationsRows:
+    def _full_row(self) -> dict:
+        """Row using confirmed column names from vw_gold_process_order_phase (2026-05-17)."""
+        return {
+            "operation_id": "PHASE-001",
+            "operation_number": "0010",
+            "operation_text": "Milk Standardisation",
+            "operation_detail": "Standardise milk fat content",
+            "planned_quantity": 1000.0,
+            "uom": "L",
+            "sort_number": 10,
+            "start_user": "USER01",
+            "end_user": "USER01",
+        }
+
+    def _pending_row(self) -> dict:
+        return {**self._full_row(), "start_user": None, "end_user": None}
+
+    def _in_progress_row(self) -> dict:
+        return {**self._full_row(), "end_user": None}
+
+    def test_empty_rows_returns_empty_list(self) -> None:
+        assert map_order_operations_rows([]) == []
+
+    def test_returns_list_for_multiple_rows(self) -> None:
+        result = map_order_operations_rows([self._full_row(), self._pending_row()])
+        assert len(result) == 2
+
+    def test_operation_id_mapped(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["operationId"] == "PHASE-001"
+
+    def test_operation_number_mapped(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["operationNumber"] == "0010"
+
+    def test_operation_text_mapped(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["operationText"] == "Milk Standardisation"
+
+    def test_leading_zeros_preserved_in_operation_id(self) -> None:
+        row = {**self._full_row(), "operation_id": "000000000001"}
+        result = map_order_operations_rows([row])
+        assert result[0]["operationId"] == "000000000001"
+
+    def test_work_centre_defaults_to_empty(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["workCentre"] == ""
+
+    def test_planned_start_defaults_to_empty(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["plannedStart"] == ""
+
+    def test_planned_finish_defaults_to_empty(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["plannedFinish"] == ""
+
+    def test_planned_duration_defaults_to_zero(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["plannedDurationMinutes"] == 0
+
+    def test_has_exception_defaults_to_false(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["hasException"] is False
+
+    def test_status_confirmed_when_end_user_set(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["status"] == "confirmed"
+
+    def test_status_in_progress_when_only_start_user_set(self) -> None:
+        result = map_order_operations_rows([self._in_progress_row()])
+        assert result[0]["status"] == "in-progress"
+
+    def test_status_pending_when_no_users(self) -> None:
+        result = map_order_operations_rows([self._pending_row()])
+        assert result[0]["status"] == "pending"
+
+    def test_confirmation_status_final_when_end_user_set(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["confirmationStatus"] == "final-confirmed"
+
+    def test_confirmation_status_partial_when_only_start_user(self) -> None:
+        result = map_order_operations_rows([self._in_progress_row()])
+        assert result[0]["confirmationStatus"] == "partially-confirmed"
+
+    def test_confirmation_status_unconfirmed_when_no_users(self) -> None:
+        result = map_order_operations_rows([self._pending_row()])
+        assert result[0]["confirmationStatus"] == "unconfirmed"
+
+    def test_confirmed_true_when_end_user_set(self) -> None:
+        result = map_order_operations_rows([self._full_row()])
+        assert result[0]["confirmed"] is True
+
+    def test_confirmed_false_when_in_progress(self) -> None:
+        result = map_order_operations_rows([self._in_progress_row()])
+        assert result[0]["confirmed"] is False
+
+    def test_confirmed_false_when_pending(self) -> None:
+        result = map_order_operations_rows([self._pending_row()])
+        assert result[0]["confirmed"] is False
+
+    def test_missing_operation_id_returns_empty_string(self) -> None:
+        row = {**self._full_row(), "operation_id": None}
+        result = map_order_operations_rows([row])
+        assert result[0]["operationId"] == ""
+
+    def test_sort_preserved_across_multiple_rows(self) -> None:
+        row1 = {**self._full_row(), "operation_id": "PHASE-001", "sort_number": 10}
+        row2 = {**self._full_row(), "operation_id": "PHASE-002", "sort_number": 20, "end_user": None}
+        result = map_order_operations_rows([row1, row2])
+        assert result[0]["operationId"] == "PHASE-001"
+        assert result[1]["operationId"] == "PHASE-002"
+        assert result[1]["status"] == "in-progress"

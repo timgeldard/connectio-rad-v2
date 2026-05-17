@@ -97,6 +97,7 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 | Route | Mode gate | Databricks path | Legacy path preserved | Response headers (databricks-api mode) |
 |---|---|---|---|---|
 | `POST /api/por/order-header` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_order_header_databricks()` | Yes | `X-Data-Source`, `X-Adapter-Mode`, `X-Query-Name` |
+| `GET /api/por/order-operations` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `order_operations()` | No (databricks-api only — no V1 endpoint) | `X-Data-Source`, `X-Adapter-Mode`, `X-Query-Name` |
 | `GET /api/cq/lab/plants` | Yes — `BACKEND_ADAPTER_MODE` | Yes — `_lab_plants_databricks()` | Yes | `X-Data-Source`, `X-Adapter-Mode`, `X-Query-Name` |
 | `GET /api/cq/lab/fails` | No gate needed | N/A — blocked | Yes | N/A |
 | `POST /api/trace2/batch-header` | No gate — not wired yet | No | Yes | N/A |
@@ -126,6 +127,12 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 
 8. **CQ Lab failures**: `vw_gold_process_order_plan` view missing — route implementation blocked.
 
+9. **POH order operations**: Route implemented (`GET /api/por/order-operations`) — **browser verification pending**. Use process order 7006965038. Known gaps: `workCentre`, `plannedStart`, `plannedFinish`, `plannedDurationMinutes` not in `vw_gold_process_order_phase`.
+
+10. **POH confirmations** (`getOrderConfirmations`): `vw_gold_confirmation` DDL not confirmed — implementation blocked. Run `DESCRIBE TABLE` first.
+
+11. **POH goods movements** (`getOrderGoodsMovements`): `vw_gold_adp_movement` DDL not confirmed — implementation blocked. Run `DESCRIBE TABLE` first.
+
 ---
 
 ## How to test locally with mocked Databricks client
@@ -144,7 +151,7 @@ python -m pytest tests/shared/ -q
 python -m pytest tests/routes/ -q
 ```
 
-All 325 tests pass without a Databricks connection (250 from k.txt + 26 from l.txt hardening + 49 from m.txt config reconciliation).
+All 360 tests pass without a Databricks connection (250 from k.txt + 26 from l.txt hardening + 49 from m.txt config reconciliation + 35 from POH operations slice).
 
 ---
 

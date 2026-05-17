@@ -304,3 +304,162 @@ class TestOrderHeaderDatabricksMode:
 
         # Must return 502 — not fall back to 503 (legacy) or 200 (mock)
         assert response.status_code == 502
+
+
+# ---------------------------------------------------------------------------
+# GET /api/por/order-operations — databricks-api only
+# ---------------------------------------------------------------------------
+
+_FAKE_OPS_ROWS = [
+    {
+        "operation_id": "PHASE-001",
+        "operation_number": "0010",
+        "operation_text": "Milk Standardisation",
+        "operation_detail": "Standardise milk fat content",
+        "planned_quantity": 1000.0,
+        "uom": "L",
+        "sort_number": 10,
+        "start_user": "USER01",
+        "end_user": "USER01",
+    },
+]
+
+
+class TestOrderOperationsDatabricksMode:
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+
+    async def test_returns_503_in_legacy_mode(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/por/order-operations",
+                params={"process_order_id": "100001"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 503
+        assert "databricks-api" in response.json()["detail"]
+
+    async def test_returns_503_when_databricks_host_missing(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.delenv("DATABRICKS_HOST", raising=False)
+        monkeypatch.delenv("SQL_WAREHOUSE_ID", raising=False)
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/por/order-operations",
+                params={"process_order_id": "100001"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 503
+
+    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "100001"},
+                    # No x-forwarded-access-token
+                )
+        assert response.status_code == 401
+
+    async def test_returns_empty_list_when_no_rows(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "NOTEXIST"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    async def test_returns_200_with_mapped_operations(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=_FAKE_OPS_ROWS,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "7006965038"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]["operationId"] == "PHASE-001"
+        assert data[0]["operationNumber"] == "0010"
+        assert data[0]["operationText"] == "Milk Standardisation"
+        assert data[0]["status"] == "confirmed"
+        assert data[0]["confirmed"] is True
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=_FAKE_OPS_ROWS,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "7006965038"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.headers.get("x-data-source") == "databricks-api"
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+        assert response.headers.get("x-query-name") == "poh.get_order_operations"
+
+    async def test_does_not_fall_back_on_query_error(self, monkeypatch) -> None:
+        from shared.query_service.errors import DatabricksQueryError
+
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryError("test.query", "Warehouse down"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        # Must return 502 — not fall back to legacy or mock
+        assert response.status_code == 502
+
+    async def test_uses_process_order_id_from_query_param(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        captured: list[dict] = []
+
+        async def capture_execute(self_inner, *, sql, params, oauth_token, **kwargs):
+            captured.append(params)
+            return []
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            capture_execute,
+        ):
+            async with _make_client() as client:
+                await client.get(
+                    "/api/por/order-operations",
+                    params={"process_order_id": "7006965038"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert captured[0]["process_order_id"] == "7006965038"
