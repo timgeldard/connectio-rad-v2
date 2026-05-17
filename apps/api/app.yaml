@@ -22,6 +22,16 @@ command:
   - --workers
   - "2"
 
+# SQL warehouse resource — declares that the app executes queries on behalf of users.
+# This causes Databricks to include the "sql" scope in the forwarded OAuth token,
+# which is required for the token to be accepted by the SQL statement API.
+resources:
+  - name: connectio-warehouse
+    description: SQL warehouse for Databricks native reads
+    sql_warehouse:
+      id: e76480b94bea6ed5
+      permission: CAN_USE
+
 env:
   # V1 backend URLs — format: valueFrom: scope/key
   - name: V1_TRACE_API_BASE_URL
@@ -43,8 +53,10 @@ env:
 
   # Databricks connection — non-secret config values set as literals.
   # The workspace host and warehouse ID are not credentials; no need for secret scope.
+  # Note: DAB ${var.*} substitution applies to databricks.yml only, not app.yaml.
+  # Per-environment values live in the targets section of databricks.yml.
   - name: DATABRICKS_HOST
-    value: adb-604667594731808.8.azuredatabricks.net
+    value: https://adb-604667594731808.8.azuredatabricks.net
 
   - name: SQL_WAREHOUSE_ID
     value: e76480b94bea6ed5
@@ -54,6 +66,7 @@ env:
     value: legacy-api
 
   # Domain catalog/schema — non-secret config set as literals.
+  # Per-environment values live in the targets section of databricks.yml.
   - name: POH_CATALOG
     value: connected_plant_uat
 
