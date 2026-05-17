@@ -41,30 +41,29 @@ env:
   - name: BACKEND_ADAPTER_MODE
     value: databricks-api
 
-  # Databricks connection — required when BACKEND_ADAPTER_MODE=databricks-api.
+  # Databricks connection — non-secret config values set as literals.
+  # The workspace host and warehouse ID are not credentials; no need for secret scope.
   - name: DATABRICKS_HOST
-    valueFrom: connectio-v2/databricks-host
+    value: adb-604667594731808.8.azuredatabricks.net
 
   - name: SQL_WAREHOUSE_ID
-    valueFrom: connectio-v2/sql-warehouse-id
+    value: e76480b94bea6ed5
 
   # App behaviour (frontend adapter mode — baked into JS bundle at build time, informational only)
   - name: ADAPTER_MODE
     value: legacy-api
 
-  # Domain catalog/schema — required when BACKEND_ADAPTER_MODE=databricks-api.
-  # CQ_CATALOG falls back to TRACE_CATALOG if unset (CQ and Trace share a workspace).
-  # Schema env vars are optional; defaults: POH=csm_process_order_history, TRACE=gold.
+  # Domain catalog/schema — non-secret config set as literals.
   - name: POH_CATALOG
-    valueFrom: connectio-v2/poh-catalog
+    value: connected_plant_uat
 
   - name: CQ_CATALOG
-    valueFrom: connectio-v2/cq-catalog
+    value: connected_plant_uat
 
   # TRACE_CATALOG — uncomment if Trace databricks-api routes are activated.
   # Also used as CQ_CATALOG fallback if CQ_CATALOG is unset.
   # - name: TRACE_CATALOG
-  #   valueFrom: connectio-v2/trace-catalog
+  #   value: connected_plant_uat
 
   # Auth diagnostics — enabled for initial verification only.
   # Disable after OAuth headers are confirmed: remove this entry and redeploy.
