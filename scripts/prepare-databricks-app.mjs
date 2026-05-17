@@ -32,12 +32,18 @@ const envLocalBak = join(root, 'apps', 'web', '.env.local.bak')
 // For same-origin Databricks Apps deployment, all base URLs must be empty so
 // fetch calls use relative paths (e.g. /api/trace2/...) against the current host.
 //
+// VITE_ADAPTER_MODE controls which HTTP adapter the frontend uses to reach the
+// FastAPI backend — 'legacy-api' means real HTTP calls (not mock). It is
+// independent of BACKEND_ADAPTER_MODE, which is a backend-only env var that
+// controls whether FastAPI routes to Databricks directly or proxies to V1.
+// 'legacy-api' is always the correct value here for a Databricks Apps deploy.
+//
 // Vite loads .env.local AFTER process.env and overrides it, so we temporarily
 // rename apps/web/.env.local during the build to prevent dev localhost values
 // from being baked into the production bundle.
 const buildEnv = {
   ...process.env,
-  VITE_ADAPTER_MODE: 'legacy-api',
+  VITE_ADAPTER_MODE: process.env.VITE_ADAPTER_MODE ?? 'legacy-api',
   VITE_TRACE_API_BASE_URL: '',
   VITE_WH360_API_BASE_URL: '',
   VITE_POH_API_BASE_URL: '',
@@ -54,6 +60,11 @@ console.log()
 
 // ── 2. Build frontend ──────────────────────────────────────────────────────
 // Temporarily hide .env.local so Vite cannot pick up localhost dev values.
+// If .env.local.bak already exists a prior run crashed before restoring it — recover first.
+if (existsSync(envLocalBak)) {
+  renameSync(envLocalBak, envLocal)
+  console.log('  Warning: found stale .env.local.bak from a prior run — restored before build')
+}
 const hadEnvLocal = existsSync(envLocal)
 if (hadEnvLocal) {
   renameSync(envLocal, envLocalBak)

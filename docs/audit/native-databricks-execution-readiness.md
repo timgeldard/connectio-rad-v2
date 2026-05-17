@@ -70,11 +70,11 @@ Query tags are not natively supported by the Statement API. Tags are logged via 
 
 | Header | Role | Status | Verified in Databricks Apps? |
 |---|---|---|---|
-| `x-forwarded-access-token` | OAuth bearer token | Assumed — MUST verify | No — TODO |
-| `x-forwarded-user` | User identifier | Assumed — MUST verify | No — TODO |
-| `x-forwarded-email` | User email | Assumed — MUST verify | No — TODO |
+| `x-forwarded-access-token` | OAuth bearer token | Confirmed | Yes — 2026-05-17 (`token_present: true`, `token_length_bucket: "long"`) |
+| `x-forwarded-user` | User identifier | Confirmed | Yes — 2026-05-17 (`user_header_present: true`) |
+| `x-forwarded-email` | User email | Confirmed | Yes — 2026-05-17 (`email_header_present: true`) |
 
-`extract_user_identity()` FastAPI dependency is implemented in `shared/query_service/identity.py`. Header names are marked `TODO: Verify` pending Databricks Apps deployment.
+`extract_user_identity()` FastAPI dependency is implemented in `shared/query_service/identity.py`. Header names are confirmed correct — no further verification needed.
 
 Missing OAuth token does not raise in `extract_user_identity()` — the caller (route) is responsible for calling `identity.require_user_oauth()` via the executor, which raises `DatabricksAuthRequiredError` → HTTP 401.
 
@@ -108,13 +108,13 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 
 ### Must-verify before production use
 
-1. **Databricks Apps OAuth header names**: `x-forwarded-access-token`, `x-forwarded-user`, `x-forwarded-email` assumed from documentation. Must be confirmed by inspecting request headers in a deployed Databricks App.
+1. ~~**Databricks Apps OAuth header names**~~ — **RESOLVED 2026-05-17.** All three `x-forwarded-*` headers confirmed present in UAT. `sql` scope confirmed in user token. `identity.py` header names are correct.
 
-2. **POH column names**: All SQL column names in `get_process_order_header_spec` are TODO-marked (inferred from SAP AUFNR/AUART/MATNR conventions). Must run `DESCRIBE TABLE connected_plant_uat.vw_gold_process_order` to confirm.
+2. **POH column names**: SQL column names in `get_process_order_header_spec` were confirmed from live DDL (2026-05-17). Fields not in `vw_gold_process_order` (`plannedQuantity`, `confirmedQuantity`, `uom`, dates) return zero/empty by design — the view does not expose them. No column-name blockers remain for the currently wired POH query.
 
-3. **CQ Lab column names**: `PLANT_ID`/`PLANT_NAME` confirmed from V1 source (`confirmed-v1`). Status updated in `native-databricks-column-verification-checklist.md`. Live DDL confirmation (`DESCRIBE TABLE connected_plant_uat.gold.gold_plant`) still required before production to upgrade to `confirmed-ddl`.
+3. **CQ Lab column names**: `PLANT_ID`/`PLANT_NAME` confirmed working — `GET /api/cq/lab/plants` returned real plant data (browser-verified 2026-05-17). No column-name blockers remain.
 
-4. **POH order status mapping**: `objnr` column alias → status mapping is approximate. The actual gold view may expose a status text column rather than the SAP status object number. Must verify with `DESCRIBE TABLE` and inspect sample rows.
+4. **POH order status mapping**: `orderStatus: "closed"` returned correctly for process order 7006965038. Status mapping confirmed working for at least the closed case — verify other status values when those orders become available for testing.
 
 5. **Cache backend** (ADR-024 open question #7): No active cache. All Databricks queries go to the warehouse on every request.
 
@@ -150,31 +150,25 @@ All 325 tests pass without a Databricks connection (250 from k.txt + 26 from l.t
 
 ## How to test in Databricks Apps with a real user OAuth token
 
-1. Deploy the app: `databricks apps deploy connectio-v2 --source-code-path apps/api`
+**Current state (2026-05-17):** The app is live at `https://connectio-v2-604667594731808.8.azure.databricksapps.com` with `BACKEND_ADAPTER_MODE=databricks-api`. CQ lab plants and POH order header are browser-verified. The steps below are for future deploys or new environments.
 
-2. Set secrets (one-time):
-   ```bash
-   databricks secrets put-secret connectio-v2 databricks-host \
-     --string-value "<your-workspace>.azuredatabricks.net"
-   databricks secrets put-secret connectio-v2 sql-warehouse-id \
-     --string-value "<warehouse-id>"
-   ```
+1. Deploy: `npm run prepare:databricks && databricks bundle deploy --target uat`
 
-3. Update `apps/api/app.yaml` — change `BACKEND_ADAPTER_MODE` to `databricks-api` and uncomment the `DATABRICKS_HOST`/`SQL_WAREHOUSE_ID` entries (already present as commented-out placeholders). Use `valueFrom: connectio-v2/<key>` string form — Databricks Apps does not support nested YAML dicts.
+2. `DATABRICKS_HOST`, `SQL_WAREHOUSE_ID`, `POH_CATALOG`, and `CQ_CATALOG` are set as literals in `app.yaml` — no secret setup required for these. V1 backend URLs (`V1_*`) still come from the `connectio-v2` secret scope.
 
-4. Redeploy and open the app in a browser (as an authenticated Databricks user).
+3. `user_api_scopes: [sql]` is set in `databricks.yml` and survives redeployment. No manual REST PATCH needed.
 
-5. Navigate to the Process Order Review workspace. The POH header panel should load data from Databricks.
+4. Open the app in a browser as an authenticated Databricks user.
 
-6. Check `databricks apps logs connectio-v2` for `Executing Databricks statement` log entries confirming user_id and query_name.
+5. Navigate to the Process Order Review workspace — the POH header panel loads data from Databricks. Navigate to Connected Quality Lab — the plant list loads from Databricks.
 
-7. Verify these headers are present in browser DevTools → Network → the order-header request:
+6. Check `databricks apps logs connectio-v2` for `Executing Databricks statement` log entries confirming user_id and query_name. Confirm no `service_principal`, `client_secret`, or `DATABRICKS_TOKEN` entries.
+
+7. Verify in browser DevTools → Network → the order-header request:
    - `X-Data-Source: databricks-api`
    - `X-Adapter-Mode: databricks-api`
    - `X-Query-Name: poh.get_process_order_header`
 
-8. Before switching to databricks-api, enable `ENABLE_AUTH_DIAGNOSTICS=true` and call `GET /api/diagnostics/auth-headers` to confirm the OAuth headers are injected. See `docs/audit/databricks-apps-oauth-header-verification.md`.
+8. If the panel shows a 401: the user's `effective_user_api_scopes` may not include `sql`. Run `databricks apps get connectio-v2` and confirm `sql` is in the list. If missing, run `databricks bundle deploy --target uat` (bundle deploy sets `user_api_scopes` from `databricks.yml`).
 
-9. If the panel shows a 401 error: OAuth header names differ from assumed values. Inspect the actual headers in the Databricks Apps logs and update `identity.py`.
-
-10. Column name verification: if data returns but fields show empty values, the SQL column aliases are wrong. Run `DESCRIBE TABLE` queries from `docs/audit/native-databricks-column-verification-checklist.md`.
+9. Column name verification: if data returns but fields show empty values, the SQL column aliases may be wrong. Run `DESCRIBE TABLE` queries from `docs/audit/native-databricks-column-verification-checklist.md`.

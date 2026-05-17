@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — UAT deployment state added  
+**Last updated:** 2026-05-17 — databricks-api browser-verified for CQ plants + POH order header  
 **Scope:** All domain-integration adapter methods across Trace2, SPC, Warehouse360, POH (Process Order Review), and Quality/Lab  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -13,12 +13,14 @@
 |---|---|
 | V2 app deployed to UAT | **RUNNING** — `https://connectio-v2-604667594731808.8.azure.databricksapps.com` |
 | React UI load | Confirmed |
-| `BACKEND_ADAPTER_MODE` | `legacy-api` (all V1-backed routes active; native Databricks inactive) |
+| `BACKEND_ADAPTER_MODE` | **`databricks-api`** — native Databricks reads active for CQ lab plants and POH order header |
 | V1 apps | **STOPPED** — all legacy-api domain routes return 503 until V1 apps are restarted |
-| Native Databricks reads | Not active — `DATABRICKS_HOST`, `SQL_WAREHOUSE_ID`, catalog vars not yet set |
-| `databricks-api` mode-gated routes | Executable in code; not active in UAT |
+| Native Databricks reads | **Active and browser-verified** — `DATABRICKS_HOST`, `SQL_WAREHOUSE_ID`, `POH_CATALOG`, `CQ_CATALOG` set as literals in `app.yaml` |
+| OAuth identity (`sql` scope) | **Confirmed** — `effective_user_api_scopes` includes `sql`; set via `user_api_scopes` in `databricks.yml` |
+| CQ lab plants | **Browser-verified 2026-05-17** — `GET /api/cq/lab/plants` returns real plant list; `X-Data-Source: databricks-api` |
+| POH order header | **Browser-verified 2026-05-17** — `POST /api/por/order-header` with process order 7006965038 returns real data |
 
-> **Verification claim:** Deployment and UI serving are proven. Data connectivity (V1 proxy or native Databricks) is not yet verified in this UAT deployment.
+> **Two-layer adapter model:** `VITE_ADAPTER_MODE=legacy-api` (baked into the frontend bundle) means the frontend calls FastAPI via HTTP — not mock. It is independent of `BACKEND_ADAPTER_MODE`. The frontend has no `databricks-api` mode; Databricks is always accessed through the FastAPI layer.
 
 ---
 
@@ -116,7 +118,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
-| `getProcessOrderHeader` | ✓ | ✓ W | — | **✓ mode-gated** | green when databricks | Route mode-gated; databricks path uses `vw_gold_process_order` — column names TODO |
+| `getProcessOrderHeader` | ✓ | ✓ W | — | **✓ BV 2026-05-17** | green when databricks | Browser-verified: process order 7006965038 returned real data; some fields empty by design (not in view) |
 | `getProcessOrderReviewContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getOrderProgressSummary` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getExecutionTimeline` | ✓ | — | — | — | none | Include in POH databricks-api slice |
@@ -154,7 +156,7 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getLabFailures` | ✓ | ✓ W | — | — | amber when live | **Browser-verify** `GET /api/cq/lab/fails`. Databricks-api blocked on `vw_gold_process_order_plan` |
-| `getLabPlants` | ✓ | ✓ W | — | **✓ mode-gated** | green when databricks | `GET /api/cq/lab/plants` wired in both modes; databricks path uses `gold_plant` — column names TODO |
+| `getLabPlants` | ✓ | ✓ W | — | **✓ BV 2026-05-17** | green when databricks | Browser-verified: `GET /api/cq/lab/plants` returns real plant list; `PLANT_ID`/`PLANT_NAME` column names confirmed |
 
 **Summary:** 2 methods — both wired legacy-api (not browser-verified); `getLabPlants` also mode-gated for databricks-api.  
 **Blocker:** `vw_gold_process_order_plan` does not exist. `getLabFailures` cannot migrate to databricks-api until this view is created. `getLabPlants` unblocked — column names must be confirmed.
@@ -163,15 +165,15 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 
 ## Cross-Domain Totals
 
-| Domain | Total methods | Browser-verified | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
-|--------|--------------|-----------------|---------------------|-----------|----------------|
-| Traceability | 11 | 1 | 0 | 10 | 0 |
+| Domain | Total methods | Browser-verified (databricks-api) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
+|--------|--------------|----------------------------------|---------------------|-----------|----------------|
+| Traceability | 11 | 1 (legacy-api only) | 0 | 10 | 0 |
 | SPC | 9 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 1 | 8 | 0 |
-| POH (POR) | 10 | 0 | 1 | 9 | **1** (`getProcessOrderHeader`) |
+| POH (POR) | 10 | **1** (`getProcessOrderHeader` 2026-05-17) | 1 | 8 | **1 BV** |
 | POH (plan risk) | 9 | 0 | 0 | 9 | 0 |
-| Quality/Lab | 2 | 0 | 2 | 0 | **1** (`getLabPlants`) |
-| **Total** | **50** | **1** | **4** | **45** | **2** |
+| Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 1 | 0 | **1 BV** |
+| **Total** | **50** | **2** | **3** | **44** | **2 BV** |
 
 ---
 
@@ -181,8 +183,8 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
-| `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + mode-gated (databricks-api); UAT: 503 while V1 STOPPED |
-| `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); UAT: 503 while V1 STOPPED; databricks-api blocked on `vw_gold_process_order_plan` |
-| `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + mode-gated (databricks-api); UAT: 503 while V1 STOPPED |
+| `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
+| `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
+| `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
 
 No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend.
