@@ -31,3 +31,5 @@ resources:
       name: connectio-v2
       description: ConnectIO V2 — process-domain RAD with FastAPI backend and React frontend
       source_code_path: apps/api
+      user_api_scopes:
+        - sql

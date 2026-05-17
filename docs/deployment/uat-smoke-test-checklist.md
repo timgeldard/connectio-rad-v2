@@ -110,42 +110,40 @@ These tests confirm V2 can query Databricks directly using end-user OAuth.
 - [x] `gap-auth` response header confirms authenticated user identity
 - [x] `ENABLE_AUTH_DIAGNOSTICS` removed from `app.yaml` (disabled 2026-05-17)
 
-### C3 — CQ lab plants (native Databricks)
-
-Open the app in a browser (authenticated Databricks session), then:
+### C3 — CQ lab plants (native Databricks) ✓ PASSED 2026-05-17
 
 ```
-GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/cq/lab/plants
+GET /api/cq/lab/plants
 ```
 
-- [ ] Returns HTTP 200 with plant list
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Adapter-Mode: databricks-api` present
-- [ ] No SPN/PAT token used — query executes as the end user's identity
+- [x] Returns HTTP 200 with plant list
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Adapter-Mode: databricks-api` present
+- [x] No SPN/PAT token used — query executes as the end user's identity
 
-### C4 — POH order header (native Databricks)
+### C4 — POH order header (native Databricks) ✓ PASSED 2026-05-17
 
-From a browser session with a known process order ID:
+Tested with process order `7006965038` (plant C113, MIXED BERRY FLV LQD 70373871, status: closed).
 
 ```
-POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-header
-{"process_order_id": "<known-id>"}
+POST /api/por/order-header
+{"process_order_id": "7006965038"}
 ```
 
-- [ ] Returns HTTP 200 with order data
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: poh.get_process_order_header` present
-- [ ] Fields not yet in the view (`plannedQuantity`, `confirmedQuantity`, dates) return zero/empty defaults — expected until a richer view is available
+- [x] Returns HTTP 200 with order data
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Query-Name: poh.get_process_order_header` present
+- [x] Fields not in the view (`plannedQuantity`, `confirmedQuantity`, `uom`, dates) return zero/empty defaults — expected, by design
 
-### C5 — Auth failure cases
+### C5 — Auth failure cases ✓ PASSED 2026-05-17
 
-- [ ] Without auth (no cookie / expired session): returns HTTP 401 — not a silent fallback to mock
-- [ ] Confirm no 200 with mock data when token is absent
+- [x] Without auth (no cookie / expired session): returns HTTP 401 — Databricks Apps gateway rejects before reaching FastAPI
+- [x] Confirmed no 200 with mock data when token is absent
 
-### C6 — No SPN/PAT fallback
+### C6 — No SPN/PAT fallback ✓ PASSED 2026-05-17
 
-- [ ] Check `databricks apps logs connectio-v2` — no log entries containing `service_principal`, `client_secret`, or `DATABRICKS_TOKEN`
-- [ ] Confirm `X-Data-Source` header is `databricks-api`, not `mock` or `legacy-api`
+- [x] `databricks apps logs connectio-v2` — zero entries containing `service_principal`, `client_secret`, or `DATABRICKS_TOKEN`
+- [x] `X-Data-Source` header confirmed `databricks-api` on C3 and C4
 
 ---
 

@@ -18,25 +18,30 @@
  */
 
 import { execSync } from 'node:child_process'
-import { existsSync, rmSync, cpSync } from 'node:fs'
+import { existsSync, rmSync, cpSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 const distDir = join(root, 'apps', 'web', 'dist')
 const staticDir = join(root, 'apps', 'api', 'static')
+const envLocal = join(root, 'apps', 'web', '.env.local')
+const envLocalBak = join(root, 'apps', 'web', '.env.local.bak')
 
 // ── 1. Environment defaults ────────────────────────────────────────────────
-// Override individual vars before running if targeting a cross-origin deployment.
-// For standard same-origin Databricks Apps deployment, empty base URLs are correct
-// (relative fetch paths like /api/trace2/... resolve against the current host).
+// For same-origin Databricks Apps deployment, all base URLs must be empty so
+// fetch calls use relative paths (e.g. /api/trace2/...) against the current host.
+//
+// Vite loads .env.local AFTER process.env and overrides it, so we temporarily
+// rename apps/web/.env.local during the build to prevent dev localhost values
+// from being baked into the production bundle.
 const buildEnv = {
   ...process.env,
-  VITE_ADAPTER_MODE: process.env.VITE_ADAPTER_MODE ?? 'legacy-api',
-  VITE_TRACE_API_BASE_URL: process.env.VITE_TRACE_API_BASE_URL ?? '',
-  VITE_WH360_API_BASE_URL: process.env.VITE_WH360_API_BASE_URL ?? '',
-  VITE_POH_API_BASE_URL: process.env.VITE_POH_API_BASE_URL ?? '',
-  VITE_CQ_API_BASE_URL: process.env.VITE_CQ_API_BASE_URL ?? '',
+  VITE_ADAPTER_MODE: 'legacy-api',
+  VITE_TRACE_API_BASE_URL: '',
+  VITE_WH360_API_BASE_URL: '',
+  VITE_POH_API_BASE_URL: '',
+  VITE_CQ_API_BASE_URL: '',
 }
 
 console.log('=== prepare-databricks-app ===')
@@ -48,8 +53,19 @@ console.log(`CQ base URL        : "${buildEnv.VITE_CQ_API_BASE_URL}" (empty = sa
 console.log()
 
 // ── 2. Build frontend ──────────────────────────────────────────────────────
-console.log('Step 1/3: Building React frontend (nx run web:build)...')
-execSync('npm exec nx -- run web:build', { cwd: root, stdio: 'inherit', env: buildEnv })
+// Temporarily hide .env.local so Vite cannot pick up localhost dev values.
+const hadEnvLocal = existsSync(envLocal)
+if (hadEnvLocal) {
+  renameSync(envLocal, envLocalBak)
+  console.log('  Temporarily renamed apps/web/.env.local (restored after build)')
+}
+
+console.log('Step 1/3: Building React frontend (nx run web:build --skip-nx-cache)...')
+try {
+  execSync('npm exec nx -- run web:build --skip-nx-cache', { cwd: root, stdio: 'inherit', env: buildEnv })
+} finally {
+  if (hadEnvLocal) renameSync(envLocalBak, envLocal)
+}
 
 // ── 3. Clean stale static/ ─────────────────────────────────────────────────
 console.log('\nStep 2/3: Refreshing apps/api/static/')
