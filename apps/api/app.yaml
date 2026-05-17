@@ -78,11 +78,9 @@ env:
   # - name: TRACE_CATALOG
   #   value: connected_plant_uat
 
-  # Auth diagnostics — enabled for initial verification only.
-  # Disable after OAuth headers are confirmed: remove this entry and redeploy.
+  # Auth diagnostics — DISABLED. OAuth headers confirmed 2026-05-17.
+  # Re-enable by adding: - name: ENABLE_AUTH_DIAGNOSTICS / value: "true"
   # GET /api/diagnostics/auth-headers returns token_present/user_header_present (never raw token).
-  - name: ENABLE_AUTH_DIAGNOSTICS
-    value: "true"
 
   # Python runtime
   - name: PYTHONUNBUFFERED

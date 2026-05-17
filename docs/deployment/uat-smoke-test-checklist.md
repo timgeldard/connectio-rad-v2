@@ -70,7 +70,6 @@ curl -s -X POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/
 
 While V1 apps are STOPPED, all routes above should return:
 - HTTP 503 with `{"detail": "..."}` — not a V2 defect, expected behaviour
-- Record exact HTTP status and route for each failure and note here
 
 | Route | HTTP status while V1 stopped | Notes |
 |---|---|---|
@@ -81,104 +80,62 @@ While V1 apps are STOPPED, all routes above should return:
 
 ---
 
-## Section C — Native Databricks smoke test (PENDING — not yet active)
+## Section C — Native Databricks smoke test (ACTIVE — browser verification pending)
 
-These tests confirm V2 can query Databricks directly using end-user OAuth. Requires switching `BACKEND_ADAPTER_MODE=databricks-api`.
+These tests confirm V2 can query Databricks directly using end-user OAuth.
 
-**Current state:** `BACKEND_ADAPTER_MODE=legacy-api` — native reads not active.
+**Current state (2026-05-17):**
+- `BACKEND_ADAPTER_MODE=databricks-api` — native reads active for CQ lab plants and POH order header
+- `DATABRICKS_HOST`, `SQL_WAREHOUSE_ID`, `POH_CATALOG`, `CQ_CATALOG` set as literals in `app.yaml`
+- `sql` OAuth scope added to app (`effective_user_api_scopes: ["sql", "iam.current-user:read", "iam.access-control:read"]`)
+- All SQL column names confirmed from live DDL (connected_plant_uat, 2026-05-17)
+- CLI-based curl tests cannot verify end-to-end — CLI tokens bypass the Databricks Apps OAuth consent flow and don't carry the `sql` scope. **Browser testing required.**
 
-### C1 — Prerequisites
+### C1 — Prerequisites (COMPLETE)
 
-1. Set required secrets in the `connectio-v2` scope:
-   ```bash
-   databricks secrets put-secret connectio-v2 databricks-host \
-     --string-value "<workspace>.azuredatabricks.net"
+- [x] `BACKEND_ADAPTER_MODE=databricks-api` set in `app.yaml`
+- [x] `DATABRICKS_HOST` set to `https://adb-604667594731808.8.azuredatabricks.net`
+- [x] `SQL_WAREHOUSE_ID` set to `e76480b94bea6ed5`
+- [x] `POH_CATALOG` and `CQ_CATALOG` set to `connected_plant_uat`
+- [x] `sql` OAuth scope in `effective_user_api_scopes`
+- [x] App service principal has READ on `connectio-v2` secret scope
+- [x] App deployed and `state: RUNNING`
 
-   databricks secrets put-secret connectio-v2 sql-warehouse-id \
-     --string-value "<warehouse-id>"
+### C2 — OAuth header verification (CONFIRMED 2026-05-17)
 
-   databricks secrets put-secret connectio-v2 poh-catalog \
-     --string-value "<catalog-name>"
-
-   databricks secrets put-secret connectio-v2 cq-catalog \
-     --string-value "<catalog-name>"
-   ```
-
-2. Update `apps/api/app.yaml` — change `BACKEND_ADAPTER_MODE` and uncomment native Databricks blocks:
-   ```yaml
-   - name: BACKEND_ADAPTER_MODE
-     value: databricks-api
-   - name: DATABRICKS_HOST
-     valueFrom: connectio-v2/databricks-host
-   - name: SQL_WAREHOUSE_ID
-     valueFrom: connectio-v2/sql-warehouse-id
-   - name: POH_CATALOG
-     valueFrom: connectio-v2/poh-catalog
-   - name: CQ_CATALOG
-     valueFrom: connectio-v2/cq-catalog
-   ```
-   > **Reminder:** `valueFrom` must be `scope/key` as a plain string. Do NOT use nested YAML dicts.
-
-3. Redeploy:
-   ```bash
-   npm run prepare:databricks
-   databricks bundle deploy --target uat
-   databricks apps deploy connectio-v2 \
-     --source-code-path "/Workspace/Shared/.bundle/connectio-v2/uat/files/apps/api"
-   ```
-
-### C2 — OAuth header verification
-
-Enable the diagnostic endpoint first:
-```bash
-# Option A: set via app.yaml literal
-# Add to app.yaml env:
-# - name: ENABLE_AUTH_DIAGNOSTICS
-#   value: "true"
-
-# Option B: set via secret
-databricks secrets put-secret connectio-v2 enable-auth-diagnostics \
-  --string-value "true"
-# Reference in app.yaml:
-# - name: ENABLE_AUTH_DIAGNOSTICS
-#   valueFrom: connectio-v2/enable-auth-diagnostics
-```
-
-Then call the diagnostic endpoint from an authenticated browser session:
-```
-GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/diagnostics/auth-headers
-```
-
-- [ ] `token_present: true` — `x-forwarded-access-token` is being injected
-- [ ] `user_header_present: true` — `x-forwarded-user` is being injected
-- [ ] `token_length_bucket: "long"` — token is a real OAuth JWT (≥ 500 chars)
-- [ ] **Disable diagnostics** after verification (`ENABLE_AUTH_DIAGNOSTICS` absent or `"false"`)
+- [x] `token_present: true` — `x-forwarded-access-token` is being injected
+- [x] `user_header_present: true` — `x-forwarded-user` is being injected
+- [x] `email_header_present: true` — `x-forwarded-email` is being injected
+- [x] `token_length_bucket: "long"` — token is a real OAuth JWT
+- [x] `gap-auth` response header confirms authenticated user identity
+- [x] `ENABLE_AUTH_DIAGNOSTICS` removed from `app.yaml` (disabled 2026-05-17)
 
 ### C3 — CQ lab plants (native Databricks)
 
-```bash
-curl -s https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/cq/lab/plants \
-  -H "Cookie: <auth-cookie-from-browser>" | jq .
+Open the app in a browser (authenticated Databricks session), then:
+
+```
+GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/cq/lab/plants
 ```
 
 - [ ] Returns HTTP 200 with plant list
 - [ ] Response header `X-Data-Source: databricks-api` present
 - [ ] Response header `X-Adapter-Mode: databricks-api` present
 - [ ] No SPN/PAT token used — query executes as the end user's identity
-- [ ] `databricks apps logs connectio-v2` shows `Executing Databricks statement` with `user_id` logged
 
 ### C4 — POH order header (native Databricks)
 
-```bash
-curl -s -X POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-header \
-  -H "Content-Type: application/json" \
-  -H "Cookie: <auth-cookie-from-browser>" \
-  -d '{"process_order_id": "<known-id>"}' | jq .
+From a browser session with a known process order ID:
+
+```
+POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-header
+{"process_order_id": "<known-id>"}
 ```
 
 - [ ] Returns HTTP 200 with order data
 - [ ] Response header `X-Data-Source: databricks-api` present
 - [ ] Response header `X-Query-Name: poh.get_process_order_header` present
+- [ ] Fields not yet in the view (`plannedQuantity`, `confirmedQuantity`, dates) return zero/empty defaults — expected until a richer view is available
 
 ### C5 — Auth failure cases
 
@@ -188,12 +145,12 @@ curl -s -X POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/
 ### C6 — No SPN/PAT fallback
 
 - [ ] Check `databricks apps logs connectio-v2` — no log entries containing `service_principal`, `client_secret`, or `DATABRICKS_TOKEN`
-- [ ] Confirm X-Data-Source header is `databricks-api`, not `mock` or `legacy-api`
+- [ ] Confirm `X-Data-Source` header is `databricks-api`, not `mock` or `legacy-api`
 
 ---
 
 ## Notes
 
-- SQL column names in POH and CQ adapters are marked TODO — queries may return 502 if actual column names differ from what V2 expects. Verify via `DESCRIBE TABLE <object>` in the target Unity Catalog.
-- CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed.
+- CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
+- SQL column names for POH and CQ adapters are confirmed from live DDL (2026-05-17). No column-name blockers remain.
 - All tests in this checklist require a human in the loop with valid Databricks workspace access. Do not attempt to automate against live Databricks in CI.
