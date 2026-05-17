@@ -4,7 +4,7 @@
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
 **Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
-**Last updated:** 2026-05-17 (p.txt) — EnvMon swab-results route wired, 56 new tests, 608 total
+**Last updated:** 2026-05-18 (q.txt) — Trace getTraceGraph route wired (iterative multi-hop, gold_batch_lineage confirmed-ddl), 47 new tests, 655 total
 
 ---
 
@@ -81,7 +81,7 @@
 | Method | Source | Status |
 |---|---|---|
 | `getBatchHeaderSummary` | `gold_batch_stock_v` + `gold_batch_summary_v`⚠ + `gold_material`⚠ + `gold_plant` | ✓ QS — DDL blockers (6 TODOs); V1 proxy returns 503 |
-| `getTraceGraph` | `gold_batch_lineage` + `gold_material`⚠ + `gold_plant` | ✓ QS — language_id blocker |
+| `getTraceGraph` | `gold_batch_lineage` (confirmed-ddl, 18 cols) | ✓ E — route wired (q.txt, 2026-05-18); iterative multi-hop; no gold_material/gold_plant joins (deferred); BV pending; frontend wiring deferred (TraceGraphSchema contract mismatch) |
 | `getMassBalanceSummary` | `gold_batch_mass_balance_v`⚠ | ✓ QS — WHERE columns unverified |
 | `getInvestigationContext` | — | Mock |
 | `getCustomerExposureSummary` | Unknown | Blocked — business rules undefined |
@@ -92,7 +92,7 @@
 | `getRelatedInvestigations` | — | Mock |
 | `getTraceExposureForRelease` | — | Mock |
 
-**Total: 11 methods — 3 QS (blocked on DDL), 1 blocked (business rules), 7 mock**
+**Total: 11 methods — 1 E (getTraceGraph), 2 QS (getBatchHeaderSummary + getMassBalanceSummary, blocked on DDL), 1 blocked (getCustomerExposureSummary, business rules undefined), 7 mock**
 
 ---
 
@@ -272,7 +272,7 @@
 |---|---|---|---|---|---|---|---|
 | POH | 10 | 2 | 2 | 0 | 0 | 6 | 0 |
 | Ops Plan Risk | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
-| Trace | 11 | 0 | 0 | 3 | 0 | 7 | 1 |
+| Trace | 11 | 0 | **1** | 2 | 0 | 7 | 1 |
 | SPC | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | WH360 | 9 | 0 | 0 | 0 | 1 | 8 | 0 |
 | CQ Lab | 2 | 1 | 0 | 0 | 0 | 0 | 1 |
@@ -280,12 +280,12 @@
 | Maintenance | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
 | Prod Staging | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | Quality Release | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **4** | **3** | **1** | **69** | **2** |
+| **Total** | **82** | **3** | **5** | **2** | **1** | **69** | **2** |
 
 **3 of 82 methods (3.7%) are browser-verified with live Databricks data (BV).**  
-**4 of 82 methods (4.9%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`, `getEnvMonSwabResults`.**  
+**5 of 82 methods (6.1%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`, `getEnvMonSwabResults`, `getTraceGraph`.**  
 **1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
 **69 of 82 methods (84.1%) are mock-only — no wired route of any kind.**  
-*(3 methods have a databricks-api QuerySpec written but no route wired — 3 Trace; 2 are blocked by missing view or undefined business rules.)*
+*(2 methods have a databricks-api QuerySpec written but no route wired — getBatchHeaderSummary + getMassBalanceSummary (Trace); 2 are blocked by missing view or undefined business rules.)*
 
 **EnvMon correction (k.txt + l.txt, 2026-05-17):** EnvMon is a **hybrid domain** — SAP QM inspection lots (k.txt) plus app-managed spatial configuration — 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA (l.txt). Three gold views confirmed-v1. QuerySpec written for `getEnvMonSiteSummary`. All five em_* tables confirmed-v1 from V1 migrations. DDL for all pending in UAT. See `docs/audit/envmon-spatial-configuration-model.md`.

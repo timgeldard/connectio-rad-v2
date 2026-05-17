@@ -4,13 +4,14 @@ import pytest
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
     Trace2MassBalanceRequest,
-    Trace2TraceGraphRequest,
+    TraceGraphRequest,
     get_batch_header_summary_spec,
     get_mass_balance_spec,
-    get_trace_graph_spec,
+    get_trace_graph_anchor_spec,
+    get_trace_graph_hop_spec,
     map_batch_header_rows,
     map_mass_balance_rows,
-    map_trace_graph_rows,
+    map_trace_graph,
 )
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.errors import DatabricksConfigError
@@ -40,18 +41,30 @@ _FULL_BATCH_HEADER_ROW = {
 }
 
 _LINEAGE_ROW_A_TO_B = {
-    "parent_material_id": "MAT_A",
-    "parent_batch_id": "BATCH_A",
-    "parent_plant_id": "IE01",
+    "parent_material_id": "000000000020052009",
+    "parent_batch_id": "0008602411",
+    "parent_plant_id": "C061",
     "child_material_id": "MAT_B",
     "child_batch_id": "BATCH_B",
-    "child_plant_id": "IE01",
+    "child_plant_id": "C061",
     "link_type": "PRODUCTION",
-    "parent_material_name": "Material A",
-    "child_material_name": "Material B",
-    "parent_plant_name": "Listowel",
-    "child_plant_name": "Listowel",
+    "process_order_id": "PO-100001",
+    "material_document_number": "4900012345",
+    "purchase_order_id": None,
+    "supplier_id": None,
+    "customer_id": None,
+    "delivery_id": None,
+    "sales_order_id": None,
+    "quantity": 500.0,
+    "base_unit_of_measure": "KG",
+    "posting_date": "2026-01-15",
+    "movement_type": "261",
 }
+
+_ANCHOR_MATERIAL_ID = "000000000020052009"
+_ANCHOR_BATCH_ID = "0008602411"
+_ANCHOR_PLANT_ID = "C061"
+_ANCHOR_KEY = f"{_ANCHOR_MATERIAL_ID}:{_ANCHOR_BATCH_ID}:{_ANCHOR_PLANT_ID}"
 
 
 # ---------------------------------------------------------------------------
@@ -245,203 +258,346 @@ class TestMapBatchHeaderRows:
 
 
 # ---------------------------------------------------------------------------
-# TestGetTraceGraphSpec
+# TestGetTraceGraphAnchorSpec
 # ---------------------------------------------------------------------------
 
-class TestGetTraceGraphSpec:
+class TestGetTraceGraphAnchorSpec:
     @pytest.fixture(autouse=True)
     def _set_trace_catalog(self, monkeypatch):
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
         monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
-    def _req(self) -> Trace2TraceGraphRequest:
-        return Trace2TraceGraphRequest("MAT001", "BATCH_ROOT")
+    def _req(self, direction: str = "both") -> TraceGraphRequest:
+        return TraceGraphRequest(
+            _ANCHOR_MATERIAL_ID, _ANCHOR_BATCH_ID, _ANCHOR_PLANT_ID, direction=direction
+        )
 
     def test_name(self) -> None:
-        assert get_trace_graph_spec(self._req()).name == "trace2.get_trace_graph"
+        assert get_trace_graph_anchor_spec(self._req()).name == "trace2.get_trace_graph"
 
     def test_module(self) -> None:
-        assert get_trace_graph_spec(self._req()).module == "trace2"
+        assert get_trace_graph_anchor_spec(self._req()).module == "trace2"
 
     def test_endpoint(self) -> None:
-        assert get_trace_graph_spec(self._req()).endpoint == "/api/trace2/trace-graph"
+        assert get_trace_graph_anchor_spec(self._req()).endpoint == "/api/trace2/trace-graph"
 
     def test_cache_policy_is_per_user(self) -> None:
-        assert get_trace_graph_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
+        assert get_trace_graph_anchor_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
 
     def test_source_badge_is_gold_batch_lineage(self) -> None:
-        assert get_trace_graph_spec(self._req()).source_badge == "view:gold_batch_lineage"
-
-    def test_max_rows_is_500(self) -> None:
-        assert get_trace_graph_spec(self._req()).max_rows == 500
+        assert get_trace_graph_anchor_spec(self._req()).source_badge == "view:gold_batch_lineage"
 
     def test_tags(self) -> None:
-        spec = get_trace_graph_spec(self._req())
+        spec = get_trace_graph_anchor_spec(self._req())
         assert "trace2" in spec.tags
         assert "trace-graph" in spec.tags
         assert "lineage" in spec.tags
 
-    def test_params_contain_material_and_batch_id(self) -> None:
-        spec = get_trace_graph_spec(self._req())
-        assert spec.params["material_id"] == "MAT001"
-        assert spec.params["batch_id"] == "BATCH_ROOT"
+    def test_params_contain_all_three_anchor_fields(self) -> None:
+        spec = get_trace_graph_anchor_spec(self._req())
+        assert spec.params["material_id"] == _ANCHOR_MATERIAL_ID
+        assert spec.params["batch_id"] == _ANCHOR_BATCH_ID
+        assert spec.params["plant_id"] == _ANCHOR_PLANT_ID
 
     def test_sql_references_gold_batch_lineage(self) -> None:
-        assert "gold_batch_lineage" in get_trace_graph_spec(self._req()).sql
+        assert "gold_batch_lineage" in get_trace_graph_anchor_spec(self._req()).sql
 
-    def test_sql_uses_trace_catalog(self) -> None:
-        assert "`connected_plant_uat`" in get_trace_graph_spec(self._req()).sql
+    def test_sql_uses_fully_qualified_table(self) -> None:
+        sql = get_trace_graph_anchor_spec(self._req()).sql
+        assert "`connected_plant_uat`" in sql
+        assert "`gold`" in sql
+        assert "FROM gold_batch_lineage" not in sql
 
-    def test_sql_uses_gold_schema(self) -> None:
-        assert "`gold`" in get_trace_graph_spec(self._req()).sql
+    def test_sql_has_no_todo_markers(self) -> None:
+        assert "TODO" not in get_trace_graph_anchor_spec(self._req()).sql
 
-    def test_sql_has_no_unqualified_from_gold_batch_lineage(self) -> None:
-        spec = get_trace_graph_spec(self._req())
-        assert "FROM gold_batch_lineage" not in spec.sql
+    def test_sql_includes_all_18_confirmed_columns(self) -> None:
+        sql = get_trace_graph_anchor_spec(self._req()).sql
+        for col in [
+            "PARENT_MATERIAL_ID", "PARENT_BATCH_ID", "PARENT_PLANT_ID",
+            "CHILD_MATERIAL_ID", "CHILD_BATCH_ID", "CHILD_PLANT_ID",
+            "LINK_TYPE", "PROCESS_ORDER_ID", "MATERIAL_DOCUMENT_NUMBER",
+            "PURCHASE_ORDER_ID", "SUPPLIER_ID", "CUSTOMER_ID", "DELIVERY_ID",
+            "SALES_ORDER_ID", "QUANTITY", "BASE_UNIT_OF_MEASURE",
+            "POSTING_DATE", "MOVEMENT_TYPE",
+        ]:
+            assert col in sql, f"Column {col} missing from anchor spec SQL"
 
-    def test_sql_has_limit(self) -> None:
-        assert "LIMIT :max_rows" in get_trace_graph_spec(self._req()).sql
+    def test_downstream_where_uses_parent_columns(self) -> None:
+        sql = get_trace_graph_anchor_spec(self._req("downstream")).sql
+        assert "PARENT_MATERIAL_ID = :material_id" in sql
+        assert "PARENT_BATCH_ID = :batch_id" in sql
+        assert "PARENT_PLANT_ID = :plant_id" in sql
+        assert "CHILD_MATERIAL_ID = :material_id" not in sql
 
-    def test_sql_contains_todo_markers(self) -> None:
-        assert "TODO" in get_trace_graph_spec(self._req()).sql
+    def test_upstream_where_uses_child_columns(self) -> None:
+        sql = get_trace_graph_anchor_spec(self._req("upstream")).sql
+        assert "CHILD_MATERIAL_ID = :material_id" in sql
+        assert "CHILD_BATCH_ID = :batch_id" in sql
+        assert "CHILD_PLANT_ID = :plant_id" in sql
+        assert "PARENT_MATERIAL_ID = :material_id" not in sql
+
+    def test_both_where_has_or_with_parent_and_child(self) -> None:
+        sql = get_trace_graph_anchor_spec(self._req("both")).sql
+        assert "PARENT_MATERIAL_ID = :material_id" in sql
+        assert "CHILD_MATERIAL_ID = :material_id" in sql
+        assert " OR " in sql
 
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
         with pytest.raises(DatabricksConfigError):
-            get_trace_graph_spec(self._req())
+            get_trace_graph_anchor_spec(self._req())
 
 
 # ---------------------------------------------------------------------------
-# TestMapTraceGraphRows
+# TestGetTraceGraphHopSpec
 # ---------------------------------------------------------------------------
 
-class TestMapTraceGraphRows:
-    def test_single_lineage_row_produces_two_nodes_one_edge(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        assert len(result["nodes"]) == 2
-        assert len(result["edges"]) == 1
+class TestGetTraceGraphHopSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
-    def test_node_ids_use_material_and_batch(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        node_ids = {n["id"] for n in result["nodes"]}
-        assert "MAT_A:BATCH_A" in node_ids
-        assert "MAT_B:BATCH_B" in node_ids
+    _FRONTIER = [("MAT_B", "BATCH_B", "C061")]
 
-    def test_edge_relationship_type_production(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        assert result["edges"][0]["relationshipType"] == "produced-from"
+    def test_name(self) -> None:
+        assert get_trace_graph_hop_spec(self._FRONTIER, "both").name == "trace2.get_trace_graph"
 
-    def test_edge_source_and_target(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        edge = result["edges"][0]
-        assert edge["source"] == "MAT_A:BATCH_A"
-        assert edge["target"] == "MAT_B:BATCH_B"
+    def test_sql_references_gold_batch_lineage(self) -> None:
+        assert "gold_batch_lineage" in get_trace_graph_hop_spec(self._FRONTIER, "both").sql
 
-    def test_graph_meta_fields(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        assert result["direction"] == "both"
-        assert result["depth"] == 1
-        assert result["rootBatch"] == "BATCH_A"
-        assert result["unresolvedNodeCount"] == 0
+    def test_sql_uses_fully_qualified_table(self) -> None:
+        sql = get_trace_graph_hop_spec(self._FRONTIER, "both").sql
+        assert "`connected_plant_uat`" in sql
+        assert "`gold`" in sql
 
-    def test_duplicate_rows_produce_single_node(self) -> None:
-        result = map_trace_graph_rows(
-            [_LINEAGE_ROW_A_TO_B, _LINEAGE_ROW_A_TO_B], root_batch="BATCH_A"
-        )
-        assert len(result["nodes"]) == 2
-        assert len(result["edges"]) == 1
+    def test_params_are_empty_frontier_values_are_literals(self) -> None:
+        assert get_trace_graph_hop_spec(self._FRONTIER, "downstream").params == {}
 
-    def test_empty_rows_returns_empty_graph_state(self) -> None:
-        result = map_trace_graph_rows([], root_batch="BATCH_ROOT")
-        assert result["nodes"] == []
+    def test_downstream_where_uses_parent_in(self) -> None:
+        sql = get_trace_graph_hop_spec(self._FRONTIER, "downstream").sql
+        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" in sql
+        assert "IN (" in sql
+        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" not in sql
+
+    def test_upstream_where_uses_child_in(self) -> None:
+        sql = get_trace_graph_hop_spec(self._FRONTIER, "upstream").sql
+        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" in sql
+        assert "IN (" in sql
+        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" not in sql
+
+    def test_both_where_has_or_clause(self) -> None:
+        sql = get_trace_graph_hop_spec(self._FRONTIER, "both").sql
+        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" in sql
+        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" in sql
+        assert " OR " in sql
+
+    def test_frontier_values_embedded_as_single_quoted_literals(self) -> None:
+        sql = get_trace_graph_hop_spec(self._FRONTIER, "downstream").sql
+        assert "'MAT_B'" in sql
+        assert "'BATCH_B'" in sql
+        assert "'C061'" in sql
+
+    def test_leading_zeros_preserved_in_literals(self) -> None:
+        frontier = [("000000000020052009", "0008602411", "C061")]
+        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
+        assert "'000000000020052009'" in sql
+        assert "'0008602411'" in sql
+
+    def test_single_quote_in_value_is_escaped(self) -> None:
+        frontier = [("MAT'X", "BATCH_B", "C061")]
+        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
+        assert "'MAT''X'" in sql
+
+    def test_multiple_frontier_nodes_all_appear(self) -> None:
+        frontier = [("MAT_B", "BATCH_B", "C061"), ("MAT_C", "BATCH_C", "C061")]
+        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
+        assert "'MAT_B'" in sql
+        assert "'MAT_C'" in sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_trace_graph_hop_spec(self._FRONTIER, "both")
+
+
+# ---------------------------------------------------------------------------
+# TestMapTraceGraph
+# ---------------------------------------------------------------------------
+
+def _make_req(**kwargs) -> TraceGraphRequest:
+    defaults = dict(
+        material_id=_ANCHOR_MATERIAL_ID,
+        batch_id=_ANCHOR_BATCH_ID,
+        plant_id=_ANCHOR_PLANT_ID,
+        direction="both",
+        max_depth=6,
+        max_edges=1000,
+    )
+    defaults.update(kwargs)
+    return TraceGraphRequest(**defaults)
+
+
+class TestMapTraceGraph:
+    def test_empty_rows_returns_anchor_only_and_warning(self) -> None:
+        result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
+        assert result["anchor"]["materialId"] == _ANCHOR_MATERIAL_ID
+        assert result["anchor"]["batchId"] == _ANCHOR_BATCH_ID
+        assert result["anchor"]["plantId"] == _ANCHOR_PLANT_ID
+        assert result["anchor"]["nodeKey"] == _ANCHOR_KEY
+        assert len(result["nodes"]) == 1
+        assert result["nodes"][0]["isAnchor"] is True
         assert result["edges"] == []
-        assert result["direction"] == "both"
-        assert result["depth"] == 1
-        assert result["rootBatch"] == "BATCH_ROOT"
-        assert result["upstreamCount"] == 0
-        assert result["downstreamCount"] == 0
-        assert result["unresolvedNodeCount"] == 0
+        assert "no_edges_found" in result["warnings"]
 
-    def test_unknown_link_type_maps_to_component_of(self) -> None:
-        row = {**_LINEAGE_ROW_A_TO_B, "link_type": "UNKNOWN_TYPE"}
-        result = map_trace_graph_rows([row], root_batch="BATCH_A")
-        assert result["edges"][0]["relationshipType"] == "component-of"
-
-    def test_none_link_type_maps_to_component_of(self) -> None:
-        row = {**_LINEAGE_ROW_A_TO_B, "link_type": None}
-        result = map_trace_graph_rows([row], root_batch="BATCH_A")
-        assert result["edges"][0]["relationshipType"] == "component-of"
-
-    def test_all_link_type_mappings(self) -> None:
-        mappings = [
-            ("PRODUCTION", "produced-from"),
-            ("BATCH_TRANSFER", "transferred-to"),
-            ("STO_TRANSFER", "transferred-to"),
-            ("VENDOR_RECEIPT", "component-of"),
-            ("CONSUMPTION", "component-of"),
-            ("DELIVERY", "delivered-to"),
-            ("SPLIT", "split-from"),
-            ("MERGE", "merged-into"),
-        ]
-        for raw, expected in mappings:
-            row = {**_LINEAGE_ROW_A_TO_B, "link_type": raw}
-            result = map_trace_graph_rows([row], root_batch="BATCH_A")
-            assert result["edges"][0]["relationshipType"] == expected, f"Failed for {raw!r}"
-
-    def test_upstream_count_when_root_is_child(self) -> None:
-        row = {**_LINEAGE_ROW_A_TO_B, "child_batch_id": "ROOT", "child_material_id": "MAT_ROOT"}
-        result = map_trace_graph_rows([row], root_batch="ROOT")
-        assert result["upstreamCount"] == 1
-        assert result["downstreamCount"] == 0
-
-    def test_downstream_count_when_root_is_parent(self) -> None:
-        row = {**_LINEAGE_ROW_A_TO_B, "parent_batch_id": "ROOT", "parent_material_id": "MAT_ROOT"}
-        result = map_trace_graph_rows([row], root_batch="ROOT")
-        assert result["upstreamCount"] == 0
-        assert result["downstreamCount"] == 1
-
-    def test_root_in_both_parent_and_child_rows_counts_both(self) -> None:
-        """Root as parent of B (downstream) and child of C (upstream)."""
-        row_root_as_parent = {**_LINEAGE_ROW_A_TO_B,
-                              "parent_batch_id": "ROOT", "parent_material_id": "MAT_ROOT",
-                              "child_batch_id": "BATCH_B", "child_material_id": "MAT_B"}
-        row_root_as_child = {**_LINEAGE_ROW_A_TO_B,
-                             "parent_batch_id": "BATCH_C", "parent_material_id": "MAT_C",
-                             "child_batch_id": "ROOT", "child_material_id": "MAT_ROOT"}
-        result = map_trace_graph_rows([row_root_as_parent, row_root_as_child], root_batch="ROOT")
-        assert result["upstreamCount"] == 1
-        assert result["downstreamCount"] == 1
-
-    def test_cycle_like_input_does_not_crash(self) -> None:
-        """Row A→B and row B→A should produce 2 nodes and 2 edges without error."""
-        row_a_to_b = _LINEAGE_ROW_A_TO_B
-        row_b_to_a = {
-            "parent_material_id": "MAT_B",
-            "parent_batch_id": "BATCH_B",
-            "parent_plant_id": "IE01",
-            "child_material_id": "MAT_A",
-            "child_batch_id": "BATCH_A",
-            "child_plant_id": "IE01",
-            "link_type": "PRODUCTION",
-            "parent_material_name": "Material B",
-            "child_material_name": "Material A",
-            "parent_plant_name": "Listowel",
-            "child_plant_name": "Listowel",
-        }
-        result = map_trace_graph_rows([row_a_to_b, row_b_to_a], root_batch="BATCH_A")
+    def test_single_downstream_row_gives_anchor_plus_child_plus_one_edge(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         assert len(result["nodes"]) == 2
-        assert len(result["edges"]) == 2
+        assert len(result["edges"]) == 1
 
-    def test_node_type_defaults_to_intermediate(self) -> None:
-        result = map_trace_graph_rows([_LINEAGE_ROW_A_TO_B], root_batch="BATCH_A")
-        for node in result["nodes"]:
-            assert node["type"] == "intermediate"
+    def test_anchor_node_is_marked_is_anchor(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        anchor_nodes = [n for n in result["nodes"] if n["isAnchor"]]
+        assert len(anchor_nodes) == 1
+        assert anchor_nodes[0]["nodeKey"] == _ANCHOR_KEY
 
-    def test_material_description_empty_string_when_name_absent(self) -> None:
-        row = {**_LINEAGE_ROW_A_TO_B, "parent_material_name": None, "child_material_name": None}
-        result = map_trace_graph_rows([row], root_batch="BATCH_A")
-        for node in result["nodes"]:
-            assert node["materialDescription"] == ""
+    def test_anchor_directions_is_anchor_label(self) -> None:
+        result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
+        assert result["nodes"][0]["directions"] == ["anchor"]
+
+    def test_downstream_child_node_direction(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        child_node = next(n for n in result["nodes"] if not n["isAnchor"])
+        assert child_node["directions"] == ["downstream"]
+
+    def test_upstream_row_maps_parent_as_upstream(self) -> None:
+        upstream_row = {
+            **_LINEAGE_ROW_A_TO_B,
+            "parent_material_id": "MAT_PARENT",
+            "parent_batch_id": "BATCH_PARENT",
+            "parent_plant_id": "C061",
+            "child_material_id": _ANCHOR_MATERIAL_ID,
+            "child_batch_id": _ANCHOR_BATCH_ID,
+            "child_plant_id": _ANCHOR_PLANT_ID,
+        }
+        tagged = [(upstream_row, 0, "upstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        non_anchor = [n for n in result["nodes"] if not n["isAnchor"]]
+        assert len(non_anchor) == 1
+        assert non_anchor[0]["directions"] == ["upstream"]
+
+    def test_node_key_includes_plant_id(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        child = next(n for n in result["nodes"] if not n["isAnchor"])
+        assert child["nodeKey"] == "MAT_B:BATCH_B:C061"
+
+    def test_duplicate_rows_produce_single_edge(self) -> None:
+        tagged = [
+            (_LINEAGE_ROW_A_TO_B, 0, "downstream"),
+            (_LINEAGE_ROW_A_TO_B, 0, "downstream"),
+        ]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        assert len(result["edges"]) == 1
+
+    def test_leading_zeros_preserved_in_node_keys(self) -> None:
+        result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
+        anchor_node = result["nodes"][0]
+        assert anchor_node["materialId"] == "000000000020052009"
+        assert anchor_node["batchId"] == "0008602411"
+
+    def test_edge_preserves_quantity_and_uom(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        edge = result["edges"][0]
+        assert edge["quantity"] == 500.0
+        assert edge["baseUnitOfMeasure"] == "KG"
+
+    def test_edge_preserves_posting_date_and_movement_type(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        edge = result["edges"][0]
+        assert edge["postingDate"] == "2026-01-15"
+        assert edge["movementType"] == "261"
+
+    def test_edge_preserves_process_order_and_doc_number(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        edge = result["edges"][0]
+        assert edge["processOrderId"] == "PO-100001"
+        assert edge["materialDocumentNumber"] == "4900012345"
+
+    def test_null_optional_fields_handled_safely(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        edge = result["edges"][0]
+        assert edge["supplierId"] is None
+        assert edge["customerId"] is None
+        assert edge["deliveryId"] is None
+        assert edge["salesOrderId"] is None
+        assert edge["purchaseOrderId"] is None
+
+    def test_null_quantity_becomes_none_not_zero(self) -> None:
+        row = {**_LINEAGE_ROW_A_TO_B, "quantity": None}
+        tagged = [(row, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        assert result["edges"][0]["quantity"] is None
+
+    def test_edge_direction_field_reflects_tagged_direction(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        assert result["edges"][0]["direction"] == "downstream"
+
+    def test_truncated_true_adds_max_edges_warning(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=True)
+        assert "max_edges_reached" in result["warnings"]
+        assert result["truncated"] is True
+
+    def test_depth_reached_equals_max_depth_adds_warning(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(
+            tagged, _make_req(max_depth=1), depth_reached=1, truncated=False
+        )
+        assert "max_depth_reached" in result["warnings"]
+
+    def test_depth_not_reached_no_warning(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(
+            tagged, _make_req(max_depth=6), depth_reached=1, truncated=False
+        )
+        assert "max_depth_reached" not in result["warnings"]
+
+    def test_depth_reached_in_response(self) -> None:
+        result = map_trace_graph([], _make_req(), depth_reached=3, truncated=False)
+        assert result["depthReached"] == 3
+
+    def test_response_has_required_top_level_keys(self) -> None:
+        result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
+        for key in ("anchor", "nodes", "edges", "depthReached", "truncated", "warnings"):
+            assert key in result, f"Missing key: {key}"
+
+    def test_vendor_supplier_fields_preserved_on_edge(self) -> None:
+        row = {
+            **_LINEAGE_ROW_A_TO_B,
+            "supplier_id": "SUPP-001",
+            "customer_id": "CUST-001",
+            "delivery_id": "DEL-001",
+            "sales_order_id": "SO-001",
+            "purchase_order_id": "PO-EXT-001",
+        }
+        tagged = [(row, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        edge = result["edges"][0]
+        assert edge["supplierId"] == "SUPP-001"
+        assert edge["customerId"] == "CUST-001"
+        assert edge["deliveryId"] == "DEL-001"
+        assert edge["salesOrderId"] == "SO-001"
+        assert edge["purchaseOrderId"] == "PO-EXT-001"
 
 
 # ---------------------------------------------------------------------------

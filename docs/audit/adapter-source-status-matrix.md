@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — n.txt: EnvMon DDL confirmed, route wired (`GET /api/envmon/site-summary`), 99 tests passing; p.txt: swab-results route wired (`GET /api/envmon/swab-results`), 56 new tests, 608 total; docs updated  
+**Last updated:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage confirmed-ddl), 47 new tests, 655 total; frontend wiring deferred (TraceGraphSchema contract mismatch)  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
+| `getTraceGraph` | ✓ | — | — | ✓ E | green when databricks | Route wired (q.txt, 2026-05-18); gold_batch_lineage confirmed-ddl (18 cols); iterative multi-hop; 47 new tests; BV pending; frontend wiring deferred (TraceGraphSchema contract mismatch — see trace-lineage-to-graph-contract-map.md) |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -62,7 +62,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 | `getRelatedInvestigations` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getTraceExposureForRelease` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 
-**Summary:** 11 methods — 1 browser-verified legacy-api, 10 mock only.
+**Summary:** 11 methods — 1 browser-verified legacy-api, 1 executable (✓ E: getTraceGraph — route wired, BV pending), 9 mock only.
 
 ---
 
@@ -270,7 +270,7 @@ Gold views: None identified
 
 | Domain | Total methods | Browser-verified (databricks-api) | Executable (not verified) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
 |--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
-| Traceability | 11 | 1 (legacy-api only) | 0 | 0 | 10 | 0 |
+| Traceability | 11 | 1 (legacy-api only) | **1** (getTraceGraph — BV pending) | 0 | 9 | **1 E** |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
 | POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
@@ -280,7 +280,7 @@ Gold views: None identified
 | Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
 | Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **4** | **2** | **72** | **7** (3 BV + 4 E) |
+| **Total** | **82** | **3** | **5** | **2** | **71** | **8** (3 BV + 5 E) |
 
 > Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
@@ -291,6 +291,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **executable, not browser-verified** — gold_batch_lineage confirmed-ddl (q.txt, 2026-05-18); iterative multi-hop; 47 new tests; frontend wiring deferred (TraceGraphSchema contract mismatch) |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |

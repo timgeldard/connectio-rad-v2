@@ -2,20 +2,20 @@
 
 Implemented slices:
   - get_batch_header_summary_spec / map_batch_header_rows
-  - get_trace_graph_spec / map_trace_graph_rows  (depth=1 first pass)
+  - get_trace_graph_anchor_spec + get_trace_graph_hop_spec / map_trace_graph
   - get_mass_balance_spec / map_mass_balance_rows
 
 Deferred slices:
   - getCustomerExposureSummary — requires severity/recall business rules not derivable
     from gold_batch_delivery_v; see docs/migration/databricks-vertical-slices-trace-plan.md §4
 
-Route wiring deferred: existing proxy routes forward to V1. Wiring requires:
-  1. Column names verified against live gold views in connected_plant_uat
-  2. ADR-024 open questions #1 (Statement API vs Connector) and #7 (cache backend) resolved
-
 IMPORTANT: All gold_batch_summary_v column names are unverified (marked TODO).
 Column names for gold_batch_stock_v, gold_batch_lineage, gold_material, gold_plant,
 gold_batch_mass_balance_v are confirmed from V1 source inspection (trace2-functional-parity-audit.md §3).
+
+Trace graph uses iterative multi-hop expansion (not recursive CTE) — WITH RECURSIVE support
+under the Databricks Statement API cannot be verified against UAT without DDL execution.
+The route orchestrates one QuerySpec call per depth hop in a Python loop.
 """
 from __future__ import annotations
 
@@ -38,9 +38,13 @@ class Trace2BatchHeaderRequest:
 
 
 @dataclass
-class Trace2TraceGraphRequest:
+class TraceGraphRequest:
     material_id: str
     batch_id: str
+    plant_id: str
+    direction: str = "both"   # "upstream" | "downstream" | "both"
+    max_depth: int = 6
+    max_edges: int = 1000
 
 
 @dataclass
@@ -147,48 +151,70 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Slice 2 — getTraceGraph (depth=1)
+# Slice 2 — getTraceGraph (iterative multi-hop expansion)
 # ---------------------------------------------------------------------------
 
-def get_trace_graph_spec(request: Trace2TraceGraphRequest) -> QuerySpec:
-    """Return a QuerySpec for getTraceGraph at depth=1.
+# All 18 confirmed DDL columns from gold_batch_lineage, aliased lowercase so
+# Databricks Statement API returns consistent lowercase dict keys.
+_TRACE_GRAPH_SELECT = """\
+    SELECT
+        PARENT_MATERIAL_ID        AS parent_material_id,
+        PARENT_BATCH_ID           AS parent_batch_id,
+        PARENT_PLANT_ID           AS parent_plant_id,
+        CHILD_MATERIAL_ID         AS child_material_id,
+        CHILD_BATCH_ID            AS child_batch_id,
+        CHILD_PLANT_ID            AS child_plant_id,
+        LINK_TYPE                 AS link_type,
+        PROCESS_ORDER_ID          AS process_order_id,
+        MATERIAL_DOCUMENT_NUMBER  AS material_document_number,
+        PURCHASE_ORDER_ID         AS purchase_order_id,
+        SUPPLIER_ID               AS supplier_id,
+        CUSTOMER_ID               AS customer_id,
+        DELIVERY_ID               AS delivery_id,
+        SALES_ORDER_ID            AS sales_order_id,
+        QUANTITY                  AS quantity,
+        BASE_UNIT_OF_MEASURE      AS base_unit_of_measure,
+        POSTING_DATE              AS posting_date,
+        MOVEMENT_TYPE             AS movement_type"""
 
-    Source: gold_batch_lineage + gold_material + gold_plant
-    under TRACE_CATALOG / TRACE_SCHEMA (default: "gold").
-    Contract: TraceGraphSchema (packages/data-contracts)
-    Cache: PER_USER_60S — lineage data can shift as movements are posted.
-    Depth: 1 only — flat SELECT of direct parents/children.
-    Recursion deferred until column names confirmed and ADR-024 resolved.
 
-    Raises DatabricksConfigError if TRACE_CATALOG is not set.
+def get_trace_graph_anchor_spec(request: TraceGraphRequest) -> QuerySpec:
+    """QuerySpec for hop 0 — edges directly touching the anchor node.
+
+    Anchor (material_id, batch_id, plant_id) is bound as named params — user input.
+    Direction controls which side of the edge the anchor must appear on:
+      downstream → anchor must be PARENT (anchor produced something)
+      upstream   → anchor must be CHILD  (something produced anchor)
+      both       → either side
     """
-    tbl_lineage = resolve_domain_object("trace2", "gold_batch_lineage")
-    tbl_material = resolve_domain_object("trace2", "gold_material")
-    tbl_plant = resolve_domain_object("trace2", "gold_plant")
+    tbl = resolve_domain_object("trace2", "gold_batch_lineage")
+
+    if request.direction == "downstream":
+        where = (
+            "PARENT_MATERIAL_ID = :material_id"
+            " AND PARENT_BATCH_ID = :batch_id"
+            " AND PARENT_PLANT_ID = :plant_id"
+        )
+    elif request.direction == "upstream":
+        where = (
+            "CHILD_MATERIAL_ID = :material_id"
+            " AND CHILD_BATCH_ID = :batch_id"
+            " AND CHILD_PLANT_ID = :plant_id"
+        )
+    else:  # both
+        where = (
+            "(PARENT_MATERIAL_ID = :material_id"
+            " AND PARENT_BATCH_ID = :batch_id"
+            " AND PARENT_PLANT_ID = :plant_id)"
+            "\n       OR (CHILD_MATERIAL_ID = :material_id"
+            " AND CHILD_BATCH_ID = :batch_id"
+            " AND CHILD_PLANT_ID = :plant_id)"
+        )
 
     sql = f"""
-    SELECT
-        l.parent_material_id,                               -- confirmed column name
-        l.parent_batch_id,                                  -- confirmed column name
-        l.parent_plant_id,                                  -- confirmed column name
-        l.child_material_id,                                -- confirmed column name
-        l.child_batch_id,                                   -- confirmed column name
-        l.child_plant_id,                                   -- confirmed column name
-        l.link_type,                                        -- confirmed column name
-        pm.material_name AS parent_material_name,           -- TODO: verify join; language_id filter needed
-        cm.material_name AS child_material_name,            -- TODO: verify join; language_id filter needed
-        pp.plant_name    AS parent_plant_name,              -- TODO: verify join key
-        cp.plant_name    AS child_plant_name                -- TODO: verify join key
-    FROM {tbl_lineage} l
-    LEFT JOIN {tbl_material} pm                             -- TODO: verify language_id column/value
-        ON l.parent_material_id = pm.material_id AND pm.language_id = 'EN'
-    LEFT JOIN {tbl_material} cm                             -- TODO: verify language_id column/value
-        ON l.child_material_id = cm.material_id AND cm.language_id = 'EN'
-    LEFT JOIN {tbl_plant} pp ON l.parent_plant_id = pp.plant_id  -- TODO: verify plant_id column
-    LEFT JOIN {tbl_plant} cp ON l.child_plant_id = cp.plant_id   -- TODO: verify plant_id column
-    WHERE (l.parent_batch_id = :batch_id AND l.parent_material_id = :material_id)
-       OR (l.child_batch_id = :batch_id AND l.child_material_id = :material_id)
-    LIMIT :max_rows
+{_TRACE_GRAPH_SELECT}
+    FROM {tbl}
+    WHERE {where}
     """
 
     return QuerySpec(
@@ -196,87 +222,157 @@ def get_trace_graph_spec(request: Trace2TraceGraphRequest) -> QuerySpec:
         module="trace2",
         endpoint="/api/trace2/trace-graph",
         sql=sql,
-        params={"material_id": request.material_id, "batch_id": request.batch_id},
+        params={
+            "material_id": request.material_id,
+            "batch_id": request.batch_id,
+            "plant_id": request.plant_id,
+        },
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_lineage",
-        max_rows=500,
         tags=["trace2", "trace-graph", "lineage"],
     )
 
 
-def map_trace_graph_rows(rows: list[dict], root_batch: str) -> dict:
-    """Map Databricks lineage rows to TraceGraphSchema shape.
+def get_trace_graph_hop_spec(
+    frontier: list[tuple[str, str, str]],
+    direction: str,
+) -> QuerySpec:
+    """QuerySpec for hops 1..N in iterative traversal.
 
-    Depth=1: all direct parents/children of root_batch.
-    Nodes keyed by (material_id, batch_id) — duplicates suppressed.
-    Edges keyed by (source_id, target_id, relationship_type) — duplicates suppressed.
-    Node type defaults to 'intermediate' — gold_batch_lineage has no material-type column.
+    frontier: server-generated (material_id, batch_id, plant_id) tuples produced
+    by the previous hop — safe to embed as SQL tuple literals.
+    No user input reaches this SQL; anchor params are only in the hop-0 spec.
     """
-    if not rows:
-        return {
-            "nodes": [],
-            "edges": [],
-            "direction": "both",
-            "depth": 1,
-            "rootBatch": root_batch,
-            "upstreamCount": 0,
-            "downstreamCount": 0,
-            "unresolvedNodeCount": 0,
+    tbl = resolve_domain_object("trace2", "gold_batch_lineage")
+
+    tuple_list = ", ".join(
+        f"({_sql_str(m)}, {_sql_str(b)}, {_sql_str(p)})"
+        for m, b, p in frontier
+    )
+
+    if direction == "downstream":
+        where = (
+            f"(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)"
+            f" IN ({tuple_list})"
+        )
+    elif direction == "upstream":
+        where = (
+            f"(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)"
+            f" IN ({tuple_list})"
+        )
+    else:  # both
+        where = (
+            f"(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID) IN ({tuple_list})"
+            f"\n       OR (CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID) IN ({tuple_list})"
+        )
+
+    sql = f"""
+{_TRACE_GRAPH_SELECT}
+    FROM {tbl}
+    WHERE {where}
+    """
+
+    return QuerySpec(
+        name="trace2.get_trace_graph",
+        module="trace2",
+        endpoint="/api/trace2/trace-graph",
+        sql=sql,
+        params={},  # frontier values are server-generated and embedded as literals
+        cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:gold_batch_lineage",
+        tags=["trace2", "trace-graph", "lineage"],
+    )
+
+
+def map_trace_graph(
+    tagged_rows: list[tuple[dict, int, str]],
+    request: TraceGraphRequest,
+    depth_reached: int,
+    truncated: bool,
+) -> dict:
+    """Map iterative traversal results to the q.txt trace graph response shape.
+
+    tagged_rows: list of (row_dict, hop_index, direction_str) produced by the route loop.
+    Anchor node is always included even when tagged_rows is empty.
+    Nodes and edges are deduped by key; leading zeros preserved (no numeric casting).
+    """
+    anchor_key = _node_key(request.material_id, request.batch_id, request.plant_id)
+
+    nodes: dict[str, dict] = {
+        anchor_key: {
+            "nodeKey": anchor_key,
+            "materialId": request.material_id,
+            "batchId": request.batch_id,
+            "plantId": request.plant_id,
+            "label": f"{request.material_id} / {request.batch_id}",
+            "depth": 0,
+            "directions": ["anchor"],
+            "isAnchor": True,
         }
-
-    nodes: dict[str, dict] = {}
+    }
     edges: dict[str, dict] = {}
-    upstream_batches: set[str] = set()
-    downstream_batches: set[str] = set()
+    warnings: list[str] = []
 
-    for row in rows:
-        parent_id = f"{row['parent_material_id']}:{row['parent_batch_id']}"
-        child_id = f"{row['child_material_id']}:{row['child_batch_id']}"
+    for row, hop, direction in tagged_rows:
+        parent_key = _node_key(
+            row["parent_material_id"],
+            row["parent_batch_id"],
+            row["parent_plant_id"],
+        )
+        child_key = _node_key(
+            row["child_material_id"],
+            row["child_batch_id"],
+            row["child_plant_id"],
+        )
 
-        if parent_id not in nodes:
-            nodes[parent_id] = {
-                "id": parent_id,
-                "type": "intermediate",
-                "materialId": row["parent_material_id"],
-                "materialDescription": row.get("parent_material_name") or "",
-                "batchId": row["parent_batch_id"],
-                "plantId": row.get("parent_plant_id"),
-            }
+        # Assign depth: for downstream the parent was found at hop, child is one step further.
+        # For upstream the child was found at hop, parent is one step further.
+        if direction == "downstream":
+            parent_depth, child_depth = hop, hop + 1
+        else:
+            parent_depth, child_depth = hop + 1, hop
 
-        if child_id not in nodes:
-            nodes[child_id] = {
-                "id": child_id,
-                "type": "intermediate",
-                "materialId": row["child_material_id"],
-                "materialDescription": row.get("child_material_name") or "",
-                "batchId": row["child_batch_id"],
-                "plantId": row.get("child_plant_id"),
-            }
+        if parent_key not in nodes:
+            nodes[parent_key] = _make_graph_node(
+                row, "parent", parent_depth, direction
+            )
+        elif direction not in nodes[parent_key]["directions"]:
+            nodes[parent_key]["directions"].append(direction)
 
-        relationship = _map_link_type(row.get("link_type"))
-        edge_key = f"{parent_id}|{child_id}|{relationship}"
+        if child_key not in nodes:
+            nodes[child_key] = _make_graph_node(
+                row, "child", child_depth, direction
+            )
+        elif direction not in nodes[child_key]["directions"]:
+            nodes[child_key]["directions"].append(direction)
+
+        link_type = row.get("link_type") or ""
+        doc_num = row.get("material_document_number") or ""
+        edge_key = f"{parent_key}|{child_key}|{link_type}|{doc_num}|{hop}"
         if edge_key not in edges:
-            edges[edge_key] = {
-                "id": edge_key,
-                "source": parent_id,
-                "target": child_id,
-                "relationshipType": relationship,
-            }
+            edges[edge_key] = _make_graph_edge(
+                row, parent_key, child_key, edge_key, hop, direction
+            )
 
-        if row["child_batch_id"] == root_batch:
-            upstream_batches.add(parent_id)
-        if row["parent_batch_id"] == root_batch:
-            downstream_batches.add(child_id)
+    if not tagged_rows:
+        warnings.append("no_edges_found")
+    if truncated:
+        warnings.append("max_edges_reached")
+    if depth_reached >= request.max_depth and tagged_rows:
+        warnings.append("max_depth_reached")
 
     return {
+        "anchor": {
+            "materialId": request.material_id,
+            "batchId": request.batch_id,
+            "plantId": request.plant_id,
+            "nodeKey": anchor_key,
+        },
         "nodes": list(nodes.values()),
         "edges": list(edges.values()),
-        "direction": "both",
-        "depth": 1,
-        "rootBatch": root_batch,
-        "upstreamCount": len(upstream_batches),
-        "downstreamCount": len(downstream_batches),
-        "unresolvedNodeCount": 0,
+        "depthReached": depth_reached,
+        "truncated": truncated,
+        "warnings": warnings,
     }
 
 
@@ -396,6 +492,67 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+def _node_key(material_id: str, batch_id: str, plant_id: str) -> str:
+    """Unique key for a batch node — includes plant_id to prevent collisions."""
+    return f"{material_id}:{batch_id}:{plant_id}"
+
+
+def _sql_str(value: str) -> str:
+    """Embed a server-generated string as a SQL single-quoted literal.
+
+    Only call with values produced by a prior Databricks query result, never with
+    raw user input. Single-quotes within the value are escaped by doubling.
+    """
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
+    prefix = "parent" if side == "parent" else "child"
+    mat = row[f"{prefix}_material_id"]
+    bat = row[f"{prefix}_batch_id"]
+    pla = row[f"{prefix}_plant_id"]
+    return {
+        "nodeKey": _node_key(mat, bat, pla),
+        "materialId": mat,
+        "batchId": bat,
+        "plantId": pla,
+        "label": f"{mat} / {bat}",
+        "depth": depth,
+        "directions": [direction],
+        "isAnchor": False,
+    }
+
+
+def _make_graph_edge(
+    row: dict,
+    parent_key: str,
+    child_key: str,
+    edge_id: str,
+    depth: int,
+    direction: str,
+) -> dict:
+    qty_raw = row.get("quantity")
+    return {
+        "id": edge_id,
+        "source": parent_key,
+        "target": child_key,
+        "linkType": row.get("link_type"),
+        "processOrderId": row.get("process_order_id"),
+        "materialDocumentNumber": row.get("material_document_number"),
+        "purchaseOrderId": row.get("purchase_order_id"),
+        "supplierId": row.get("supplier_id"),
+        "customerId": row.get("customer_id"),
+        "deliveryId": row.get("delivery_id"),
+        "salesOrderId": row.get("sales_order_id"),
+        "quantity": float(qty_raw) if qty_raw is not None else None,
+        "baseUnitOfMeasure": row.get("base_unit_of_measure"),
+        "postingDate": row.get("posting_date"),
+        "movementType": row.get("movement_type"),
+        "depth": depth,
+        "direction": direction,
+    }
+
 
 _LINK_TYPE_MAP: dict[str, str] = {
     "PRODUCTION": "produced-from",

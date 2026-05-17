@@ -56,7 +56,7 @@
 | Object | Columns confirmed | Used by | Status |
 |---|---|---|---|
 | `gold_batch_stock_v` | material_id, batch_id, unrestricted, blocked, quality_inspection, restricted, transit, total_stock | `getBatchHeaderSummary` (join) | ✓ QS (columns confirmed from V1 inspection) |
-| `gold_batch_lineage` | parent_material_id, parent_batch_id, parent_plant_id, child_material_id, child_batch_id, child_plant_id, link_type | `getTraceGraph` | ✓ QS (columns confirmed from V1 inspection) |
+| `gold_batch_lineage` | PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID, CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID, LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER, PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID, SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE — 18 cols; clustered on CHILD_MATERIAL_ID + CHILD_BATCH_ID | `getTraceGraph` | **✓ confirmed-ddl (q.txt, 2026-05-18)** — `POST /api/trace2/trace-graph` wired; iterative multi-hop |
 | `gold_batch_summary_v` | **NOT VERIFIED** — 6 columns assumed: plant_id, manufacture_date, expiry_date, batch_status, uom, process_order_id | `getBatchHeaderSummary` | ⚠ DDL NOT run — **blocks route wiring** |
 | `gold_material` | material_id, material_name confirmed; `language_id` **NOT VERIFIED** | `getBatchHeaderSummary`, `getTraceGraph` | ⚠ language_id unverified — **blocks route wiring** |
 | `gold_plant` | plant_id, plant_name (assumed — confirmed for CQ lab, assumed same view) | `getBatchHeaderSummary`, `getTraceGraph` | ✓ QS (assumed; LEFT JOIN so not hard-blocking) |
@@ -160,7 +160,7 @@ Full DDL checklist: `docs/audit/trace-native-column-verification-checklist.md`
 | `getOrderConfirmations` | `csm_process_order_history.vw_gold_confirmation` | ✓ E |
 | `getOrderGoodsMovements` | `csm_process_order_history.vw_gold_adp_movement` | ✓ E |
 | `getBatchHeaderSummary` | `gold.gold_batch_stock_v`, `gold.gold_batch_summary_v`⚠, `gold.gold_material`⚠, `gold.gold_plant` | QS only — blocked |
-| `getTraceGraph` | `gold.gold_batch_lineage`, `gold.gold_material`⚠, `gold.gold_plant` | QS only — blocked |
+| `getTraceGraph` | `gold.gold_batch_lineage` (confirmed-ddl) | **✓ E** — `POST /api/trace2/trace-graph` (q.txt, 2026-05-18); iterative multi-hop; gold_material/gold_plant joins deferred |
 | `getMassBalanceSummary` | `gold.gold_batch_mass_balance_v`⚠ | QS only — blocked |
 | `getLabFailures` | `csm_process_order_history.vw_gold_process_order_plan`❌ | Blocked — view missing |
 | `getEnvMonSiteSummary` | `gold.gold_inspection_lot` + `gold.gold_inspection_point` + `gold.gold_batch_quality_result_v` | **✓ E** — `GET /api/envmon/site-summary` (n.txt) |
