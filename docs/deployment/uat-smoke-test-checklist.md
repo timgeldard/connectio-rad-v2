@@ -161,27 +161,39 @@ See `docs/deployment/poh-native-slices-browser-verification.md` for full checkli
 
 ---
 
-### C8 — POH order confirmations ⛔ BLOCKED
+### C8 — POH order confirmations (native Databricks) — EXECUTABLE, awaiting browser verification
 
 `GET /api/por/order-confirmations?process_order_id=7006965038`
 
-**Status: NOT IMPLEMENTED** — route does not exist.
+**Status: IMPLEMENTED** — route wired, DDL confirmed 2026-05-17, all tests passing. Browser verification pending.
 
-- [ ] BLOCKED — `vw_gold_confirmation` DDL not captured. Cannot confirm column names or implement QuerySpec.
-- [ ] Action required: Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` in Databricks SQL editor. Update `docs/audit/native-databricks-column-verification-checklist.md` before implementing.
-- [ ] Expected HTTP status once implemented: 200 with `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_confirmations`
+- [ ] Returns HTTP 200 with JSON array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: poh.get_order_confirmations` present
+- [ ] Each item has `confirmationId`, `operationId`, `confirmedYield`, `uom`, `confirmedAt`
+- [ ] Duration fields (`setupDurationMinutes`, `machineDurationMinutes`, `cleaningDurationMinutes`) present where view has data
+- [ ] `operationText` and `isFinalConfirmation` absent — not in `vw_gold_confirmation` by design
+- [ ] No SPN/PAT token used — query executes as end-user identity
+
+See `docs/deployment/browser-verification-backlog.md` (BV-01) for full pass criteria and troubleshooting.
 
 ---
 
-### C9 — POH goods movements ⛔ BLOCKED
+### C9 — POH goods movements (native Databricks) — EXECUTABLE, awaiting browser verification
 
 `GET /api/por/order-goods-movements?process_order_id=7006965038`
 
-**Status: NOT IMPLEMENTED** — route does not exist.
+**Status: IMPLEMENTED** — route wired, DDL confirmed 2026-05-17, all tests passing. Browser verification pending.
 
-- [ ] BLOCKED — `vw_gold_adp_movement` DDL not captured. Cannot confirm column names or implement QuerySpec.
-- [ ] Action required: Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` in Databricks SQL editor. Update `docs/audit/native-databricks-column-verification-checklist.md` before implementing.
-- [ ] Expected HTTP status once implemented: 200 with `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_goods_movements`
+- [ ] Returns HTTP 200 with JSON array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: poh.get_order_goods_movements` present
+- [ ] All `direction` values are `"input"`, `"output"`, or `"unknown"` — never null
+- [ ] `materialId` values preserve leading zeros (string, not numeric)
+- [ ] `materialDescription` absent — no material master join in `vw_gold_adp_movement` by design
+- [ ] No SPN/PAT token used — query executes as end-user identity
+
+See `docs/deployment/browser-verification-backlog.md` (BV-02) for full pass criteria and troubleshooting.
 
 ---
 
@@ -189,5 +201,6 @@ See `docs/deployment/poh-native-slices-browser-verification.md` for full checkli
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
 - `vw_gold_process_order_phase` DDL is confirmed (2026-05-17). No column-name blockers for order-operations route.
-- `vw_gold_confirmation` and `vw_gold_adp_movement` DDL not captured — confirmations and goods movements routes are blocked until DDL is confirmed.
+- `vw_gold_confirmation` DDL confirmed 2026-05-17 — confirmations route is implemented and executable.
+- `vw_gold_adp_movement` DDL confirmed 2026-05-17 — goods movements route is implemented and executable.
 - All tests in this checklist require a human in the loop with valid Databricks workspace access. Do not attempt to automate against live Databricks in CI.
