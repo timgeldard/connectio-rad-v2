@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — getOrderOperations browser-verified (11 ops, PO 7006965038); confirmations + movements blocked pending DDL  
+**Last updated:** 2026-05-17 — getOrderConfirmations + getOrderGoodsMovements implemented (DDL confirmed); browser verification pending deployment  
 **Scope:** All domain-integration adapter methods across Trace2, SPC, Warehouse360, POH (Process Order Review), and Quality/Lab  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -29,7 +29,8 @@
 | Symbol | Meaning |
 |--------|---------|
 | ✓ | Implemented / available |
-| ✓ BV | Implemented + browser-verified against live V1 |
+| ✓ BV | Implemented + browser-verified against live UAT endpoint |
+| ✓ E | Executable — databricks-api route wired, DDL confirmed, tests passing; awaiting browser verification in UAT |
 | ✓ W | Wired (proxy route + adapter code exist) — NOT browser-verified |
 | — | Not yet implemented |
 | ⛔ | Blocked (prerequisite missing) |
@@ -126,8 +127,8 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getOrderStagingContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getRelatedBatchContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getOrderOperations` | ✓ | — | — | **✓ BV 2026-05-17** | green when databricks | `GET /api/por/order-operations` — browser-verified 2026-05-17; 11 operations returned for PO 7006965038 |
-| `getOrderConfirmations` | ✓ | — | — | — | none | **BLOCKED** — `vw_gold_confirmation` DDL not confirmed; no implementation |
-| `getOrderGoodsMovements` | ✓ | — | — | — | none | **BLOCKED** — `vw_gold_adp_movement` DDL not confirmed; no implementation |
+| `getOrderConfirmations` | ✓ | — | — | **✓ E** | green when databricks | Databricks-api route wired (`GET /api/por/order-confirmations`); DDL confirmed 2026-05-17; `operationText` + `isFinalConfirmation` absent from view (schema relaxed to optional); browser verification pending |
+| `getOrderGoodsMovements` | ✓ | — | — | **✓ E** | green when databricks | Databricks-api route wired (`GET /api/por/order-goods-movements`); DDL confirmed 2026-05-17; `materialDescription` absent from view (optional); Tulip movement types confirmed (101/261/262/531 mapped; 711/712/999/null direction-unknown); browser verification pending |
 
 **POH (Plan Risk) — `OperationsPlanRiskAdapter`** (no legacy adapter):
 
@@ -143,7 +144,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getShiftHandoverItems` | ✓ | — | — | — | none | Requires planning-data gold views |
 | `getOperationsActionQueue` | ✓ | — | — | — | none | Requires planning-data gold views |
 
-**Summary (POR):** 10 + 9 = 19 methods — `getProcessOrderHeader` and `getOrderOperations` are databricks-api browser-verified (2026-05-17); confirmations and goods movements are blocked pending DDL; remaining POR and plan-risk methods are mock-only.
+**Summary (POR):** 10 + 9 = 19 methods — `getProcessOrderHeader` and `getOrderOperations` are databricks-api browser-verified (2026-05-17); `getOrderConfirmations` and `getOrderGoodsMovements` are executable (DDL confirmed, routes wired) but not yet browser-verified; remaining POR and plan-risk methods are mock-only.
 
 ---
 
@@ -165,15 +166,15 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 
 ## Cross-Domain Totals
 
-| Domain | Total methods | Browser-verified (databricks-api) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
-|--------|--------------|----------------------------------|---------------------|-----------|----------------|
-| Traceability | 11 | 1 (legacy-api only) | 0 | 10 | 0 |
-| SPC | 9 | 0 | 0 | 9 | 0 |
-| Warehouse360 | 9 | 0 | 1 | 8 | 0 |
-| POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | 0 | 8 | **2 BV** |
-| POH (plan risk) | 9 | 0 | 0 | 9 | 0 |
-| Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 1 | 0 | **1 BV** |
-| **Total** | **50** | **3** | **2** | **44** | **3 BV** |
+| Domain | Total methods | Browser-verified (databricks-api) | Executable (not verified) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
+|--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
+| Traceability | 11 | 1 (legacy-api only) | 0 | 0 | 10 | 0 |
+| SPC | 9 | 0 | 0 | 0 | 9 | 0 |
+| Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
+| POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
+| POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
+| Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
+| **Total** | **50** | **3** | **2** | **2** | **42** | **5** (3 BV + 2 E) |
 
 ---
 
@@ -185,6 +186,8 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
+| `/api/por/order-confirmations` | GET | POH | `getOrderConfirmations` | Databricks-api only — **executable, not browser-verified** — `vw_gold_confirmation` DDL confirmed 2026-05-17; `operationText` + `isFinalConfirmation` absent from view |
+| `/api/por/order-goods-movements` | GET | POH | `getOrderGoodsMovements` | Databricks-api only — **executable, not browser-verified** — `vw_gold_adp_movement` DDL confirmed 2026-05-17; Tulip movement types mapped; `materialDescription` absent from view |
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
 

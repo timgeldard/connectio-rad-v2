@@ -32,8 +32,8 @@ The `ProcessOrderReviewLegacyApiAdapter` class extends `ProcessOrderReviewAdapte
 | `getOrderStagingContext` | mock | — | No | No | No |
 | `getRelatedBatchContext` | mock | — | No | No | No |
 | `getOrderOperations` | **databricks-api** (mode-gated) | `GET /api/por/order-operations` | **Yes 2026-05-17** (PO 7006965038, 11 ops) | `get_order_operations_spec` | `map_order_operations_rows` |
-| `getOrderConfirmations` | mock | — | — | — **BLOCKED** — `vw_gold_confirmation` DDL unconfirmed | — |
-| `getOrderGoodsMovements` | mock | — | — | — **BLOCKED** — `vw_gold_adp_movement` DDL unconfirmed | — |
+| `getOrderConfirmations` | ✓ | — | — | **✓ E 2026-05-17** — DDL confirmed; `operationText`/`isFinalConfirmation` absent (optional) | `get_order_confirmations_spec` | `map_order_confirmations_rows` |
+| `getOrderGoodsMovements` | ✓ | — | — | **✓ E 2026-05-17** — DDL confirmed; `materialDescription` absent (optional); Tulip movement types mapped | `get_order_goods_movements_spec` | `map_order_goods_movements_rows` |
 
 ### OperationsPlanRiskAdapter
 
@@ -138,14 +138,10 @@ Priority order for V1 wiring:
 
 ```python
 # apps/api/routes/process_order.py
-POST /api/por/order-header      # mode-gated: legacy-api (proxy) or databricks-api (StatementApi) — browser-verified 2026-05-17
-GET  /api/por/order-operations  # databricks-api only (no V1 endpoint) — browser-verified 2026-05-17 (11 ops for PO 7006965038)
-```
-
-Routes not yet created (require V1 endpoint confirmation or DDL confirmation first):
-```python
-GET /api/por/order-confirmations   # blocked — vw_gold_confirmation DDL not captured
-GET /api/por/order-goods-movements # blocked — vw_gold_adp_movement DDL not captured
+POST /api/por/order-header           # mode-gated: legacy-api (proxy) or databricks-api — browser-verified 2026-05-17
+GET  /api/por/order-operations       # databricks-api only — browser-verified 2026-05-17 (11 ops for PO 7006965038)
+GET  /api/por/order-confirmations    # databricks-api only — executable, not browser-verified; vw_gold_confirmation DDL confirmed 2026-05-17
+GET  /api/por/order-goods-movements  # databricks-api only — executable, not browser-verified; vw_gold_adp_movement DDL confirmed 2026-05-17
 # All others (related-batches, quality-context, staging-context, etc.) — mock only
 ```
 
@@ -155,5 +151,5 @@ GET /api/por/order-goods-movements # blocked — vw_gold_adp_movement DDL not ca
 |------|---------|--------|
 | `vw_gold_process_order` | `PROCESS_ORDER_ID`, `STATUS`, `MATERIAL_ID`, `MATERIAL_DESCRIPTION`, `PLANT_ID`, `INSPECTION_LOT_ID` | **confirmed-ddl 2026-05-17** |
 | `vw_gold_process_order_phase` | `PROCESS_ORDER_PHASE_ID`, `PHASE_ID`, `PHASE_DESCRIPTION`, `PHASE_TEXT`, `OPERATION_QUANTITY`, `OPERATION_QUANTITY_UOM`, `SORT_NUMBER`, `START_USER`, `END_USER` | **confirmed-ddl 2026-05-17** |
-| `vw_gold_confirmation` | unknown | **blocked** — run `DESCRIBE TABLE` |
-| `vw_gold_adp_movement` | unknown | **blocked** — run `DESCRIBE TABLE` |
+| `vw_gold_confirmation` | `CONFIRMATION_ID`, `PROCESS_ORDER_PHASE_ID`, `CONFIRMED_QUANTITY`, `CONFIRMED_QUANTITY_UOM`, `END_TIMESTAMP`, `START_TIMESTAMP`, `SET_UP_DURATION_S`, `MACHINE_DURATION_S`, `CLEANING_DURATION_S`, `__CREATED_ON` | **confirmed-ddl 2026-05-17** |
+| `vw_gold_adp_movement` | `ID`, `PROCESS_ORDER_ID`, `MOVEMENT_TYPE`, `MATERIAL_ID`, `QUANTITY`, `UOM`, `DATE_TIME_OF_ENTRY`, `BATCH_ID`, `USER`, `MATERIAL_DOCUMENT`, `STORAGE_ID` (39 cols total) | **confirmed-ddl 2026-05-17** |

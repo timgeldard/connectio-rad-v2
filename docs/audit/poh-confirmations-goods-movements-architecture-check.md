@@ -1,7 +1,7 @@
 # POH Confirmations and Goods Movements — Architecture Check
 
 **Date:** 2026-05-17  
-**Status:** Both slices BLOCKED — DDL not confirmed. This document records the pre-implementation architecture audit.  
+**Status:** Both slices IMPLEMENTED — DDL confirmed 2026-05-17; routes wired; executable but not yet browser-verified.  
 **Principle:** DDL first. Implement only what confirmed Databricks views actually support.  
 **References:**
 - `docs/migration/poh-confirmations-goods-movements-plan.md`
@@ -18,8 +18,8 @@
 | `POST /api/por/order-header` | **browser-verified** — PO 7006965038 |
 | `GET /api/por/order-operations` | **browser-verified** — 11 operations for PO 7006965038 |
 | `GET /api/cq/lab/plants` | **browser-verified** |
-| `GET /api/por/order-confirmations` | **BLOCKED** — route not implemented |
-| `GET /api/por/order-goods-movements` | **BLOCKED** — route not implemented |
+| `GET /api/por/order-confirmations` | **Implemented** — executable; DDL confirmed 2026-05-17; not browser-verified |
+| `GET /api/por/order-goods-movements` | **Implemented** — executable; DDL confirmed 2026-05-17; not browser-verified |
 
 ---
 
@@ -164,14 +164,15 @@ override async getOrderConfirmations(
 
 ---
 
-## What remains blocked
+## What remains to complete
 
-| Item | Blocker | Required action |
-|------|---------|----------------|
-| `getOrderConfirmations` implementation | `vw_gold_confirmation` DDL not captured | Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` |
-| `getOrderGoodsMovements` implementation | `vw_gold_adp_movement` DDL not captured | Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` |
-| Browser verification for either route | Route not implemented | Implement after DDL confirmed |
-| `getExecutionTimeline` native path | Depends on confirmations + movements being proven | Deferred |
+| Item | Status | Required action |
+|------|--------|----------------|
+| Browser verification — `getOrderConfirmations` | Not yet tested | Deploy to UAT; hit `GET /api/por/order-confirmations?process_order_id=7006965038`; verify 200 + data |
+| Browser verification — `getOrderGoodsMovements` | Not yet tested | Deploy to UAT; hit `GET /api/por/order-goods-movements?process_order_id=7006965038`; verify 200 + data |
+| `operationText` / `isFinalConfirmation` re-require | Pending upstream view change | When `vw_gold_confirmation` exposes these fields, revert schema optionals |
+| `materialDescription` re-require | Pending material master join | When `vw_gold_adp_movement` exposes material description, revert schema optional |
+| `getExecutionTimeline` native path | Deferred | Depends on date columns in operations view; post-verification task |
 
 ---
 
