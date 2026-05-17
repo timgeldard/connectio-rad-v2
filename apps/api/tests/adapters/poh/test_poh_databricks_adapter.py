@@ -12,6 +12,7 @@ from adapters.poh.poh_databricks_adapter import (
     _map_order_type,
 )
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.errors import DatabricksConfigError
 
 
 # ---------------------------------------------------------------------------
@@ -19,6 +20,11 @@ from shared.query_service.cache_policy import CacheTier
 # ---------------------------------------------------------------------------
 
 class TestGetProcessOrderHeaderSpec:
+    @pytest.fixture(autouse=True)
+    def _set_poh_catalog(self, monkeypatch):
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("POH_SCHEMA", "csm_process_order_history")
+
     def test_name(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
         assert spec.name == "poh.get_process_order_header"
@@ -73,6 +79,21 @@ class TestGetProcessOrderHeaderSpec:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
         assert "vw_gold_process_order" in spec.sql
 
+    def test_sql_uses_poh_catalog(self) -> None:
+        """SQL must include catalog from POH_CATALOG env var."""
+        spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_uses_poh_schema(self) -> None:
+        """SQL must include schema from POH_SCHEMA env var."""
+        spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
+        assert "`csm_process_order_history`" in spec.sql
+
+    def test_sql_has_no_unqualified_from_vw(self) -> None:
+        """SQL must not have bare unqualified FROM vw_gold_process_order."""
+        spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
+        assert "FROM vw_gold_process_order" not in spec.sql
+
     def test_sql_has_where_clause_for_order_id(self) -> None:
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
         assert "WHERE aufnr = :process_order_id" in spec.sql
@@ -82,9 +103,14 @@ class TestGetProcessOrderHeaderSpec:
         assert "LIMIT :max_rows" in spec.sql
 
     def test_sql_contains_todo_markers(self) -> None:
-        """All column references must be marked with TODO until verified."""
+        """Column references remain TODO until verified against live DDL."""
         spec = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
         assert "TODO" in spec.sql
+
+    def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +118,11 @@ class TestGetProcessOrderHeaderSpec:
 # ---------------------------------------------------------------------------
 
 class TestGetOrderOperationsSpec:
+    @pytest.fixture(autouse=True)
+    def _set_poh_catalog(self, monkeypatch):
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("POH_SCHEMA", "csm_process_order_history")
+
     def test_name(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
         assert spec.name == "poh.get_order_operations"
@@ -121,6 +152,15 @@ class TestGetOrderOperationsSpec:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
         assert "vw_gold_process_order_phase" in spec.sql
 
+    def test_sql_uses_poh_catalog(self) -> None:
+        spec = get_order_operations_spec(OrderOperationsRequest("100001"))
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_has_no_unqualified_from_vw(self) -> None:
+        """SQL must not have bare unqualified FROM vw_gold_process_order_phase."""
+        spec = get_order_operations_spec(OrderOperationsRequest("100001"))
+        assert "FROM vw_gold_process_order_phase" not in spec.sql
+
     def test_sql_has_where_clause_for_order_id(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
         assert "WHERE aufnr = :process_order_id" in spec.sql
@@ -136,6 +176,11 @@ class TestGetOrderOperationsSpec:
     def test_sql_contains_todo_markers(self) -> None:
         spec = get_order_operations_spec(OrderOperationsRequest("100001"))
         assert "TODO" in spec.sql
+
+    def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_order_operations_spec(OrderOperationsRequest("100001"))
 
     def test_two_requests_produce_independent_params(self) -> None:
         spec1 = get_process_order_header_spec(ProcessOrderHeaderRequest("100001"))

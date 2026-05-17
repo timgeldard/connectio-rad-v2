@@ -41,11 +41,12 @@ class DatabricksQueryError(Exception):
 class DatabricksConfigError(Exception):
     """Raised when required Databricks configuration environment variables are missing."""
 
-    def __init__(self, missing_vars: list[str]) -> None:
-        super().__init__(
+    def __init__(self, missing_vars: list[str], detail: str = "") -> None:
+        msg = detail or (
             f"Databricks configuration incomplete. Missing: {', '.join(missing_vars)}. "
-            "Set DATABRICKS_HOST and SQL_WAREHOUSE_ID environment variables."
+            "Set the required environment variables."
         )
+        super().__init__(msg)
         self.missing_vars = missing_vars
 
 

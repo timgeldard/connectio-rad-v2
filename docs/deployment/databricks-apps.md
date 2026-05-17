@@ -268,6 +268,12 @@ path-segment deep links is not needed.
 | `BACKEND_ADAPTER_MODE` | app.yaml literal or secret | `legacy-api` (default) or `databricks-api`. Controls whether POH and CQ Lab routes query Databricks directly or proxy to V1. |
 | `DATABRICKS_HOST` | Secret scope | Databricks workspace hostname (no `https://` prefix). Required when `BACKEND_ADAPTER_MODE=databricks-api`. Example: `myworkspace.azuredatabricks.net` |
 | `SQL_WAREHOUSE_ID` | Secret scope | SQL Warehouse ID to run statements against. Required when `BACKEND_ADAPTER_MODE=databricks-api`. |
+| `POH_CATALOG` | Secret scope | Unity Catalog name for the POH domain (e.g. `connected_plant_uat`). Required when `BACKEND_ADAPTER_MODE=databricks-api` and POH route is active. |
+| `POH_SCHEMA` | app.yaml literal (optional) | Schema name for POH views. Defaults to `csm_process_order_history` if unset. |
+| `CQ_CATALOG` | Secret scope | Unity Catalog name for the CQ domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and CQ Lab routes are active. Falls back to `TRACE_CATALOG` if unset (V1-compatible). |
+| `CQ_SCHEMA` | app.yaml literal (optional) | Schema name for CQ tables. Defaults to `csm_process_order_history` if unset. Note: CQ lab plants always uses `gold` schema regardless of this setting. |
+| `TRACE_CATALOG` | Secret scope | Unity Catalog name for the Trace2 domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and Trace2 routes are active. Also used as `CQ_CATALOG` fallback. |
+| `TRACE_SCHEMA` | app.yaml literal (optional) | Schema name for Trace2 gold views. Defaults to `gold` if unset. |
 | `VITE_CQ_API_BASE_URL` | Build env | Frontend base URL for CQ API (empty = same-origin Databricks Apps deployment) |
 | `ADAPTER_MODE` | app.yaml literal | Informational only — the frontend adapter mode is baked into the JS bundle at build time |
 | `PYTHONUNBUFFERED` | app.yaml literal | Ensures FastAPI logs appear immediately in Databricks Apps log stream |

@@ -14,13 +14,14 @@ Route wiring deferred: the existing proxy route GET /api/cq/lab/plants in
 apps/api/routes/connected_quality_lab.py forwards to V1. Databricks route wiring
 requires column names verified against live gold_plant table in connected_plant_uat.
 
-IMPORTANT: All SQL column names below are unverified. They are inferred from SAP
-T001W (plant master) naming conventions. Every column alias is marked with a TODO
-comment. Do not remove TODOs until confirmed against the live table DDL.
+Column name alignment: PLANT_ID / PLANT_NAME confirmed from V1 source
+(apps/connectedquality/backend/connectedquality_backend/dal/lab.py — fetch_lab_plants).
+Table qualification uses CQ_CATALOG + gold schema (V1 behaviour: gold.gold_plant).
 """
 from __future__ import annotations
 
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
 
@@ -30,8 +31,7 @@ def map_lab_plants_rows(rows: list[dict]) -> dict:
     Returns ``{"plants": [...]}`` always — empty list if no rows.
 
     Mapping: ``plant_id`` → ``plantId``, ``plant_name`` → ``plantName``.
-    Column names are SQL aliases from ``get_lab_plants_spec`` — both are TODO-marked
-    and must be verified against the live gold_plant table before production use.
+    Column names confirmed from V1 source (gold.gold_plant.PLANT_ID / PLANT_NAME).
     """
     plants = [
         {
@@ -47,16 +47,22 @@ def map_lab_plants_rows(rows: list[dict]) -> dict:
 def get_lab_plants_spec() -> QuerySpec:
     """Return a QuerySpec for getLabPlants.
 
-    Source table: gold_plant (connected_plant_uat)
+    Source table: gold.gold_plant under CQ_CATALOG (falls back to TRACE_CATALOG).
+    Schema is always ``gold`` — matches V1 which uses `{CQ_CATALOG}`.`gold`.`gold_plant`.
     Contract: ConnectedQualityLabPlantsResponseSchema (packages/data-contracts)
     Cache: GLOBAL_300S — plant list is a slow-moving dimension; shared across users.
+
+    Raises DatabricksConfigError if CQ_CATALOG (or fallback TRACE_CATALOG) is not set.
     """
-    sql = """
+    plant_table = resolve_domain_object("cq", "gold_plant", schema_override="gold")
+
+    sql = f"""
     SELECT
-        werks  AS plant_id,    -- TODO: verify column name (SAP T001W.WERKS; may be plant_id in gold view)
-        name1  AS plant_name   -- TODO: verify column name (SAP T001W.NAME1; may be plant_name in gold view)
-    FROM gold_plant
-    ORDER BY werks
+        PLANT_ID   AS plant_id,    -- confirmed via V1 source: gold.gold_plant.PLANT_ID
+        PLANT_NAME AS plant_name   -- confirmed via V1 source: gold.gold_plant.PLANT_NAME
+    FROM {plant_table}
+    WHERE PLANT_ID IS NOT NULL
+    ORDER BY PLANT_ID
     LIMIT :max_rows
     """
 

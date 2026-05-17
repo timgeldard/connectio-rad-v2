@@ -1,7 +1,7 @@
 # Native Databricks Execution Hardening — Architecture Check
 
 **Date:** 2026-05-17
-**Tranche:** l.txt — Native Databricks Execution Hardening and Verification Readiness
+**Tranches:** l.txt — Native Databricks Execution Hardening and Verification Readiness; m.txt — V1/V2 Databricks Config Reconciliation
 **Reference:** ADR-024, ADR-025
 
 This document confirms that the hardening tranche preserved all architecture guardrails defined in ADR-024 and the project CLAUDE.md.
@@ -102,6 +102,52 @@ Both implemented slices (`poh.get_process_order_header`, `cq.get_lab_plants`) ar
 - `warning: string`
 
 The raw token value is never included. Verified by test `test_raw_token_never_in_response` in `test_auth_diagnostics_routes.py`.
+
+---
+
+## m.txt guardrail confirmations
+
+### Catalog env vars read at request time (not import time)
+
+**Status: CONFIRMED**
+
+`resolve_domain_object()` reads `os.environ` inside the function body, not at module level. Env var changes (including `monkeypatch` in tests) are reflected immediately. Verified by `test_reads_env_var_at_call_time` in `test_object_resolver.py`.
+
+### Object names are code constants — not user-supplied
+
+**Status: CONFIRMED**
+
+`object_name` in `resolve_domain_object()` is always a string literal passed by the adapter factory (e.g. `"vw_gold_process_order"`, `"gold_plant"`). Request parameters never reach the object resolver. Verified by `test_object_name_from_code_constant_not_user_input` in `test_object_resolver.py`.
+
+### All identifiers backtick-quoted
+
+**Status: CONFIRMED**
+
+`qualify_object()` wraps catalog, schema, and object name in backticks. No identifier is interpolated without quoting. Verified by `test_backtick_quotes_all_parts` in `test_object_resolver.py`.
+
+### Missing catalog raises DatabricksConfigError → HTTP 503
+
+**Status: CONFIRMED**
+
+Missing `POH_CATALOG`, `CQ_CATALOG` (with no `TRACE_CATALOG` fallback), or `TRACE_CATALOG` all raise `DatabricksConfigError`. Both `routes/process_order.py` and `routes/connected_quality_lab.py` catch `DatabricksConfigError` and return HTTP 503. Verified by `test_returns_503_when_poh_catalog_missing` and `test_returns_503_when_cq_catalog_missing` in the respective route test files.
+
+### Legacy-api mode does not require catalog env vars
+
+**Status: CONFIRMED**
+
+`BACKEND_ADAPTER_MODE=legacy-api` routes never call the spec factory. `POH_CATALOG` and `CQ_CATALOG` are not read in legacy mode. Verified by `test_legacy_api_mode_does_not_require_poh_catalog` and `test_legacy_api_mode_does_not_require_cq_catalog`.
+
+### CQ lab plants uses confirmed V1 column names
+
+**Status: CONFIRMED**
+
+`get_lab_plants_spec()` uses `PLANT_ID` and `PLANT_NAME` (not SAP `werks`/`name1`). Columns confirmed from V1 source. SQL qualifies the table as `` `{CQ_CATALOG}`.`gold`.`gold_plant` `` matching the V1 query exactly.
+
+### CQ_CATALOG fallback to TRACE_CATALOG preserved
+
+**Status: CONFIRMED**
+
+`resolve_domain_object("cq", ...)` falls back to `TRACE_CATALOG` when `CQ_CATALOG` is unset, matching V1 behaviour (`os.environ.get("CQ_CATALOG", os.environ.get("TRACE_CATALOG", ""))`). Verified by `test_cq_catalog_falls_back_to_trace_catalog` in `test_object_resolver.py`.
 
 ---
 

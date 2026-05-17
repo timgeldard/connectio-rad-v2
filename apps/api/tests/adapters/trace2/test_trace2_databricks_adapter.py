@@ -13,6 +13,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     map_trace_graph_rows,
 )
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.errors import DatabricksConfigError
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +59,11 @@ _LINEAGE_ROW_A_TO_B = {
 # ---------------------------------------------------------------------------
 
 class TestGetBatchHeaderSummarySpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
     def _req(self) -> Trace2BatchHeaderRequest:
         return Trace2BatchHeaderRequest("0000020582002", "BATCH001")
 
@@ -93,12 +99,27 @@ class TestGetBatchHeaderSummarySpec:
     def test_sql_references_gold_batch_summary_v(self) -> None:
         assert "gold_batch_summary_v" in get_batch_header_summary_spec(self._req()).sql
 
+    def test_sql_uses_trace_catalog(self) -> None:
+        assert "`connected_plant_uat`" in get_batch_header_summary_spec(self._req()).sql
+
+    def test_sql_uses_gold_schema(self) -> None:
+        assert "`gold`" in get_batch_header_summary_spec(self._req()).sql
+
+    def test_sql_has_no_unqualified_from_gold_batch_stock_v(self) -> None:
+        spec = get_batch_header_summary_spec(self._req())
+        assert "FROM gold_batch_stock_v" not in spec.sql
+
     def test_sql_has_limit(self) -> None:
         assert "LIMIT :max_rows" in get_batch_header_summary_spec(self._req()).sql
 
     def test_sql_contains_todo_markers(self) -> None:
         """gold_batch_summary_v column names are unverified — SQL must carry TODO markers."""
         assert "TODO" in get_batch_header_summary_spec(self._req()).sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_batch_header_summary_spec(self._req())
 
     def test_params_not_shared_between_requests(self) -> None:
         spec1 = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1"))
@@ -228,6 +249,11 @@ class TestMapBatchHeaderRows:
 # ---------------------------------------------------------------------------
 
 class TestGetTraceGraphSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
     def _req(self) -> Trace2TraceGraphRequest:
         return Trace2TraceGraphRequest("MAT001", "BATCH_ROOT")
 
@@ -263,11 +289,26 @@ class TestGetTraceGraphSpec:
     def test_sql_references_gold_batch_lineage(self) -> None:
         assert "gold_batch_lineage" in get_trace_graph_spec(self._req()).sql
 
+    def test_sql_uses_trace_catalog(self) -> None:
+        assert "`connected_plant_uat`" in get_trace_graph_spec(self._req()).sql
+
+    def test_sql_uses_gold_schema(self) -> None:
+        assert "`gold`" in get_trace_graph_spec(self._req()).sql
+
+    def test_sql_has_no_unqualified_from_gold_batch_lineage(self) -> None:
+        spec = get_trace_graph_spec(self._req())
+        assert "FROM gold_batch_lineage" not in spec.sql
+
     def test_sql_has_limit(self) -> None:
         assert "LIMIT :max_rows" in get_trace_graph_spec(self._req()).sql
 
     def test_sql_contains_todo_markers(self) -> None:
         assert "TODO" in get_trace_graph_spec(self._req()).sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_trace_graph_spec(self._req())
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +449,11 @@ class TestMapTraceGraphRows:
 # ---------------------------------------------------------------------------
 
 class TestGetMassBalanceSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
     def _req(self) -> Trace2MassBalanceRequest:
         return Trace2MassBalanceRequest("MAT001", "BATCH001")
 
@@ -434,6 +480,13 @@ class TestGetMassBalanceSpec:
     def test_sql_references_gold_batch_mass_balance_v(self) -> None:
         assert "gold_batch_mass_balance_v" in get_mass_balance_spec(self._req()).sql
 
+    def test_sql_uses_trace_catalog(self) -> None:
+        assert "`connected_plant_uat`" in get_mass_balance_spec(self._req()).sql
+
+    def test_sql_has_no_unqualified_from_gold_batch_mass_balance_v(self) -> None:
+        spec = get_mass_balance_spec(self._req())
+        assert "FROM gold_batch_mass_balance_v" not in spec.sql
+
     def test_sql_has_order_by_posting_date(self) -> None:
         assert "ORDER BY posting_date" in get_mass_balance_spec(self._req()).sql
 
@@ -443,6 +496,11 @@ class TestGetMassBalanceSpec:
     def test_sql_contains_todo_markers(self) -> None:
         """WHERE column names in gold_batch_mass_balance_v are unverified."""
         assert "TODO" in get_mass_balance_spec(self._req()).sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_mass_balance_spec(self._req())
 
 
 # ---------------------------------------------------------------------------

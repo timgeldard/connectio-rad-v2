@@ -85,6 +85,44 @@ env:
   - name: ADAPTER_MODE
     value: legacy-api
 
+  # ── Domain catalog/schema (required for BACKEND_ADAPTER_MODE=databricks-api) ──
+  # Each domain reads its own catalog/schema env vars for SQL object qualification.
+  # CQ_CATALOG falls back to TRACE_CATALOG if unset (CQ and Trace share a workspace).
+  # CQ_SCHEMA, POH_SCHEMA, TRACE_SCHEMA have sensible V1-compatible defaults and are
+  # optional unless the Unity Catalog layout differs from those defaults.
+  #
+  # Defaults (if env var is absent):
+  #   POH_SCHEMA   = "csm_process_order_history"
+  #   CQ_SCHEMA    = "csm_process_order_history"  (falls back to POH_SCHEMA)
+  #   TRACE_SCHEMA = "gold"
+  #
+  # Required (no default):
+  #   POH_CATALOG, CQ_CATALOG (or TRACE_CATALOG), TRACE_CATALOG
+  #
+  # - name: POH_CATALOG
+  #   valueFrom:
+  #     secretScope: connectio-v2
+  #     secretKey: poh-catalog
+  #
+  # - name: POH_SCHEMA
+  #   value: csm_process_order_history
+  #
+  # - name: CQ_CATALOG
+  #   valueFrom:
+  #     secretScope: connectio-v2
+  #     secretKey: cq-catalog
+  #
+  # - name: CQ_SCHEMA
+  #   value: csm_process_order_history
+  #
+  # - name: TRACE_CATALOG
+  #   valueFrom:
+  #     secretScope: connectio-v2
+  #     secretKey: trace-catalog
+  #
+  # - name: TRACE_SCHEMA
+  #   value: gold
+
   # ── Auth diagnostics (non-production only) ────────────────────────────────
   # Set to "true" to enable GET /api/diagnostics/auth-headers.
   # This endpoint returns OAuth header presence metadata (never the token value)

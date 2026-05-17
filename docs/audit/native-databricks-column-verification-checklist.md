@@ -1,7 +1,7 @@
 # Native Databricks Column Verification Checklist
 
 **Date:** 2026-05-17
-**Status:** All columns ASSUMED — none confirmed from live DDL
+**Status:** CQ lab plants columns confirmed-v1; all others ASSUMED — none confirmed from live DDL
 **Reference:** ADR-025, `apps/api/adapters/poh/poh_databricks_adapter.py`, `apps/api/adapters/cq/cq_databricks_adapter.py`
 
 **Legend:**
@@ -83,32 +83,35 @@ LIMIT 1;
 ## CQ Lab — `getLabPlants`
 
 **QuerySpec:** `cq.get_lab_plants` in `apps/api/adapters/cq/cq_databricks_adapter.py`
-**Source table:** `connected_plant_uat.gold_plant`
+**Source table:** `` `{CQ_CATALOG}`.`gold`.`gold_plant` `` (e.g. `connected_plant_uat.gold.gold_plant`)
 **FastAPI route:** `GET /api/cq/lab/plants`
 
 Verify columns with:
 ```sql
-DESCRIBE TABLE connected_plant_uat.gold_plant;
+DESCRIBE TABLE connected_plant_uat.gold.gold_plant;
 -- or
-SELECT * FROM connected_plant_uat.gold_plant LIMIT 5;
+SELECT * FROM connected_plant_uat.gold.gold_plant LIMIT 5;
 ```
 
-| Contract field | SQL alias | Assumed source column | Status | Verified date |
-|---------------|-----------|----------------------|--------|--------------|
-| `plantId` | `plant_id` | `werks` | **assumed** | — |
-| `plantName` | `plant_name` | `name1` | **assumed** | — |
+| Contract field | SQL alias | Source column | Status | Verified date |
+|---------------|-----------|--------------|--------|--------------|
+| `plantId` | `plant_id` | `PLANT_ID` | **confirmed-v1** | 2026-05-17 |
+| `plantName` | `plant_name` | `PLANT_NAME` | **confirmed-v1** | 2026-05-17 |
 
-**Verification SQL to run:**
+**Confirmation source:** V1 DAL query — `` SELECT PLANT_ID AS plant_id, PLANT_NAME AS plant_name FROM `{CQ_CATALOG}`.`gold`.`gold_plant` WHERE PLANT_ID IS NOT NULL ORDER BY PLANT_ID ``.
+
+**Verification SQL to run (live DDL confirmation):**
 ```sql
 -- Step 1: confirm columns
-DESCRIBE TABLE connected_plant_uat.gold_plant;
+DESCRIBE TABLE connected_plant_uat.gold.gold_plant;
 
 -- Step 2: test the full query
 SELECT
-    werks AS plant_id,
-    name1 AS plant_name
-FROM connected_plant_uat.gold_plant
-ORDER BY werks
+    PLANT_ID   AS plant_id,
+    PLANT_NAME AS plant_name
+FROM connected_plant_uat.gold.gold_plant
+WHERE PLANT_ID IS NOT NULL
+ORDER BY PLANT_ID
 LIMIT 100;
 ```
 

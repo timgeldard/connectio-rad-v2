@@ -16,6 +16,7 @@ from .errors import (
     QueryExecutionError,
 )
 from .identity import UserIdentity, extract_user_identity
+from .object_resolver import qualify_object, quote_identifier, resolve_domain_object
 from .query_executor import QueryExecutor
 from .query_spec import QuerySpec
 
@@ -36,4 +37,7 @@ __all__ = [
     "StatementApiDatabricksClient",
     "UserIdentity",
     "extract_user_identity",
+    "qualify_object",
+    "quote_identifier",
+    "resolve_domain_object",
 ]

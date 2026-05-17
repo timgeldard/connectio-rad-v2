@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
 
@@ -56,11 +57,19 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     """Return a QuerySpec for getBatchHeaderSummary.
 
     Sources: gold_batch_stock_v + gold_batch_summary_v + gold_material + gold_plant
+    under TRACE_CATALOG / TRACE_SCHEMA (default: "gold").
     Contract: BatchHeaderSummarySchema (packages/data-contracts)
     Cache: PER_USER_60S — batch release/block status can change during a shift.
     Parallel validation: possible against browser-verified POST /api/trace2/batch-header.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
-    sql = """
+    tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
+    tbl_summary = resolve_domain_object("trace2", "gold_batch_summary_v")
+    tbl_material = resolve_domain_object("trace2", "gold_material")
+    tbl_plant = resolve_domain_object("trace2", "gold_plant")
+
+    sql = f"""
     SELECT
         s.material_id,                         -- confirmed column name (gold_batch_stock_v)
         s.batch_id,                            -- confirmed column name
@@ -78,12 +87,12 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         b.batch_status     AS batch_status,    -- TODO: verify column name in gold_batch_summary_v
         b.uom              AS uom,             -- TODO: verify column name in gold_batch_summary_v
         b.process_order_id AS process_order_id -- TODO: verify column name in gold_batch_summary_v
-    FROM gold_batch_stock_v s
-    JOIN gold_batch_summary_v b                -- TODO: verify join key columns
+    FROM {tbl_stock} s
+    JOIN {tbl_summary} b                       -- TODO: verify join key columns
         ON s.material_id = b.material_id AND s.batch_id = b.batch_id
-    JOIN gold_material m                       -- confirmed join key
+    JOIN {tbl_material} m                      -- confirmed join key
         ON s.material_id = m.material_id AND m.language_id = 'EN'  -- TODO: verify language_id filter
-    JOIN gold_plant p                          -- confirmed join key
+    JOIN {tbl_plant} p                         -- confirmed join key
         ON b.plant_id = p.plant_id             -- TODO: verify plant_id column in gold_batch_summary_v
     WHERE s.material_id = :material_id
       AND s.batch_id = :batch_id
@@ -145,12 +154,19 @@ def get_trace_graph_spec(request: Trace2TraceGraphRequest) -> QuerySpec:
     """Return a QuerySpec for getTraceGraph at depth=1.
 
     Source: gold_batch_lineage + gold_material + gold_plant
+    under TRACE_CATALOG / TRACE_SCHEMA (default: "gold").
     Contract: TraceGraphSchema (packages/data-contracts)
     Cache: PER_USER_60S — lineage data can shift as movements are posted.
     Depth: 1 only — flat SELECT of direct parents/children.
     Recursion deferred until column names confirmed and ADR-024 resolved.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
-    sql = """
+    tbl_lineage = resolve_domain_object("trace2", "gold_batch_lineage")
+    tbl_material = resolve_domain_object("trace2", "gold_material")
+    tbl_plant = resolve_domain_object("trace2", "gold_plant")
+
+    sql = f"""
     SELECT
         l.parent_material_id,                               -- confirmed column name
         l.parent_batch_id,                                  -- confirmed column name
@@ -163,13 +179,13 @@ def get_trace_graph_spec(request: Trace2TraceGraphRequest) -> QuerySpec:
         cm.material_name AS child_material_name,            -- TODO: verify join; language_id filter needed
         pp.plant_name    AS parent_plant_name,              -- TODO: verify join key
         cp.plant_name    AS child_plant_name                -- TODO: verify join key
-    FROM gold_batch_lineage l
-    LEFT JOIN gold_material pm                              -- TODO: verify language_id column/value
+    FROM {tbl_lineage} l
+    LEFT JOIN {tbl_material} pm                             -- TODO: verify language_id column/value
         ON l.parent_material_id = pm.material_id AND pm.language_id = 'EN'
-    LEFT JOIN gold_material cm                              -- TODO: verify language_id column/value
+    LEFT JOIN {tbl_material} cm                             -- TODO: verify language_id column/value
         ON l.child_material_id = cm.material_id AND cm.language_id = 'EN'
-    LEFT JOIN gold_plant pp ON l.parent_plant_id = pp.plant_id  -- TODO: verify plant_id column
-    LEFT JOIN gold_plant cp ON l.child_plant_id = cp.plant_id   -- TODO: verify plant_id column
+    LEFT JOIN {tbl_plant} pp ON l.parent_plant_id = pp.plant_id  -- TODO: verify plant_id column
+    LEFT JOIN {tbl_plant} cp ON l.child_plant_id = cp.plant_id   -- TODO: verify plant_id column
     WHERE (l.parent_batch_id = :batch_id AND l.parent_material_id = :material_id)
        OR (l.child_batch_id = :batch_id AND l.child_material_id = :material_id)
     LIMIT :max_rows
@@ -271,12 +287,16 @@ def map_trace_graph_rows(rows: list[dict], root_batch: str) -> dict:
 def get_mass_balance_spec(request: Trace2MassBalanceRequest) -> QuerySpec:
     """Return a QuerySpec for getMassBalanceSummary.
 
-    Source: gold_batch_mass_balance_v
+    Source: gold_batch_mass_balance_v under TRACE_CATALOG / TRACE_SCHEMA (default: "gold").
     Contract: MassBalanceSummarySchema + MassBalanceMovementSchema (packages/data-contracts)
     Cache: PER_USER_60S — movement postings occur throughout the shift.
     balance_qty is the confirmed running-balance column — maps directly to runningBalance.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
-    sql = """
+    tbl_mass_balance = resolve_domain_object("trace2", "gold_batch_mass_balance_v")
+
+    sql = f"""
     SELECT
         posting_date,      -- confirmed column name
         movement_type,     -- confirmed column name
@@ -284,7 +304,7 @@ def get_mass_balance_spec(request: Trace2MassBalanceRequest) -> QuerySpec:
         abs_quantity,      -- confirmed column name
         uom,               -- confirmed column name
         balance_qty        -- confirmed — running balance; maps directly to runningBalance
-    FROM gold_batch_mass_balance_v
+    FROM {tbl_mass_balance}
     WHERE material_id = :material_id  -- TODO: verify filter column name
       AND batch_id = :batch_id         -- TODO: verify filter column name
     ORDER BY posting_date

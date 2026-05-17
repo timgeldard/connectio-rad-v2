@@ -1,6 +1,6 @@
 # CQ Lab — Databricks-API Blockers
 
-**Date:** 2026-05-16  
+**Date:** 2026-05-17 (updated m.txt — column names confirmed-v1 for getLabPlants)  
 **Reference:** ADR-024, `docs/audit/integration-readiness-report-2026-05-16.md` §4  
 **Implementation plan:** `docs/migration/databricks-vertical-slices-poh-cq-plan.md`
 
@@ -60,5 +60,10 @@ slice is unblocked.
 `getLabPlants` has **no blockers**. It requires only `gold_plant` (plant dimension table),
 available in `connected_plant_uat`.
 
-QuerySpec implemented at: `apps/api/adapters/cq/cq_databricks_adapter.py`  
-Route wiring deferred pending: column name verification + ADR-024 open questions #1/#7.
+QuerySpec implemented at: `apps/api/adapters/cq/cq_databricks_adapter.py`
+
+**Column names confirmed-v1 (m.txt):** V1 source uses `PLANT_ID` and `PLANT_NAME` (not SAP `werks`/`name1`).
+V2 `get_lab_plants_spec()` updated to match. Table qualified as `` `{CQ_CATALOG}`.`gold`.`gold_plant` `` per V1.
+
+Remaining pre-production requirement: live DDL confirmation (`DESCRIBE TABLE connected_plant_uat.gold.gold_plant`)
+to upgrade status from `confirmed-v1` to `confirmed-ddl`. See ADR-024 open question #7.

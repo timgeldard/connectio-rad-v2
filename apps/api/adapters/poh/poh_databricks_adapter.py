@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
 # ---------------------------------------------------------------------------
@@ -61,10 +62,18 @@ class OrderOperationsRequest:
 def get_process_order_header_spec(request: ProcessOrderHeaderRequest) -> QuerySpec:
     """Return a QuerySpec for getProcessOrderHeader.
 
-    Source view: vw_gold_process_order (connected_plant_uat)
+    Source view: vw_gold_process_order under POH_CATALOG / POH_SCHEMA.
     Contract: ProcessOrderHeaderSchema (packages/data-contracts)
     Cache: PER_USER_60S — order status changes during a shift.
+
+    Raises DatabricksConfigError if POH_CATALOG is not set.
+
+    Column note: V1 POH db.py ORDER_STATUS_EXPR uses `po.STATUS` with values
+    'IN PROGRESS', 'COMPLETED', 'CLOSED', 'NOT STARTED'. The V2 spec uses
+    `objnr` (SAP status object number). TODO: verify which column the gold view
+    exposes — status text or SAP objnr.
     """
+    order_view = resolve_domain_object("poh", "vw_gold_process_order")
     plant_clause = "AND werks = :plant_id" if request.plant_id else ""
 
     sql = f"""
@@ -83,8 +92,8 @@ def get_process_order_header_spec(request: ProcessOrderHeaderRequest) -> QuerySp
         gltrp          AS planned_finish,     -- TODO: verify date column (basic finish date)
         gstri          AS actual_start,       -- TODO: verify (actual start; null if not started)
         getri          AS actual_finish,      -- TODO: verify (actual finish; null if not complete)
-        objnr          AS order_status_raw    -- TODO: verify; map status bits → V2 enum
-    FROM vw_gold_process_order
+        objnr          AS order_status_raw    -- TODO: verify; V1 uses STATUS text col, not objnr
+    FROM {order_view}
     WHERE aufnr = :process_order_id
     {plant_clause}
     LIMIT :max_rows
@@ -186,11 +195,15 @@ def _format_datetime(value: object) -> str:
 def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:
     """Return a QuerySpec for getOrderOperations.
 
-    Source view: vw_gold_process_order_phase (connected_plant_uat)
+    Source view: vw_gold_process_order_phase under POH_CATALOG / POH_SCHEMA.
     Contract: ProcessOrderOperationSchema[] (packages/data-contracts)
     Cache: PER_USER_60S — operation confirmations post during the shift.
+
+    Raises DatabricksConfigError if POH_CATALOG is not set.
     """
-    sql = """
+    ops_view = resolve_domain_object("poh", "vw_gold_process_order_phase")
+
+    sql = f"""
     SELECT
         vornr          AS operation_number,          -- TODO: verify (SAP op sequence, AFVO.VORNR)
         ltxa1          AS operation_text,            -- TODO: verify (short op description, AFVO.LTXA1)
@@ -204,7 +217,7 @@ def get_order_operations_spec(request: OrderOperationsRequest) -> QuerySpec:
         dauno          AS planned_duration_minutes,  -- TODO: verify units (AFVO.DAUNO may be in hours or minutes)
         iauno          AS actual_duration_minutes,   -- TODO: verify units (AFVO.IAUNO)
         rueck          AS has_confirmation           -- TODO: verify (AFVO.RUECK confirmation counter; > 0 means confirmed)
-    FROM vw_gold_process_order_phase
+    FROM {ops_view}
     WHERE aufnr = :process_order_id
     ORDER BY vornr
     LIMIT :max_rows

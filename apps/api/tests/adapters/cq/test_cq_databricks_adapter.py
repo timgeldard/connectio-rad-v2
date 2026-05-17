@@ -3,75 +3,132 @@ import pytest
 
 from adapters.cq.cq_databricks_adapter import get_lab_plants_spec, map_lab_plants_rows
 from shared.query_service.cache_policy import CacheTier
+from shared.query_service.errors import DatabricksConfigError
 
 
 class TestGetLabPlantsSpec:
-    def test_name(self) -> None:
+    def test_name(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.name == "cq.get_lab_plants"
 
-    def test_module(self) -> None:
+    def test_module(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.module == "cq"
 
-    def test_endpoint(self) -> None:
+    def test_endpoint(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.endpoint == "/api/cq/lab/plants"
 
-    def test_cache_policy_is_global(self) -> None:
+    def test_cache_policy_is_global(self, monkeypatch) -> None:
         """Lab plants is a slow-moving dimension — must use GLOBAL_300S."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.cache_policy == CacheTier.GLOBAL_300S
 
-    def test_source_badge(self) -> None:
+    def test_source_badge(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.source_badge == "databricks-api"
 
-    def test_tags(self) -> None:
+    def test_tags(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert "cq" in spec.tags
         assert "lab" in spec.tags
         assert "plants" in spec.tags
 
-    def test_params_is_empty(self) -> None:
+    def test_params_is_empty(self, monkeypatch) -> None:
         """getLabPlants takes no input parameters."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert spec.params == {}
 
-    def test_sql_references_gold_plant(self) -> None:
+    def test_sql_references_gold_plant(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert "gold_plant" in spec.sql
 
-    def test_sql_has_order_by_werks(self) -> None:
+    def test_sql_uses_cq_catalog(self, monkeypatch) -> None:
+        """SQL must include the catalog from CQ_CATALOG env var."""
+        monkeypatch.setenv("CQ_CATALOG", "connected_plant_uat")
         spec = get_lab_plants_spec()
-        assert "ORDER BY werks" in spec.sql
+        assert "`connected_plant_uat`" in spec.sql
 
-    def test_sql_has_limit(self) -> None:
+    def test_sql_uses_gold_schema(self, monkeypatch) -> None:
+        """CQ lab plants always uses gold schema (V1: `{CQ_CATALOG}`.`gold`.`gold_plant`)."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
+        spec = get_lab_plants_spec()
+        assert "`gold`" in spec.sql
+
+    def test_sql_uses_cq_catalog_fallback_to_trace_catalog(self, monkeypatch) -> None:
+        """CQ_CATALOG falls back to TRACE_CATALOG (V1-compatible)."""
+        monkeypatch.delenv("CQ_CATALOG", raising=False)
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        spec = get_lab_plants_spec()
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_aliases_plant_id_from_v1_column(self, monkeypatch) -> None:
+        """Uses PLANT_ID column (confirmed from V1: gold.gold_plant.PLANT_ID)."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
+        spec = get_lab_plants_spec()
+        assert "PLANT_ID" in spec.sql
+        assert "plant_id" in spec.sql
+
+    def test_sql_aliases_plant_name_from_v1_column(self, monkeypatch) -> None:
+        """Uses PLANT_NAME column (confirmed from V1: gold.gold_plant.PLANT_NAME)."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
+        spec = get_lab_plants_spec()
+        assert "PLANT_NAME" in spec.sql
+        assert "plant_name" in spec.sql
+
+    def test_sql_orders_by_plant_id(self, monkeypatch) -> None:
+        """Matches V1 ORDER BY PLANT_ID."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
+        spec = get_lab_plants_spec()
+        assert "ORDER BY PLANT_ID" in spec.sql
+
+    def test_sql_filters_null_plant_ids(self, monkeypatch) -> None:
+        """Matches V1 WHERE PLANT_ID IS NOT NULL."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
+        spec = get_lab_plants_spec()
+        assert "PLANT_ID IS NOT NULL" in spec.sql
+
+    def test_sql_has_limit(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert "LIMIT :max_rows" in spec.sql
 
-    def test_sql_contains_todo_markers(self) -> None:
-        """Column names are unverified — SQL must carry TODO markers until confirmed."""
-        spec = get_lab_plants_spec()
-        assert "TODO" in spec.sql
-
-    def test_sql_selects_plant_id_alias(self) -> None:
+    def test_sql_selects_plant_id_alias(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert "plant_id" in spec.sql
 
-    def test_sql_selects_plant_name_alias(self) -> None:
+    def test_sql_selects_plant_name_alias(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec = get_lab_plants_spec()
         assert "plant_name" in spec.sql
 
-    def test_multiple_calls_return_equal_specs(self) -> None:
+    def test_missing_catalog_raises_config_error(self, monkeypatch) -> None:
+        """Missing CQ_CATALOG (and TRACE_CATALOG fallback) raises DatabricksConfigError."""
+        monkeypatch.delenv("CQ_CATALOG", raising=False)
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_lab_plants_spec()
+
+    def test_multiple_calls_return_equal_specs(self, monkeypatch) -> None:
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec1 = get_lab_plants_spec()
         spec2 = get_lab_plants_spec()
         assert spec1.name == spec2.name
         assert spec1.sql == spec2.sql
         assert spec1.params == spec2.params
 
-    def test_params_not_shared_between_calls(self) -> None:
+    def test_params_not_shared_between_calls(self, monkeypatch) -> None:
         """Mutable default guard: params dicts must not be the same object."""
+        monkeypatch.setenv("CQ_CATALOG", "mycat")
         spec1 = get_lab_plants_spec()
         spec2 = get_lab_plants_spec()
         spec1.params["injected"] = "value"

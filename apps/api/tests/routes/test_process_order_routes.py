@@ -82,6 +82,12 @@ class TestOrderHeaderLegacyMode:
 # ---------------------------------------------------------------------------
 
 class TestOrderHeaderDatabricksMode:
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+
     async def test_returns_503_when_databricks_host_missing(
         self, monkeypatch
     ) -> None:
@@ -113,10 +119,35 @@ class TestOrderHeaderDatabricksMode:
             )
         assert response.status_code == 503
 
-    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+    async def test_returns_503_when_poh_catalog_missing(self, monkeypatch) -> None:
+        """DatabricksConfigError from missing POH_CATALOG must map to 503."""
         monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
         monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/por/order-header",
+                json={"process_order_id": "100001"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 503
+
+    async def test_legacy_api_mode_does_not_require_poh_catalog(self, monkeypatch) -> None:
+        """legacy-api mode must not require POH_CATALOG."""
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+        # No V1 URL configured — 503 from V1, not from catalog check
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/por/order-header",
+                json={"process_order_id": "100001"},
+            )
+        assert response.status_code == 503  # 503 = V1 URL missing, not catalog missing
+
+    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -131,9 +162,7 @@ class TestOrderHeaderDatabricksMode:
         assert response.status_code == 401
 
     async def test_returns_404_when_no_rows(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -149,9 +178,7 @@ class TestOrderHeaderDatabricksMode:
         assert response.status_code == 404
 
     async def test_returns_200_with_mapped_data(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -173,9 +200,7 @@ class TestOrderHeaderDatabricksMode:
         assert data["orderStatus"] == "released"
 
     async def test_sets_x_data_source_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -192,9 +217,7 @@ class TestOrderHeaderDatabricksMode:
         assert response.headers.get("x-data-source") == "databricks-api"
 
     async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -211,9 +234,7 @@ class TestOrderHeaderDatabricksMode:
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
     async def test_sets_x_query_name_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -232,6 +253,7 @@ class TestOrderHeaderDatabricksMode:
 
     async def test_source_is_databricks_api(self, monkeypatch) -> None:
         """Source badge on the POH spec must be 'databricks-api'."""
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
         from adapters.poh.poh_databricks_adapter import (
             ProcessOrderHeaderRequest,
             get_process_order_header_spec,
@@ -240,9 +262,7 @@ class TestOrderHeaderDatabricksMode:
         assert spec.source_badge == "databricks-api"
 
     async def test_uses_process_order_id_from_request(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         captured_sql_params: list[dict] = []
 
@@ -268,9 +288,7 @@ class TestOrderHeaderDatabricksMode:
     ) -> None:
         from shared.query_service.errors import DatabricksQueryError
 
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",

@@ -25,6 +25,7 @@ from routes._databricks import require_databricks_config, set_databricks_respons
 from shared.query_service.databricks_client import StatementApiDatabricksClient
 from shared.query_service.errors import (
     DatabricksAuthRequiredError,
+    DatabricksConfigError,
     DatabricksPermissionError,
     DatabricksQueryError,
     DatabricksQueryTimeoutError,
@@ -119,6 +120,8 @@ async def _order_header_databricks(
         client = StatementApiDatabricksClient(host=databricks_host)
         executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
         rows = await executor.execute(spec, identity)
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except DatabricksAuthRequiredError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except DatabricksPermissionError as exc:

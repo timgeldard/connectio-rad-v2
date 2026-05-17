@@ -64,7 +64,13 @@ class TestLabPlantsLegacyMode:
 # ---------------------------------------------------------------------------
 
 class TestLabPlantsDatabricksMode:
-    async def test_returns_503_when_config_missing(self, monkeypatch) -> None:
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("CQ_CATALOG", "connected_plant_uat")
+
+    async def test_returns_503_when_databricks_config_missing(self, monkeypatch) -> None:
         monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
         monkeypatch.delenv("DATABRICKS_HOST", raising=False)
         monkeypatch.delenv("SQL_WAREHOUSE_ID", raising=False)
@@ -75,10 +81,32 @@ class TestLabPlantsDatabricksMode:
             )
         assert response.status_code == 503
 
-    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+    async def test_returns_503_when_cq_catalog_missing(self, monkeypatch) -> None:
+        """DatabricksConfigError from missing CQ_CATALOG must map to 503."""
         monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
         monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.delenv("CQ_CATALOG", raising=False)
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/cq/lab/plants", headers=_HEADERS_WITH_TOKEN
+            )
+        assert response.status_code == 503
+
+    async def test_legacy_api_mode_does_not_require_cq_catalog(self, monkeypatch) -> None:
+        """legacy-api mode must not require CQ_CATALOG."""
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        monkeypatch.delenv("CQ_CATALOG", raising=False)
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        # No V1 URL configured — 503 from V1, not from catalog check
+        async with _make_client() as client:
+            response = await client.get("/api/cq/lab/plants")
+        assert response.status_code == 503  # 503 = V1 URL missing, not catalog missing
+
+    async def test_returns_401_when_oauth_token_missing(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -92,9 +120,7 @@ class TestLabPlantsDatabricksMode:
         assert response.status_code == 401
 
     async def test_returns_200_with_plants_list(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -114,9 +140,7 @@ class TestLabPlantsDatabricksMode:
         assert data["plants"][0]["plantName"] == "Kerry Charleville"
 
     async def test_sets_x_data_source_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -131,9 +155,7 @@ class TestLabPlantsDatabricksMode:
         assert response.headers.get("x-data-source") == "databricks-api"
 
     async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -148,9 +170,7 @@ class TestLabPlantsDatabricksMode:
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
     async def test_sets_x_query_name_header(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -166,9 +186,7 @@ class TestLabPlantsDatabricksMode:
         assert "lab_plants" in response.headers.get("x-query-name", "")
 
     async def test_empty_rows_returns_empty_plants_list(self, monkeypatch) -> None:
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -186,9 +204,7 @@ class TestLabPlantsDatabricksMode:
     async def test_does_not_fall_back_on_databricks_error(self, monkeypatch) -> None:
         from shared.query_service.errors import DatabricksQueryError
 
-        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
-        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
-        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        self._databricks_env(monkeypatch)
 
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",

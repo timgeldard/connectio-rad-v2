@@ -1,7 +1,7 @@
 # Native Databricks Execution Readiness
 
-**Date:** 2026-05-17 (updated — l.txt hardening tranche)
-**Scope:** k.txt tranche — first executable Databricks read path; l.txt — hardening and verification readiness
+**Date:** 2026-05-17 (updated — m.txt V1/V2 config reconciliation)
+**Scope:** k.txt tranche — first executable Databricks read path; l.txt — hardening and verification readiness; m.txt — V1/V2 config reconciliation
 **References:** ADR-024, ADR-025
 
 ---
@@ -23,8 +23,8 @@ Documents the current state of the native Databricks read path after the k.txt t
 | `params` | Yes | Merged with `max_rows` by QueryExecutor before client call |
 | `cache_policy` | Yes | `CacheTier` enum; not yet active (no cache backend) |
 | `source_badge` | Yes | Forwarded to `X-Data-Source` response header in both routes |
-| `catalog_override` | Yes (field) | Not used by current slices; wh360 deferred |
-| `schema_override` | Yes (field) | Not used by current slices |
+| `catalog_override` | Yes (field) | Not used by current slices directly; `object_resolver.py` accepts it |
+| `schema_override` | Yes (field) | Used by `cq.get_lab_plants` — `schema_override="gold"` forces gold schema per V1 |
 | `max_rows` | Yes | Merged into `params` as `"max_rows"` int value |
 | `timeout_seconds` | Yes | Forwarded to client as `wait_timeout: "{n}s"` |
 | `tags` | Yes | List[str] merged into `dict[str,str]` and logged; not sent to Statement API |
@@ -112,7 +112,7 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 
 2. **POH column names**: All SQL column names in `get_process_order_header_spec` are TODO-marked (inferred from SAP AUFNR/AUART/MATNR conventions). Must run `DESCRIBE TABLE connected_plant_uat.vw_gold_process_order` to confirm.
 
-3. **CQ Lab column names**: `werks`/`name1` → `plant_id`/`plant_name` aliases in `get_lab_plants_spec` are TODO-marked. Must confirm against `DESCRIBE TABLE connected_plant_uat.gold_plant`.
+3. **CQ Lab column names**: `PLANT_ID`/`PLANT_NAME` confirmed from V1 source (`confirmed-v1`). Status updated in `native-databricks-column-verification-checklist.md`. Live DDL confirmation (`DESCRIBE TABLE connected_plant_uat.gold.gold_plant`) still required before production to upgrade to `confirmed-ddl`.
 
 4. **POH order status mapping**: `objnr` column alias → status mapping is approximate. The actual gold view may expose a status text column rather than the SAP status object number. Must verify with `DESCRIBE TABLE` and inspect sample rows.
 
@@ -144,7 +144,7 @@ python -m pytest tests/shared/ -q
 python -m pytest tests/routes/ -q
 ```
 
-All 276 tests pass without a Databricks connection (250 from k.txt tranche + 26 new in l.txt hardening tranche).
+All 325 tests pass without a Databricks connection (250 from k.txt + 26 from l.txt hardening + 49 from m.txt config reconciliation).
 
 ---
 
