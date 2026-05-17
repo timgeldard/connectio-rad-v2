@@ -162,25 +162,29 @@
 
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`  
 **FastAPI:** None  
-**Databricks views:** None confirmed  
+**Databricks adapter:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` (QuerySpec-only)  
+**Source:** SAP QM inspection lots — `INSPECTION_TYPE IN ('14','Z14')` — TRACE_CATALOG/TRACE_SCHEMA  
+**Gold views confirmed-v1:** `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v`  
+**Gold views confirmed-ddl:** Zero — DDL not yet run  
 **ADR-024 priority:** Not assigned
 
 | Method | Source | Status |
 |---|---|---|
 | `getEnvMonContext` | — | Mock |
-| `getEnvMonSiteSummary` | — | Mock |
-| `getEnvMonZones` | — | Mock |
-| `getEnvMonAlerts` | — | Mock |
-| `getEnvMonSwabResults` | — | Mock |
-| `getEnvMonTrends` | — | Mock |
-| `getEnvMonHeatmap` | — | Mock |
-| `getEnvMonCorrectiveActions` | — | Mock |
-| `getEnvMonSwabVectors` | — | Mock |
+| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | Mock — **QuerySpec written** (confirmed-v1); DDL pending; route not wired |
+| `getEnvMonZones` | Requires `em_location_zones` | Mock — Blocked (em_* table may not exist) |
+| `getEnvMonAlerts` | lot + point + result_v (derivable) | Mock — Deferred (alert rules undefined) |
+| `getEnvMonSwabResults` | lot + point + result_v | Mock — Rank 2; after DDL confirmed |
+| `getEnvMonTrends` | lot + point + result_v | Mock — Rank 3; after DDL confirmed |
+| `getEnvMonHeatmap` | Requires `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* tables may not exist) |
+| `getEnvMonCorrectiveActions` | CAPA source unknown | Mock — Blocked (no source) |
+| `getEnvMonSwabVectors` | — | Mock — Deferred indefinitely |
 
 **Total: 9 methods — all mock**  
-**Status:** No gold views confirmed. No planning path identified. Requires domain owner to identify Databricks source.
+**Status:** V1 functional — SAP QM source recovered (confirmed-v1); DDL pending in connected_plant_uat; `getEnvMonSiteSummary` QuerySpec written.
 
-**Groundwork docs (i.txt, 2026-05-17):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`
+**Source recovery docs (k.txt):** `docs/migration/envmon-v1-functional-recovery.md` · `docs/audit/envmon-sap-qm-source-model.md` · `docs/audit/envmon-inspection-lot-type-filter.md`  
+**Groundwork docs (i.txt):** `docs/migration/envmon-native-groundwork-plan.md` · `docs/audit/envmon-contract-inventory.md` · `docs/audit/envmon-databricks-source-candidates.md` · `docs/audit/envmon-native-column-verification-checklist.md` · `docs/migration/envmon-native-candidate-ranking.md`
 
 ---
 
@@ -272,4 +276,6 @@
 **2 of 82 methods (2.4%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E).**  
 **1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
 **71 of 82 methods (86.6%) are mock-only — no wired route of any kind.**  
-*(The remaining 5 methods: 3 have a databricks-api QuerySpec written but no route wired; 2 are blocked by missing view or undefined business rules.)*
+*(4 methods have a databricks-api QuerySpec written but no route wired — 3 Trace + 1 EnvMon; 2 are blocked by missing view or undefined business rules.)*
+
+**EnvMon correction (k.txt, 2026-05-17):** Source is SAP QM inspection lots — not LIMS. Three gold views confirmed-v1. QuerySpec written for `getEnvMonSiteSummary`. DDL pending.

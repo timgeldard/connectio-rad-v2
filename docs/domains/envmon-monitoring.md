@@ -1,6 +1,6 @@
 # Environmental Monitoring — Adapter and Contract Reference
 
-**Date:** 2026-05-17
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt)
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`
 **Data contracts:** `packages/data-contracts/src/schemas/environmental-monitoring.ts`
 **Product model:** `docs/product-model/envmon-monitoring.md` (workspace views, panels, metadata)
@@ -10,12 +10,34 @@ This document covers the adapter interface, data contract structure, source syst
 
 ---
 
+## Source System (corrected, k.txt 2026-05-17)
+
+**Source:** SAP QM inspection lots (not LIMS)
+
+EnvMon V1 reads from the same Databricks gold layer as Trace2 — `TRACE_CATALOG / TRACE_SCHEMA` (default `connected_plant_uat.gold`). The data is SAP Quality Management inspection lots filtered to `INSPECTION_TYPE IN ('14', 'Z14')` (recurring environmental inspection).
+
+The `systemName: 'lims'` badge in V1 panels reflects the functional domain context, not the data integration technology. The actual source is SAP QM.
+
+| Item | Value |
+|---|---|
+| Source system | SAP QM inspection lots |
+| Catalog env var | `TRACE_CATALOG` |
+| Schema env var | `TRACE_SCHEMA` (default: `gold`) |
+| Inspection type filter | `INSPECTION_TYPE IN ('14', 'Z14')` |
+| Gold views confirmed-v1 | `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v` |
+| Gold views confirmed-ddl | **Zero** — DDL not yet run in connected_plant_uat |
+| QuerySpecs written | **1** — `envmon.get_site_summary` (QuerySpec-only, no route wired) |
+| FastAPI routes | **None** — deferred until DDL confirmed |
+| Legacy-api adapter | None — native Databricks will be first live data path |
+
+---
+
 ## Adapter Interface
 
 **Class:** `EnvMonAdapter`
 **Request interface:** `{ readonly regionId?: string; readonly plantId?: string; readonly periodStart?: string; readonly periodEnd?: string }`
 
-All request fields are optional. The mock adapter ignores them. Future native slices will use `plantId` and `periodStart`/`periodEnd` for WHERE clause filtering; `regionId` maps to a site grouping concept whose Databricks equivalent is not yet known.
+All request fields are optional. The mock adapter ignores them. Future native slices will use `plantId` and `periodStart`/`periodEnd` for WHERE clause filtering; `regionId` maps to a site grouping concept.
 
 ---
 
@@ -24,39 +46,26 @@ All request fields are optional. The mock adapter ignores them. Future native sl
 | Method | Return type | Status |
 |---|---|---|
 | `getEnvMonContext` | `EnvMonContext` | Mock |
-| `getEnvMonSiteSummary` | `EnvMonSiteSummary` | Mock |
-| `getEnvMonZones` | `EnvMonZone[]` | Mock |
-| `getEnvMonAlerts` | `EnvMonAlert[]` | Mock |
-| `getEnvMonSwabResults` | `EnvMonSwabResult[]` | Mock |
-| `getEnvMonTrends` | `EnvMonTrend[]` | Mock |
-| `getEnvMonHeatmap` | `EnvMonHeatmapCell[]` | Mock |
-| `getEnvMonCorrectiveActions` | `EnvMonCorrectiveAction[]` | Mock |
-| `getEnvMonSwabVectors` | `EnvMonSwabVector[]` | Mock |
-
-No FastAPI routes exist for EnvMon. No Databricks QuerySpecs exist. No legacy-api adapter exists.
-
----
-
-## Source System
-
-**Intended source:** LIMS (Laboratory Information Management System)
-**Current source:** Mock data — Phase 4; LIMS data either not yet surfaced in the Databricks gold layer, or gold views not yet identified in this repo
-**Databricks gold views confirmed:** Zero
-**Legacy-api adapter:** None — no V1 proxy path
-
-When native Databricks is implemented, it will be the first live data path for this domain. There is no legacy-api path to validate against in parallel.
+| `getEnvMonSiteSummary` | `EnvMonSiteSummary` | Mock — **QuerySpec written** (DDL pending; route not wired) |
+| `getEnvMonZones` | `EnvMonZone[]` | Mock — blocked on em_location_zones |
+| `getEnvMonAlerts` | `EnvMonAlert[]` | Mock — alert derivation logic undefined |
+| `getEnvMonSwabResults` | `EnvMonSwabResult[]` | Mock — after DDL verification |
+| `getEnvMonTrends` | `EnvMonTrend[]` | Mock — after DDL verification |
+| `getEnvMonHeatmap` | `EnvMonHeatmapCell[]` | Mock — blocked on em_* app-managed tables |
+| `getEnvMonCorrectiveActions` | `EnvMonCorrectiveAction[]` | Mock — no CAPA source |
+| `getEnvMonSwabVectors` | `EnvMonSwabVector[]` | Mock — business rules undefined; deferred indefinitely |
 
 ---
 
 ## Key Contract Enums
 
-Defined in `packages/data-contracts/src/schemas/environmental-monitoring.ts`. These must be confirmed against actual source view data with `SELECT DISTINCT` before column mapping — do not assume the values match without DDL verification.
+Defined in `packages/data-contracts/src/schemas/environmental-monitoring.ts`. Must be confirmed against actual source view data with `SELECT DISTINCT` before column mapping.
 
-| Field | Allowed values |
-|---|---|
-| `areaType` | `production`, `storage`, `packaging`, `utility`, `corridor`, `other` |
-| `hygieneZone` | `zone-1`, `zone-2`, `zone-3`, `zone-4` |
-| `result` | `negative`, `positive`, `borderline`, `pending` |
+| Field | Allowed values (V2 contract) | SAP QM equivalent (confirmed-v1) |
+|---|---|---|
+| `result` | `negative`, `positive`, `borderline`, `pending` | VALUATION: A→negative, R/REJ/REJECT→positive, W/WARN→borderline, NULL→pending |
+| `hygieneZone` | `zone-1`, `zone-2`, `zone-3`, `zone-4` | Derived from em_location_zones (app-managed — existence unknown in UAT) |
+| `areaType` | `production`, `storage`, `packaging`, `utility`, `corridor`, `other` | Derived from em_location_zones (same) |
 
 ---
 
@@ -72,18 +81,17 @@ sourceOwnership: {
 }
 ```
 
-This is **static metadata** in the panel registration object — not a runtime field from the API response. However, the EvidencePanel component renders `systemName` as the visible source badge in the UI. All users currently see **"lims"** as the source for all EnvMon panels, including while data is mock.
-
-When a native Databricks slice is implemented, update `systemName` (and `legacyAppId`) in each affected panel's registration to reflect the actual data source. Do this at the same time as wiring the native route — not before.
+This is **static metadata** — not a runtime field from the API response. The EvidencePanel component renders `systemName` as the visible source badge. When a native Databricks route is wired, update `systemName` to reflect the actual source (`'sap-qm'` or `'databricks'`) in each affected panel's registration. Do this at the same time as wiring the route — not before.
 
 ---
 
 ## Migration Blockers
 
-1. No Databricks gold views identified — domain owner must name the LIMS source views
-2. No legacy-api adapter — native Databricks will be the first live data path; no parallel validation possible
-3. Contract enum values (`hygieneZone`, `areaType`, `result`) must be confirmed against actual view data before mapping
-4. No FastAPI route path convention established for EnvMon (POH uses `/api/por/`, CQ uses `/api/cq/`, EnvMon has no precedent yet)
+1. **DDL not run** — run `DESCRIBE TABLE` for all three gold views in connected_plant_uat before wiring any route
+2. **Inspection type filter not DDL-confirmed** — run `SELECT DISTINCT INSPECTION_TYPE` to confirm '14' and 'Z14' are present
+3. **em_* tables unknown** — zone, heatmap, and coordinates methods require app-managed tables that may not exist in connected_plant_uat
+4. **No route path established** — POH uses `/api/por/`, CQ uses `/api/cq/`, EnvMon will use `/api/envmon/` (not yet created)
 
-For the full groundwork plan and unblocking steps see `docs/migration/envmon-native-groundwork-plan.md`.
-For candidate source objects and DDL verification see `docs/audit/envmon-databricks-source-candidates.md` and `docs/audit/envmon-native-column-verification-checklist.md`.
+For the full groundwork plan and recovery detail see `docs/migration/envmon-native-groundwork-plan.md` and `docs/migration/envmon-v1-functional-recovery.md`.
+For SAP QM source view documentation see `docs/audit/envmon-sap-qm-source-model.md`.
+For DDL verification see `docs/audit/envmon-native-column-verification-checklist.md`.

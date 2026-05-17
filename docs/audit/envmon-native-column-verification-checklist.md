@@ -1,171 +1,233 @@
 # EnvMon Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17
-**Tranche:** i.txt groundwork
-**Status:** ALL ITEMS UNCHECKED — no source views identified; no DDL run
-**Reference:** `docs/audit/envmon-databricks-source-candidates.md`, `docs/audit/envmon-contract-inventory.md`
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
+**Status:** CONFIRMED-V1 — DDL NOT YET RUN in connected_plant_uat
+**Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-databricks-source-candidates.md`
 
 **Legend:**
+- `confirmed-v1` — confirmed from V1 ConnectIO-RAD source code or entities.yaml; not yet DDL-verified
 - `confirmed-ddl` — verified via `DESCRIBE TABLE` or `SHOW COLUMNS IN` in the live workspace
 - `confirmed-browser` — field value confirmed in a live API response in the browser
 - `assumed` — inferred from naming convention or prior knowledge; not verified
 - `missing` — expected field not found in the view DDL
-- `blocked` — cannot verify until the source view is identified
+- `blocked` — cannot verify until another dependency is resolved
 
-Do not mark any field `confirmed-ddl` unless you have run the DDL command and seen the column name in the output. Do not infer from V1 field names or documentation alone.
-
----
-
-## Prerequisites
-
-Before running any DDL below, confirm the source view names with the domain owner or data engineering team. None of these views are confirmed to exist. Run the exploratory SQL first:
-
-```sql
--- Step 0: Find EnvMon-relevant schemas and views
-SHOW SCHEMAS IN connected_plant_uat;
-
--- For each schema that looks relevant (e.g. 'gold', 'lims', 'envmon', 'em'):
-SHOW TABLES IN connected_plant_uat.<schema_name>;
-```
+Do not mark any field `confirmed-ddl` unless you have run the DDL command and seen the column name in the output.
 
 ---
 
-## Group A — SAP QM Inspection Lot Candidates
+## Primary Views (confirmed-v1 — DDL pending)
 
-These views would contain LIMS results if environmental sampling flows through SAP QM inspection lots.
-
-### Candidate: `gold_inspection_lot`
+### `gold_inspection_lot` (TRACE_CATALOG.TRACE_SCHEMA)
 
 ```sql
 DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_lot;
 
 SELECT * FROM connected_plant_uat.gold.gold_inspection_lot LIMIT 5;
 
--- Confirm plant-level filtering works:
-SELECT * FROM connected_plant_uat.gold.gold_inspection_lot
-WHERE PLANT_ID = 'C061'
-LIMIT 20;
+-- Confirm filter values
+SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_inspection_lot
+GROUP BY INSPECTION_TYPE ORDER BY n DESC;
+
+-- Confirm plant-level data exists
+SELECT PLANT_ID, INSPECTION_TYPE, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_inspection_lot
+WHERE INSPECTION_TYPE IN ('14','Z14')
+GROUP BY PLANT_ID, INSPECTION_TYPE
+ORDER BY PLANT_ID;
 ```
 
-| Contract concept | Expected column name | Status |
+| Contract concept | Column name | Status |
 |---|---|---|
-| Lot identifier | `INSPECTION_LOT` or `INSPECTION_LOT_ID` | `[ ]` blocked |
-| Plant | `PLANT_ID` | `[ ]` blocked |
-| Material | `MATERIAL_ID` | `[ ]` blocked |
-| Lot status | `LOT_STATUS` or `STATUS` | `[ ]` blocked |
-| Sample date | `SAMPLE_DATE` or `START_DATE` | `[ ]` blocked |
-
-### Candidate: `vw_gold_inspection_result`
-
-```sql
-DESCRIBE TABLE connected_plant_uat.gold.vw_gold_inspection_result;
--- or if in csm schema:
-DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_inspection_result;
-
-SELECT * FROM connected_plant_uat.gold.vw_gold_inspection_result LIMIT 5;
-```
-
-| Contract concept | Expected column name | Status |
-|---|---|---|
-| Sample / result ID | `RESULT_ID` | `[ ]` blocked |
-| Inspection lot | `INSPECTION_LOT` | `[ ]` blocked |
-| Characteristic / test type | `INSPECTION_CHARACTERISTIC` or `TEST_TYPE` | `[ ]` blocked |
-| Result value | `RESULT_VALUE` | `[ ]` blocked |
-| Result qualifier | `RESULT_QUALIFIER` (`NEG`/`POS` etc.) | `[ ]` blocked |
-| Specification lower limit | `LOWER_LIMIT` | `[ ]` blocked |
-| Specification upper limit | `UPPER_LIMIT` | `[ ]` blocked |
-| Unit | `UOM` | `[ ]` blocked |
+| Lot identifier | `INSPECTION_LOT_ID` | `confirmed-v1` |
+| Plant | `PLANT_ID` | `confirmed-v1` |
+| Inspection type (domain filter) | `INSPECTION_TYPE` | `confirmed-v1` |
+| Period start filter | `CREATED_DATE` | `confirmed-v1` |
+| Lot completion date | `INSPECTION_END_DATE` | `confirmed-v1` |
+| Material | `MATERIAL_ID` | `confirmed-v1` |
+| Batch | `BATCH_ID` | `confirmed-v1` |
 
 ---
 
-## Group B — LIMS-Native Candidates
-
-These views would exist if LIMS exports directly to Databricks with its own schema.
-
-### Candidate: `lims_swab_result` (or equivalent)
+### `gold_inspection_point` (TRACE_CATALOG.TRACE_SCHEMA)
 
 ```sql
--- Try various schema/name combinations:
-DESCRIBE TABLE connected_plant_uat.lims.lims_swab_result;
-DESCRIBE TABLE connected_plant_uat.gold.lims_swab_result;
-DESCRIBE TABLE connected_plant_uat.gold.em_swab_result;
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_point;
 
-SELECT * FROM connected_plant_uat.lims.lims_swab_result LIMIT 5;
+SELECT * FROM connected_plant_uat.gold.gold_inspection_point LIMIT 5;
+
+-- Confirm functional location is populated
+SELECT COUNT(*) AS n, COUNT(FUNCTIONAL_LOCATION) AS with_loc
+FROM connected_plant_uat.gold.gold_inspection_point
+WHERE INSPECTION_LOT_ID IN (
+    SELECT INSPECTION_LOT_ID FROM connected_plant_uat.gold.gold_inspection_lot
+    WHERE INSPECTION_TYPE IN ('14','Z14') LIMIT 100
+);
 ```
 
-| Contract field | Expected column | Status |
+| Contract concept | Column name | Status |
 |---|---|---|
-| `sampleId` | `SAMPLE_ID` or `SWAB_ID` | `[ ]` blocked |
-| `locationId` | `LOCATION_ID` or `SAMPLING_POINT_ID` | `[ ]` blocked |
-| `sampleDate` | `SAMPLE_DATE` or `SAMPLED_AT` | `[ ]` blocked |
-| `testType` | `TEST_TYPE` or `ORGANISM` | `[ ]` blocked |
-| `result` | `RESULT` (negative/positive/borderline/pending) | `[ ]` blocked |
-| `resultValue` | `RESULT_VALUE` or `CFU_COUNT` | `[ ]` blocked |
-| `unit` | `UOM` or `UNIT` | `[ ]` blocked |
-| `specification` | `SPECIFICATION` or `LIMIT_VALUE` | `[ ]` blocked |
-| `plantId` | `PLANT_ID` | `[ ]` blocked |
-
-### Candidate: `lims_sampling_point` (or equivalent)
-
-```sql
-DESCRIBE TABLE connected_plant_uat.lims.lims_sampling_point;
-DESCRIBE TABLE connected_plant_uat.gold.gold_em_location;
-
-SELECT * FROM connected_plant_uat.lims.lims_sampling_point LIMIT 20;
-```
-
-| Contract field | Expected column | Status |
-|---|---|---|
-| `locationId` | `LOCATION_ID` or `POINT_ID` | `[ ]` blocked |
-| `locationName` | `LOCATION_NAME` or `POINT_NAME` | `[ ]` blocked |
-| `zoneId` | `ZONE_ID` or `AREA_CODE` | `[ ]` blocked |
-| `hygieneZone` | `HYGIENE_ZONE` (`zone-1` .. `zone-4`) | `[ ]` blocked |
-| `areaType` | `AREA_TYPE` | `[ ]` blocked |
-| `plantId` | `PLANT_ID` | `[ ]` blocked |
-| `x` / `y` | `X_COORD` / `Y_COORD` (for heatmap) | `[ ]` blocked |
+| Lot FK | `INSPECTION_LOT_ID` | `confirmed-v1` |
+| Point identifier | `INSPECTION_POINT_ID` | `confirmed-v1` |
+| Physical location (SAP TPLNR) | `FUNCTIONAL_LOCATION` | `confirmed-v1` |
+| Join key to result_v (part 2) | `OPERATION_ID` | `confirmed-v1` |
+| Join key to result_v (part 3) | `SAMPLE_ID` | `confirmed-v1` |
+| Sample hour | `SAMPLE_HOUR` | `confirmed-v1` |
 
 ---
 
-## Group C — EnvMon Gold Views (if pre-built by data engineering)
-
-### Candidate: `gold_em_result` (or equivalent)
+### `gold_batch_quality_result_v` (TRACE_CATALOG.TRACE_SCHEMA)
 
 ```sql
-DESCRIBE TABLE connected_plant_uat.gold.gold_em_result;
+DESCRIBE TABLE connected_plant_uat.gold.gold_batch_quality_result_v;
 
-SELECT * FROM connected_plant_uat.gold.gold_em_result
-WHERE PLANT_ID = 'C061'
-LIMIT 20;
+SELECT * FROM connected_plant_uat.gold.gold_batch_quality_result_v LIMIT 5;
 
--- Confirm enum values:
-SELECT DISTINCT RESULT FROM connected_plant_uat.gold.gold_em_result LIMIT 50;
-SELECT DISTINCT HYGIENE_ZONE FROM connected_plant_uat.gold.gold_em_result LIMIT 50;
-SELECT DISTINCT AREA_TYPE FROM connected_plant_uat.gold.gold_em_result LIMIT 50;
+-- Confirm valuation values
+SELECT DISTINCT INSPECTION_RESULT_VALUATION, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+GROUP BY INSPECTION_RESULT_VALUATION ORDER BY n DESC;
+
+-- Confirm MIC names (organism/test types)
+SELECT DISTINCT MIC_NAME, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+WHERE INSPECTION_LOT_ID IN (
+    SELECT INSPECTION_LOT_ID FROM connected_plant_uat.gold.gold_inspection_lot
+    WHERE INSPECTION_TYPE IN ('14','Z14') LIMIT 100
+)
+GROUP BY MIC_NAME ORDER BY n DESC;
 ```
 
-| Contract field | Expected column | Status |
+| Contract concept | Column name | Status |
 |---|---|---|
-| `sampleId` | `EM_RESULT_ID` or `SAMPLE_ID` | `[ ]` blocked |
-| `locationId` | `LOCATION_ID` | `[ ]` blocked |
-| `zoneId` | `ZONE_ID` | `[ ]` blocked |
-| `hygieneZone` | `HYGIENE_ZONE` | `[ ]` blocked |
-| `areaType` | `AREA_TYPE` | `[ ]` blocked |
-| `sampleDate` | `SAMPLE_DATE` | `[ ]` blocked |
-| `testType` | `TEST_TYPE` | `[ ]` blocked |
-| `result` | `RESULT` | `[ ]` blocked |
-| `resultValue` | `RESULT_VALUE` | `[ ]` blocked |
-| `unit` | `UOM` | `[ ]` blocked |
-| `plantId` | `PLANT_ID` | `[ ]` blocked |
+| Join key (part 1) | `INSPECTION_LOT_ID` | `confirmed-v1` |
+| Join key (part 2) | `OPERATION_ID` | `confirmed-v1` |
+| Join key (part 3) | `SAMPLE_ID` | `confirmed-v1` |
+| Test type / organism | `MIC_NAME` | `confirmed-v1` |
+| Result status | `INSPECTION_RESULT_VALUATION` | `confirmed-v1` |
+| Numeric result value | `QUANTITATIVE_RESULT` | `confirmed-v1` |
+| Upper specification limit | `UPPER_TOLERANCE` | `confirmed-v1` |
+| Lower specification limit | `LOWER_TOLERANCE` | `confirmed-v1` |
+
+**Valuation mapping (confirmed-v1):**
+| Raw value | V2 contract result |
+|---|---|
+| `R`, `REJ`, `REJECT` | `positive` (fail) |
+| `W`, `WARN` | `borderline` (warning) |
+| `A` (or other non-null) | `negative` (pass) |
+| NULL | `pending` |
+
+---
+
+## App-Managed Tables (existence UNKNOWN in connected_plant_uat)
+
+Run this first:
+```sql
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
+```
+
+If em_* tables exist, run DDL. If not, heatmap and zone methods remain blocked.
+
+### `em_location_coordinates` (EM_CATALOG.EM_SCHEMA — if exists)
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_location_coordinates;
+SELECT * FROM connected_plant_uat.gold.em_location_coordinates LIMIT 20;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Location (TPLNR) link | `func_loc_id` | `confirmed-v1` (V1 entities.yaml) |
+| Floor | `floor_id` | `confirmed-v1` |
+| X position (%) | `x_pos` | `confirmed-v1` |
+| Y position (%) | `y_pos` | `confirmed-v1` |
+| Plant | `plant_id` | `confirmed-v1` |
+| View existence in UAT | — | **blocked — run `SHOW TABLES` first** |
+
+### `em_plant_floor` (EM_CATALOG.EM_SCHEMA — if exists)
+
+```sql
+DESCRIBE TABLE connected_plant_uat.gold.em_plant_floor;
+SELECT * FROM connected_plant_uat.gold.em_plant_floor LIMIT 20;
+```
+
+| Field | Column | Status |
+|---|---|---|
+| Plant | `plant_id` | `confirmed-v1` |
+| Floor | `floor_id` | `confirmed-v1` |
+| Floor name | `floor_name` | `confirmed-v1` |
+| SVG URL | `svg_url` | `confirmed-v1` |
+| SVG dimensions | `svg_width`, `svg_height` | `confirmed-v1` |
+| Active revision | `active_revision_id` | `confirmed-v1` |
+| View existence in UAT | — | **blocked — run `SHOW TABLES` first** |
+
+---
+
+## Lot-Type Filter Verification
+
+```sql
+-- Step 1: Confirm INSPECTION_TYPE column exists and has '14'/'Z14' values
+SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_inspection_lot
+GROUP BY INSPECTION_TYPE ORDER BY n DESC;
+
+-- Step 2: Confirm data volume for EnvMon lot types
+SELECT PLANT_ID, COUNT(*) AS lot_count, MIN(CREATED_DATE) AS earliest, MAX(CREATED_DATE) AS latest
+FROM connected_plant_uat.gold.gold_inspection_lot
+WHERE INSPECTION_TYPE IN ('14','Z14')
+GROUP BY PLANT_ID ORDER BY PLANT_ID;
+```
+
+Update `docs/audit/envmon-inspection-lot-type-filter.md` status after running step 1.
+
+---
+
+## Site Summary End-to-End Test
+
+Once all three primary views are confirmed-ddl, run the full site summary query:
+
+```sql
+-- Test the full site summary query for a known plant (replace C061 with real plant)
+WITH base AS (
+    SELECT
+        ip.FUNCTIONAL_LOCATION        AS func_loc_id,
+        r.INSPECTION_RESULT_VALUATION AS valuation,
+        lot.INSPECTION_LOT_ID         AS lot_id
+    FROM connected_plant_uat.gold.gold_inspection_lot lot
+    JOIN connected_plant_uat.gold.gold_inspection_point ip
+        ON lot.INSPECTION_LOT_ID = ip.INSPECTION_LOT_ID
+    LEFT JOIN connected_plant_uat.gold.gold_batch_quality_result_v r
+        ON ip.INSPECTION_LOT_ID = r.INSPECTION_LOT_ID
+       AND ip.OPERATION_ID      = r.OPERATION_ID
+       AND ip.SAMPLE_ID         = r.SAMPLE_ID
+    WHERE lot.PLANT_ID = 'C061'
+      AND lot.INSPECTION_TYPE IN ('14','Z14')
+      AND ip.FUNCTIONAL_LOCATION IS NOT NULL
+      AND lot.CREATED_DATE >= DATEADD(DAY, -90, CURRENT_DATE)
+),
+loc_status AS (
+    SELECT
+        func_loc_id,
+        MAX(CASE WHEN valuation IN ('R','REJ','REJECT') THEN 1 ELSE 0 END) AS is_fail,
+        MAX(CASE WHEN valuation IN ('W','WARN')         THEN 1 ELSE 0 END) AS is_warn,
+        COUNT(DISTINCT lot_id)                                              AS lot_count
+    FROM base GROUP BY func_loc_id
+)
+SELECT COUNT(*) AS total_locs, SUM(is_fail) AS active_fails, SUM(lot_count) AS lots_tested
+FROM loc_status;
+```
+
+If this returns rows, the QuerySpec is ready for route wiring. Update `adapter-source-status-matrix.md` and `domain-source-truth-matrix.md` status accordingly.
 
 ---
 
 ## How to Update This Checklist
 
-1. Confirm source view name with domain owner.
-2. Run `DESCRIBE TABLE <catalog>.<schema>.<view>` in the Databricks SQL Editor.
-3. For each field found, change status from `[ ] blocked` to `[x] confirmed-ddl` and record the date.
-4. For enums (`hygieneZone`, `areaType`, `result`), run `SELECT DISTINCT` and verify values match the Zod enum in `environmental-monitoring.ts`.
-5. If a column is not found, mark `missing` and note the date.
-6. Do not wire any QuerySpec or route until all required fields for that slice are `confirmed-ddl`.
+1. Run `DESCRIBE TABLE` for each view in the Databricks SQL Editor.
+2. For each column found, change status from `confirmed-v1` to `confirmed-ddl` and record the date.
+3. For enums, run `SELECT DISTINCT` and verify values match expectations.
+4. If a column is not found, mark `missing` and note the date — do not wire that field.
+5. Do not wire any QuerySpec or route until all required fields for that slice are `confirmed-ddl`.
 
-Once a view is confirmed, update `docs/audit/envmon-databricks-source-candidates.md` to change the candidate status from `Unconfirmed` to `confirmed-ddl`, and update `docs/audit/domain-source-truth-matrix.md` §7.
+After DDL confirmation, update `docs/audit/envmon-databricks-source-candidates.md` statuses and `docs/migration/envmon-native-candidate-ranking.md`.

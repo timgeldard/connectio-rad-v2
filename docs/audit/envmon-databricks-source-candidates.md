@@ -1,89 +1,128 @@
 # EnvMon Databricks Source Candidates
 
-**Date:** 2026-05-17
-**Tranche:** i.txt groundwork
-**Status:** ALL CANDIDATES UNCONFIRMED — none identified in repo code or docs; all are speculative
-**Reference:** i.txt §3, `docs/audit/domain-source-truth-matrix.md` §7
+**Date:** 2026-05-17 (i.txt groundwork) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
+**Status:** CONFIRMED-V1 (3 primary views) — DDL verification pending in connected_plant_uat
+**Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-inspection-lot-type-filter.md`
 
 ---
 
-## Summary
+## Correction (k.txt, 2026-05-17)
 
-Zero Databricks gold views have been confirmed or identified for EnvMon. The source system is LIMS. The candidates below are **entirely speculative** — inferred from:
-- Common LIMS/environmental monitoring data patterns
-- SAP QM / inspection lot naming conventions used elsewhere in this repo
-- i.txt §3 candidate object list
-
-None of these objects have been searched for in the Databricks workspace, confirmed via DDL, or verified from repo code. Do not treat any of these as confirmed.
-
-The `docs/audit/domain-source-truth-matrix.md` §7 already states: "No gold views confirmed. No planning path identified. Requires domain owner to identify Databricks source."
+The i.txt groundwork incorrectly classified all candidates as "entirely speculative" with a LIMS source. The V1 source model has been recovered from the ConnectIO-RAD repo. The candidates below are now classified as `confirmed-v1` (confirmed from V1 source code) pending DDL verification.
 
 ---
 
-## Candidate Objects
+## Primary Sources (confirmed-v1)
 
-### Group A — Inspection Lot / Quality Result (SAP QM origin)
+These three views are confirmed from V1 `em_config.py`, `entities.yaml`, and DAL SQL. They use `TRACE_CATALOG / TRACE_SCHEMA` (same catalog as Trace2 — default `connected_plant_uat.gold`).
 
-These would only be relevant if LIMS environmental sampling results flow through SAP QM inspection lots before landing in Databricks. Confirm with the domain owner whether this is the case.
+### `gold_inspection_lot`
 
-| Object name | Catalog | Schema | Purpose | Status |
+| Attribute | Value |
+|---|---|
+| Catalog | `connected_plant_uat` |
+| Schema | `gold` (TRACE_SCHEMA default) |
+| Purpose | SAP QM inspection lot header |
+| EnvMon role | Primary query table; filtered by INSPECTION_TYPE IN ('14','Z14') |
+| Key columns | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE |
+| Status | **confirmed-v1** |
+| Evidence | V1 `em_config.py` `LOT_TBL_NAME` + `entities.yaml` |
+
+### `gold_inspection_point`
+
+| Attribute | Value |
+|---|---|
+| Catalog | `connected_plant_uat` |
+| Schema | `gold` (TRACE_SCHEMA default) |
+| Purpose | Inspection sample points with FUNCTIONAL_LOCATION (SAP TPLNR) |
+| EnvMon role | Maps lots to physical floor positions; join bridge to results |
+| Key columns | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID |
+| Status | **confirmed-v1** |
+| Evidence | V1 `em_config.py` `POINT_TBL_NAME` + `entities.yaml` + `plants.py` join keys |
+
+### `gold_batch_quality_result_v`
+
+| Attribute | Value |
+|---|---|
+| Catalog | `connected_plant_uat` |
+| Schema | `gold` (TRACE_SCHEMA default) |
+| Purpose | MIC test results — one row per characteristic per sample |
+| EnvMon role | Result valuations, numeric values, specification limits |
+| Key columns | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (composite FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE |
+| Status | **confirmed-v1** |
+| Evidence | V1 `em_config.py` `RESULT_TBL_NAME` + `entities.yaml` + `plants.py` join keys |
+
+---
+
+## Shared View (confirmed-ddl)
+
+### `gold_plant`
+
+| Attribute | Value |
+|---|---|
+| Catalog | `connected_plant_uat` |
+| Schema | `gold` |
+| Purpose | Plant master — name, country, city |
+| EnvMon role | Enrichment (optional) |
+| Status | **confirmed-ddl** (verified 2026-05-17 via `getLabPlants` browser verification) |
+| Evidence | CQ Lab `getLabPlants` — PLANT_ID, PLANT_NAME confirmed |
+
+---
+
+## App-Managed Tables (confirmed-v1 as V1 objects — existence in connected_plant_uat UNKNOWN)
+
+These tables are owned by the V1 EnvMon app, not data engineering. They **may not exist in connected_plant_uat**.
+
+| Object | Catalog in V1 | Purpose | Status | Risk |
 |---|---|---|---|---|
-| `gold_inspection_lot` | `connected_plant_uat` | `gold` (assumed) | Inspection lot header — lot ID, material, plant, status | **Unconfirmed** — not found in repo |
-| `gold_inspection_point` | `connected_plant_uat` | `gold` (assumed) | Inspection points / sampling locations | **Unconfirmed** |
-| `vw_gold_inspection_result` | `connected_plant_uat` | `csm_process_order_history` or `gold` (assumed) | Individual inspection results — characteristic, value, specification | **Unconfirmed** |
-| `vw_gold_inspection_specification` | `connected_plant_uat` | `gold` (assumed) | Inspection specs — tolerance, limit values | **Unconfirmed** |
-| `gold_batch_quality_result` | `connected_plant_uat` | `gold` (assumed) | Quality results per batch | **Unconfirmed** |
-| `gold_batch_quality_result_v` | `connected_plant_uat` | `gold` (assumed) | Quality results view (enriched) | **Unconfirmed** |
-| `gold_batch_quality_lot_v` | `connected_plant_uat` | `gold` (assumed) | Quality lot view | **Unconfirmed** |
+| `em_location_coordinates` | `EM_CATALOG.EM_SCHEMA` | FUNCTIONAL_LOCATION → floor x/y coordinates | confirmed-v1 (V1 only) | **HIGH — may not exist in UAT** |
+| `em_plant_floor` | `EM_CATALOG.EM_SCHEMA` | Plant floor SVG definition | confirmed-v1 (V1 only) | HIGH |
+| `em_plant_geo` | `EM_CATALOG.EM_SCHEMA` | Plant lat/lon | confirmed-v1 (V1 only) | HIGH |
+| `em_location_zones` | `EM_CATALOG.EM_SCHEMA` | Zone / hygiene zone classification per FUNCTIONAL_LOCATION | confirmed-v1 (V1 only) | HIGH |
+| `em_layout_revision` | `EM_CATALOG.EM_SCHEMA` | SVG revision tracking | confirmed-v1 (V1 only) | HIGH |
 
-### Group B — LIMS-native Objects (if LIMS has its own gold views)
+To discover whether em_* tables exist in UAT:
+```sql
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
+-- Or search across all schemas:
+SHOW TABLES IN connected_plant_uat.gold;
+```
 
-These would be relevant if LIMS exports directly to Databricks with its own schema, independent of SAP QM.
+---
 
-| Object name | Catalog | Schema | Purpose | Status |
-|---|---|---|---|---|
-| `em_location_coordinates` | Unknown | Unknown | Sampling point floor plan coordinates for heatmap | **Unconfirmed** |
-| `em_plant_floor` | Unknown | Unknown | Plant floor plan grid definition | **Unconfirmed** |
-| `lims_swab_result` | Unknown | Unknown | LIMS swab test result — sample, organism, value, result | **Unconfirmed** |
-| `lims_sampling_point` | Unknown | Unknown | Sampling point master — location, zone, hygiene zone | **Unconfirmed** |
-| `lims_corrective_action` | Unknown | Unknown | CAPA records from LIMS | **Unconfirmed** |
+## Previously Listed LIMS Candidates — Retired
 
-### Group C — EnvMon-specific Gold Views (if already built by data engineering)
+The following candidate groups from i.txt are retired. They were inferred from LIMS patterns and are not the actual V1 source:
 
-If the data engineering team has already built EnvMon gold views in the `connected_plant_uat` catalog, they would most likely follow the naming convention of existing views.
+- Group B (LIMS-native: lims_swab_result, lims_sampling_point, etc.) — **Not the source; retired**
+- Group C (EnvMon-specific: gold_em_result, gold_em_location, etc.) — **Not the source; retired**
 
-| Object name | Catalog | Schema | Purpose | Status |
-|---|---|---|---|---|
-| `gold_em_result` | `connected_plant_uat` | Unknown | Environmental monitoring result (LIMS swab) | **Unconfirmed** |
-| `gold_em_location` | `connected_plant_uat` | Unknown | Sampling point / location master | **Unconfirmed** |
-| `gold_em_zone` | `connected_plant_uat` | Unknown | Zone master with hygiene zone classification | **Unconfirmed** |
-| `gold_em_corrective_action` | `connected_plant_uat` | Unknown | CAPA / corrective action records | **Unconfirmed** |
-| `vw_gold_em_summary` | `connected_plant_uat` | Unknown | Aggregated site summary | **Unconfirmed** |
+The actual source is Group A (SAP QM inspection lots via gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v), which are now confirmed-v1.
 
 ---
 
 ## How to Confirm
 
-1. Ask the data engineering or domain owner team: "Does `connected_plant_uat` have any gold views for environmental monitoring / LIMS swab data?"
-2. Run exploratory SQL in the Databricks workspace:
+Run DDL in Databricks SQL Editor:
 
 ```sql
--- List all schemas in the catalog
-SHOW SCHEMAS IN connected_plant_uat;
+-- Confirm primary views
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_lot;
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_point;
+DESCRIBE TABLE connected_plant_uat.gold.gold_batch_quality_result_v;
 
--- If a relevant schema is found, list its views/tables
-SHOW TABLES IN connected_plant_uat.<schema_name>;
+-- Confirm inspection type filter values are present
+SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_inspection_lot
+GROUP BY INSPECTION_TYPE ORDER BY n DESC;
 
--- Or search by naming convention across gold schema
-SHOW TABLES IN connected_plant_uat.gold;
+-- Confirm valuation values
+SELECT DISTINCT INSPECTION_RESULT_VALUATION, COUNT(*) AS n
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+GROUP BY INSPECTION_RESULT_VALUATION ORDER BY n DESC;
+
+-- Check for app-managed tables
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
 ```
 
-3. Once a candidate view is named, run `DESCRIBE TABLE` and update `docs/audit/envmon-native-column-verification-checklist.md`.
-
----
-
-## Why No Candidates Are Confirmed
-
-The existing repo docs and source code contain zero references to EnvMon-specific Databricks views. The V1 CQ Lab adapter references `vw_gold_quality_result_enriched` and `metric_quality_daily` — but those are for quality results linked to process order inspection lots, not standalone LIMS environmental swab sampling. They should not be assumed to cover EnvMon without verification.
-
-Until the domain owner identifies the correct source views, **no QuerySpecs, no routes, and no code changes** should be made for EnvMon.
+Update `docs/audit/envmon-native-column-verification-checklist.md` after running DDL.

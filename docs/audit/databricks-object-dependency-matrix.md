@@ -90,19 +90,30 @@ All WH360 objects are planned only. The schema (`wh360`) is separate from `gold`
 
 ---
 
-## EnvMon — No objects identified
+## EnvMon — `connected_plant_uat.gold` (TRACE_CATALOG / TRACE_SCHEMA)
 
-**Groundwork date:** 2026-05-17 (i.txt)
-**Source system:** LIMS
-**Catalog:** Unknown — no EnvMon gold views found in this repo or in Unity Catalog docs
+**Source recovery:** 2026-05-17 (k.txt)
+**Source system:** SAP QM inspection lots (INSPECTION_TYPE IN ('14','Z14'))
+**Catalog:** `TRACE_CATALOG` (same as Trace2 — default `connected_plant_uat`)
+**Schema:** `TRACE_SCHEMA` (default `gold`)
 
-Zero Databricks objects have been identified for EnvMon. The candidates in `docs/audit/envmon-databricks-source-candidates.md` are entirely speculative — none are confirmed by DDL. No objects can be added to this matrix until the domain owner identifies the source views.
+Three gold views confirmed from V1 ConnectIO-RAD source code and entities.yaml. DDL not yet run in connected_plant_uat — all objects are `confirmed-v1`.
 
-| Object | Used by | Status |
-|---|---|---|
-| (none identified) | — | Domain owner must name source views before DDL verification |
+| Object | Columns confirmed-v1 | Used by | Status |
+|---|---|---|---|
+| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `em_location_coordinates` | func_loc_id, floor_id, x_pos, y_pos, plant_id | Heatmap (planned) | ❌ app-managed — may not exist in connected_plant_uat |
+| `em_plant_floor` | plant_id, floor_id, floor_name, svg_url, svg_width, svg_height, active_revision_id | Heatmap (planned) | ❌ app-managed — may not exist in connected_plant_uat |
 
-**Next action:** Run exploratory `SHOW TABLES IN connected_plant_uat.<schema>` after domain owner identifies the relevant schema. Then run `DESCRIBE TABLE` on each candidate and add confirmed objects to this section.
+**EnvMon QuerySpec written:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` — `get_site_summary_spec`  
+**Missing fields from confirmed-v1 views:**
+- No `hygieneZone` / `areaType` — requires em_location_zones (app-managed, may not exist)
+- No CAPA/corrective action data in gold views
+- No zone classification without em_location_zones
+
+**Next action:** Run `DESCRIBE TABLE` for all three primary views in Databricks SQL Editor. Then wire `GET /api/envmon/site-summary` route.
 
 ---
 

@@ -1,9 +1,14 @@
 # EnvMon Native Databricks — Candidate Slice Ranking
 
-**Date:** 2026-05-17
-**Tranche:** i.txt groundwork
-**Status:** ALL CANDIDATES BLOCKED — no source views identified; ranking is hypothetical only
-**Reference:** `docs/audit/envmon-databricks-source-candidates.md`, `docs/audit/envmon-contract-inventory.md`
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
+**Status:** SITE SUMMARY first (QuerySpec written) — all others deferred until DDL confirmed
+**Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/migration/envmon-v1-functional-recovery.md`
+
+---
+
+## Correction (k.txt)
+
+The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source model has been recovered. Candidates are now ranked using confirmed-v1 evidence. Source confidence is now the primary discriminator between implementable and deferred slices.
 
 ---
 
@@ -11,149 +16,175 @@
 
 | Criterion | Weight | Notes |
 |---|---|---|
-| User value | High | Does this slice show data users care about most? |
-| Source confidence | Critical | Is the source view confirmed in Unity Catalog? |
+| Source confidence | Critical | confirmed-v1 > assumed; confirmed-ddl required before route wiring |
+| em_* table dependency | Critical | App-managed tables may not exist in connected_plant_uat — blocks any method that needs them |
 | Mapping complexity | Medium | Simple columns-to-fields vs aggregation vs business rules |
-| Semantic risk | Medium | Enum mismatch, null handling, derived fields |
-| UI readiness | Low | Does the frontend panel exist and accept real data without changes? |
-| Browser-verifiable | Medium | Can a developer verify the result in the UAT browser? |
-| Dependencies | High | Does this slice depend on other unconfirmed objects? |
-
-**Source confidence is the overriding criterion.** A high-value, low-complexity slice cannot be implemented if the source view is unconfirmed. All candidates below are currently BLOCKED on this criterion.
+| V1 support | High | Does V1 implement this feature? If so, SQL and semantics are known |
+| Browser-verifiable | Medium | Can a developer verify in UAT browser? |
+| Business rules confirmed | High | Alerts, vectors, corrective actions need rule definitions |
 
 ---
 
-## Candidate Slices — Ranked by Hypothetical Value
-
-### Rank 1 — Swab Results (most valuable if source confirmed)
-
-**Adapter method:** `getEnvMonSwabResults`
-**Returns:** `EnvMonSwabResult[]` — individual sampling results per location
-
-**Why first:** Individual swab results are the atomic unit of environmental monitoring. All other panels (summaries, trends, heatmap, alerts) are aggregations or derivatives of swab results. If only one view exists in the gold layer, it is most likely the results table.
-
-**Mapping:** Relatively straightforward — one row per sample per test type. Required fields: sample ID, location ID, sample date, test type, result enum, result value, unit, plant.
-
-**Semantic risk:** Medium. The `result` enum (`negative`, `positive`, `borderline`, `pending`) must exactly match the source view values. `SELECT DISTINCT RESULT` verification is required before mapping.
-
-**Status: BLOCKED** — no source view identified.
-
----
-
-### Rank 2 — Monitoring Locations / Sampling Points
-
-**Adapter method:** `getEnvMonZones` (partially) or a new `getEnvMonLocations` if the contract is refactored
-**Returns:** `EnvMonZone[]` — zones with hygiene zone classification and area type
-
-**Why second:** A location/zone master is often a small, stable reference table — lowest row count, highest chance of a clean simple schema. It enables `plantId` filtering for all other slices. If a sampling-point view exists, this would be the easiest to verify.
-
-**Mapping:** Simple reference-table pattern — one row per zone/location. Required fields: zone ID, zone name, hygiene zone enum, area type enum, plant ID.
-
-**Semantic risk:** Medium. The `hygieneZone` enum (`zone-1` .. `zone-4`) and `areaType` enum must match the source. Run `SELECT DISTINCT HYGIENE_ZONE` before mapping.
-
-**Status: BLOCKED** — no source view identified.
-
----
-
-### Rank 3 — Site Summary (aggregation)
+## Rank 1 — Site Summary (QuerySpec written; recommended first route)
 
 **Adapter method:** `getEnvMonSiteSummary`
-**Returns:** `EnvMonSiteSummary` — aggregated counts and rates for a plant/period
+**Returns:** `EnvMonSiteSummary` — aggregated KPI counts for a plant/period
+**QuerySpec:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` → `get_site_summary_spec`
 
-**Why third:** Useful as a KPI card, but requires aggregation over the results view (or a pre-aggregated summary view). If the source is a raw results table, this becomes a multi-step aggregation query rather than a simple SELECT.
+**Why first:**
+- V1 `plants.py` `fetch_plant_kpis` SQL confirmed — join keys, column names, filter values all known
+- Uses ONLY `gold_inspection_lot + gold_inspection_point + gold_batch_quality_result_v` — no em_* joins
+- Returns 1 aggregated row per plant — minimal data transfer risk
+- Inspection type filter `IN ('14','Z14')` confirmed-v1
 
-**Mapping:** Either SELECT with COUNT/SUM aggregation, or a pre-built summary view. Pre-built view would be simpler and more performant.
+**Partial coverage:**
+- `totalSamples` ← `lots_tested` (lot-level count; not swab-level)
+- `positiveSamples` ← `active_fails` (location-level fail count)
+- `positiveRate` ← computed
+- `criticalZoneExposures`, `openCorrectiveActions`, `trendDirection` ← defaults (em_* / CAPA source not confirmed)
 
-**Semantic risk:** Low for count/rate fields. The `trendDirection` field (period-over-period comparison) is more complex — may require two period queries or a pre-built trend column.
+**Status:** QuerySpec written (confirmed-v1) — **DDL required before route wiring**
 
-**Status: BLOCKED** — no source view identified.
+| Item | Status |
+|---|---|
+| Source views | confirmed-v1 |
+| V1 SQL recovered | Yes (plants.py `fetch_plant_kpis`) |
+| em_* dependency | None |
+| DDL run | No |
+| Route wired | No — deferred until DDL confirmed |
+| Browser-verified | No |
 
 ---
 
-### Rank 4 — Alerts
+## Rank 2 — Swab Results (individual results per sample point)
 
-**Adapter method:** `getEnvMonAlerts`
-**Returns:** `EnvMonAlert[]` — active alerts (positive results, out-of-limit events)
+**Adapter method:** `getEnvMonSwabResults`
+**Returns:** `EnvMonSwabResult[]` — one row per MIC test per sample point
 
-**Why fourth:** Alerts are derived events, not raw data. They may be: (a) rows in a dedicated alerts/CAPA table in LIMS, or (b) derived from swab results where `result = 'positive'` or value exceeds specification. Path (b) can be implemented without a separate alerts view. Path (a) requires a separate confirmed source.
+**Why second:**
+- Same three gold views as site summary — no new dependencies
+- V1 `lots.py` DAL provides the per-MIC result SQL pattern
+- Enriches `positiveSamples` count with individual result rows and organism details
 
-**Semantic risk:** High if alerts are CAPA records with business-rule-based severity classification. The `severity` enum and `alertType` classification need domain owner input.
+**Partial coverage:**
+- `sampleId` ← `SAMPLE_ID` (confirmed-v1)
+- `testType` ← `MIC_NAME` (confirmed-v1)
+- `result` ← derived from `INSPECTION_RESULT_VALUATION` (confirmed-v1 valuation mapping)
+- `resultValue` ← `QUANTITATIVE_RESULT` (confirmed-v1)
+- `specification` ← `UPPER_TOLERANCE` (confirmed-v1)
+- `locationId` ← `FUNCTIONAL_LOCATION` (confirmed-v1) — maps to V2 contract as location identifier
+- `zoneId` ← **not available** without em_location_zones
+- `hygieneZone` ← **not available** without em_location_zones
+- `sampledBy`, `analysedBy` ← **not available** from gold views (V1 did not expose these)
 
-**Status: BLOCKED** — no source view identified; alert derivation logic undefined.
+**Status:** QuerySpec not yet written — deferred until DDL confirmed for site summary
 
 ---
 
-### Rank 5 — Trends
+## Rank 3 — Trends (time-series by period)
 
 **Adapter method:** `getEnvMonTrends`
 **Returns:** `EnvMonTrend[]` — period-bucketed positive rates
 
-**Why fifth:** Requires date-bucketed aggregation over a time series of results. Simple if results have a reliable `SAMPLE_DATE` column. But the period bucket (weekly, monthly) must be defined and the UI must accept the period granularity produced.
+**Why third:**
+- Same three gold views — no new dependencies
+- V1 `trends.py` provides the time-series SQL with date truncation
 
-**Status: BLOCKED** — no source view; time bucketing logic undefined.
+**Status:** Deferred — implement after site summary DDL confirmed
 
 ---
 
-### Rank 6 — Corrective Actions
+## Rank 4 — Zones / Locations (reference data)
+
+**Adapter method:** `getEnvMonZones`
+**Returns:** `EnvMonZone[]` — zone master with hygiene zone classification
+
+**Why fourth (despite being a simple reference-table pattern):**
+- Requires `em_location_zones` or equivalent for `hygieneZone` and `areaType` classification
+- `em_location_zones` is an app-managed table — **may not exist in connected_plant_uat**
+- Without it, only `FUNCTIONAL_LOCATION` strings are available — no zone mapping
+
+**Status:** **Blocked** — pending confirmation that em_location_zones exists in connected_plant_uat
+
+---
+
+## Rank 5 — Alerts (derived from result data)
+
+**Adapter method:** `getEnvMonAlerts`
+**Returns:** `EnvMonAlert[]` — positive/warning findings as alerts
+
+**Why fifth:**
+- Can be derived from swab results where `INSPECTION_RESULT_VALUATION IN ('R','REJ','REJECT','W','WARN')`
+- Alert derivation logic (severity classification, alertType) undefined — needs domain owner input
+- The `severity` enum (`low`/`medium`/`high`/`critical`) has no direct SAP QM equivalent
+
+**Status:** Deferred — implement after swab results confirmed; alert rules need definition
+
+---
+
+## Rank 6 — Corrective Actions
 
 **Adapter method:** `getEnvMonCorrectiveActions`
 **Returns:** `EnvMonCorrectiveAction[]` — CAPA records
 
-**Why sixth:** CAPA records may exist in LIMS or in a separate quality management system. Their availability in Databricks is unknown and their schema is highly system-specific.
+**Why sixth:**
+- No CAPA/corrective action source identified in the gold layer
+- V1 app may have managed CAPAs in a separate app-managed table
 
-**Semantic risk:** High. Business rules for status transitions, due date logic, and assignment are undefined.
-
-**Status: BLOCKED** — no source view identified; business rules undefined.
+**Status:** **Blocked** — no source identified
 
 ---
 
-### Rank 7 — Heatmap
+## Rank 7 — Heatmap
 
 **Adapter method:** `getEnvMonHeatmap`
 **Returns:** `EnvMonHeatmapCell[]` — grid cells with risk scores
 
-**Why seventh:** Requires floor-plan or grid coordinates per sampling point. This is likely not in the gold views alongside result data — it may require a separate static reference table with x/y coordinates per location. Two-source join risk.
+**Why seventh:**
+- Requires `em_location_coordinates` (x/y positions) + `em_plant_floor` (SVG dimensions)
+- Both are app-managed tables — **may not exist in connected_plant_uat**
+- V1 confirmed these tables exist, but they may not be in the UAT Databricks catalog
 
-**Status: BLOCKED** — no source view; floor plan / coordinate source unknown.
+**Status:** **Blocked** — pending `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`
 
 ---
 
-### Rank 8 — Swab Vectors (deferred indefinitely)
+## Rank 8 — Swab Vectors (deferred indefinitely)
 
 **Adapter method:** `getEnvMonSwabVectors`
 **Returns:** `EnvMonSwabVector[]` — contamination trajectory / spread signals
 
-**Why last:** Swab vectors require business-rule-defined contamination chain logic — identifying correlations between repeated positive events at adjacent locations. This is an analytical computation, not a simple table read. It requires: (a) confirmed swab result data, (b) proximity/adjacency rules between sampling points, (c) temporal correlation rules. None of these are defined.
+**Why last:**
+- Requires proximity/adjacency rules between sampling points — not a simple table query
+- Temporal correlation rules are undefined
+- Depends on zones (Rank 4) and swab results (Rank 2) being implemented first
 
-**Status: BLOCKED** — no source; business rules undefined; depends on ranks 1 and 2 being solved first.
+**Status:** **Deferred indefinitely** — business rules undefined; depends on earlier ranks
 
 ---
 
-## Recommended Implementation Sequence (when source is confirmed)
+## Recommended Implementation Sequence
 
-1. Confirm source view for raw swab results (Rank 1)
-2. Implement `envmon.get_swab_results` QuerySpec — no route yet
-3. Confirm sampling point / zone master view (Rank 2)
-4. Implement `envmon.get_zones` QuerySpec — no route yet
-5. Wire `GET /api/envmon/swab-results` route (results slice only)
-6. Wire `GET /api/envmon/zones` route (reference data)
-7. Browser-verify both routes in UAT
-8. Derive site summary from results data (Rank 3)
-9. Proceed to alerts and trends only after results are stable
-
-Do not implement Rank 6 (corrective actions), Rank 7 (heatmap), or Rank 8 (vectors) without additional domain owner input on business rules and additional source views.
+1. Run DDL for all three primary views in Databricks SQL Editor
+2. Update `docs/audit/envmon-native-column-verification-checklist.md` with `confirmed-ddl` status
+3. Wire `GET /api/envmon/site-summary` route — Rank 1 (QuerySpec already exists)
+4. Browser-verify in UAT
+5. Implement Rank 2 QuerySpec (`envmon.get_swab_results`)
+6. Wire `GET /api/envmon/swab-results` route after DDL confirmed
+7. Implement Rank 3 (trends) — shares same views
+8. Proceed to Rank 4+ only when em_* table existence is confirmed
 
 ---
 
 ## Current Status Summary
 
-| Rank | Slice | Method | Status |
-|---|---|---|---|
-| 1 | Swab Results | `getEnvMonSwabResults` | BLOCKED — no source view |
-| 2 | Zones / Locations | `getEnvMonZones` | BLOCKED — no source view |
-| 3 | Site Summary | `getEnvMonSiteSummary` | BLOCKED — no source view |
-| 4 | Alerts | `getEnvMonAlerts` | BLOCKED — no source view + logic undefined |
-| 5 | Trends | `getEnvMonTrends` | BLOCKED — no source view |
-| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | BLOCKED — no source view |
-| 7 | Heatmap | `getEnvMonHeatmap` | BLOCKED — no source view + coordinates unknown |
-| 8 | Swab Vectors | `getEnvMonSwabVectors` | BLOCKED — no source view + rules undefined; deferred indefinitely |
+| Rank | Slice | Method | Source confidence | em_* dependency | Status |
+|---|---|---|---|---|---|
+| 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-v1 | None | **QuerySpec written — DDL pending** |
+| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-v1 | None | Deferred until Rank 1 DDL confirmed |
+| 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Deferred until Rank 1 DDL confirmed |
+| 4 | Zones | `getEnvMonZones` | assumed | em_location_zones | Blocked — em_* unknown |
+| 5 | Alerts | `getEnvMonAlerts` | partial (derivable) | None | Deferred — alert rules undefined |
+| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | none | unknown | Blocked — no CAPA source |
+| 7 | Heatmap | `getEnvMonHeatmap` | confirmed-v1 for views; app tables unknown | em_location_coordinates, em_plant_floor | Blocked — em_* unknown |
+| 8 | Swab Vectors | `getEnvMonSwabVectors` | none | partial | Deferred indefinitely — business rules undefined |

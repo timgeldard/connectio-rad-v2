@@ -1,99 +1,107 @@
 # EnvMon Native Databricks Groundwork Plan
 
-**Date:** 2026-05-17
-**Tranche:** i.txt
-**Status:** GROUNDWORK COMPLETE — no implementation; source confidence zero
-**Outcome:** All native implementation deferred. Domain owner must identify LIMS→Databricks gold views before any QuerySpec or route work can proceed.
+**Date:** 2026-05-17 (i.txt groundwork) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
+**Status:** SAP QM SOURCE RECOVERED (confirmed-v1) — DDL verification pending
+**Outcome:** V1 source model confirmed from SAP QM inspection lots. QuerySpec skeleton written for `getEnvMonSiteSummary`. Route deferred until DDL confirmed.
 
 ---
 
-## Purpose
+## Correction (k.txt, 2026-05-17)
 
-Records the findings of the EnvMon native Databricks groundwork tranche (i.txt). The goal was to audit the existing EnvMon module, inventory data contracts, identify candidate Databricks source views, and rank first native slices.
+The i.txt groundwork incorrectly concluded that EnvMon has "no source model" and should be treated as a LIMS-only app with zero gold views. This conclusion was wrong.
 
-No implementation was done. No QuerySpecs, no routes, no code changes. Source confidence is zero — no gold views have been confirmed or even tentatively identified from repo code or docs.
+**Corrected status:**
+
+> EnvMon V1 was fully functional and used SAP Quality inspection lot/result data filtered to `INSPECTION_TYPE IN ('14', 'Z14')`. The V1 source model has been recovered from the ConnectIO-RAD repo. Gold views are confirmed-v1 but DDL has not yet been run in connected_plant_uat.
+
+The i.txt error occurred because the search used "LIMS" and "envmon" terminology instead of SAP QM terms (INSPECTION_TYPE, gold_inspection_lot, em_config). The V1 app is under `apps/envmon/` — but its data source is SAP QM inspection lots, not a standalone LIMS system.
 
 ---
 
-## Current State (2026-05-17)
+## Current State (post k.txt, 2026-05-17)
 
 | Item | Status |
 |---|---|
-| Adapter methods | 9 — all mock-only |
+| Adapter methods | 9 — all mock-only (no route wired) |
 | FastAPI routes | None |
-| Databricks QuerySpecs | None |
-| Source system | LIMS (mock in Phase 4 — not yet in gold layer, or gold views unidentified) |
-| Gold views confirmed | **Zero** |
-| Gold views tentatively identified | **Zero** |
-| Legacy-api adapter | None |
-| Groundwork docs | Complete (see below) |
+| Databricks QuerySpecs | **1** — `envmon.get_site_summary` (QuerySpec-only, no route) |
+| Source system | **SAP QM inspection lots** (INSPECTION_TYPE IN ('14','Z14')) |
+| Gold views confirmed-v1 | **3** — gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v |
+| Gold views confirmed-ddl | **0** — DDL not yet run in connected_plant_uat |
+| Object resolver | "envmon" domain key added → TRACE_CATALOG / TRACE_SCHEMA |
+| Legacy-api adapter | None — native Databricks will be first live path |
+| Source system (corrected) | SAP QM inspection lots via TRACE_CATALOG / TRACE_SCHEMA |
 
 ---
 
-## What Was Audited
+## What Was Audited (i.txt)
 
 | Artefact | Finding |
 |---|---|
 | `domain-integrations/envmon/src/adapters/envmon-adapter.ts` | 9 mock-only methods; no Databricks imports; no QuerySpec |
 | `packages/data-contracts/src/schemas/environmental-monitoring.ts` | 10 contract types defined; 3 key enums |
 | `domain-integrations/envmon/src/panels/` | 8 panels; all `sourceOwnership: { systemName: 'lims' }` |
-| `docs/product-model/envmon-monitoring.md` | lifecycle: live; 7 views; 8 panels; source described as LIMS |
-| `docs/audit/domain-source-truth-matrix.md` §7 | "No gold views confirmed. No planning path identified." |
-| `apps/api/routes/` | No EnvMon routes (auth, cq, health, por, trace2, wh360, workspaces only) |
+| `docs/product-model/envmon-monitoring.md` | lifecycle: live; 7 views; 8 panels |
 
 ---
 
-## Key Findings
+## What Was Recovered (k.txt)
 
-**Finding 1 — Source system is LIMS, not SAP.**
-EnvMon data originates from a LIMS (Laboratory Information Management System), not SAP ECC/S4. This is a different integration from POH (`csm_process_order_history`) and CQ (`gold`). The Databricks gold layer may expose LIMS data via views not yet identified in this repo.
-
-**Finding 2 — Zero gold views identified.**
-No EnvMon-specific gold views, MVs, or tables were found in repo code, docs, or audit matrices. The candidates in `docs/audit/envmon-databricks-source-candidates.md` are entirely speculative — inferred from the i.txt §3 concept list and common LIMS/quality data patterns. None are confirmed by DDL or code.
-
-**Finding 3 — Panel source badge shows "lims" to users.**
-All 8 panels register `sourceOwnership: { domainId: 'envmon', systemName: 'lims', legacyAppId: 'lims' }`. This is static metadata (not a runtime API response field), but the EvidencePanel component renders `systemName` as the source badge visible to users. When the source moves to Databricks, this registration will need updating in each panel.
-
-**Finding 4 — No legacy-api adapter exists.**
-Unlike POH and CQ Lab, there is no `EnvMonLegacyApiAdapter`. There is no V1 proxy path to validate against. Native Databricks will be the first live data path for EnvMon if/when implemented.
-
-**Finding 5 — 10 contract types defined, none mapped to source columns.**
-The Zod schemas in `environmental-monitoring.ts` define a rich model (zones, hygiene zones, swab results, heatmap cells, trends, corrective actions, vectors, KPIs). None can be mapped to Databricks columns until source views are confirmed.
+| Artefact | Finding |
+|---|---|
+| `ConnectIO-RAD/apps/envmon/backend/envmon_backend/utils/em_config.py` | **INSPECTION_TYPE IN ('14','Z14')** — definitive filter; all three gold view names |
+| `ConnectIO-RAD/apps/envmon/backend/envmon_backend/inspection_analysis/dal/plants.py` | Full KPI SQL with join keys; basis for `getEnvMonSiteSummary` QuerySpec |
+| `ConnectIO-RAD/apps/envmon/backend/envmon_backend/inspection_analysis/dal/heatmap.py` | Floor plan + result join SQL; app-managed table dependency identified |
+| `ConnectIO-RAD/apps/envmon/backend/envmon_backend/inspection_analysis/dal/trends.py` | MIC time-series SQL |
+| `ConnectIO-RAD/apps/envmon/backend/envmon_backend/inspection_analysis/dal/lots.py` | Per-location lot listing + per-lot MIC detail |
+| `ConnectIO-RAD/ai-context/semantic-model/entities.yaml` | Column-level DDL for gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v, em_* tables |
 
 ---
 
-## What Is Needed to Unblock
+## Key Findings (corrected)
+
+**Finding 1 — Source system is SAP QM, not LIMS.**
+EnvMon data originates from SAP QM inspection lots (recurring environmental inspection types 14/Z14). The data is in `TRACE_CATALOG.TRACE_SCHEMA` — the same catalog as Trace2. The LIMS badge in V1 panels (`systemName: 'lims'`) reflects the functional domain, not the data source technology.
+
+**Finding 2 — Three gold views confirmed from V1 source.**
+`gold_inspection_lot`, `gold_inspection_point`, and `gold_batch_quality_result_v` are confirmed-v1 from `em_config.py`, `entities.yaml`, and DAL SQL. DDL not yet run in connected_plant_uat.
+
+**Finding 3 — First safe slice identified: `getEnvMonSiteSummary`.**
+V1 `fetch_plant_kpis` (plants.py) uses only the three gold views — no app-managed em_* tables. This is the lowest-risk first slice. QuerySpec written in `apps/api/adapters/envmon/envmon_databricks_adapter.py`.
+
+**Finding 4 — Heatmap and zone-level methods blocked by app-managed tables.**
+The em_* tables (`em_location_coordinates`, `em_plant_floor`, etc.) are app-managed and may not exist in `connected_plant_uat`. Do not implement heatmap until existence confirmed via `SHOW TABLES`.
+
+**Finding 5 — Panel source badge concern remains.**
+All 8 panels register `systemName: 'lims'`. When a native Databricks slice is wired, update `systemName` in each affected panel registration at the same time. Do not update the badge before wiring the route.
+
+---
+
+## Groundwork Documents
+
+| Document | Purpose | k.txt status |
+|---|---|---|
+| `docs/migration/envmon-v1-functional-recovery.md` | V1 source recovery report | **New — k.txt** |
+| `docs/audit/envmon-sap-qm-source-model.md` | SAP QM view/column documentation | **New — k.txt** |
+| `docs/audit/envmon-inspection-lot-type-filter.md` | INSPECTION_TYPE IN ('14','Z14') filter | **New — k.txt** |
+| `docs/domains/envmon-monitoring.md` | Adapter/contract/source reference | Updated — k.txt |
+| `docs/audit/envmon-contract-inventory.md` | Per-method fields + SAP QM mapping | Updated — k.txt |
+| `docs/audit/envmon-databricks-source-candidates.md` | Source candidates (confirmed-v1) | Updated — k.txt |
+| `docs/audit/envmon-native-column-verification-checklist.md` | DDL checks — SAP QM views | Updated — k.txt |
+| `docs/migration/envmon-native-candidate-ranking.md` | Ranked candidates with V1 evidence | Updated — k.txt |
+| `docs/audit/envmon-native-architecture-check.md` | Architecture guardrail check | Updated — k.txt |
+
+---
+
+## What Is Needed to Un-defer the Route
 
 In order:
 
-1. **Domain owner identifies LIMS gold views** — which Databricks Unity Catalog schema/view exposes environmental monitoring data? (catalog, schema, view name)
-2. **Run `DESCRIBE TABLE` on identified views** — confirm column names, types, and availability
-3. **Update `docs/audit/envmon-native-column-verification-checklist.md`** — mark columns `confirmed-ddl`
-4. **Run `SELECT DISTINCT` on key categorical columns** — confirm enum values match contract (`hygieneZone`, `areaType`, `result`)
-5. **Map contract fields to confirmed columns** — update `docs/audit/envmon-contract-inventory.md`
-6. **Implement QuerySpec for highest-ranked confirmed candidate** — only after steps 1–5
+1. **Run `DESCRIBE TABLE`** for all three gold views in connected_plant_uat SQL Editor
+2. **Run `SELECT DISTINCT INSPECTION_TYPE`** — confirm '14' and 'Z14' are present
+3. **Run `SELECT DISTINCT INSPECTION_RESULT_VALUATION`** — confirm valuation values
+4. **Update `docs/audit/envmon-native-column-verification-checklist.md`** — mark columns `confirmed-ddl`
+5. **Wire `GET /api/envmon/site-summary` route** in `apps/api/routes/envmon.py` (file does not yet exist)
+6. **Browser-verify** in UAT before claiming BV status
 
----
-
-## Groundwork Documents Created (i.txt)
-
-| Document | Purpose |
-|---|---|
-| `docs/domains/envmon-monitoring.md` | Adapter/contract/source angle — links to product model |
-| `docs/audit/envmon-contract-inventory.md` | Per-method: adapter method, contract type, fields, filters, source badge |
-| `docs/audit/envmon-databricks-source-candidates.md` | Speculative source candidates — all unconfirmed |
-| `docs/audit/envmon-native-column-verification-checklist.md` | DDL SQL to run — all items unchecked |
-| `docs/migration/envmon-native-candidate-ranking.md` | Ranked first slices — all BLOCKED |
-| `docs/audit/envmon-native-architecture-check.md` | Architecture guardrail check |
-
----
-
-## Recommended First Step (Post-Groundwork)
-
-Contact the EnvMon domain owner or data engineering team:
-
-> "Which Databricks Unity Catalog view exposes LIMS environmental monitoring results — sampling points, test results, hygiene zones — for plant C061 and other connected sites? We need the catalog name, schema name, and view/table name to run DDL verification."
-
-Once a view is named, run `DESCRIBE TABLE` and work through `docs/audit/envmon-native-column-verification-checklist.md`.
-
-Do not implement any QuerySpec or route before step 1 above is answered.
+Do not wire the route before step 4. The QuerySpec SQL is confirmed-v1 only.

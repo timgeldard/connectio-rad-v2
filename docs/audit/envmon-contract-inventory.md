@@ -1,10 +1,9 @@
 # EnvMon Contract Inventory
 
-**Date:** 2026-05-17
-**Tranche:** i.txt groundwork
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
 **Adapter:** `domain-integrations/envmon/src/adapters/envmon-adapter.ts`
 **Contracts:** `packages/data-contracts/src/schemas/environmental-monitoring.ts`
-**Status:** All methods mock-only. No source columns confirmed. Fields are documented from the Zod schema — not from live Databricks data.
+**Status:** All methods mock-only. SAP QM mapping hypotheses added (k.txt). No route wired. DDL pending.
 
 ---
 
@@ -12,9 +11,9 @@
 
 | Column | Meaning |
 |---|---|
-| Filters used | Request fields the method would pass to a WHERE clause (future native path) |
-| Source badge | `systemName` registered in the panel's `sourceOwnership` |
-| Contract status | `confirmed` = field is in the Zod schema; `assumed` = field name inferred; `missing` = not in schema |
+| SAP QM source (hypothesis) | Likely source column from confirmed-v1 views — not confirmed-ddl |
+| Contract status | `confirmed` = field is in the Zod schema; `missing` = not in schema |
+| Confidence | `confirmed-v1` / `assumed` / `missing` / `blocked` |
 
 ---
 
@@ -25,13 +24,15 @@
 **Filters used:** `plantId`, `regionId`
 **Source badge:** `lims` (static — all EnvMon panels)
 
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `plantId` | Plant/site identifier | Confirmed in schema |
-| `regionId` | Site group / region | Confirmed in schema |
-| `periodStart` | Date range start | Confirmed in schema |
-| `periodEnd` | Date range end | Confirmed in schema |
-| `kpiSummary` | Aggregated KPI object | Confirmed in schema — see `EnvMonKpiSummary` |
+| `plantId` | `gold_inspection_lot.PLANT_ID` | confirmed-v1 |
+| `regionId` | No direct SAP QM equivalent — may be derived from plant master or static config | assumed |
+| `periodStart` | Request parameter | confirmed |
+| `periodEnd` | Request parameter | confirmed |
+| `kpiSummary` | Aggregated from site summary query | confirmed-v1 (via getEnvMonSiteSummary) |
+
+**V2 native recommendation:** Implement after `getEnvMonSiteSummary` is DDL-confirmed. Context can be assembled from site summary + plant master.
 
 ---
 
@@ -39,17 +40,20 @@
 
 **Return type:** `EnvMonSiteSummary`
 **Panel:** Site summary panel
-**Filters used:** `plantId`, `regionId`, `periodStart`, `periodEnd`
+**Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
+**QuerySpec:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` → `get_site_summary_spec`
 
-| Contract field | Likely source concept | Status |
-|---|---|---|
-| `totalSamples` | Count of sampling events in period | Confirmed in schema |
-| `positiveSamples` | Count of positive/failed results | Confirmed in schema |
-| `positiveRate` | `positiveSamples / totalSamples` | Confirmed in schema |
-| `criticalZoneExposures` | Positives in Zone 1 | Confirmed in schema |
-| `openCorrectiveActions` | Unresolved CAPAs | Confirmed in schema |
-| `trendDirection` | Period-over-period comparison | Confirmed in schema |
+| Contract field | SAP QM source hypothesis | Confidence | Notes |
+|---|---|---|---|
+| `totalSamples` | `SUM(lot_count)` from `gold_inspection_lot` JOIN `gold_inspection_point` | confirmed-v1 | V1 uses lot count per location; not individual swab count |
+| `positiveSamples` | Location count where `INSPECTION_RESULT_VALUATION IN ('R','REJ','REJECT')` | confirmed-v1 | Location-level fail count from V1 `plants.py` |
+| `positiveRate` | `active_fails / total_locs` (computed in mapper) | confirmed-v1 | |
+| `criticalZoneExposures` | Fails in `zone-1` — needs em_location_zones join | blocked | em_location_zones may not exist in UAT |
+| `openCorrectiveActions` | No CAPA source confirmed | blocked | |
+| `trendDirection` | Period-over-period comparison — deferred | blocked | |
+
+**V2 native recommendation:** **First safe slice.** Implement after DDL confirmed.
 
 ---
 
@@ -60,16 +64,18 @@
 **Filters used:** `plantId`
 **Source badge:** `lims`
 
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `zoneId` | Zone identifier | Confirmed in schema |
-| `zoneName` | Zone display name | Confirmed in schema |
-| `hygieneZone` | `zone-1` / `zone-2` / `zone-3` / `zone-4` | Confirmed in schema — enum must be verified against view |
-| `areaType` | `production` / `storage` / `packaging` / `utility` / `corridor` / `other` | Confirmed in schema — enum must be verified |
-| `plantId` | Plant identifier | Confirmed in schema |
-| `activeSwabPoints` | Count of active sampling points in zone | Confirmed in schema |
-| `lastSampleDate` | Most recent sample date | Confirmed in schema |
-| `riskLevel` | `low` / `medium` / `high` | Confirmed in schema |
+| `zoneId` | `em_location_zones.zone_id` (if exists) or derived from FUNCTIONAL_LOCATION | blocked |
+| `zoneName` | `em_location_zones.zone_name` (if exists) | blocked |
+| `hygieneZone` | `em_location_zones.hygiene_zone` (if exists) | blocked |
+| `areaType` | `em_location_zones.area_type` (if exists) | blocked |
+| `plantId` | `gold_inspection_lot.PLANT_ID` | confirmed-v1 |
+| `activeSwabPoints` | COUNT DISTINCT FUNCTIONAL_LOCATION from recent lots | confirmed-v1 |
+| `lastSampleDate` | MAX(lot.CREATED_DATE) per zone | confirmed-v1 |
+| `riskLevel` | Derived from zone-level fail rate — business rule needed | assumed |
+
+**V2 native recommendation:** **Blocked** — requires em_location_zones. Run `SHOW TABLES` to check existence.
 
 ---
 
@@ -80,16 +86,18 @@
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `alertId` | Alert / finding identifier | Confirmed in schema |
-| `alertType` | Alert category | Confirmed in schema |
-| `severity` | `low` / `medium` / `high` / `critical` | Confirmed in schema |
-| `zoneId` | Zone where alert originated | Confirmed in schema |
-| `locationId` | Specific sampling point | Confirmed in schema |
-| `description` | Alert description text | Confirmed in schema |
-| `raisedAt` | Alert timestamp | Confirmed in schema |
-| `status` | `open` / `acknowledged` / `resolved` | Confirmed in schema |
+| `alertId` | Generated (e.g. `lot_id + point_id`) — no native alert ID | assumed |
+| `alertType` | Derived from MIC_NAME (Listeria → `microbiological`, ATP → `hygiene`) | assumed |
+| `severity` | Derived from INSPECTION_RESULT_VALUATION (REJECT → high, WARN → medium) | assumed |
+| `zoneId` | Via em_location_zones (if exists) | blocked |
+| `locationId` | `gold_inspection_point.FUNCTIONAL_LOCATION` | confirmed-v1 |
+| `description` | Composed from MIC_NAME + valuation | assumed |
+| `raisedAt` | `gold_inspection_lot.CREATED_DATE` or INSPECTION_END_DATE | confirmed-v1 |
+| `status` | Usage decision not tracked in confirmed views — `open` default | assumed |
+
+**V2 native recommendation:** **Deferred** — derivation rules for alertType and severity undefined.
 
 ---
 
@@ -100,24 +108,24 @@
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-This is the most data-intensive method — individual test results per sampling point. Likely the most important for native Databricks migration.
-
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `sampleId` | LIMS sample / swab identifier | Confirmed in schema |
-| `locationId` | Sampling point identifier | Confirmed in schema |
-| `locationName` | Sampling point display name | Confirmed in schema |
-| `zoneId` | Zone containing this point | Confirmed in schema |
-| `hygieneZone` | `zone-1` .. `zone-4` | Confirmed in schema — enum |
-| `sampleDate` | Date/time sample was taken | Confirmed in schema |
-| `testType` | Organism or test type (e.g. Listeria, TVC) | Confirmed in schema |
-| `result` | `negative` / `positive` / `borderline` / `pending` | Confirmed in schema — enum |
-| `resultValue` | Numeric result (CFU, count) | Confirmed in schema |
-| `unit` | Unit of measure for numeric result | Confirmed in schema |
-| `specification` | Pass/fail limit | Confirmed in schema |
-| `sampledBy` | Person who took the sample | Confirmed in schema |
-| `analysedBy` | Person/lab who analysed | Confirmed in schema |
-| `plantId` | Plant where sample was taken | Confirmed in schema |
+| `sampleId` | `gold_inspection_point.SAMPLE_ID` | confirmed-v1 |
+| `locationId` | `gold_inspection_point.FUNCTIONAL_LOCATION` | confirmed-v1 |
+| `locationName` | `FUNCTIONAL_LOCATION` (raw TPLNR — no display name confirmed) | confirmed-v1 (TPLNR) |
+| `zoneId` | Via em_location_zones | blocked |
+| `hygieneZone` | Via em_location_zones | blocked |
+| `sampleDate` | `gold_inspection_lot.CREATED_DATE` | confirmed-v1 |
+| `testType` | `gold_batch_quality_result_v.MIC_NAME` | confirmed-v1 |
+| `result` | Derived from `INSPECTION_RESULT_VALUATION` | confirmed-v1 |
+| `resultValue` | `gold_batch_quality_result_v.QUANTITATIVE_RESULT` | confirmed-v1 |
+| `unit` | Not in confirmed-v1 columns — may be in full DDL | assumed |
+| `specification` | `gold_batch_quality_result_v.UPPER_TOLERANCE` | confirmed-v1 |
+| `sampledBy` | Not in confirmed gold views | missing |
+| `analysedBy` | Not in confirmed gold views | missing |
+| `plantId` | `gold_inspection_lot.PLANT_ID` | confirmed-v1 |
+
+**V2 native recommendation:** Second slice after site summary. Implement after DDL confirmed.
 
 ---
 
@@ -128,14 +136,16 @@ This is the most data-intensive method — individual test results per sampling 
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `periodLabel` | Time bucket label (week, month) | Confirmed in schema |
-| `totalSamples` | Samples in this period bucket | Confirmed in schema |
-| `positiveSamples` | Positives in this period bucket | Confirmed in schema |
-| `positiveRate` | Rate for this bucket | Confirmed in schema |
-| `zoneId` | Optional zone filter | Confirmed in schema |
-| `testType` | Optional test type filter | Confirmed in schema |
+| `periodLabel` | DATE_TRUNC('week' or 'month', CREATED_DATE) | confirmed-v1 |
+| `totalSamples` | COUNT lots per period bucket | confirmed-v1 |
+| `positiveSamples` | COUNT fail valuations per period bucket | confirmed-v1 |
+| `positiveRate` | Computed in mapper | confirmed-v1 |
+| `zoneId` | Via em_location_zones (optional filter) | blocked |
+| `testType` | `MIC_NAME` (optional filter) | confirmed-v1 |
+
+**V2 native recommendation:** Third slice. Same views as site summary.
 
 ---
 
@@ -146,17 +156,17 @@ This is the most data-intensive method — individual test results per sampling 
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-Heatmap visualises risk density by zone/area. Requires location coordinates or a zone-grid definition — this is a potential blocker if no floor plan or coordinate source exists in the gold layer.
-
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `cellId` | Grid cell identifier | Confirmed in schema |
-| `zoneId` | Zone the cell belongs to | Confirmed in schema |
-| `riskScore` | Numeric risk density | Confirmed in schema |
-| `sampleCount` | Samples in this cell | Confirmed in schema |
-| `positiveCount` | Positives in this cell | Confirmed in schema |
-| `x` | Grid x-coordinate | Confirmed in schema — may require floor plan source |
-| `y` | Grid y-coordinate | Confirmed in schema — may require floor plan source |
+| `cellId` | `em_location_coordinates.func_loc_id` | confirmed-v1 (if table exists) |
+| `zoneId` | Via em_location_zones | blocked |
+| `riskScore` | Computed from fail rate per location | assumed |
+| `sampleCount` | COUNT lots per func_loc_id | confirmed-v1 |
+| `positiveCount` | COUNT fail valuations per func_loc_id | confirmed-v1 |
+| `x` | `em_location_coordinates.x_pos` | confirmed-v1 (if table exists) |
+| `y` | `em_location_coordinates.y_pos` | confirmed-v1 (if table exists) |
+
+**V2 native recommendation:** **Blocked** — requires em_location_coordinates and em_plant_floor; both app-managed and may not exist in connected_plant_uat.
 
 ---
 
@@ -167,16 +177,11 @@ Heatmap visualises risk density by zone/area. Requires location coordinates or a
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `actionId` | CAPA / corrective action identifier | Confirmed in schema |
-| `triggerSampleId` | Sample that triggered the action | Confirmed in schema |
-| `zoneId` | Zone affected | Confirmed in schema |
-| `description` | Action description | Confirmed in schema |
-| `assignedTo` | Person responsible | Confirmed in schema |
-| `dueDate` | Target completion date | Confirmed in schema |
-| `status` | `open` / `in-progress` / `completed` / `overdue` | Confirmed in schema |
-| `completedAt` | Completion timestamp | Confirmed in schema |
+| All fields | No CAPA source identified in gold layer | missing |
+
+**V2 native recommendation:** **Blocked** — no source. SAP QM usage decisions are in the lot but do not contain CAPA workflow data.
 
 ---
 
@@ -187,31 +192,29 @@ Heatmap visualises risk density by zone/area. Requires location coordinates or a
 **Filters used:** `plantId`, `periodStart`, `periodEnd`
 **Source badge:** `lims`
 
-Swab vectors encode the trajectory of contamination findings — repeated positives at the same point, or spread between adjacent zones. This is the most semantically complex method and the hardest to implement without business rule confirmation.
-
-| Contract field | Likely source concept | Status |
+| Contract field | SAP QM source hypothesis | Confidence |
 |---|---|---|
-| `vectorId` | Vector / contamination chain identifier | Confirmed in schema |
-| `fromLocationId` | Source sampling point | Confirmed in schema |
-| `toLocationId` | Destination / affected point | Confirmed in schema |
-| `strength` | Signal strength / correlation score | Confirmed in schema |
-| `testType` | Organism type linking the events | Confirmed in schema |
-| `eventCount` | Number of positive events in this vector | Confirmed in schema |
+| `vectorId` | Generated — no native vector concept | missing |
+| `fromLocationId` | `FUNCTIONAL_LOCATION` | confirmed-v1 |
+| `toLocationId` | Adjacent location — adjacency rules undefined | missing |
+| `strength` | Temporal/spatial correlation score — algorithm undefined | missing |
+| `testType` | `MIC_NAME` | confirmed-v1 |
+| `eventCount` | COUNT fails at correlated locations | assumed |
+
+**V2 native recommendation:** **Deferred indefinitely** — proximity/adjacency business rules undefined.
 
 ---
 
 ## Source Mapping Status Summary
 
-| Method | Fields confirmed from schema | Fields mapped to view columns | Status |
-|---|---|---|---|
-| `getEnvMonContext` | Yes | **No** | Blocked — no source view |
-| `getEnvMonSiteSummary` | Yes | **No** | Blocked — no source view |
-| `getEnvMonZones` | Yes | **No** | Blocked — no source view |
-| `getEnvMonAlerts` | Yes | **No** | Blocked — no source view |
-| `getEnvMonSwabResults` | Yes | **No** | Blocked — no source view |
-| `getEnvMonTrends` | Yes | **No** | Blocked — no source view |
-| `getEnvMonHeatmap` | Yes | **No** | Blocked — no source view + floor plan risk |
-| `getEnvMonCorrectiveActions` | Yes | **No** | Blocked — no source view |
-| `getEnvMonSwabVectors` | Yes | **No** | Blocked — no source view + business rules undefined |
-
-All methods are blocked on source view identification. Column mapping cannot proceed until `docs/audit/envmon-native-column-verification-checklist.md` has at least one `confirmed-ddl` entry.
+| Method | SAP QM mapping hypothesis | Required views | em_* dependency | Status |
+|---|---|---|---|---|
+| `getEnvMonContext` | Partial (plant + site summary) | lot + plant | None | After site summary DDL |
+| `getEnvMonSiteSummary` | **Confirmed-v1** | lot + point + result_v | None | **QuerySpec written — DDL pending** |
+| `getEnvMonZones` | Partial (blocked on zone mapping) | lot + point + em_location_zones | em_location_zones | Blocked |
+| `getEnvMonAlerts` | Derivable from results | lot + point + result_v | None | Deferred — rules undefined |
+| `getEnvMonSwabResults` | Confirmed-v1 (most fields) | lot + point + result_v | None | After DDL — Rank 2 |
+| `getEnvMonTrends` | Confirmed-v1 | lot + point + result_v | None | After DDL — Rank 3 |
+| `getEnvMonHeatmap` | Confirmed-v1 (contingent on em_*) | lot + point + result_v + em_* | em_location_coordinates, em_plant_floor | Blocked — em_* unknown |
+| `getEnvMonCorrectiveActions` | No source | — | — | Blocked — no CAPA source |
+| `getEnvMonSwabVectors` | Partial (no adjacency rules) | lot + point + result_v | None | Deferred indefinitely |
