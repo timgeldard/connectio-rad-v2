@@ -69,8 +69,7 @@ X-Query-Name: poh.get_order_operations
 
 | Status | Date | Notes |
 |--------|------|-------|
-| [ ] not tested | | |
-| [ ] passed | | |
+| [x] passed | 2026-05-17 | 11 operations returned for PO 7006965038; `x-data-source: databricks-api`; `x-query-name: poh.get_order_operations` |
 | [ ] failed 401 | | |
 | [ ] failed 403 | | |
 | [ ] failed 502 | | |

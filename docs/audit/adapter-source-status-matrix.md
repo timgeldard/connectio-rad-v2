@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-17 — getOrderOperations native slice implemented; confirmations + movements blocked pending DDL  
+**Last updated:** 2026-05-17 — getOrderOperations browser-verified (11 ops, PO 7006965038); confirmations + movements blocked pending DDL  
 **Scope:** All domain-integration adapter methods across Trace2, SPC, Warehouse360, POH (Process Order Review), and Quality/Lab  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -125,7 +125,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getOrderQualityContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getOrderStagingContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getRelatedBatchContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
-| `getOrderOperations` | ✓ | — | — | **✓ W** | green when databricks | `GET /api/por/order-operations` — wired databricks-api; **not browser-verified** — use PO 7006965038 |
+| `getOrderOperations` | ✓ | — | — | **✓ BV 2026-05-17** | green when databricks | `GET /api/por/order-operations` — browser-verified 2026-05-17; 11 operations returned for PO 7006965038 |
 | `getOrderConfirmations` | ✓ | — | — | — | none | **BLOCKED** — `vw_gold_confirmation` DDL not confirmed; no implementation |
 | `getOrderGoodsMovements` | ✓ | — | — | — | none | **BLOCKED** — `vw_gold_adp_movement` DDL not confirmed; no implementation |
 
@@ -170,10 +170,10 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | Traceability | 11 | 1 (legacy-api only) | 0 | 10 | 0 |
 | SPC | 9 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 1 | 8 | 0 |
-| POH (POR) | 10 | **1** (`getProcessOrderHeader` 2026-05-17) | 1 | 8 | **1 BV** |
+| POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | 0 | 8 | **2 BV** |
 | POH (plan risk) | 9 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 1 | 0 | **1 BV** |
-| **Total** | **50** | **2** | **3** | **44** | **2 BV** |
+| **Total** | **50** | **3** | **2** | **44** | **3 BV** |
 
 ---
 
@@ -184,7 +184,7 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
-| `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **implemented, not browser-verified** — use PO 7006965038 |
+| `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
 

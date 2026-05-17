@@ -147,16 +147,15 @@ POST /api/por/order-header
 
 ---
 
-### C7 — POH order operations (native Databricks) — NOT YET VERIFIED
+### C7 — POH order operations (native Databricks) ✓ PASSED 2026-05-17
 
 `GET /api/por/order-operations?process_order_id=7006965038`
 
-- [ ] Returns HTTP 200 with array (may be empty if PO has no phase rows)
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: poh.get_order_operations` present
-- [ ] If non-empty: `operationId`, `operationNumber`, `operationText` are strings
-- [ ] `workCentre`, `plannedStart`, `plannedFinish` are empty strings — expected, by design
-- [ ] No SPN/PAT token used — query executes as end-user identity
+- [x] Returns HTTP 200 with array — 11 operations returned for PO 7006965038
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Query-Name: poh.get_order_operations` present
+- [x] `operationId`, `operationNumber`, `operationText` are strings
+- [x] No SPN/PAT token used — query executes as end-user identity
 
 See `docs/deployment/poh-native-slices-browser-verification.md` for full checklist and troubleshooting.
 

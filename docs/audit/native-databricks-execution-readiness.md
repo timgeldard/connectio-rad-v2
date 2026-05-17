@@ -127,7 +127,7 @@ Missing OAuth token does not raise in `extract_user_identity()` — the caller (
 
 8. **CQ Lab failures**: `vw_gold_process_order_plan` view missing — route implementation blocked.
 
-9. **POH order operations**: Route implemented (`GET /api/por/order-operations`) — **browser verification pending**. Use process order 7006965038. Known gaps: `workCentre`, `plannedStart`, `plannedFinish`, `plannedDurationMinutes` not in `vw_gold_process_order_phase`.
+9. **POH order operations**: Route implemented and **browser-verified 2026-05-17** — 11 operations returned for PO 7006965038. Known gaps: `workCentre`, `plannedStart`, `plannedFinish`, `plannedDurationMinutes` not in `vw_gold_process_order_phase` — return empty/zero by design.
 
 10. **POH confirmations** (`getOrderConfirmations`): `vw_gold_confirmation` DDL not confirmed — implementation blocked. Run `DESCRIBE TABLE` first.
 
