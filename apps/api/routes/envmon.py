@@ -18,8 +18,11 @@ from fastapi import APIRouter, Header, HTTPException, Response
 
 from adapters.envmon.envmon_databricks_adapter import (
     SiteSummaryRequest,
+    SwabResultsRequest,
     get_site_summary_spec,
+    get_swab_results_spec,
     map_site_summary_rows,
+    map_swab_result_rows,
 )
 from routes._databricks import (
     build_user_identity,
@@ -77,3 +80,54 @@ async def envmon_site_summary(
     )
     set_databricks_response_headers(response, spec)
     return map_site_summary_rows(rows, plant_id)
+
+
+@router.get("/envmon/swab-results")
+async def envmon_swab_results(
+    plant_id: str,
+    period_start: str,
+    period_end: str,
+    response: Response,
+    limit: int = 100,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> list:
+    """Environmental monitoring swab results — databricks-api only.
+
+    Returns individual SAP QM inspection results per MIC characteristic per sampling
+    point. Status derived from INSPECTION_RESULT_VALUATION:
+    NULL→pending, R/REJ/REJECT→fail, W/WARN→warning, other non-null→pass.
+
+    Source views (Group A SAP QM, confirmed-ddl 2026-05-17):
+      gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v
+      INSPECTION_TYPE IN ('14','Z14') — EnvMon domain boundary filter
+
+    limit: default 100, clamped to [1, 500]. Not a bound parameter — embedded as literal.
+
+    No em_* spatial joins. zoneId / hygieneZone not available from SAP QM alone.
+    Frontend wiring deferred — EnvMonSwabResultSchema requires zoneId (no source).
+    """
+    backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if backend_mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="EnvMon swab results requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    clamped_limit = max(1, min(limit, 500))
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    rows, spec = await run_query(
+        lambda: get_swab_results_spec(
+            SwabResultsRequest(
+                plant_id=plant_id,
+                period_start=period_start,
+                period_end=period_end,
+                limit=clamped_limit,
+            )
+        ),
+        identity, host, warehouse_id,
+    )
+    set_databricks_response_headers(response, spec)
+    return map_swab_result_rows(rows)

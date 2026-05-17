@@ -1,26 +1,27 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired; o.txt — candidate routes added)
-**Status:** EXECUTABLE — route wired, DDL confirmed (2026-05-17); browser verification pending
+**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired; o.txt — candidate routes added; p.txt — swab-results route wired)
+**Status:** EXECUTABLE — two routes wired (site-summary n.txt, swab-results p.txt), DDL confirmed (2026-05-17); browser verification pending
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
 
 ## Current Status
 
-**Route `GET /api/envmon/site-summary` is WIRED (n.txt, 2026-05-17).**
+**Routes `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` are WIRED (n.txt + p.txt, 2026-05-17).**
 
 DDL confirmed for all three Group A views via `DESCRIBE TABLE` in `connected_plant_uat` on
-2026-05-17. Route implemented in `apps/api/routes/envmon.py`, registered in `main.py`.
-99 backend tests passing. Browser verification pending — requires deployment to UAT.
+2026-05-17. Both routes implemented in `apps/api/routes/envmon.py`, registered in `main.py`.
+608 backend tests passing. Browser verification pending — requires deployment to UAT.
 
 Previously blocking items (all resolved):
 
 - [x] DDL confirmed for all three Group A views (2026-05-17)
 - [x] `apps/api/routes/envmon.py` implemented (n.txt, 2026-05-17)
 - [x] Route registered in FastAPI app (`main.py`)
-- [x] All backend tests passing (99 tests)
+- [x] `GET /api/envmon/site-summary`: 99 tests passing (n.txt)
+- [x] `GET /api/envmon/swab-results`: 56 new tests (adapter + route) passing (p.txt)
 - [ ] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api` — **pending**
 
 ---
@@ -110,9 +111,96 @@ not V1 business semantics.
 | Date | Tester | Route | HTTP | `X-Data-Source` | `X-Query-Name` | Data returned | Notes |
 |---|---|---|---|---|---|---|---|
 | (pending) | — | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17` | — | — | — | — | Route wired (n.txt); DDL confirmed; browser verification pending |
+| (pending) | — | `GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=100` | — | — | — | — | Route wired (p.txt); DDL confirmed (same Group A views); browser verification pending |
 
 **Do not mark any item above as verified without live UAT testing in Databricks Apps.**  
 **Do not claim browser verification unless actually tested in Databricks Apps.**
+
+---
+
+## Route: `GET /api/envmon/swab-results`
+
+**Status: EXECUTABLE — route wired (p.txt), DDL confirmed (same Group A views); browser verification pending**
+
+```
+GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=100
+```
+
+### Required query parameters
+
+| Parameter | Required | Example | Notes |
+|---|---|---|---|
+| `plant_id` | Yes | `C061` | SAP plant code — no default |
+| `period_start` | Yes | `2026-01-01` | ISO date — filters `lot.CREATED_DATE >= period_start` |
+| `period_end` | Yes | `2026-05-17` | ISO date — filters `lot.CREATED_DATE <= period_end` |
+| `limit` | No | `100` | Clamped to [1, 500] at route; default 100 |
+
+### Expected: success
+
+| Property | Expected value |
+|---|---|
+| HTTP status | 200 |
+| Body type | JSON array (may be empty `[]` if no data) |
+| `X-Data-Source` header | `databricks-api` |
+| `X-Adapter-Mode` header | `databricks-api` |
+| `X-Query-Name` header | `envmon.get_swab_results` |
+
+### Expected body item shape
+
+Each element in the array represents one MIC test result per sample point per inspection lot.
+Key fields:
+
+| Field | Source | Notes |
+|---|---|---|
+| `inspectionLotId` | `gold_inspection_lot.INSPECTION_LOT_ID` | SAP inspection lot ID |
+| `functionalLocation` | `gold_inspection_point.FUNCTIONAL_LOCATION` | Sampling location code |
+| `micId` | `gold_batch_quality_result_v.MIC_ID` | MIC characteristic ID |
+| `micName` | `gold_batch_quality_result_v.MIC_NAME` | MIC name (organism/test type) |
+| `valuation` | `gold_batch_quality_result_v.INSPECTION_RESULT_VALUATION` | Raw SAP valuation (R/REJ/W/WARN/A/null) |
+| `status` | Derived from `valuation` | `fail` / `warning` / `pass` / `pending` |
+| `result` | `gold_batch_quality_result_v.RESULT` | Raw SAP RESULT column — distinct from valuation |
+| `createdDate` | `gold_inspection_lot.CREATED_DATE` | Lot creation date |
+| `plantId` | `gold_inspection_lot.PLANT_ID` | Should match query `plant_id` |
+
+### Status derivation mapping (confirmed-v1)
+
+| `valuation` value | Derived `status` |
+|---|---|
+| `null` (no usage decision) | `pending` |
+| `R`, `REJ`, `REJECT` | `fail` |
+| `W`, `WARN` | `warning` |
+| `A` or any other non-null | `pass` |
+| `""` (empty string) | `pass` (non-null, not a fail/warn code) |
+
+### No spatial enrichment
+
+`zoneId`, `zoneName`, `hygieneZone`, `areaType` are **not present** in this response. They require
+`em_location_zones` (existence in UAT unknown). Frontend wiring is deferred until zoneId/zoneName
+can be sourced.
+
+### Expected: error cases
+
+| Condition | Expected HTTP status | How to trigger |
+|---|---|---|
+| Missing required param | 422 | Omit `plant_id`, `period_start`, or `period_end` |
+| Session expired or no cookie | 401 | Clear session cookies and retry |
+| Wrong `BACKEND_ADAPTER_MODE` | 503 | Deploy with `BACKEND_ADAPTER_MODE=legacy-api` or unset |
+| Missing Databricks config | 503 | Remove `DATABRICKS_HOST` from app.yaml |
+| UC permission denied | 403 | Remove UC SELECT on `connected_plant_uat.gold.*` for the user's identity |
+| Rate limit | 429 | Trigger many rapid requests |
+| SQL/query error | 502 | Introduce bad SQL or wrong view name |
+| Timeout | 504 | Use a suspended warehouse |
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| 401 | Expired/missing Databricks Apps session | Log in at the Databricks Apps URL and retry |
+| 503 | `BACKEND_ADAPTER_MODE != databricks-api` | Check `app.yaml` → `BACKEND_ADAPTER_MODE`; redeploy |
+| 503 config | Missing `DATABRICKS_HOST` or `DATABRICKS_WAREHOUSE_ID` | Check app.yaml secrets |
+| 200 but `[]` empty array | No EnvMon lots for plant/period | Run `SELECT DISTINCT PLANT_ID FROM gold_inspection_lot WHERE INSPECTION_TYPE IN ('14','Z14')` |
+| `status` always `pass` | No fail/warn valuations in UAT data | Run `SELECT DISTINCT INSPECTION_RESULT_VALUATION FROM gold_batch_quality_result_v LIMIT 50` |
+| `X-Data-Source` absent | `set_databricks_response_headers` not called | Verify route handler implementation |
 
 ---
 
@@ -146,3 +234,4 @@ plant geo and floorplan routes both depend on `SHOW TABLES IN connected_plant_ua
 | 2026-05-17 | m.txt | Replaced with correct route `/api/envmon/site-summary`; marked BLOCKED by DDL; added required params, expected body shape, partial coverage note, full troubleshooting guide |
 | 2026-05-17 | n.txt | DDL confirmed; route wired; status EXECUTABLE; body shape updated to V2 contract (EnvMonSiteSummarySchema); placeholder/derivation distinction clarified |
 | 2026-05-17 | o.txt | Candidate future routes section added (plant-map, plant-hotspots, floors, floorplan, location-coordinates, zones, heatmap); all marked planned/not wired |
+| 2026-05-17 | p.txt | Swab-results route section added (`GET /api/envmon/swab-results`); route wired in `apps/api/routes/envmon.py`; DDL confirmed (same Group A SAP QM views); 56 new tests; BV pending; frontend wiring deferred (zoneId/zoneName unavailable from SAP QM alone) |

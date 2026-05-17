@@ -2,7 +2,7 @@
 
 **Domain:** traceability  
 **Workspace:** trace-investigation  
-**Lifecycle:** live (mock data tier; V1 proxy wired for batch-header only)
+**Lifecycle:** active — V1 proxy wired for batch-header; `POST /api/trace2/trace-graph` native Databricks route wired (q.txt, 2026-05-18, iterative multi-hop over gold_batch_lineage)
 
 ---
 

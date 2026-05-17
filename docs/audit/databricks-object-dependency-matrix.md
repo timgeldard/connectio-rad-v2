@@ -4,7 +4,7 @@
 **Scope:** All Databricks views and materialised views referenced by current or planned native adapters  
 **Catalog (default):** `connected_plant_uat`  
 **Reference:** `docs/audit/adapter-source-status-matrix.md`, `docs/audit/current-state-after-native-databricks-work.md`  
-**Last updated:** 2026-05-17 (n.txt) — EnvMon DDL confirmed, route wired (`GET /api/envmon/site-summary`), 99 tests passing
+**Last updated:** 2026-05-17 (p.txt) — EnvMon swab-results route wired (`GET /api/envmon/swab-results`), 56 new tests, 608 total
 
 ---
 
@@ -56,7 +56,7 @@
 | Object | Columns confirmed | Used by | Status |
 |---|---|---|---|
 | `gold_batch_stock_v` | material_id, batch_id, unrestricted, blocked, quality_inspection, restricted, transit, total_stock | `getBatchHeaderSummary` (join) | ✓ QS (columns confirmed from V1 inspection) |
-| `gold_batch_lineage` | parent_material_id, parent_batch_id, parent_plant_id, child_material_id, child_batch_id, child_plant_id, link_type | `getTraceGraph` | ✓ QS (columns confirmed from V1 inspection) |
+| `gold_batch_lineage` | PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID, CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID, LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER, PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID, SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE — 18 cols; clustered on CHILD_MATERIAL_ID + CHILD_BATCH_ID | `getTraceGraph` | **✓ confirmed-ddl (q.txt, 2026-05-18)** — `POST /api/trace2/trace-graph` wired; iterative multi-hop |
 | `gold_batch_summary_v` | **NOT VERIFIED** — 6 columns assumed: plant_id, manufacture_date, expiry_date, batch_status, uom, process_order_id | `getBatchHeaderSummary` | ⚠ DDL NOT run — **blocks route wiring** |
 | `gold_material` | material_id, material_name confirmed; `language_id` **NOT VERIFIED** | `getBatchHeaderSummary`, `getTraceGraph` | ⚠ language_id unverified — **blocks route wiring** |
 | `gold_plant` | plant_id, plant_name (assumed — confirmed for CQ lab, assumed same view) | `getBatchHeaderSummary`, `getTraceGraph` | ✓ QS (assumed; LEFT JOIN so not hard-blocking) |
@@ -105,9 +105,9 @@ Gold views confirmed-ddl 2026-05-17 (Group A — all three via DESCRIBE TABLE in
 
 | Object | Columns confirmed-v1 | Used by | Status |
 |---|---|---|---|
-| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
-| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
-| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
+| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID, PROCESS_ORDER_ID | `getEnvMonSiteSummary`, `getEnvMonSwabResults` | ✓ E (DDL confirmed 2026-05-17) |
+| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR, SAMPLE_SUMMARY | `getEnvMonSiteSummary`, `getEnvMonSwabResults` | ✓ E (DDL confirmed 2026-05-17) |
+| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_ID, MIC_NAME, MIC_CODE, RESULT, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, QUALITATIVE_RESULT, TARGET_VALUE, UPPER_TOLERANCE, LOWER_TOLERANCE, UNIT_OF_MEASURE, INSPECTOR, INSPECTION_METHOD | `getEnvMonSiteSummary`, `getEnvMonSwabResults` | ✓ E (DDL confirmed 2026-05-17) |
 
 ### Group B — App-Managed Spatial Configuration (em_* tables)
 
@@ -122,6 +122,7 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 | `em_plant_geo` | plant_id, lat, lon, updated_at, updated_by | `getEnvMonPlantMap` (PROPOSED), `getEnvMonPlantHotspots` (PROPOSED) — estate map + hot spot markers | ❌ app-managed — existence unknown in UAT |
 
 **o.txt (2026-05-17):** em_plant_geo elevated from "site map not yet designed" to required dependency for Estate Monitoring BC; `getEnvMonPlantMap` and `getEnvMonPlantHotspots` added as proposed candidate routes.  
+**p.txt (2026-05-17):** `getEnvMonSwabResults` route wired (`GET /api/envmon/swab-results`); same Group A views; 56 new tests; frontend wiring deferred (zoneId unavailable).  
 **n.txt (2026-05-17):** DDL confirmed for all three Group A views; route wired in `apps/api/routes/envmon.py`; registered in `main.py`; 99 tests passing.  
 **m.txt:** QuerySpec hardened (LIMIT 1 fix); 56 tests added; DDD model + route plan created.  
 **Key gaps (unchanged):**
@@ -159,8 +160,9 @@ Full DDL checklist: `docs/audit/trace-native-column-verification-checklist.md`
 | `getOrderConfirmations` | `csm_process_order_history.vw_gold_confirmation` | ✓ E |
 | `getOrderGoodsMovements` | `csm_process_order_history.vw_gold_adp_movement` | ✓ E |
 | `getBatchHeaderSummary` | `gold.gold_batch_stock_v`, `gold.gold_batch_summary_v`⚠, `gold.gold_material`⚠, `gold.gold_plant` | QS only — blocked |
-| `getTraceGraph` | `gold.gold_batch_lineage`, `gold.gold_material`⚠, `gold.gold_plant` | QS only — blocked |
+| `getTraceGraph` | `gold.gold_batch_lineage` (confirmed-ddl) | **✓ E** — `POST /api/trace2/trace-graph` (q.txt, 2026-05-18); iterative multi-hop; gold_material/gold_plant joins deferred |
 | `getMassBalanceSummary` | `gold.gold_batch_mass_balance_v`⚠ | QS only — blocked |
 | `getLabFailures` | `csm_process_order_history.vw_gold_process_order_plan`❌ | Blocked — view missing |
 | `getEnvMonSiteSummary` | `gold.gold_inspection_lot` + `gold.gold_inspection_point` + `gold.gold_batch_quality_result_v` | **✓ E** — `GET /api/envmon/site-summary` (n.txt) |
-| All other methods (73) | None — mock data | Mock only |
+| `getEnvMonSwabResults` | `gold.gold_inspection_lot` + `gold.gold_inspection_point` + `gold.gold_batch_quality_result_v` | **✓ E** — `GET /api/envmon/swab-results` (p.txt) |
+| All other methods (72) | None — mock data | Mock only |

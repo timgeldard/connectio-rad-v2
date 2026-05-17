@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
-**Date:** 2026-05-17  
-**Status:** Routes not yet wired to Databricks — this checklist is prepared for when DDL is confirmed and routes are implemented.  
+**Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
+**Status:** T2 route executable — awaiting browser verification. T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -107,100 +107,119 @@ X-Query-Name: trace2.get_batch_header_summary
 
 ---
 
-## Check T2 — POST /api/trace2/trace-graph (depth=1)
+## Check T2 — POST /api/trace2/trace-graph (multi-hop, q.txt)
 
-**Prerequisite:** Implement only after Check T1 passes.
-
-**UI route:** Navigate to Trace Investigation workspace → enter material/batch → Trace Graph panel.
+**Status:** Route wired (q.txt, 2026-05-18) — executable, awaiting browser verification.  
+**Note:** T2 can be browser-verified independently of T1 (batch-header) — gold_batch_lineage DDL is confirmed; no joins to unverified views.
 
 **Direct API call:**
 ```http
 POST https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/trace2/trace-graph
 Content-Type: application/json
+Authorization: Bearer <user-oauth-token>
 
 {
   "material_id": "000000000020052009",
-  "batch_id": "0008602411"
+  "batch_id": "0008602411",
+  "plant_id": "C061",
+  "direction": "both",
+  "max_depth": 6,
+  "max_edges": 1000
 }
 ```
 
 **Expected response headers:**
 ```http
-X-Data-Source: databricks-api
+X-Data-Source: view:gold_batch_lineage
 X-Adapter-Mode: databricks-api
 X-Query-Name: trace2.get_trace_graph
 ```
 
-**Expected response body shape:**
+**Expected response body shape (data exists):**
 ```json
 {
+  "anchor": {
+    "materialId": "000000000020052009",
+    "batchId": "0008602411",
+    "plantId": "C061",
+    "nodeKey": "000000000020052009:0008602411:C061"
+  },
   "nodes": [
     {
-      "id": "<material_id>:<batch_id>",
-      "type": "intermediate",
-      "materialId": "<string>",
-      "materialDescription": "<string or empty>",
-      "batchId": "<string>",
-      "plantId": "<string or null>"
+      "nodeKey": "000000000020052009:0008602411:C061",
+      "materialId": "000000000020052009",
+      "batchId": "0008602411",
+      "plantId": "C061",
+      "label": "000000000020052009 / 0008602411",
+      "depth": 0,
+      "directions": ["anchor"],
+      "isAnchor": true
     }
   ],
   "edges": [
     {
-      "id": "<source_id>|<target_id>|<relationship_type>",
-      "source": "<node_id>",
-      "target": "<node_id>",
-      "relationshipType": "produced-from" | "transferred-to" | "component-of" | "delivered-to" | "split-from" | "merged-into"
+      "id": "<parent_key>|<child_key>|<link_type>|<doc_num>|<hop>",
+      "source": "<parent_node_key>",
+      "target": "<child_node_key>",
+      "linkType": "PRODUCTION",
+      "processOrderId": "<string or null>",
+      "materialDocumentNumber": "<string or null>",
+      "quantity": <number or null>,
+      "baseUnitOfMeasure": "<string or null>",
+      "postingDate": "<date or null>",
+      "movementType": "<string or null>",
+      "depth": 0,
+      "direction": "downstream"
     }
   ],
-  "direction": "both",
-  "depth": 1,
-  "rootBatch": "0008602411",
-  "upstreamCount": <number>,
-  "downstreamCount": <number>,
-  "unresolvedNodeCount": 0
+  "depthReached": 1,
+  "truncated": false,
+  "warnings": []
 }
 ```
 
-**Acceptable empty response (no lineage rows):**
+**Acceptable empty response (anchor exists, no lineage edges):**
 ```json
 {
-  "nodes": [],
+  "anchor": { "materialId": "000000000020052009", "batchId": "0008602411", "plantId": "C061", "nodeKey": "..." },
+  "nodes": [{ "isAnchor": true, ... }],
   "edges": [],
-  "direction": "both",
-  "depth": 1,
-  "rootBatch": "0008602411",
-  "upstreamCount": 0,
-  "downstreamCount": 0,
-  "unresolvedNodeCount": 0
+  "depthReached": 0,
+  "truncated": false,
+  "warnings": ["no_edges_found"]
 }
 ```
 
 **Pass criteria:**
 - [ ] HTTP 200
-- [ ] `X-Data-Source: databricks-api` header present
+- [ ] `X-Data-Source: view:gold_batch_lineage` header present
+- [ ] `X-Adapter-Mode: databricks-api` header present
 - [ ] `X-Query-Name: trace2.get_trace_graph` header present
-- [ ] Response is a JSON object with `nodes`, `edges`, `depth` fields
-- [ ] No node has a null `id`, `materialId`, or `batchId`
-- [ ] All edge `source` and `target` values correspond to node `id` values
-- [ ] No duplicate node IDs
-- [ ] No recursive edges (depth=1; no multi-hop paths)
+- [ ] Response has `anchor`, `nodes`, `edges`, `depthReached`, `truncated`, `warnings` keys
+- [ ] Anchor node is present in `nodes` with `isAnchor: true`
+- [ ] `anchor.materialId` = `"000000000020052009"` (leading zeros preserved)
+- [ ] `anchor.batchId` = `"0008602411"` (leading zeros preserved)
+- [ ] If edges exist: all edge `source`/`target` values correspond to `nodeKey` values in `nodes`
+- [ ] No duplicate `nodeKey` values in `nodes`
 - [ ] No 401/403/502/503
 
 **Troubleshooting:**
 
 | Status | Likely cause | Fix |
 |---|---|---|
-| 503 | Mode or catalog missing | Same as T1 |
-| 401 | OAuth issue | Same as T1 |
-| 403 | No SELECT on `gold_batch_lineage` | `GRANT SELECT ON VIEW connected_plant_uat.gold.gold_batch_lineage TO <user>` |
-| 502 | language_id join failure | Verify `gold_material.language_id` column and 'EN' value |
-| Empty graph | Test batch has no lineage records | Expected if batch entered production externally — try alternate anchor |
+| 503 (mode) | `BACKEND_ADAPTER_MODE` ≠ `databricks-api` | Check `app.yaml` |
+| 503 (catalog) | `TRACE_CATALOG` not set | Add to `app.yaml` |
+| 401 | OAuth token missing or `sql` scope absent | Re-deploy bundle; check `user_api_scopes: [sql]` |
+| 403 | No SELECT on `gold_batch_lineage` | `GRANT SELECT ON TABLE connected_plant_uat.gold.gold_batch_lineage TO <user>` |
+| 422 | Invalid `direction` value | Use `upstream`, `downstream`, or `both` |
+| 502 | SQL execution error | Check `databricks apps logs connectio-v2` |
+| Empty graph (`no_edges_found` warning) | Anchor has no lineage edges | Expected for some batches — try alternate anchor |
 
 **Manual result:**
 
 | Status | Date | Notes |
 |---|---|---|
-| [ ] not yet tested | — | Blocked — DDL verification incomplete; batch header not yet verified |
+| [ ] not yet tested | — | Route wired (q.txt, 2026-05-18) — deploy and browser-verify |
 
 ---
 

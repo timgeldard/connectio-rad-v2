@@ -7,14 +7,17 @@ gold_batch_quality_result_v.
 Mapper output matches EnvMonSiteSummarySchema (packages/data-contracts/src/schemas/
 environmental-monitoring.ts). Placeholder fields are documented in adapter module docstring.
 
-Route wired: apps/api/routes/envmon.py (n.txt, 2026-05-17).
+Route wired: apps/api/routes/envmon.py (n.txt and p.txt, 2026-05-17).
 """
 import pytest
 
 from adapters.envmon.envmon_databricks_adapter import (
     SiteSummaryRequest,
+    SwabResultsRequest,
     get_site_summary_spec,
+    get_swab_results_spec,
     map_site_summary_rows,
+    map_swab_result_rows,
     _default_site_summary,
 )
 from shared.query_service.cache_policy import CacheTier
@@ -477,3 +480,241 @@ class TestDefaultSiteSummary:
         from_default = _default_site_summary("C061")
         from_mapper = map_site_summary_rows([], "C061")
         assert from_default == from_mapper
+
+
+# ---------------------------------------------------------------------------
+# get_swab_results_spec
+# ---------------------------------------------------------------------------
+
+class TestGetSwabResultsSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    def _request(self) -> SwabResultsRequest:
+        return SwabResultsRequest(
+            plant_id="C061",
+            period_start="2026-01-01",
+            period_end="2026-05-17",
+            limit=100,
+        )
+
+    def test_name(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.name == "envmon.get_swab_results"
+
+    def test_module(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.module == "envmon"
+
+    def test_endpoint(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.endpoint == "/api/envmon/swab-results"
+
+    def test_cache_policy_is_per_user(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.cache_policy == CacheTier.PER_USER_60S
+
+    def test_source_badge(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.source_badge == "databricks-api"
+
+    def test_plant_id_in_params(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.params["plant_id"] == "C061"
+
+    def test_period_start_in_params(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.params["period_start"] == "2026-01-01"
+
+    def test_period_end_in_params(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert spec.params["period_end"] == "2026-05-17"
+
+    def test_limit_not_in_params(self) -> None:
+        """Limit is embedded as a literal — must not be a bound parameter."""
+        spec = get_swab_results_spec(self._request())
+        assert "limit" not in spec.params
+
+    def test_limit_embedded_as_literal_in_sql(self) -> None:
+        req = SwabResultsRequest("C061", "2026-01-01", "2026-05-17", limit=50)
+        spec = get_swab_results_spec(req)
+        assert "LIMIT 50" in spec.sql
+
+    def test_sql_references_gold_inspection_lot(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "gold_inspection_lot" in spec.sql
+
+    def test_sql_references_gold_inspection_point(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "gold_inspection_point" in spec.sql
+
+    def test_sql_references_gold_batch_quality_result_v(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "gold_batch_quality_result_v" in spec.sql
+
+    def test_sql_uses_trace_catalog(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_uses_trace_schema(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "`gold`" in spec.sql
+
+    def test_sql_has_no_unqualified_from_gold_inspection_lot(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "FROM gold_inspection_lot" not in spec.sql
+
+    def test_sql_has_no_unqualified_from_gold_inspection_point(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "FROM gold_inspection_point" not in spec.sql
+
+    def test_sql_has_no_unqualified_from_result_v(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "FROM gold_batch_quality_result_v" not in spec.sql
+
+    def test_sql_has_inspection_type_filter(self) -> None:
+        """EnvMon domain boundary filter must be present — confirmed-v1+ddl."""
+        spec = get_swab_results_spec(self._request())
+        assert "INSPECTION_TYPE" in spec.sql
+        assert "'14'" in spec.sql
+        assert "'Z14'" in spec.sql
+
+    def test_sql_has_plant_id_param_binding(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert ":plant_id" in spec.sql
+
+    def test_sql_has_period_start_param_binding(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert ":period_start" in spec.sql
+
+    def test_sql_has_period_end_param_binding(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert ":period_end" in spec.sql
+
+    def test_sql_has_date_filter_using_created_date(self) -> None:
+        spec = get_swab_results_spec(self._request())
+        assert "CREATED_DATE" in spec.sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_swab_results_spec(self._request())
+
+
+# ---------------------------------------------------------------------------
+# map_swab_result_rows
+# ---------------------------------------------------------------------------
+
+class TestMapSwabResultRows:
+    def _fail_row(self) -> dict:
+        return {
+            "inspection_lot_id": "00001234",
+            "inspection_point_id": "00005678",
+            "sample_id": "S001",
+            "operation_id": "0010",
+            "functional_location": "LOC-001",
+            "sample_summary": "Surface swab",
+            "sample_hour": 8,
+            "plant_id": "C061",
+            "inspection_type": "14",
+            "created_date": "2026-01-15",
+            "inspection_end_date": "2026-01-16",
+            "process_order_id": "7006965038",
+            "material_id": "00001234",
+            "batch_id": "BATCH001",
+            "mic_id": "MIC001",
+            "mic_name": "TVC",
+            "mic_code": "MIC001",
+            "result": "REJECT",
+            "quantitative_result": 450.0,
+            "qualitative_result": None,
+            "target_value": 100.0,
+            "upper_tolerance": 200.0,
+            "lower_tolerance": None,
+            "unit_of_measure": "CFU/mL",
+            "valuation": "R",
+            "inspector": "USER001",
+            "inspection_method": "METHOD-001",
+        }
+
+    def _pass_row(self) -> dict:
+        return {**self._fail_row(), "valuation": "A", "result": "OK", "quantitative_result": 10.0}
+
+    def _warn_row(self) -> dict:
+        return {**self._fail_row(), "valuation": "W", "quantitative_result": 180.0}
+
+    def _pending_row(self) -> dict:
+        return {**self._fail_row(), "valuation": None, "result": None, "quantitative_result": None}
+
+    def _empty_string_valuation_row(self) -> dict:
+        return {**self._fail_row(), "valuation": "", "result": ""}
+
+    # --- empty rows ---
+
+    def test_empty_rows_returns_empty_list(self) -> None:
+        assert map_swab_result_rows([]) == []
+
+    # --- status mapping ---
+
+    def test_fail_valuation_r_maps_to_fail(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["status"] == "fail"
+
+    def test_fail_valuation_rej_maps_to_fail(self) -> None:
+        row = {**self._fail_row(), "valuation": "REJ"}
+        result = map_swab_result_rows([row])
+        assert result[0]["status"] == "fail"
+
+    def test_fail_valuation_reject_maps_to_fail(self) -> None:
+        row = {**self._fail_row(), "valuation": "REJECT"}
+        result = map_swab_result_rows([row])
+        assert result[0]["status"] == "fail"
+
+    def test_warn_valuation_w_maps_to_warning(self) -> None:
+        result = map_swab_result_rows([self._warn_row()])
+        assert result[0]["status"] == "warning"
+
+    def test_warn_valuation_warn_maps_to_warning(self) -> None:
+        row = {**self._warn_row(), "valuation": "WARN"}
+        result = map_swab_result_rows([row])
+        assert result[0]["status"] == "warning"
+
+    def test_null_valuation_maps_to_pending(self) -> None:
+        result = map_swab_result_rows([self._pending_row()])
+        assert result[0]["status"] == "pending"
+
+    def test_accepted_valuation_a_maps_to_pass(self) -> None:
+        result = map_swab_result_rows([self._pass_row()])
+        assert result[0]["status"] == "pass"
+
+    def test_empty_string_valuation_maps_to_pass(self) -> None:
+        """Empty string is non-null — must map to pass, not pending."""
+        result = map_swab_result_rows([self._empty_string_valuation_row()])
+        assert result[0]["status"] == "pass"
+
+    # --- field mapping ---
+
+    def test_leading_zeros_preserved_in_lot_id(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["inspectionLotId"] == "00001234"
+
+    def test_numeric_quantitative_result_preserved(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["quantitativeResult"] == pytest.approx(450.0, rel=1e-4)
+
+    def test_valuation_included_in_output_raw(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["valuation"] == "R"
+
+    def test_optional_fields_return_none_when_absent(self) -> None:
+        result = map_swab_result_rows([self._pending_row()])
+        assert result[0]["quantitativeResult"] is None
+        assert result[0]["result"] is None
+
+    def test_multiple_rows_all_mapped(self) -> None:
+        rows = [self._fail_row(), self._pass_row(), self._pending_row()]
+        result = map_swab_result_rows(rows)
+        assert len(result) == 3
+        assert [r["status"] for r in result] == ["fail", "pass", "pending"]
