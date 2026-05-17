@@ -119,7 +119,7 @@ Input components, output batch, co-products, and rework batches linked to this o
 
 ## Adapter Methods
 
-All methods are on `ProcessOrderReviewAdapter` in `domain-integrations/operations/src/adapters/process-order-review-adapter.ts`. `getProcessOrderHeader` is wired to V1 (legacy-api, not browser-verified) and native Databricks (browser-verified 2026-05-17). `getOrderOperations` is wired to native Databricks (`GET /api/por/order-operations`, not yet browser-verified). All other methods return mock data.
+All methods are on `ProcessOrderReviewAdapter` in `domain-integrations/operations/src/adapters/process-order-review-adapter.ts`. `getProcessOrderHeader` is wired to V1 (legacy-api, not browser-verified) and native Databricks (browser-verified 2026-05-17). `getOrderOperations` is wired to native Databricks (`GET /api/por/order-operations`, browser-verified 2026-05-17 — 11 operations for PO 7006965038). `getOrderConfirmations` and `getOrderGoodsMovements` are blocked pending DDL confirmation. All other methods return mock data.
 
 | Method | Request fields used | Returns |
 |---|---|---|
@@ -201,9 +201,9 @@ All types are in `packages/data-contracts/src/schemas/process-order-review.ts` a
 | Capability | Status |
 |---|---|
 | Process order header | **databricks-api browser-verified 2026-05-17** (process order 7006965038) |
-| Operations / phases list | **databricks-api wired** (`GET /api/por/order-operations`) — not browser-verified; known field gaps (workCentre, dates) |
-| Confirmations (yield, scrap, variance) | mock — blocked pending `vw_gold_confirmation` DDL |
-| Goods movements (GI/GR) | mock — blocked pending `vw_gold_adp_movement` DDL |
+| Operations / phases list | **databricks-api browser-verified 2026-05-17** (`GET /api/por/order-operations`, 11 ops for PO 7006965038); known field gaps (workCentre, dates, hasException) — not in view |
+| Confirmations (yield, scrap, variance) | mock — **BLOCKED** pending `vw_gold_confirmation` DDL |
+| Goods movements (GI/GR) | mock — **BLOCKED** pending `vw_gold_adp_movement` DDL |
 | Execution event timeline | mock — deferred until operations/confirmations/movements are native |
 | Order progress KPIs | mock |
 | Quality context | mock |
@@ -220,7 +220,7 @@ See `docs/migration/poh-functional-parity-matrix.md` for full matrix.
 ## Known Limitations
 
 1. `getProcessOrderHeader` is browser-verified (2026-05-17) but returns empty `plannedQuantity`, `confirmedQuantity`, `uom`, and date fields — these are not in `vw_gold_process_order`.
-2. `getOrderOperations` is wired to native Databricks but not browser-verified. `workCentre`, `plannedStart`, `plannedFinish`, `plannedDurationMinutes` are empty/zero (not in `vw_gold_process_order_phase`). Status is inferred from START_USER/END_USER.
+2. `getOrderOperations` is wired to native Databricks and browser-verified 2026-05-17. `workCentre`, `plannedStart`, `plannedFinish`, `plannedDurationMinutes` are empty/zero (not in `vw_gold_process_order_phase`). Status is inferred from START_USER/END_USER.
 3. All other adapter methods return mock data using Kerry Listowel fixtures.
 4. No order search or order list — workspace requires `processOrderId` from scope context.
 5. No inspection characteristic results panel — only pass/fail summary via `OrderQualityContextPanel`.

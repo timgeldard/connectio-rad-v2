@@ -143,7 +143,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getShiftHandoverItems` | ✓ | — | — | — | none | Requires planning-data gold views |
 | `getOperationsActionQueue` | ✓ | — | — | — | none | Requires planning-data gold views |
 
-**Summary (POR):** 10 + 9 = 19 methods — 1 wired databricks-api (not browser-verified: `getOrderOperations`), 1 wired legacy-api (not browser-verified: `getProcessOrderHeader`), 7 mock only (POR); 9 mock only (plan risk).
+**Summary (POR):** 10 + 9 = 19 methods — `getProcessOrderHeader` and `getOrderOperations` are databricks-api browser-verified (2026-05-17); confirmations and goods movements are blocked pending DDL; remaining POR and plan-risk methods are mock-only.
 
 ---
 

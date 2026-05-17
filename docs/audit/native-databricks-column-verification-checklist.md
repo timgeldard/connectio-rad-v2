@@ -74,51 +74,107 @@ SELECT * FROM connected_plant_uat.vw_gold_process_order LIMIT 1;
 
 **Status inference logic:** `END_USER` populated → `confirmed` / `final-confirmed`; `START_USER` only → `in-progress` / `partially-confirmed`; neither → `pending` / `unconfirmed`. This is a conservative inference, not a direct SAP status field.
 
-**Browser verification:** Not yet done. Required before claiming route is production-ready. Use process order 7006965038.
+**Browser verification:** PASSED 2026-05-17 — 11 operations returned for PO 7006965038; `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_operations` confirmed in response headers.
 
 ---
 
 ## POH — `getOrderConfirmations` — BLOCKED
 
 **Candidate view:** `vw_gold_confirmation`
-**FastAPI route:** Not implemented
-**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_confirmation` in connected_plant_uat. Cannot confirm column names.
+**FastAPI route:** Not implemented — blocked pending DDL confirmation
+**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_confirmation` in connected_plant_uat. Cannot confirm column names. Do not implement until DDL is captured and confirmed.
+
+**DDL discovery SQL (run in Databricks SQL editor as the UAT user or a workspace admin):**
+```sql
+-- Step 1: Confirm view exists and list all columns
+DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation;
+
+-- Step 2: Inspect sample rows for known process order
+SELECT *
+FROM connected_plant_uat.csm_process_order_history.vw_gold_confirmation
+WHERE PROCESS_ORDER_ID = '7006965038'
+LIMIT 20;
+
+-- If PROCESS_ORDER_ID is not a column, find the linkage:
+-- SELECT * FROM connected_plant_uat.csm_process_order_history.vw_gold_confirmation LIMIT 5;
+```
+
+After running the above, classify as: `view exists + columns confirmed`, `view exists + required columns missing`, `view missing`, `access denied`, `no rows for sample order`, or `unknown/not tested`.
 
 | Required contract field | Assumed source column | Status |
 |------------------------|----------------------|--------|
-| `confirmationId` | unknown | **blocked** |
+| `confirmationId` | unknown — may be AFBNR or derived | **blocked** |
 | `operationId` | unknown | **blocked** |
-| `operationNumber` | unknown | **blocked** |
+| `operationText` | unknown | **blocked** |
 | `confirmedYield` | unknown | **blocked** |
-| `scrapQuantity` | unknown | **blocked** |
-| `confirmationDateTime` | unknown | **blocked** |
-| `postedBy` | unknown | **blocked** |
-| `finalConfirmationFlag` | unknown | **blocked** |
+| `uom` | unknown | **blocked** |
+| `confirmedAt` | unknown — required ISO datetime; cannot default | **blocked** |
+| `isFinalConfirmation` | unknown | **blocked** |
+| `scrapQuantity` | unknown | optional — blocked |
+| `reworkQuantity` | unknown | optional — blocked |
+| `confirmedBy` | unknown | optional — blocked |
+| `setupDurationMinutes` | unknown | optional — blocked |
+| `machineDurationMinutes` | unknown | optional — blocked |
+| `cleaningDurationMinutes` | unknown | optional — blocked |
+| `variancePercent` | unknown | optional — blocked |
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
+**Stop condition:** Do not implement if any of `confirmationId`, `operationId`/linkage, `confirmedYield`, `confirmedAt` is absent and cannot be safely derived.
+
+**Action required:** Run the DDL discovery SQL above. Update this table with confirmed column names before implementing.
 
 ---
 
 ## POH — `getOrderGoodsMovements` — BLOCKED
 
 **Candidate view:** `vw_gold_adp_movement`
-**FastAPI route:** Not implemented
-**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_adp_movement` in connected_plant_uat. Cannot confirm column names.
+**FastAPI route:** Not implemented — blocked pending DDL confirmation
+**Status: BLOCKED** — no `DESCRIBE TABLE` output available for `vw_gold_adp_movement` in connected_plant_uat. Cannot confirm column names. Do not implement until DDL is captured and confirmed.
+
+**DDL discovery SQL (run in Databricks SQL editor as the UAT user or a workspace admin):**
+```sql
+-- Step 1: Confirm view exists and list all columns
+DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement;
+
+-- Step 2: Inspect sample rows for known process order
+SELECT *
+FROM connected_plant_uat.csm_process_order_history.vw_gold_adp_movement
+WHERE PROCESS_ORDER_ID = '7006965038'
+LIMIT 50;
+
+-- If PROCESS_ORDER_ID is not a column, find the linkage:
+-- SELECT * FROM connected_plant_uat.csm_process_order_history.vw_gold_adp_movement LIMIT 5;
+```
+
+After running the above, classify as: `view exists + columns confirmed`, `view exists + required columns missing`, `view missing`, `access denied`, `no rows for sample order`, or `unknown/not tested`.
 
 | Required contract field | Assumed source column | Status |
 |------------------------|----------------------|--------|
-| `movementType` | unknown | **blocked** |
-| `materialId` | unknown | **blocked** |
+| `movementId` | unknown — may be MBLNR/ZEILE or derived | **blocked** |
+| `movementType` | unknown — SAP BWART code (101, 261, etc.) | **blocked** |
+| `direction` | derived from movementType | **blocked** |
+| `materialId` | unknown — MATNR; must preserve leading zeros | **blocked** |
 | `materialDescription` | unknown | **blocked** |
-| `batchId` | unknown | **blocked** |
 | `quantity` | unknown | **blocked** |
-| `unit` | unknown | **blocked** |
-| `postingDate` | unknown | **blocked** |
-| `processOrderId` | unknown | **blocked** |
-| `storageLocation` | unknown | **blocked** |
-| `movementCategory` | unknown | **blocked** |
+| `uom` | unknown | **blocked** |
+| `postedAt` | unknown — required ISO datetime; cannot default | **blocked** |
+| `batchId` | unknown — CHARG | optional — blocked |
+| `postedBy` | unknown — USNAM | optional — blocked |
+| `referenceDocument` | unknown — AUFNR or source doc | optional — blocked |
+| `storageLocation` | unknown — LGORT | optional — blocked |
 
-**Action required:** Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` (or equivalent catalog/schema). Update this table with confirmed column names before implementing.
+**Planned movement category mapping (implement only if movementType column confirmed):**
+
+| SAP BWART | Meaning | V2 direction |
+|-----------|---------|-------------|
+| 101 | Goods receipt from production | `output` |
+| 261 | Goods issue to order | `input` |
+| 102 | Reversal of 101 | `output` (reversal) |
+| 262 | Reversal of 261 | `input` (reversal) |
+| others | Unknown | document only — do not guess |
+
+**Stop condition:** Do not implement if `PROCESS_ORDER_ID` linkage is absent, or if `materialId`, `movementType`, `quantity`, or `postedAt` cannot be confirmed.
+
+**Action required:** Run the DDL discovery SQL above. Update this table with confirmed column names before implementing.
 
 ---
 

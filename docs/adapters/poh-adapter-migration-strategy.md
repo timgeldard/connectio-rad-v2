@@ -31,7 +31,7 @@ The `ProcessOrderReviewLegacyApiAdapter` class extends `ProcessOrderReviewAdapte
 | `getOrderQualityContext` | mock | — | No | No | No |
 | `getOrderStagingContext` | mock | — | No | No | No |
 | `getRelatedBatchContext` | mock | — | No | No | No |
-| `getOrderOperations` | **databricks-api** (mode-gated) | `GET /api/por/order-operations` | **Not yet** | `get_order_operations_spec` | `map_order_operations_rows` |
+| `getOrderOperations` | **databricks-api** (mode-gated) | `GET /api/por/order-operations` | **Yes 2026-05-17** (PO 7006965038, 11 ops) | `get_order_operations_spec` | `map_order_operations_rows` |
 | `getOrderConfirmations` | mock | — | — | — **BLOCKED** — `vw_gold_confirmation` DDL unconfirmed | — |
 | `getOrderGoodsMovements` | mock | — | — | — **BLOCKED** — `vw_gold_adp_movement` DDL unconfirmed | — |
 
@@ -139,7 +139,7 @@ Priority order for V1 wiring:
 ```python
 # apps/api/routes/process_order.py
 POST /api/por/order-header      # mode-gated: legacy-api (proxy) or databricks-api (StatementApi) — browser-verified 2026-05-17
-GET  /api/por/order-operations  # databricks-api only (no V1 endpoint) — implemented 2026-05-17, browser verification pending
+GET  /api/por/order-operations  # databricks-api only (no V1 endpoint) — browser-verified 2026-05-17 (11 ops for PO 7006965038)
 ```
 
 Routes not yet created (require V1 endpoint confirmation or DDL confirmation first):

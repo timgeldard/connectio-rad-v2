@@ -161,6 +161,30 @@ See `docs/deployment/poh-native-slices-browser-verification.md` for full checkli
 
 ---
 
+### C8 — POH order confirmations ⛔ BLOCKED
+
+`GET /api/por/order-confirmations?process_order_id=7006965038`
+
+**Status: NOT IMPLEMENTED** — route does not exist.
+
+- [ ] BLOCKED — `vw_gold_confirmation` DDL not captured. Cannot confirm column names or implement QuerySpec.
+- [ ] Action required: Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation` in Databricks SQL editor. Update `docs/audit/native-databricks-column-verification-checklist.md` before implementing.
+- [ ] Expected HTTP status once implemented: 200 with `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_confirmations`
+
+---
+
+### C9 — POH goods movements ⛔ BLOCKED
+
+`GET /api/por/order-goods-movements?process_order_id=7006965038`
+
+**Status: NOT IMPLEMENTED** — route does not exist.
+
+- [ ] BLOCKED — `vw_gold_adp_movement` DDL not captured. Cannot confirm column names or implement QuerySpec.
+- [ ] Action required: Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement` in Databricks SQL editor. Update `docs/audit/native-databricks-column-verification-checklist.md` before implementing.
+- [ ] Expected HTTP status once implemented: 200 with `X-Data-Source: databricks-api` and `X-Query-Name: poh.get_order_goods_movements`
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.

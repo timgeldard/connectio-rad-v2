@@ -1,7 +1,7 @@
 # POH Native Slices — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Status:** Not yet verified — complete each item below in the UAT environment before marking done  
+**Status:** C7 (order-operations) PASSED 2026-05-17; C8 (confirmations) and C9 (goods-movements) BLOCKED — routes not implemented  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:** `docs/audit/adapter-source-status-matrix.md`
 
@@ -17,7 +17,7 @@ Before running any check:
 
 ---
 
-## 1. `GET /api/por/order-operations` — NOT YET VERIFIED
+## 1. `GET /api/por/order-operations` — PASSED 2026-05-17
 
 **UI route:** Navigate to a process order in Process Order Review, then to the Operations/Phases tab.
 
@@ -75,6 +75,123 @@ X-Query-Name: poh.get_order_operations
 | [ ] failed 502 | | |
 | [ ] failed 503 | | |
 | [ ] failed 504 | | |
+
+---
+
+---
+
+## 2. `GET /api/por/order-confirmations` — BLOCKED (not implemented)
+
+**Status: BLOCKED** — route does not exist. `vw_gold_confirmation` DDL not captured. Do not attempt to test until the route is implemented.
+
+**UI navigation path:** Would appear in the Execution Timeline view → Confirmations panel (`OrderConfirmationsPanel`).
+
+**Direct API call (once implemented):**
+```
+GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-confirmations?process_order_id=7006965038
+```
+
+**Expected response headers (once implemented):**
+```
+X-Data-Source: databricks-api
+X-Adapter-Mode: databricks-api
+X-Query-Name: poh.get_order_confirmations
+```
+
+**Expected response body shape (once implemented):**
+```json
+[
+  {
+    "confirmationId": "<string>",
+    "operationId": "<string>",
+    "operationText": "<string>",
+    "confirmedYield": "<number>",
+    "uom": "<string>",
+    "confirmedAt": "<ISO datetime>",
+    "isFinalConfirmation": true | false
+  }
+]
+```
+
+**Prerequisite before testing:**
+1. Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_confirmation`
+2. Confirm minimum required columns are present (see `docs/audit/native-databricks-column-verification-checklist.md`)
+3. Implement QuerySpec factory, row mapper, and route in `poh_databricks_adapter.py` and `process_order.py`
+4. Run tests: `python -m pytest apps/api/tests/ -q`
+
+**Troubleshooting (once implemented):**
+
+| Status | Likely cause | Fix |
+|--------|-------------|-----|
+| 404 | Route not implemented | Implement `GET /api/por/order-confirmations` |
+| 401 | OAuth token missing or `sql` scope not in user token | Re-deploy bundle |
+| 403 | User lacks SELECT on `vw_gold_confirmation` | Grant SELECT to user |
+| 503 | `BACKEND_ADAPTER_MODE` not `databricks-api` | Check `app.yaml` |
+| 502 | Databricks query error or view missing | Check logs |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|--------|------|-------|
+| [ ] blocked — not implemented | 2026-05-17 | `vw_gold_confirmation` DDL not captured |
+
+---
+
+## 3. `GET /api/por/order-goods-movements` — BLOCKED (not implemented)
+
+**Status: BLOCKED** — route does not exist. `vw_gold_adp_movement` DDL not captured. Do not attempt to test until the route is implemented.
+
+**UI navigation path:** Would appear in the Execution Timeline view → Goods Movements panel (`ProcessOrderGoodsMovementsPanel`).
+
+**Direct API call (once implemented):**
+```
+GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/por/order-goods-movements?process_order_id=7006965038
+```
+
+**Expected response headers (once implemented):**
+```
+X-Data-Source: databricks-api
+X-Adapter-Mode: databricks-api
+X-Query-Name: poh.get_order_goods_movements
+```
+
+**Expected response body shape (once implemented):**
+```json
+[
+  {
+    "movementId": "<string>",
+    "movementType": "<string — SAP BWART e.g. '101', '261'>",
+    "direction": "input" | "output",
+    "materialId": "<string — preserve leading zeros>",
+    "materialDescription": "<string>",
+    "quantity": "<number>",
+    "uom": "<string>",
+    "postedAt": "<ISO datetime>"
+  }
+]
+```
+
+**Prerequisite before testing:**
+1. Run `DESCRIBE TABLE connected_plant_uat.csm_process_order_history.vw_gold_adp_movement`
+2. Confirm minimum required columns are present (see `docs/audit/native-databricks-column-verification-checklist.md`)
+3. Implement QuerySpec factory, row mapper, and route in `poh_databricks_adapter.py` and `process_order.py`
+4. Run tests: `python -m pytest apps/api/tests/ -q`
+
+**Troubleshooting (once implemented):**
+
+| Status | Likely cause | Fix |
+|--------|-------------|-----|
+| 404 | Route not implemented | Implement `GET /api/por/order-goods-movements` |
+| 401 | OAuth token missing or `sql` scope not in user token | Re-deploy bundle |
+| 403 | User lacks SELECT on `vw_gold_adp_movement` | Grant SELECT to user |
+| 503 | `BACKEND_ADAPTER_MODE` not `databricks-api` | Check `app.yaml` |
+| 502 | Databricks query error or view missing | Check logs |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|--------|------|-------|
+| [ ] blocked — not implemented | 2026-05-17 | `vw_gold_adp_movement` DDL not captured |
 
 ---
 
