@@ -13,11 +13,10 @@ Browser → Databricks Apps (TLS + OAuth2) → FastAPI (apps/api/)
                                               └── /          static React bundle
 ```
 
-> **Readiness caveat:** The packaging and proxy wiring described here are
-> smoke-test ready (verified locally). V1 network connectivity from Databricks
-> Apps compute has not been confirmed. Only `getBatchHeaderSummary` on the
-> Trace2 adapter has been browser-verified against a real V1 endpoint. All
-> other legacy-api adapter methods fall back to mock data until verified.
+> **UAT status (2026-05-17):** App is RUNNING at the live UAT URL below.
+> `BACKEND_ADAPTER_MODE=databricks-api` — CQ lab plants and POH order header
+> are browser-verified against real Databricks data. V1 proxy routes (legacy-api
+> mode) are wired but unverified while V1 apps are STOPPED.
 
 ---
 
@@ -108,6 +107,14 @@ cp -r apps/web/dist apps/api/static
 build time. Leave base URL vars empty for same-origin Databricks Apps
 deployment so fetch calls resolve against the current host. Set them to the
 full API host only when the React app and API are on different origins.
+
+**Two-layer adapter model:** `VITE_ADAPTER_MODE=legacy-api` tells the frontend
+to call the FastAPI backend via HTTP (not mock). It does not mean the backend
+proxies to V1 — that is controlled by `BACKEND_ADAPTER_MODE` (a backend-only
+env var). `legacy-api` is the correct frontend value for any Databricks Apps
+deploy regardless of whether the backend is in `legacy-api` or `databricks-api`
+mode. There is no `databricks-api` mode on the frontend; Databricks is always
+accessed through the FastAPI layer.
 
 > **Note:** `apps/api/static/` is git-ignored. Rebuild and re-copy whenever
 > the frontend changes.
@@ -279,14 +286,14 @@ path-segment deep links is not needed.
 | `V1_WH360_API_BASE_URL` | Secret scope | Base URL of the V1 Warehouse 360 proxy target |
 | `V1_POH_API_BASE_URL` | Secret scope | Base URL of the V1 Process Order History proxy target |
 | `V1_CQ_API_BASE_URL` | Secret scope | Base URL of the V1 Connected Quality backend |
-| `BACKEND_ADAPTER_MODE` | app.yaml literal or secret | `legacy-api` (default) or `databricks-api`. Controls whether POH and CQ Lab routes query Databricks directly or proxy to V1. |
-| `DATABRICKS_HOST` | Secret scope | Databricks workspace hostname (no `https://` prefix). Required when `BACKEND_ADAPTER_MODE=databricks-api`. Example: `myworkspace.azuredatabricks.net` |
-| `SQL_WAREHOUSE_ID` | Secret scope | SQL Warehouse ID to run statements against. Required when `BACKEND_ADAPTER_MODE=databricks-api`. |
-| `POH_CATALOG` | Secret scope | Unity Catalog name for the POH domain (e.g. `connected_plant_uat`). Required when `BACKEND_ADAPTER_MODE=databricks-api` and POH route is active. |
+| `BACKEND_ADAPTER_MODE` | app.yaml literal | `legacy-api` or `databricks-api`. Controls whether POH and CQ Lab routes query Databricks directly or proxy to V1. Currently `databricks-api` in UAT. |
+| `DATABRICKS_HOST` | app.yaml literal | Full Databricks workspace URL including `https://`. Required when `BACKEND_ADAPTER_MODE=databricks-api`. |
+| `SQL_WAREHOUSE_ID` | app.yaml literal | SQL Warehouse ID to run statements against. Required when `BACKEND_ADAPTER_MODE=databricks-api`. |
+| `POH_CATALOG` | app.yaml literal | Unity Catalog name for the POH domain (e.g. `connected_plant_uat`). Required when `BACKEND_ADAPTER_MODE=databricks-api` and POH route is active. |
 | `POH_SCHEMA` | app.yaml literal (optional) | Schema name for POH views. Defaults to `csm_process_order_history` if unset. |
-| `CQ_CATALOG` | Secret scope | Unity Catalog name for the CQ domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and CQ Lab routes are active. Falls back to `TRACE_CATALOG` if unset (V1-compatible). |
+| `CQ_CATALOG` | app.yaml literal | Unity Catalog name for the CQ domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and CQ Lab routes are active. Falls back to `TRACE_CATALOG` if unset (V1-compatible). |
 | `CQ_SCHEMA` | app.yaml literal (optional) | Schema name for CQ tables. Defaults to `csm_process_order_history` if unset. Note: CQ lab plants always uses `gold` schema regardless of this setting. |
-| `TRACE_CATALOG` | Secret scope | Unity Catalog name for the Trace2 domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and Trace2 routes are active. Also used as `CQ_CATALOG` fallback. |
+| `TRACE_CATALOG` | app.yaml literal (commented out) | Unity Catalog name for the Trace2 domain. Required when `BACKEND_ADAPTER_MODE=databricks-api` and Trace2 routes are active. Also used as `CQ_CATALOG` fallback. |
 | `TRACE_SCHEMA` | app.yaml literal (optional) | Schema name for Trace2 gold views. Defaults to `gold` if unset. |
 | `VITE_CQ_API_BASE_URL` | Build env | Frontend base URL for CQ API (empty = same-origin Databricks Apps deployment) |
 | `ADAPTER_MODE` | app.yaml literal | Informational only — the frontend adapter mode is baked into the JS bundle at build time |
@@ -325,11 +332,11 @@ Databricks Apps injects the following headers into every authenticated request. 
 
 | Header | Purpose | Verified in production? |
 |---|---|---|
-| `x-forwarded-access-token` | End-user OAuth bearer token | **TODO: verify** — assumed from documentation |
-| `x-forwarded-user` | User identifier | **TODO: verify** — assumed from documentation |
-| `x-forwarded-email` | User email address | **TODO: verify** — assumed from documentation |
+| `x-forwarded-access-token` | End-user OAuth bearer token | **Confirmed 2026-05-17** — `token_present: true`, `token_length_bucket: "long"` |
+| `x-forwarded-user` | User identifier | **Confirmed 2026-05-17** — `user_header_present: true` |
+| `x-forwarded-email` | User email address | **Confirmed 2026-05-17** — `email_header_present: true` |
 
-If these header names differ in the actual Databricks Apps environment, update `apps/api/shared/query_service/identity.py` (`extract_user_identity()` function) and this table.
+Header names are confirmed correct. `identity.py` is authoritative.
 
 ---
 
@@ -385,14 +392,16 @@ them.
 
 | Area | Status | Notes |
 |---|---|---|
-| Build packaging | Smoke-test ready | `requirements.txt` contains only PyPI packages; `shared-db` excluded |
-| Static serving | Smoke-test ready | `StaticFiles(html=True)` correct for search-param routing |
-| Trace2 proxy | Partially verified | `getBatchHeaderSummary` browser-verified; other methods return mock |
+| Build packaging | Ready | `requirements.txt` contains only PyPI packages; `shared-db` excluded |
+| Static serving | Ready | `StaticFiles(html=True)` correct for search-param routing |
+| OAuth identity forwarding | Confirmed 2026-05-17 | All three `x-forwarded-*` headers verified; `sql` scope in user token confirmed |
+| CQ Lab plants (databricks-api) | Browser-verified 2026-05-17 | `GET /api/cq/lab/plants` returns real data; `X-Data-Source: databricks-api` |
+| POH order header (databricks-api) | Browser-verified 2026-05-17 | `POST /api/por/order-header` — process order 7006965038 confirmed |
+| Trace2 proxy (legacy-api) | Partially verified | `getBatchHeaderSummary` browser-verified; other methods unverified |
 | WH360 proxy | Not yet verified | Proxy route wired; all methods return mock until browser-verified |
-| POH proxy | Not yet verified | Proxy route wired; all methods return mock until browser-verified |
-| CQ Lab Board proxy | Not yet verified | Proxy routes wired (`/api/cq/lab/fails`, `/api/cq/lab/plants`); returns mock until browser-verified |
+| POH proxy (legacy-api) | Not yet verified | Wired; unverified while V1 STOPPED |
+| CQ Lab failures | Blocked | `vw_gold_process_order_plan` view missing in `connected_plant_uat` |
 | V1 network connectivity | Not confirmed | Databricks Apps → V1 firewall/private link rules not tested |
-| `databricks-api` adapter | Not implemented | All adapters are at `legacy-api` or `mock` tier |
 
 ---
 
