@@ -41,11 +41,9 @@ Set `ENABLE_AUTH_DIAGNOSTICS=true` in the Databricks App environment (via `app.y
 databricks secrets put-secret connectio-v2 enable-auth-diagnostics \
   --string-value "true"
 
-# Then reference it in app.yaml:
+# Then reference it in app.yaml (use the scope/key string form — nested YAML not supported):
 # - name: ENABLE_AUTH_DIAGNOSTICS
-#   valueFrom:
-#     secretScope: connectio-v2
-#     secretKey: enable-auth-diagnostics
+#   valueFrom: connectio-v2/enable-auth-diagnostics
 ```
 
 ### Step 2 — Authenticate and call the endpoint

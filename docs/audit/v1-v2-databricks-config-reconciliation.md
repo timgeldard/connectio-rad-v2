@@ -82,32 +82,26 @@ databricks secrets put-secret connectio-v2 trace-catalog \
   --string-value "connected_plant_uat"
 ```
 
-In `app.yaml` (already present as commented-out blocks — uncomment to activate):
+In `app.yaml` (already present as commented-out blocks — uncomment to activate).
+
+> **IMPORTANT:** Databricks Apps requires `valueFrom` to be a plain `scope/key` string.
+> Nested YAML dicts (`valueFrom: {secretScope: ..., secretKey: ...}`) are **not supported**
+> and cause a startup error ("error reading app.yaml file").
 
 ```yaml
 env:
   - name: BACKEND_ADAPTER_MODE
     value: databricks-api
   - name: DATABRICKS_HOST
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: databricks-host
+    valueFrom: connectio-v2/databricks-host
   - name: SQL_WAREHOUSE_ID
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: sql-warehouse-id
+    valueFrom: connectio-v2/sql-warehouse-id
   - name: POH_CATALOG
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: poh-catalog
+    valueFrom: connectio-v2/poh-catalog
   - name: CQ_CATALOG
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: cq-catalog
+    valueFrom: connectio-v2/cq-catalog
   - name: TRACE_CATALOG
-    valueFrom:
-      secretScope: connectio-v2
-      secretKey: trace-catalog
+    valueFrom: connectio-v2/trace-catalog
   # Schema vars — omit to use defaults unless the workspace uses non-standard schema names
   # - name: POH_SCHEMA
   #   value: csm_process_order_history

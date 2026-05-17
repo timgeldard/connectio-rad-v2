@@ -160,7 +160,7 @@ All 325 tests pass without a Databricks connection (250 from k.txt + 26 from l.t
      --string-value "<warehouse-id>"
    ```
 
-3. Update `apps/api/app.yaml` — change `BACKEND_ADAPTER_MODE` to `databricks-api` and uncomment the `DATABRICKS_HOST`/`SQL_WAREHOUSE_ID` `valueFrom.secretScope` blocks (already present in app.yaml as commented-out placeholders).
+3. Update `apps/api/app.yaml` — change `BACKEND_ADAPTER_MODE` to `databricks-api` and uncomment the `DATABRICKS_HOST`/`SQL_WAREHOUSE_ID` entries (already present as commented-out placeholders). Use `valueFrom: connectio-v2/<key>` string form — Databricks Apps does not support nested YAML dicts.
 
 4. Redeploy and open the app in a browser (as an authenticated Databricks user).
 

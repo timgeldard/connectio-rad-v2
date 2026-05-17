@@ -1,8 +1,24 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
+**Last updated:** 2026-05-17 — UAT deployment state added  
 **Scope:** All domain-integration adapter methods across Trace2, SPC, Warehouse360, POH (Process Order Review), and Quality/Lab  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
+
+---
+
+## UAT Deployment State (as of 2026-05-17)
+
+| Item | Status |
+|---|---|
+| V2 app deployed to UAT | **RUNNING** — `https://connectio-v2-604667594731808.8.azure.databricksapps.com` |
+| React UI load | Confirmed |
+| `BACKEND_ADAPTER_MODE` | `legacy-api` (all V1-backed routes active; native Databricks inactive) |
+| V1 apps | **STOPPED** — all legacy-api domain routes return 503 until V1 apps are restarted |
+| Native Databricks reads | Not active — `DATABRICKS_HOST`, `SQL_WAREHOUSE_ID`, catalog vars not yet set |
+| `databricks-api` mode-gated routes | Executable in code; not active in UAT |
+
+> **Verification claim:** Deployment and UI serving are proven. Data connectivity (V1 proxy or native Databricks) is not yet verified in this UAT deployment.
 
 ---
 
@@ -163,10 +179,10 @@ Gold views: `vw_gold_quality_result_enriched`, `metric_quality_daily` (available
 
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
-| `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified |
-| `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified |
-| `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired — not verified |
-| `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired — not verified |
-| `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired — not verified |
+| `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
+| `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
+| `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + mode-gated (databricks-api); UAT: 503 while V1 STOPPED |
+| `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); UAT: 503 while V1 STOPPED; databricks-api blocked on `vw_gold_process_order_plan` |
+| `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + mode-gated (databricks-api); UAT: 503 while V1 STOPPED |
 
 No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend.

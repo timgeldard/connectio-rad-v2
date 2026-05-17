@@ -61,8 +61,8 @@ databricks secrets put-secret connectio-v2 v1-cq-api-base-url \
 ```
 
 Secrets are encrypted at rest and never appear in logs or environment variable
-listings. The app reads them at startup via the `valueFrom.secretScope`
-references in `apps/api/app.yaml`.
+listings. The app reads them at startup via `valueFrom: scope/key` entries in
+`apps/api/app.yaml` — Databricks Apps requires this string form; nested YAML dicts are not supported.
 
 ---
 

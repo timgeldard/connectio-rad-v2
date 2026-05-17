@@ -34,3 +34,23 @@
 - Production Databricks reads in V2 must use the authenticated end user's OAuth identity.
 - Do not introduce service-principal fallback paths for user-facing reads.
 - If user OAuth is unavailable, mark databricks-api mode as blocked rather than bypassing identity controls.
+
+## Databricks Apps `app.yaml` Secret Syntax — CRITICAL
+
+**Databricks Apps requires `valueFrom` to be a plain `scope/key` string. Nested YAML dicts are NOT supported and cause a startup error.**
+
+Correct:
+```yaml
+- name: V1_TRACE_API_BASE_URL
+  valueFrom: connectio-v2/v1-trace-api-base-url
+```
+
+Wrong (causes "error reading app.yaml file"):
+```yaml
+- name: V1_TRACE_API_BASE_URL
+  valueFrom:
+    secretScope: connectio-v2
+    secretKey: v1-trace-api-base-url
+```
+
+Do not "fix" existing `valueFrom: scope/key` entries to the nested form. The string form is the only valid syntax for Databricks Apps.

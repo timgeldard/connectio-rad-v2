@@ -178,7 +178,7 @@ Missing `POH_CATALOG`, `CQ_CATALOG` (with no `TRACE_CATALOG` fallback), or `TRAC
 ### app.yaml
 
 - `BACKEND_ADAPTER_MODE: legacy-api` added as a literal value (safe default).
-- `DATABRICKS_HOST` and `SQL_WAREHOUSE_ID` documented as commented-out `valueFrom.secretScope` blocks for when `databricks-api` mode is activated.
+- `DATABRICKS_HOST` and `SQL_WAREHOUSE_ID` documented as commented-out `valueFrom: scope/key` entries for when `databricks-api` mode is activated (Databricks Apps requires string form, not nested YAML dicts).
 - `ENABLE_AUTH_DIAGNOSTICS` documented as a commented-out option for the diagnostic endpoint.
 
 ---
