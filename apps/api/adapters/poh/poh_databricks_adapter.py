@@ -400,8 +400,8 @@ def map_order_confirmations_rows(rows: list[dict]) -> list[dict]:
 #   712  Write-On/Off            → unmapped
 #   999  (null MOVEMENT)         → unmapped
 #   null MOVEMENT_TYPE           → unmapped ("Productions", "Write-On/Off", or null)
-# Rows with unmapped MOVEMENT_TYPE are included in the response without a direction field;
-# the frontend adapter filters them out. Extend this map if direction is later confirmed.
+# Rows with unmapped MOVEMENT_TYPE are included with direction: 'unknown'.
+# Extend this map when direction is confirmed for additional ADP codes.
 _MOVEMENT_DIRECTION_MAP: dict[str, str] = {
     "101": "output",   # goods receipt from production order
     "261": "input",    # goods issue to order (standard and unplanned)
@@ -410,11 +410,11 @@ _MOVEMENT_DIRECTION_MAP: dict[str, str] = {
 }
 
 
-def _map_movement_direction(movement_type: object) -> Optional[str]:
-    """Return 'input' | 'output' for a known MOVEMENT_TYPE, else None."""
+def _map_movement_direction(movement_type: object) -> str:
+    """Return 'input' | 'output' for a known MOVEMENT_TYPE, else 'unknown'."""
     if movement_type is None:
-        return None
-    return _MOVEMENT_DIRECTION_MAP.get(str(movement_type).strip())
+        return "unknown"
+    return _MOVEMENT_DIRECTION_MAP.get(str(movement_type).strip(), "unknown")
 
 
 def get_order_goods_movements_spec(request: OrderGoodsMovementsRequest) -> QuerySpec:
@@ -432,8 +432,8 @@ def get_order_goods_movements_spec(request: OrderGoodsMovementsRequest) -> Query
       materialDescription is temporarily optional in the schema.
 
     direction is derived from MOVEMENT_TYPE via _MOVEMENT_DIRECTION_MAP.
-    Rows with unrecognised MOVEMENT_TYPE are included with direction omitted —
-    they will be filtered client-side or logged for map expansion.
+    Unrecognised MOVEMENT_TYPE values map to direction: 'unknown' so the UI can
+    render them visibly without crashing — extend _MOVEMENT_DIRECTION_MAP when confirmed.
     MATERIAL_ID leading zeros are preserved (string, not cast to numeric).
     """
     movement_view = resolve_domain_object("poh", "vw_gold_adp_movement")
@@ -472,9 +472,8 @@ def map_order_goods_movements_rows(rows: list[dict]) -> list[dict]:
 
     Field coverage (2026-05-17): see get_order_goods_movements_spec docstring.
     materialDescription is absent from the view and omitted.
-    Rows with unrecognised MOVEMENT_TYPE are included; direction is omitted for those rows
-    so the client can render them without crashing — update _MOVEMENT_DIRECTION_MAP
-    once confirmed ADP movement type values are known.
+    direction is always present — 'unknown' for unrecognised MOVEMENT_TYPE values.
+    The UI must render unknown-direction rows visibly rather than hiding them.
     """
     result = []
     for row in rows:
@@ -484,14 +483,12 @@ def map_order_goods_movements_rows(rows: list[dict]) -> list[dict]:
         item: dict[str, object] = {
             "movementId": str(row.get("movement_id") or ""),
             "movementType": movement_type,
+            "direction": direction,
             "materialId": str(row.get("material_id") or ""),
             "quantity": _safe_float(row.get("quantity")),
             "uom": str(row.get("uom") or ""),
             "postedAt": _format_datetime(row.get("posted_at")),
         }
-
-        if direction is not None:
-            item["direction"] = direction
 
         batch_id = row.get("batch_id")
         if batch_id:

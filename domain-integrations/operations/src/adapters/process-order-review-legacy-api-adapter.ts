@@ -238,8 +238,8 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
    *
    * Known gaps from vw_gold_adp_movement (2026-05-17):
    *   materialDescription not in view — field omitted from response.
-   *   direction derived from MOVEMENT_TYPE — may be absent for unrecognised ADP codes.
-   *   Update _MOVEMENT_DIRECTION_MAP in poh_databricks_adapter.py once confirmed values known.
+   *   direction: 'unknown' for unrecognised ADP codes (711/712/999/null) — rendered visibly.
+   *   Extend _MOVEMENT_DIRECTION_MAP in poh_databricks_adapter.py when direction is confirmed.
    */
   override async getOrderGoodsMovements(
     request: ProcessOrderReviewAdapterRequest,
@@ -278,16 +278,12 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
       }
 
       const movements: ProcessOrderGoodsMovement[] = raw
-        .filter((item: unknown) => {
-          const r = item as Record<string, unknown>
-          return r.direction === 'input' || r.direction === 'output'
-        })
         .map((item: unknown) => {
           const r = item as Record<string, unknown>
           return {
             movementId: String(r.movementId ?? ''),
             movementType: String(r.movementType ?? ''),
-            direction: r.direction as 'input' | 'output',
+            direction: (r.direction as 'input' | 'output' | 'unknown') ?? 'unknown',
             materialId: String(r.materialId ?? ''),
             materialDescription: r.materialDescription !== undefined ? String(r.materialDescription) : undefined,
             batchId: r.batchId !== undefined ? String(r.batchId) : undefined,

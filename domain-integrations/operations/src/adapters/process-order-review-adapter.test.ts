@@ -257,7 +257,7 @@ describe('ProcessOrderReviewAdapter', () => {
       const result = await adapter.getOrderGoodsMovements(request)
       if (!result.ok) throw new Error('Expected ok result')
       for (const mov of result.data) {
-        expect(['input', 'output']).toContain(mov.direction)
+        expect(['input', 'output', 'unknown']).toContain(mov.direction)
       }
     })
 
