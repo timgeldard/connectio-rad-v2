@@ -1,8 +1,13 @@
 # POH Confirmations and Goods Movements — Native Databricks Plan
 
 **Date:** 2026-05-17  
-**Status:** Both slices BLOCKED — DDL for source views not yet confirmed  
+**Status:** DDL confirmed — implementation in progress  
 **Principle:** DDL first. Implement only what confirmed Databricks views actually support.  
+
+**Schema relaxation (2026-05-17):** Three required fields temporarily made optional in `ProcessOrderConfirmationSchema` / `ProcessOrderGoodsMovementSchema` because the gold views do not expose them:
+- `operationText` — not in `vw_gold_confirmation`; can be re-required once a JOIN to `vw_gold_process_order_phase` is verified
+- `isFinalConfirmation` — not in `vw_gold_confirmation`; re-require once upstream view exposes a final-confirmation flag
+- `materialDescription` — not in `vw_gold_adp_movement`; re-require once material master join is available  
 **References:** `docs/audit/native-databricks-column-verification-checklist.md`, `docs/migration/poh-native-depth-plan.md`
 
 ---

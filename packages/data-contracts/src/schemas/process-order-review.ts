@@ -165,14 +165,16 @@ export type ProcessOrderOperation = z.infer<typeof ProcessOrderOperationSchema>
 export const ProcessOrderConfirmationSchema = z.object({
   confirmationId: z.string(),
   operationId: z.string(),
-  operationText: z.string(),
+  // Not in vw_gold_confirmation — re-require once gold view exposes PHASE_DESCRIPTION join (2026-05-17)
+  operationText: z.string().optional(),
   confirmedYield: z.number().min(0),
   scrapQuantity: z.number().min(0).optional(),
   reworkQuantity: z.number().min(0).optional(),
   uom: z.string(),
   confirmedAt: z.string().datetime(),
   confirmedBy: z.string().optional(),
-  isFinalConfirmation: z.boolean(),
+  // Not in vw_gold_confirmation — re-require once gold view exposes final-confirmation flag (2026-05-17)
+  isFinalConfirmation: z.boolean().optional(),
   setupDurationMinutes: z.number().min(0).optional(),
   machineDurationMinutes: z.number().min(0).optional(),
   cleaningDurationMinutes: z.number().min(0).optional(),
@@ -190,7 +192,8 @@ export const ProcessOrderGoodsMovementSchema = z.object({
   movementType: z.string(),
   direction: z.enum(['input', 'output']),
   materialId: z.string(),
-  materialDescription: z.string(),
+  // Not in vw_gold_adp_movement — re-require once material master join is available (2026-05-17)
+  materialDescription: z.string().optional(),
   batchId: z.string().optional(),
   quantity: z.number(),
   uom: z.string(),

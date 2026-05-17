@@ -1,19 +1,26 @@
 """Tests for the POH Databricks adapter — QuerySpec factories and row mappers.
 
-Column names in get_process_order_header_spec and get_order_operations_spec
-were verified against live DDL (connected_plant_uat, 2026-05-17).
-Tests updated to reflect confirmed column names.
+Column names verified against live DDL (connected_plant_uat, 2026-05-17):
+  vw_gold_process_order, vw_gold_process_order_phase, vw_gold_confirmation,
+  vw_gold_adp_movement.
 """
 import pytest
 
 from adapters.poh.poh_databricks_adapter import (
+    OrderConfirmationsRequest,
+    OrderGoodsMovementsRequest,
     OrderOperationsRequest,
     ProcessOrderHeaderRequest,
+    get_order_confirmations_spec,
+    get_order_goods_movements_spec,
     get_order_operations_spec,
     get_process_order_header_spec,
+    map_order_confirmations_rows,
+    map_order_goods_movements_rows,
     map_order_operations_rows,
     map_process_order_header_rows,
     _format_datetime,
+    _map_movement_direction,
     _map_order_status,
 )
 from shared.query_service.cache_policy import CacheTier
@@ -456,3 +463,353 @@ class TestMapOrderOperationsRows:
         assert result[0]["operationId"] == "PHASE-001"
         assert result[1]["operationId"] == "PHASE-002"
         assert result[1]["status"] == "in-progress"
+
+
+# ---------------------------------------------------------------------------
+# get_order_confirmations_spec
+# ---------------------------------------------------------------------------
+
+class TestGetOrderConfirmationsSpec:
+    @pytest.fixture(autouse=True)
+    def _set_poh_catalog(self, monkeypatch):
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("POH_SCHEMA", "csm_process_order_history")
+
+    def test_name(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert spec.name == "poh.get_order_confirmations"
+
+    def test_module(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert spec.module == "poh"
+
+    def test_endpoint(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert spec.endpoint == "/api/por/order-confirmations"
+
+    def test_cache_policy_is_per_user(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert spec.cache_policy == CacheTier.PER_USER_60S
+
+    def test_tags(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "poh" in spec.tags
+        assert "confirmations" in spec.tags
+
+    def test_process_order_id_in_params(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert spec.params["process_order_id"] == "100001"
+
+    def test_sql_references_vw_gold_confirmation(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "vw_gold_confirmation" in spec.sql
+
+    def test_sql_uses_poh_catalog(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_has_no_unqualified_from_vw(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "FROM vw_gold_confirmation" not in spec.sql
+
+    def test_sql_has_where_clause_for_order_id(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "PROCESS_ORDER_ID = :process_order_id" in spec.sql
+
+    def test_sql_has_limit(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "LIMIT :max_rows" in spec.sql
+
+    def test_sql_uses_confirmed_column_names(self) -> None:
+        """SQL must use columns confirmed from live DDL (2026-05-17)."""
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "CONFIRMATION_ID" in spec.sql
+        assert "PROCESS_ORDER_PHASE_ID" in spec.sql
+        assert "CONFIRMED_QUANTITY" in spec.sql
+        assert "CONFIRMED_QUANTITY_UOM" in spec.sql
+        assert "END_TIMESTAMP" in spec.sql
+
+    def test_sql_coalesces_timestamp_columns(self) -> None:
+        """confirmedAt must coalesce END_TIMESTAMP, START_TIMESTAMP, __CREATED_ON."""
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "COALESCE" in spec.sql
+        assert "START_TIMESTAMP" in spec.sql
+        assert "__CREATED_ON" in spec.sql
+
+    def test_sql_selects_duration_columns(self) -> None:
+        spec = get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+        assert "SET_UP_DURATION_S" in spec.sql
+        assert "MACHINE_DURATION_S" in spec.sql
+        assert "CLEANING_DURATION_S" in spec.sql
+
+    def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_order_confirmations_spec(OrderConfirmationsRequest("100001"))
+
+
+# ---------------------------------------------------------------------------
+# map_order_confirmations_rows
+# ---------------------------------------------------------------------------
+
+class TestMapOrderConfirmationsRows:
+    def _full_row(self) -> dict:
+        """Row using confirmed column names from vw_gold_confirmation (2026-05-17)."""
+        return {
+            "confirmation_id": "CONF-001",
+            "operation_id": "PHASE-PHASE-001",
+            "confirmed_yield": 25000.0,
+            "uom": "L",
+            "confirmed_at": "2024-03-08T03:05:00",
+            "setup_duration_s": 600,
+            "machine_duration_s": 9000,
+            "cleaning_duration_s": 600,
+        }
+
+    def test_empty_rows_returns_empty_list(self) -> None:
+        assert map_order_confirmations_rows([]) == []
+
+    def test_returns_list_for_multiple_rows(self) -> None:
+        result = map_order_confirmations_rows([self._full_row(), self._full_row()])
+        assert len(result) == 2
+
+    def test_confirmation_id_mapped(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["confirmationId"] == "CONF-001"
+
+    def test_operation_id_mapped_from_process_order_phase_id(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["operationId"] == "PHASE-PHASE-001"
+
+    def test_confirmed_yield_mapped(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["confirmedYield"] == 25000.0
+
+    def test_uom_mapped(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["uom"] == "L"
+
+    def test_confirmed_at_mapped(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["confirmedAt"] == "2024-03-08T03:05:00"
+
+    def test_setup_duration_converted_from_seconds_to_minutes(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["setupDurationMinutes"] == pytest.approx(10.0)
+
+    def test_machine_duration_converted_from_seconds_to_minutes(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["machineDurationMinutes"] == pytest.approx(150.0)
+
+    def test_cleaning_duration_converted_from_seconds_to_minutes(self) -> None:
+        result = map_order_confirmations_rows([self._full_row()])
+        assert result[0]["cleaningDurationMinutes"] == pytest.approx(10.0)
+
+    def test_duration_absent_when_null_in_row(self) -> None:
+        row = {**self._full_row(), "setup_duration_s": None}
+        result = map_order_confirmations_rows([row])
+        assert "setupDurationMinutes" not in result[0]
+
+    def test_operation_text_not_in_result(self) -> None:
+        """vw_gold_confirmation has no description column — must not be invented."""
+        result = map_order_confirmations_rows([self._full_row()])
+        assert "operationText" not in result[0]
+
+    def test_is_final_confirmation_not_in_result(self) -> None:
+        """vw_gold_confirmation has no final-confirmation flag — must not be invented."""
+        result = map_order_confirmations_rows([self._full_row()])
+        assert "isFinalConfirmation" not in result[0]
+
+    def test_missing_confirmation_id_returns_empty_string(self) -> None:
+        row = {**self._full_row(), "confirmation_id": None}
+        result = map_order_confirmations_rows([row])
+        assert result[0]["confirmationId"] == ""
+
+
+# ---------------------------------------------------------------------------
+# get_order_goods_movements_spec
+# ---------------------------------------------------------------------------
+
+class TestGetOrderGoodsMovementsSpec:
+    @pytest.fixture(autouse=True)
+    def _set_poh_catalog(self, monkeypatch):
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("POH_SCHEMA", "csm_process_order_history")
+
+    def test_name(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert spec.name == "poh.get_order_goods_movements"
+
+    def test_module(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert spec.module == "poh"
+
+    def test_endpoint(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert spec.endpoint == "/api/por/order-goods-movements"
+
+    def test_cache_policy_is_per_user(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert spec.cache_policy == CacheTier.PER_USER_60S
+
+    def test_tags(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "poh" in spec.tags
+        assert "goods-movements" in spec.tags
+
+    def test_process_order_id_in_params(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert spec.params["process_order_id"] == "100001"
+
+    def test_sql_references_vw_gold_adp_movement(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "vw_gold_adp_movement" in spec.sql
+
+    def test_sql_uses_poh_catalog(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "`connected_plant_uat`" in spec.sql
+
+    def test_sql_has_no_unqualified_from_vw(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "FROM vw_gold_adp_movement" not in spec.sql
+
+    def test_sql_has_where_clause_for_order_id(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "PROCESS_ORDER_ID = :process_order_id" in spec.sql
+
+    def test_sql_has_limit(self) -> None:
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "LIMIT :max_rows" in spec.sql
+
+    def test_sql_uses_confirmed_column_names(self) -> None:
+        """SQL must use columns confirmed from live DDL (2026-05-17)."""
+        spec = get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+        assert "ID" in spec.sql
+        assert "MOVEMENT_TYPE" in spec.sql
+        assert "MATERIAL_ID" in spec.sql
+        assert "QUANTITY" in spec.sql
+        assert "DATE_TIME_OF_ENTRY" in spec.sql
+
+    def test_missing_poh_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("POH_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_order_goods_movements_spec(OrderGoodsMovementsRequest("100001"))
+
+
+# ---------------------------------------------------------------------------
+# _map_movement_direction
+# ---------------------------------------------------------------------------
+
+class TestMapMovementDirection:
+    def test_261_maps_to_input(self) -> None:
+        assert _map_movement_direction("261") == "input"
+
+    def test_262_maps_to_input(self) -> None:
+        assert _map_movement_direction("262") == "input"
+
+    def test_101_maps_to_output(self) -> None:
+        assert _map_movement_direction("101") == "output"
+
+    def test_102_maps_to_output(self) -> None:
+        assert _map_movement_direction("102") == "output"
+
+    def test_unknown_returns_none(self) -> None:
+        assert _map_movement_direction("999") is None
+
+    def test_none_returns_none(self) -> None:
+        assert _map_movement_direction(None) is None
+
+    def test_whitespace_stripped(self) -> None:
+        assert _map_movement_direction(" 261 ") == "input"
+
+
+# ---------------------------------------------------------------------------
+# map_order_goods_movements_rows
+# ---------------------------------------------------------------------------
+
+class TestMapOrderGoodsMovementsRows:
+    def _full_row(self) -> dict:
+        """Row using confirmed column names from vw_gold_adp_movement (2026-05-17)."""
+        return {
+            "movement_id": "GM-001",
+            "movement_type": "261",
+            "material_id": "000000000001234",
+            "quantity": 500.0,
+            "uom": "KG",
+            "posted_at": "2024-03-08T01:30:00",
+            "batch_id": "BATCH-001",
+            "posted_by": "user@kerry.com",
+            "reference_document": "MAT-DOC-001",
+            "storage_location": "SL-001",
+        }
+
+    def test_empty_rows_returns_empty_list(self) -> None:
+        assert map_order_goods_movements_rows([]) == []
+
+    def test_returns_list_for_multiple_rows(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row(), self._full_row()])
+        assert len(result) == 2
+
+    def test_movement_id_mapped(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["movementId"] == "GM-001"
+
+    def test_movement_type_mapped(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["movementType"] == "261"
+
+    def test_direction_input_for_261(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["direction"] == "input"
+
+    def test_direction_output_for_101(self) -> None:
+        row = {**self._full_row(), "movement_type": "101"}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["direction"] == "output"
+
+    def test_direction_absent_for_unknown_movement_type(self) -> None:
+        row = {**self._full_row(), "movement_type": "999"}
+        result = map_order_goods_movements_rows([row])
+        assert "direction" not in result[0]
+
+    def test_material_id_mapped_preserving_leading_zeros(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["materialId"] == "000000000001234"
+
+    def test_quantity_mapped(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["quantity"] == 500.0
+
+    def test_uom_mapped(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["uom"] == "KG"
+
+    def test_posted_at_mapped(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["postedAt"] == "2024-03-08T01:30:00"
+
+    def test_batch_id_mapped_when_present(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["batchId"] == "BATCH-001"
+
+    def test_batch_id_absent_when_null(self) -> None:
+        row = {**self._full_row(), "batch_id": None}
+        result = map_order_goods_movements_rows([row])
+        assert "batchId" not in result[0]
+
+    def test_posted_by_mapped_when_present(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["postedBy"] == "user@kerry.com"
+
+    def test_reference_document_mapped_when_present(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["referenceDocument"] == "MAT-DOC-001"
+
+    def test_storage_location_mapped_when_present(self) -> None:
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert result[0]["storageLocation"] == "SL-001"
+
+    def test_material_description_not_in_result(self) -> None:
+        """vw_gold_adp_movement has no material master join — must not be invented."""
+        result = map_order_goods_movements_rows([self._full_row()])
+        assert "materialDescription" not in result[0]

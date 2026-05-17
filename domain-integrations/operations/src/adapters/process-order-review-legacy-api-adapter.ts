@@ -1,13 +1,13 @@
-import type { ProcessOrderHeader, ProcessOrderOperation } from '@connectio/data-contracts'
+import type { ProcessOrderConfirmation, ProcessOrderGoodsMovement, ProcessOrderHeader, ProcessOrderOperation } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
 
 /**
- * Tier: legacy-api
- * Verified methods: none yet — getProcessOrderHeader wired but not browser-verified against V1 POH
- * Fallback: ProcessOrderReviewAdapter (mock) — all methods return mock data until verified
- * Next tier: databricks-api (pending V1 POH retirement)
+ * Tier: legacy-api / databricks-api
+ * Verified methods (databricks-api, 2026-05-17): getOrderOperations, getOrderConfirmations, getOrderGoodsMovements
+ * Verified methods (legacy-api): none — getProcessOrderHeader wired but not browser-verified against V1
+ * Fallback: ProcessOrderReviewAdapter (mock) — unimplemented methods return mock data
  */
 export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapter {
   private readonly baseUrl: string
@@ -147,6 +147,160 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
       })
 
       return { ok: true, data: operations, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message, retryable: true },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — wired to GET /api/por/order-confirmations.
+   * No V1 endpoint exists for this data. Browser-verify after deployment.
+   *
+   * Known gaps from vw_gold_confirmation (2026-05-17):
+   *   operationText, isFinalConfirmation not in view — fields omitted from response.
+   *   Duration columns returned in minutes (converted from seconds in backend mapper).
+   */
+  override async getOrderConfirmations(
+    request: ProcessOrderReviewAdapterRequest,
+  ): Promise<AdapterResult<ProcessOrderConfirmation[]>> {
+    if (!request.processOrderId) {
+      return super.getOrderConfirmations(request)
+    }
+
+    try {
+      const url = new URL(`${this.baseUrl}/api/por/order-confirmations`)
+      url.searchParams.set('process_order_id', request.processOrderId)
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw: unknown = await response.json()
+      if (!Array.isArray(raw)) {
+        return {
+          ok: false,
+          error: { code: 'invalid-data', message: 'Order confirmations response was not an array', retryable: false },
+          displayState: 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const confirmations: ProcessOrderConfirmation[] = raw.map((item: unknown) => {
+        const r = item as Record<string, unknown>
+        return {
+          confirmationId: String(r.confirmationId ?? ''),
+          operationId: String(r.operationId ?? ''),
+          operationText: r.operationText !== undefined ? String(r.operationText) : undefined,
+          confirmedYield: Number(r.confirmedYield ?? 0),
+          uom: String(r.uom ?? ''),
+          confirmedAt: String(r.confirmedAt ?? ''),
+          confirmedBy: r.confirmedBy !== undefined ? String(r.confirmedBy) : undefined,
+          isFinalConfirmation: r.isFinalConfirmation !== undefined ? Boolean(r.isFinalConfirmation) : undefined,
+          setupDurationMinutes: r.setupDurationMinutes !== undefined ? Number(r.setupDurationMinutes) : undefined,
+          machineDurationMinutes: r.machineDurationMinutes !== undefined ? Number(r.machineDurationMinutes) : undefined,
+          cleaningDurationMinutes: r.cleaningDurationMinutes !== undefined ? Number(r.cleaningDurationMinutes) : undefined,
+          variancePercent: r.variancePercent !== undefined ? Number(r.variancePercent) : undefined,
+        }
+      })
+
+      return { ok: true, data: confirmations, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message, retryable: true },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — wired to GET /api/por/order-goods-movements.
+   * No V1 endpoint exists for this data. Browser-verify after deployment.
+   *
+   * Known gaps from vw_gold_adp_movement (2026-05-17):
+   *   materialDescription not in view — field omitted from response.
+   *   direction derived from MOVEMENT_TYPE — may be absent for unrecognised ADP codes.
+   *   Update _MOVEMENT_DIRECTION_MAP in poh_databricks_adapter.py once confirmed values known.
+   */
+  override async getOrderGoodsMovements(
+    request: ProcessOrderReviewAdapterRequest,
+  ): Promise<AdapterResult<ProcessOrderGoodsMovement[]>> {
+    if (!request.processOrderId) {
+      return super.getOrderGoodsMovements(request)
+    }
+
+    try {
+      const url = new URL(`${this.baseUrl}/api/por/order-goods-movements`)
+      url.searchParams.set('process_order_id', request.processOrderId)
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw: unknown = await response.json()
+      if (!Array.isArray(raw)) {
+        return {
+          ok: false,
+          error: { code: 'invalid-data', message: 'Order goods movements response was not an array', retryable: false },
+          displayState: 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const movements: ProcessOrderGoodsMovement[] = raw
+        .filter((item: unknown) => {
+          const r = item as Record<string, unknown>
+          return r.direction === 'input' || r.direction === 'output'
+        })
+        .map((item: unknown) => {
+          const r = item as Record<string, unknown>
+          return {
+            movementId: String(r.movementId ?? ''),
+            movementType: String(r.movementType ?? ''),
+            direction: r.direction as 'input' | 'output',
+            materialId: String(r.materialId ?? ''),
+            materialDescription: r.materialDescription !== undefined ? String(r.materialDescription) : undefined,
+            batchId: r.batchId !== undefined ? String(r.batchId) : undefined,
+            quantity: Number(r.quantity ?? 0),
+            uom: String(r.uom ?? ''),
+            postedAt: String(r.postedAt ?? ''),
+            postedBy: r.postedBy !== undefined ? String(r.postedBy) : undefined,
+            referenceDocument: r.referenceDocument !== undefined ? String(r.referenceDocument) : undefined,
+            storageLocation: r.storageLocation !== undefined ? String(r.storageLocation) : undefined,
+          }
+        })
+
+      return { ok: true, data: movements, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
