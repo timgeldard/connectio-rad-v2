@@ -1,97 +1,148 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
-**Date:** 2026-05-17
-**Tranche:** j.txt
-**Status:** BLOCKED — no route wired; source view not confirmed
-**Reference:** `docs/migration/envmon-first-native-slice-plan.md`
+**Date:** 2026-05-17  
+**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired; o.txt — candidate routes added)
+**Status:** EXECUTABLE — route wired, DDL confirmed (2026-05-17); browser verification pending
+**Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
 
 ## Current Status
 
-No EnvMon FastAPI routes exist. No Databricks QuerySpecs exist for EnvMon. All verification items below are pre-filled for reference — none can be checked until the source view is confirmed and the route is implemented.
+**Route `GET /api/envmon/site-summary` is WIRED (n.txt, 2026-05-17).**
 
-This document is created now so that when a route is wired, the verification checklist is ready to fill in without additional doc work.
+DDL confirmed for all three Group A views via `DESCRIBE TABLE` in `connected_plant_uat` on
+2026-05-17. Route implemented in `apps/api/routes/envmon.py`, registered in `main.py`.
+99 backend tests passing. Browser verification pending — requires deployment to UAT.
+
+Previously blocking items (all resolved):
+
+- [x] DDL confirmed for all three Group A views (2026-05-17)
+- [x] `apps/api/routes/envmon.py` implemented (n.txt, 2026-05-17)
+- [x] Route registered in FastAPI app (`main.py`)
+- [x] All backend tests passing (99 tests)
+- [ ] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api` — **pending**
 
 ---
 
-## Planned Route: `GET /api/envmon/locations`
+## Route: `GET /api/envmon/site-summary`
 
-**Status: NOT WIRED — deferred pending source view confirmation**
-
-```
-GET /api/envmon/locations?plant_id=C061
-```
-
-### Pre-conditions (must be true before testing)
-
-- [ ] Source view confirmed via `DESCRIBE TABLE` (update `docs/audit/envmon-native-column-verification-checklist.md`)
-- [ ] `envmon_databricks_adapter.py` QuerySpec implemented
-- [ ] `apps/api/routes/envmon.py` route implemented
-- [ ] Route registered in FastAPI app
-- [ ] All backend tests passing
-- [ ] App deployed to UAT
-
-### Browser Verification Steps
-
-1. Open `https://connectio-v2-604667594731808.8.azure.databricksapps.com` as an authenticated Databricks user
-2. Open DevTools → Network tab
-3. Navigate to the Environmental Monitoring workspace
-4. Locate the locations/zones panel network request (or use DevTools filter)
-5. Alternatively, test the API directly with valid auth cookie:
+**Status: EXECUTABLE — route wired, DDL confirmed; browser verification pending**
 
 ```
-GET https://connectio-v2-604667594731808.8.azure.databricksapps.com/api/envmon/locations?plant_id=C061
+GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17
 ```
 
-### Pass Criteria
+### Required query parameters
 
-- [ ] Returns HTTP 200
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Adapter-Mode: databricks-api` present
-- [ ] Response header `X-Query-Name: envmon.get_locations` present
-- [ ] Response body is a JSON array (may be empty if no data for plant C061 in UAT)
-- [ ] If non-empty: each item has at minimum `locationId` and `plantId`
-- [ ] `hygieneZone` values are one of: `zone-1`, `zone-2`, `zone-3`, `zone-4` (or absent if not in view)
-- [ ] `areaType` values are one of: `production`, `storage`, `packaging`, `utility`, `corridor`, `other` (or absent if not in view)
-- [ ] No SPN/PAT token used — check `databricks apps logs connectio-v2` for `service_principal` — must be absent
-- [ ] 401 returned if session expires or cookie is absent
+| Parameter | Required | Example | Notes |
+|---|---|---|---|
+| `plant_id` | Yes | `C061` | SAP plant code — no default |
+| `period_start` | Yes | `2026-01-01` | ISO date — no default unbounded range |
+| `period_end` | Yes | `2026-05-17` | ISO date — no default |
+
+### Expected: success
+
+| Property | Expected value |
+|---|---|
+| HTTP status | 200 |
+| `X-Data-Source` header | `databricks-api` |
+| `X-Adapter-Mode` header | `databricks-api` |
+| `X-Query-Name` header | `envmon.get_site_summary` |
+| Body shape | `EnvMonSiteSummary` (see below) |
+
+### Expected body shape
+
+```json
+{
+  "plantId": "C061",
+  "plantName": "",
+  "zonesMonitored": 50,
+  "zonesWithAlerts": 3,
+  "positiveCount": 3,
+  "positiveRate": 6.0,
+  "openCorrectiveActions": 0,
+  "overdueActions": 0,
+  "complianceRate": 88.0,
+  "riskStatus": "non-compliant",
+  "highestSeverity": "high",
+  "confidence": 1.0
+}
+```
+
+**Note on partial coverage fields:** `plantName` returns `""` (no gold_plant JOIN in current SQL — PLACEHOLDER).
+`openCorrectiveActions`/`overdueActions` return `0` — contract compatibility only; CAPA is out of scope for
+EnvMon V2 parity and these values are fixed at 0. The remaining fields (`riskStatus`, `highestSeverity`,
+`complianceRate`, `confidence`) are V2-contract derivations computed from inspection-lot aggregate counts —
+not V1 business semantics.
+
+### Expected: error cases
+
+| Condition | Expected HTTP status | How to trigger |
+|---|---|---|
+| Session expired or no cookie | 401 | Clear session cookies and retry |
+| Wrong `BACKEND_ADAPTER_MODE` | 503 | Deploy with `BACKEND_ADAPTER_MODE=legacy-api` or unset |
+| Missing Databricks config | 503 | Remove `DATABRICKS_HOST` from app.yaml |
+| UC permission denied | 403 | Remove UC permissions for the user's identity on gold views |
+| Rate limit | 429 | Trigger many rapid requests |
+| SQL/query error | 502 | Introduce bad SQL or wrong view name |
+| Timeout | 504 | Use a warehouse that is suspended and slow to start |
 
 ### Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| 401 Unauthorized | Missing or expired session cookie | Log in to the Databricks Apps URL and retry |
-| 503 Service Unavailable | `BACKEND_ADAPTER_MODE` not `databricks-api`, or route config missing | Check `app.yaml` and redeploy |
-| 502 Bad Gateway | Databricks query failed | Check `databricks apps logs connectio-v2` for SQL error |
-| 504 Gateway Timeout | SQL timeout | Check query timeout in QuerySpec; check warehouse availability |
-| 200 with empty array | No data for plant_id in UAT | Try a different `plant_id`; run `SELECT DISTINCT PLANT_ID FROM ...` in Databricks SQL Editor |
-| `X-Data-Source` absent | Route missing header set logic | Add `run_query` helper call in the route |
-
----
-
-## Planned Route: `GET /api/envmon/swab-results` (fallback slice)
-
-**Status: NOT WIRED — deferred pending source view confirmation**
-
-```
-GET /api/envmon/swab-results?plant_id=C061&limit=100
-```
-
-Pass criteria and troubleshooting would mirror the locations route above, with these additions:
-
-- [ ] Each item has `sampleId`, `locationId`, `sampleDate`, `testType`, `result`
-- [ ] `result` values are one of: `negative`, `positive`, `borderline`, `pending`
-- [ ] `sampleDate` is a valid ISO 8601 datetime string
-- [ ] `resultValue` is a number (not a string) where present
+| 401 Unauthorized | Missing or expired Databricks Apps session | Log in at the Databricks Apps URL and retry |
+| 503 Service Unavailable | `BACKEND_ADAPTER_MODE != databricks-api` | Check `app.yaml` → `BACKEND_ADAPTER_MODE` value; redeploy |
+| 503 missing config | `DATABRICKS_HOST` or `DATABRICKS_WAREHOUSE_ID` unset | Check app.yaml secrets; confirm warehouse ID |
+| 403 Forbidden | User lacks UC SELECT on `connected_plant_uat.gold.*` | Check UC permissions via Databricks admin |
+| 429 Too Many Requests | Statement-level rate limit hit | Wait and retry; check cluster/warehouse limits |
+| 502 Bad Gateway | Databricks query failed | Check `databricks apps logs connectio-v2` for SQL error; verify view names |
+| 504 Gateway Timeout | SQL timeout | Check warehouse availability; increase timeout in QuerySpec if needed |
+| 200 with zeros | No data for plant_id / period | Run `SELECT DISTINCT PLANT_ID FROM connected_plant_uat.gold.gold_inspection_lot WHERE INSPECTION_TYPE IN ('14','Z14')` to find valid plant IDs |
+| `X-Data-Source` absent | Route not implementing header set | Verify `set_databricks_response_headers` is called in route |
+| `openCorrectiveActions` or `overdueActions` non-zero | Unexpected — contract compatibility fixed zeros must not vary | Investigate mapper; CAPA is out of scope, these values are always 0 |
 
 ---
 
 ## Manual Result Record
 
-| Date | Tester | Route | HTTP | Data returned | X-Data-Source | Notes |
-|---|---|---|---|---|---|---|
-| (pending) | — | `/api/envmon/locations` | — | — | — | Route not yet wired |
-| (pending) | — | `/api/envmon/swab-results` | — | — | — | Route not yet wired |
+| Date | Tester | Route | HTTP | `X-Data-Source` | `X-Query-Name` | Data returned | Notes |
+|---|---|---|---|---|---|---|---|
+| (pending) | — | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17` | — | — | — | — | Route wired (n.txt); DDL confirmed; browser verification pending |
 
-Update this table when browser verification is performed. Do not mark any item above as checked without live UAT verification.
+**Do not mark any item above as verified without live UAT testing in Databricks Apps.**  
+**Do not claim browser verification unless actually tested in Databricks Apps.**
+
+---
+
+## History
+
+---
+
+## Candidate Future Routes (o.txt — not yet wired)
+
+The following routes are documented targets. None are wired. Do not attempt to browser-verify them.
+
+| Proposed route | Method | Source dependency | Gate before wiring |
+|---|---|---|---|
+| `GET /api/envmon/plant-map` | `getEnvMonPlantMap` (PROPOSED) | `em_plant_geo` | em_plant_geo confirmed in UAT + contract designed + site-summary BV |
+| `GET /api/envmon/plant-hotspots` | `getEnvMonPlantHotspots` (PROPOSED) | `em_plant_geo` + observation aggregate | plant-map implemented + site-summary BV |
+| `GET /api/envmon/floors` | *(not yet designed)* | `em_plant_floor` | em_plant_floor confirmed in UAT |
+| `GET /api/envmon/floorplan` | *(not yet designed)* | `em_layout_revision` | em_layout_revision confirmed in UAT |
+| `GET /api/envmon/location-coordinates` | *(not yet designed)* | `em_location_coordinates` | em_location_coordinates confirmed in UAT |
+| `GET /api/envmon/zones` | `getEnvMonZones` | `em_location_zones` | em_location_zones confirmed in UAT |
+| `GET /api/envmon/heatmap` | `getEnvMonHeatmap` | SAP QM gold views + `em_location_coordinates` + `em_plant_floor` | All em_* confirmed + site-summary BV |
+
+plant geo and floorplan routes both depend on `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` returning rows.
+
+---
+
+## History
+
+| Date | Tranche | Change |
+|---|---|---|
+| 2026-05-17 | j.txt | Created with placeholder routes `/api/envmon/locations` and `/api/envmon/swab-results` (pre-source-recovery) |
+| 2026-05-17 | m.txt | Replaced with correct route `/api/envmon/site-summary`; marked BLOCKED by DDL; added required params, expected body shape, partial coverage note, full troubleshooting guide |
+| 2026-05-17 | n.txt | DDL confirmed; route wired; status EXECUTABLE; body shape updated to V2 contract (EnvMonSiteSummarySchema); placeholder/derivation distinction clarified |
+| 2026-05-17 | o.txt | Candidate future routes section added (plant-map, plant-hotspots, floors, floorplan, location-coordinates, zones, heatmap); all marked planned/not wired |

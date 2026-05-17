@@ -1,26 +1,56 @@
 # EnvMon V1 Spatial Configuration Model
 
 **Date:** 2026-05-17  
-**Tranche:** l.txt — V1 deep-dive recovery  
+**Tranche:** l.txt — V1 deep-dive recovery | **Updated:** 2026-05-17 (o.txt — plant geo elevated to core, PlantSpatialModel hierarchy added)
 **Status:** CONFIRMED-V1 — DDL from V1 migration scripts; existence in connected_plant_uat UNKNOWN  
 **V1 source:** `ConnectIO-RAD/apps/envmon/scripts/migrations/` (migration scripts 001b–007)  
-**Reference:** `docs/migration/envmon-v1-deep-dive.md`, `docs/audit/envmon-native-column-verification-checklist.md`
+**Reference:** `docs/migration/envmon-v1-deep-dive.md`, `docs/audit/envmon-native-column-verification-checklist.md`, `docs/architecture/envmon-ddd-model.md`
 
 ---
 
 ## Overview
 
-EnvMon V1 includes a full app-managed spatial configuration sub-system alongside its SAP QM read model. This sub-system maintains:
+EnvMon V1 includes a full app-managed spatial configuration sub-system alongside its SAP QM read model. This sub-system owns **all** spatial data for EnvMon — both the estate-level plant coordinates (latitude/longitude) and the in-plant floorplan coordinates (x/y %). It maintains:
 
+- Plant geographic coordinates for the estate map (lat/lon — **WGS-84**)
 - Multiple floor plans per plant (SVG/image background with metadata)
-- Functional location (SAP TPLNR) coordinate placement on floor plans (x/y %)
+- Functional location (SAP TPLNR) coordinate placement on floor plans (**x/y % of canvas**)
 - L4 spatial zone definitions (polygon and rectangle geometry in % coordinates)
 - Layout revision lifecycle (draft → published → superseded / rolled_back)
-- Plant geographic coordinates for site map (lat/lon)
 
 All five app-managed tables are Delta tables in **TRACE_CATALOG / TRACE_SCHEMA** — the same catalog as the SAP QM gold views. There is no separate EM_CATALOG.
 
 **Critical note:** These tables may not exist in `connected_plant_uat`. Run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` before designing any V2 spatial feature.
+
+---
+
+## Two spatial scales — key distinction
+
+This spatial configuration model operates at two distinct scales. Both are managed here; neither replaces the other:
+
+| Scale | Table | Coordinate type | Purpose |
+|---|---|---|---|
+| **Estate / geographic** | `em_plant_geo` | WGS-84 latitude/longitude | Plant pins on geographic map; hot spot status per plant |
+| **In-plant / floorplan** | `em_location_coordinates` | x/y percentage (0–100%) of canvas | Functional-location pins on floorplan; heatmap |
+
+Plant geo coordinates are **not** floorplan x/y coordinates. They exist at different scales, use different coordinate systems, and feed different read models (Estate Monitoring BC vs Spatial Analysis BC).
+
+---
+
+## PlantSpatialModel hierarchy
+
+Each plant has one spatial model composed of all five tables:
+
+```
+PlantSpatialModel (per plant_id)
+  ├── PlantGeoLocation          (em_plant_geo)               — lat/lon for estate map
+  ├── PlantFloor[]              (em_plant_floor)             — floors with background image
+  ├── FloorplanRevision[]       (em_layout_revision)         — draft/published/superseded lifecycle
+  ├── MonitoringLocationPlacement[] (em_location_coordinates) — x/y % per func_loc on floor
+  └── Zone[]                    (em_location_zones)          — polygon/rectangle geometry
+```
+
+**Ownership:** All five tables are owned and written by the EnvMon application (spatial configuration maintenance). Plant geolocation setup is part of this same workstream — not a separate map feature.
 
 ---
 
@@ -203,19 +233,27 @@ This is a new design task, not a V1 migration. **Do not default these fields to 
 
 ## Table 5: `em_plant_geo`
 
-**Purpose:** Plant geographic coordinates for the site map view.  
+**Purpose:** Plant geographic coordinates (WGS-84 lat/lon) for the estate map view — plant pins on a geographic map.  
 **V1 migration source:** `003_create_em_plant_geo.sql`  
-**V2 dependency:** Optional — only needed if a site map / plant pin view is designed in V2
+**V2 dependency:** Required — feeds EnvMon Estate Monitoring BC (estate map, plant hot spot markers, drill-down entry point)
 
 ### Schema (fully confirmed-v1)
 
 | Column | Type | Nullable | Description |
 |---|---|---|---|
-| `plant_id` | STRING | NOT NULL | SAP 4-character plant code |
+| `plant_id` | STRING | NOT NULL | SAP 4-character plant code; FK to gold_inspection_lot.PLANT_ID |
 | `lat` | DOUBLE | NOT NULL | WGS-84 latitude |
 | `lon` | DOUBLE | NOT NULL | WGS-84 longitude |
 | `updated_at` | TIMESTAMP | nullable | Last modification time (UTC) |
 | `updated_by` | STRING | nullable | Identity that last updated |
+
+### Key facts
+
+- `plant_id` links to `gold_inspection_lot.PLANT_ID` — the join key for combining geo with observation aggregates in Estate Monitoring BC
+- Maintained as part of plant spatial configuration — not a standalone map feature
+- Consumed read-only by Estate Monitoring BC to place plant pins on the geographic estate map
+- Existence in connected_plant_uat: **unknown** — confirmed by `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`
+- Plant geolocation maintenance (writing lat/lon) belongs to the spatial configuration write workstream — same as floor setup and coordinate placement
 
 ---
 
@@ -301,6 +339,6 @@ GROUP BY geometry_type, status ORDER BY n DESC;
 | `em_location_coordinates` | x/y positions of sample points | `getEnvMonHeatmap` | Heatmap impossible |
 | `em_location_zones` | Zone boundaries, zone-level aggregation | `getEnvMonZones`, `getEnvMonHeatmap` | Zone view blocked; heatmap degraded to point-level |
 | `em_layout_revision` | Active revision selection | Floor/zone read queries | Cannot filter to published layout |
-| `em_plant_geo` | Plant map pin (site overview) | Site map (not designed in V2 yet) | No blocking impact on current V2 methods |
+| `em_plant_geo` | Plant map pin (estate map), hot spot status per plant | `getEnvMonPlantMap`, `getEnvMonPlantHotspots` (proposed) | Estate Monitoring BC blocked; heatmap and SAP QM workstream unaffected |
 
-**If em_* tables do not exist in connected_plant_uat:** heatmap, zones, and spatial configuration are blocked entirely. The SAP QM monitoring workstream (site summary, swab results, trends) can proceed independently.
+**If em_* tables do not exist in connected_plant_uat:** heatmap, zones, estate map, and spatial configuration are blocked entirely. The SAP QM monitoring workstream (site summary, swab results, trends) can proceed independently.

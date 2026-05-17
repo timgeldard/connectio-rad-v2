@@ -3,6 +3,17 @@
 **Date:** 2026-05-17
 **Tranche:** l.txt — post spatial-config recovery
 **Perspective:** Senior manufacturing quality / environmental monitoring product advisor
+
+> **Status update (n.txt, 2026-05-17):** CAPA/corrective actions have been formally scoped out of EnvMon V2 parity.
+> `getEnvMonCorrectiveActions` is intentionally not migrated — not blocked, not deferred. The CAPA risk items
+> and recommendations below are preserved as historical analysis context; the scope decision supersedes them.
+> Future CAPA capability belongs to a separate Quality Actions / Deviation / CAPA bounded context.
+
+> **Status update (o.txt, 2026-05-17):** Estate Monitoring / Plant Hotspot Overview workstream added (Workstream A2).
+> Plant geolocation (`em_plant_geo`) is part of EnvMon Spatial Configuration — maintained with plant floor/spatial data.
+> Recommended sequencing updated to include estate map after site-summary BV.
+> `getEnvMonPlantMap` and `getEnvMonPlantHotspots` are proposed contract additions — not yet in envmon-adapter.ts.
+
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/migration/envmon-v1-functional-recovery.md`
@@ -77,9 +88,77 @@ Join keys are three-column composite for result data: `INSPECTION_LOT_ID + OPERA
 
 ---
 
+## Workstream A2 — Estate Monitoring / Plant Hotspot Overview
+
+*Geographic estate map, plant geolocation, plant hot spot markers, drill-down entry point*
+
+### Purpose
+
+Estate Monitoring provides the high-level geographic overview of all plants — a multi-plant map showing where each plant is located and which plants have active environmental concerns. Operators can see at a glance which plants are clean, which have warnings, and which have active fails, then drill down into a specific plant's floor-level detail.
+
+This workstream connects the SAP QM Observations data (plant-level fail/warn aggregates) with the Spatial Configuration data (plant lat/lon) to produce a composed geographic read model.
+
+### Business Value
+
+- Single-screen portfolio view for environmental monitoring coordinators and quality managers
+- Rapid identification of plants requiring attention without navigating into each plant individually
+- Geographic context — plants are positioned on a real map, not just a list
+- Entry point of the full drill-down chain: estate map → plant summary → floor list → floorplan heatmap → swab point detail
+
+### Source Objects
+
+| Object | Type | Purpose |
+|---|---|---|
+| `em_plant_geo` (TRACE_CATALOG / TRACE_SCHEMA) | App-managed spatial config | Plant lat/lon; confirmed-v1 DDL; UAT existence unknown |
+| `GET /api/envmon/site-summary` | SAP QM observation aggregate | Plant-level fail/warn/pass counts for hot spot colouring |
+
+`em_plant_geo` is **maintained as part of Spatial Configuration** — setting plant lat/lon is a spatial configuration maintenance task, not a standalone map admin task. See Workstream B for the write path (`setPlantGeoLocation`).
+
+### Relationship to Plant Geolocation Maintenance
+
+Plant geolocation setup (`em_plant_geo` write API) belongs to **Workstream B — Spatial Configuration**, not to this workstream. This workstream covers only the read model: combining geo coordinates with observation aggregates to serve the estate map view.
+
+Read sequence:
+1. Operator sets plant lat/lon in spatial configuration admin (Workstream B)
+2. Estate Monitoring read model queries em_plant_geo + site-summary aggregate (this workstream)
+3. Map renders plant pins coloured by hot spot status
+
+### Dependency on site-summary route
+
+`getEnvMonPlantHotspots` (proposed) would combine plant geo coordinates with plant-level fail/warn counts from the same observation aggregate used by `getEnvMonSiteSummary`. The site-summary route must be browser-verified before estate hotspot can be designed — the aggregate shape needs to be confirmed against live data before the composition can be designed.
+
+### Dependency on em_plant_geo
+
+`getEnvMonPlantMap` (proposed) requires `em_plant_geo` to exist and be populated in connected_plant_uat. If the table does not exist, estate map is blocked. If the table exists but has no rows, map pins cannot be displayed.
+
+### V2 Current Status
+
+No estate monitoring routes or contracts exist:
+- `getEnvMonPlantMap` — NOT in envmon-adapter.ts or data-contracts — **PROPOSED**
+- `getEnvMonPlantHotspots` — NOT in envmon-adapter.ts or data-contracts — **PROPOSED**
+
+### Recommended Implementation Sequence
+
+1. Browser-verify `GET /api/envmon/site-summary` (Workstream A — already wired)
+2. Confirm `em_plant_geo` exists in connected_plant_uat (`SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`)
+3. Row-count `em_plant_geo` — confirm plants have lat/lon populated
+4. Design `getEnvMonPlantMap` contract type (lat/lon + plant metadata)
+5. Implement read-only `GET /api/envmon/plant-map` (em_plant_geo read only)
+6. Design `getEnvMonPlantHotspots` contract type (hot spot status per plant)
+7. Implement `GET /api/envmon/plant-hotspots` (em_plant_geo JOIN site-summary aggregate)
+
+### Stop Conditions
+
+- Do not implement any estate monitoring routes before `em_plant_geo` confirmed in UAT.
+- Do not design `getEnvMonPlantHotspots` before `GET /api/envmon/site-summary` is browser-verified.
+- Do not invent plant coordinates — if `em_plant_geo` is empty, the map must show no pins (not hardcoded defaults).
+- Plant geolocation write API (`setPlantGeoLocation`) belongs to Workstream B, not here.
+
+---
+
 ## Workstream B — Spatial Configuration
 
-*Floorplans, background image, revision lifecycle, coordinate placement, L4 zones*
+*Plant geolocation maintenance, floorplans, background image, revision lifecycle, coordinate placement, L4 zones*
 
 ### V1 Evidence
 
@@ -205,7 +284,7 @@ No admin surface, no spatial write endpoints, no revision workflow implemented i
 | Admin role definition not yet designed in V2 | High | Do not implement write paths until the V2 permission model for spatial admin is defined |
 | Revision workflow is multi-step transactional | High | Partial failures must be safe — define rollback semantics before implementing publish workflow |
 | Validation rules in `validation_summary_json` are V1-internal | Medium | Document what V1 validates (orphan coordinates, geometry validity, missing locations) before implementing V2 validation |
-| CAPA / corrective actions are entirely absent from V1 | Critical | V1 had no corrective action workflow. Implementing `getEnvMonCorrectiveActions` or any corrective action write path requires a fully new workflow design — not a migration task |
+| CAPA / corrective actions are out of scope for EnvMon V2 parity | N/A | `getEnvMonCorrectiveActions` is intentionally not migrated. Future CAPA belongs to a separate Quality Actions / Deviation / CAPA bounded context — not EnvMon D |
 
 ### Recommended Next Tranche
 
@@ -228,23 +307,25 @@ This workstream should not start until Workstreams B and C are complete and vali
 
 The sequencing below follows dependency order strictly. Steps that share a dependency chain are numbered together; steps that are blocked by earlier items cannot be safely skipped.
 
-| Step | Action | Blocks |
-|---|---|---|
-| 1 | DESCRIBE TABLE for `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v` in connected_plant_uat | Everything in Workstream A |
-| 2 | SELECT DISTINCT INSPECTION_TYPE — confirm `'14'` and `'Z14'` present | Site summary route wiring |
-| 3 | Wire `GET /api/envmon/site-summary` (QuerySpec already written) | Browser verification |
-| 4 | Browser-verify site summary in UAT | Swab results route |
-| 5 | Write QuerySpec for `getEnvMonSwabResults`; wire route | Trends route |
-| 6 | SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%' | All of Workstream B and C |
-| 7 | Row-count em_plant_floor, em_location_coordinates | Heatmap parity claim |
-| 8 | Wire floor plan list read adapter (`getEnvMonFloors`) | Heatmap |
-| 9 | Wire coordinate/zone read adapter (`getEnvMonCoordinates`, `getEnvMonZones`) | Heatmap |
-| 10 | Wire heatmap adapter (`getEnvMonHeatmap`) | Only after steps 1–9 complete |
-| 11 | Design upload/image hosting solution with V1 deployment team | Background image edit in Workstream D |
-| 12 | Design admin role / permission model | Workstream D write paths |
-| 13 | Implement spatial write paths + revision/publish workflow | Full Studio parity |
+| Step | Action | Workstream | Blocks |
+|---|---|---|---|
+| 1 | Complete/browser-verify `GET /api/envmon/site-summary` (DDL confirmed; route wired; BV pending) | A | Swab results; estate hotspot design |
+| 2 | Implement/read-verify `GET /api/envmon/swab-results` | A | Trends route |
+| 3 | Confirm `em_plant_geo` and all em_* spatial config tables in UAT (`SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`) | A2 + B gate | All spatial workstreams; estate map |
+| 4 | Row-count `em_plant_geo` — confirm plants have lat/lon populated | A2 | Plant map read model |
+| 5 | Implement read-only plant geo / estate map data (`GET /api/envmon/plant-map`) | A2 | Plant hotspots |
+| 6 | Implement plant hotspot summary combining em_plant_geo + observation aggregate (`GET /api/envmon/plant-hotspots`) | A2 | Estate map feature complete |
+| 7 | Row-count `em_plant_floor`, `em_location_coordinates` — confirm spatial data populated | B | Floor list; heatmap |
+| 8 | Implement floor/floorplan read models (`GET /api/envmon/floors`, `GET /api/envmon/floorplan`) | B | Heatmap |
+| 9 | Implement coordinate/zone read models (`GET /api/envmon/location-coordinates`, `GET /api/envmon/zones`) | B | Heatmap |
+| 10 | Implement floorplan heatmap (`GET /api/envmon/heatmap`) | C | Only after steps 1–9 complete |
+| 11 | Design upload/image hosting solution with V1 deployment team | D | Background image edit |
+| 12 | Design admin role / permission model; implement plant geo write (`setPlantGeoLocation`) | D | Spatial write paths |
+| 13 | Implement full spatial write paths + revision/publish workflow | D | Full Studio parity |
 
 **Steps 11–13 are intentionally deferred** and do not block steps 1–10.
+
+**Plant geolocation maintenance** (step 12, writing to `em_plant_geo`) belongs to Workstream D (spatial configuration write paths), not to the estate monitoring read model. Read before write: confirm geo data exists (steps 3–5) before designing the write admin interface.
 
 ---
 
@@ -270,9 +351,9 @@ V1 `em_location_zones` has no hygiene zone classification field. Zones in V1 are
 
 No V1 upload handler was found. The `background_image_url` column is a string reference to an externally hosted image. The hosting solution (cloud storage, CDN, Databricks Volume?) is not documented in the V1 repo. Do not design a V2 upload workflow until this is answered.
 
-### CAPA / corrective actions are not in V1 at all
+### CAPA / corrective actions are out of scope for EnvMon V2 parity
 
-`getEnvMonCorrectiveActions` is not a migration task. There is no V1 corrective action table, no V1 CAPA workflow, and no confirmed data source. Implementing this method requires designing an entire new workflow: source system, write model, status lifecycle, assignee model, due date logic, and recurrence handling. This is a Phase 5+ product design problem.
+`getEnvMonCorrectiveActions` is intentionally not migrated — not blocked, not deferred pending a source. There is no V1 corrective action table, no V1 CAPA workflow, and no confirmed data source. Any future CAPA capability belongs to a **separate Quality Actions / Deviation / CAPA bounded context** — not in EnvMon Observations, Spatial Configuration, Estate Monitoring, or Spatial Analysis. That bounded context does not exist in V2 and requires its own domain analysis, data source identification, and contract design. Do not let the existing `openCorrectiveActions: 0` placeholder in `EnvMonSiteSummarySchema` create a false sense of coverage.
 
 ### em_* tables may not exist in connected_plant_uat
 

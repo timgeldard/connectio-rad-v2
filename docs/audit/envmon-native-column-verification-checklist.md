@@ -1,8 +1,8 @@
 # EnvMon Native Databricks Column Verification Checklist
 
-**Date:** 2026-05-17 (i.txt) | **Updated:** 2026-05-17 (k.txt SAP QM recovery, l.txt hybrid split)  
-**Status:** Group A — CONFIRMED-V1, DDL NOT YET RUN; Group B — CONFIRMED-V1 DDL, EXISTENCE IN UAT UNKNOWN  
-**References:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-spatial-configuration-model.md`
+**Date:** 2026-05-17 (i.txt) | **Updated:** 2026-05-17 (k.txt, l.txt hybrid split, m.txt DDL SQL and site-summary classification, n.txt DDL confirmed + route wired)  
+**Status:** Group A — **CONFIRMED-DDL (2026-05-17) — route wired (n.txt)**; Group B — CONFIRMED-V1, EXISTENCE IN UAT UNKNOWN  
+**References:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/audit/envmon-spatial-configuration-model.md`, `docs/migration/envmon-site-summary-native-route-plan.md`
 
 EnvMon is a **hybrid domain**. DDL verification falls into two separate groups:
 
@@ -24,7 +24,98 @@ Do not mark any field `confirmed-ddl` unless you have run the DDL command and se
 ## Group A — SAP QM Read Model
 
 All three views in TRACE_CATALOG / TRACE_SCHEMA (default `connected_plant_uat.gold`).  
-All are `confirmed-v1` — DDL not yet run in connected_plant_uat.
+All three confirmed-ddl via `DESCRIBE TABLE` in connected_plant_uat on 2026-05-17.
+
+**Route wired 2026-05-17 (n.txt):** `apps/api/routes/envmon.py`. All required Group A columns confirmed-ddl.  
+See `docs/migration/envmon-site-summary-native-route-plan.md` for full history.
+
+---
+
+### Required DDL checks for site-summary route (m.txt §2)
+
+Run in Databricks SQL Editor in order. Do not wire the route until all pass.
+
+```sql
+-- Step 1: Verify object existence and column DDL
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_lot;
+DESCRIBE TABLE connected_plant_uat.gold.gold_inspection_point;
+DESCRIBE TABLE connected_plant_uat.gold.gold_batch_quality_result_v;
+
+-- Step 2: Confirm inspection type filter values ('14' and 'Z14' must be present)
+SELECT DISTINCT INSPECTION_TYPE, COUNT(*) AS lot_count
+FROM connected_plant_uat.gold.gold_inspection_lot
+GROUP BY INSPECTION_TYPE
+ORDER BY lot_count DESC;
+
+-- Step 3: Confirm valuation field values (R, REJ, REJECT, W, WARN, A, NULL expected)
+SELECT DISTINCT INSPECTION_RESULT_VALUATION, COUNT(*) AS result_count
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+GROUP BY INSPECTION_RESULT_VALUATION
+ORDER BY result_count DESC;
+
+-- Step 4: Sample lot data for EnvMon inspection types at plant C061
+SELECT *
+FROM connected_plant_uat.gold.gold_inspection_lot
+WHERE PLANT_ID = 'C061'
+  AND INSPECTION_TYPE IN ('14','Z14')
+LIMIT 20;
+
+-- Step 5: Sample inspection points for those lots
+SELECT *
+FROM connected_plant_uat.gold.gold_inspection_point
+WHERE INSPECTION_LOT_ID IN (
+  SELECT INSPECTION_LOT_ID
+  FROM connected_plant_uat.gold.gold_inspection_lot
+  WHERE PLANT_ID = 'C061'
+    AND INSPECTION_TYPE IN ('14','Z14')
+  LIMIT 20
+)
+LIMIT 20;
+
+-- Step 6: Sample quality results
+SELECT *
+FROM connected_plant_uat.gold.gold_batch_quality_result_v
+LIMIT 20;
+
+-- Step 7: Check em_* spatial tables (Group B)
+SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%';
+```
+
+---
+
+### Site Summary Required Columns — Classification (m.txt §2)
+
+Update each column status after running the DDL checks above.
+
+#### `gold_inspection_lot`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key | `confirmed-ddl` |
+| `PLANT_ID` | Yes — filter | `confirmed-ddl` |
+| `INSPECTION_TYPE` | Yes — domain filter IN ('14','Z14') | `confirmed-ddl` |
+| `CREATED_DATE` | Yes — period_start / period_end filter | `confirmed-ddl` |
+
+#### `gold_inspection_point`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key | `confirmed-ddl` |
+| `FUNCTIONAL_LOCATION` | Yes — location grouping | `confirmed-ddl` |
+| `OPERATION_ID` | Yes — join key to result_v | `confirmed-ddl` |
+| `SAMPLE_ID` | Yes — join key to result_v | `confirmed-ddl` |
+
+#### `gold_batch_quality_result_v`
+
+| Column | Required for site-summary | Current status |
+|---|---|---|
+| `INSPECTION_LOT_ID` | Yes — join key (part 1) | `confirmed-ddl` |
+| `OPERATION_ID` | Yes — join key (part 2) | `confirmed-ddl` |
+| `SAMPLE_ID` | Yes — join key (part 3) | `confirmed-ddl` |
+| `INSPECTION_RESULT_VALUATION` | Yes — fail/warn/pass classification | `confirmed-ddl` |
+
+**DDL confirmed 2026-05-17 (n.txt):** All required Group A columns verified via `DESCRIBE TABLE` in connected_plant_uat.
+Route wired in `apps/api/routes/envmon.py`. 99 tests passing.
 
 ---
 
@@ -50,10 +141,10 @@ ORDER BY PLANT_ID;
 
 | Contract concept | Column name | Status |
 |---|---|---|
-| Lot identifier | `INSPECTION_LOT_ID` | `confirmed-v1` |
-| Plant | `PLANT_ID` | `confirmed-v1` |
-| Inspection type (domain filter) | `INSPECTION_TYPE` | `confirmed-v1` |
-| Period start filter | `CREATED_DATE` | `confirmed-v1` |
+| Lot identifier | `INSPECTION_LOT_ID` | `confirmed-ddl` |
+| Plant | `PLANT_ID` | `confirmed-ddl` |
+| Inspection type (domain filter) | `INSPECTION_TYPE` | `confirmed-ddl` |
+| Period start filter | `CREATED_DATE` | `confirmed-ddl` |
 | Lot completion date | `INSPECTION_END_DATE` | `confirmed-v1` |
 | Material | `MATERIAL_ID` | `confirmed-v1` |
 | Batch | `BATCH_ID` | `confirmed-v1` |
@@ -78,11 +169,11 @@ WHERE INSPECTION_LOT_ID IN (
 
 | Contract concept | Column name | Status |
 |---|---|---|
-| Lot FK | `INSPECTION_LOT_ID` | `confirmed-v1` |
-| Point identifier | `INSPECTION_POINT_ID` | `confirmed-v1` |
-| Physical location (SAP TPLNR) | `FUNCTIONAL_LOCATION` | `confirmed-v1` |
-| Join key to result_v (part 2) | `OPERATION_ID` | `confirmed-v1` |
-| Join key to result_v (part 3) | `SAMPLE_ID` | `confirmed-v1` |
+| Lot FK | `INSPECTION_LOT_ID` | `confirmed-ddl` |
+| Point identifier | `INSPECTION_POINT_ID` | `confirmed-ddl` |
+| Physical location (SAP TPLNR) | `FUNCTIONAL_LOCATION` | `confirmed-ddl` |
+| Join key to result_v (part 2) | `OPERATION_ID` | `confirmed-ddl` |
+| Join key to result_v (part 3) | `SAMPLE_ID` | `confirmed-ddl` |
 | Sample hour | `SAMPLE_HOUR` | `confirmed-v1` |
 
 ---
@@ -111,14 +202,14 @@ GROUP BY MIC_NAME ORDER BY n DESC;
 
 | Contract concept | Column name | Status |
 |---|---|---|
-| Join key (part 1) | `INSPECTION_LOT_ID` | `confirmed-v1` |
-| Join key (part 2) | `OPERATION_ID` | `confirmed-v1` |
-| Join key (part 3) | `SAMPLE_ID` | `confirmed-v1` |
-| Test type / organism | `MIC_NAME` | `confirmed-v1` |
-| Result status | `INSPECTION_RESULT_VALUATION` | `confirmed-v1` |
-| Numeric result value | `QUANTITATIVE_RESULT` | `confirmed-v1` |
-| Upper specification limit | `UPPER_TOLERANCE` | `confirmed-v1` |
-| Lower specification limit | `LOWER_TOLERANCE` | `confirmed-v1` |
+| Join key (part 1) | `INSPECTION_LOT_ID` | `confirmed-ddl` |
+| Join key (part 2) | `OPERATION_ID` | `confirmed-ddl` |
+| Join key (part 3) | `SAMPLE_ID` | `confirmed-ddl` |
+| Test type / organism | `MIC_NAME` | `confirmed-ddl` |
+| Result status | `INSPECTION_RESULT_VALUATION` | `confirmed-ddl` |
+| Numeric result value | `QUANTITATIVE_RESULT` | `confirmed-ddl` |
+| Upper specification limit | `UPPER_TOLERANCE` | `confirmed-ddl` |
+| Lower specification limit | `LOWER_TOLERANCE` | `confirmed-ddl` |
 
 **Valuation mapping (confirmed-v1):**
 

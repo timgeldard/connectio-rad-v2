@@ -60,7 +60,7 @@ All request fields are optional. The mock adapter ignores them. Future native sl
 | `getEnvMonSwabResults` | `EnvMonSwabResult[]` | Mock — after DDL verification |
 | `getEnvMonTrends` | `EnvMonTrend[]` | Mock — after DDL verification |
 | `getEnvMonHeatmap` | `EnvMonHeatmapCell[]` | Mock — blocked on em_* app-managed tables |
-| `getEnvMonCorrectiveActions` | `EnvMonCorrectiveAction[]` | Mock — no CAPA source |
+| `getEnvMonCorrectiveActions` | `EnvMonCorrectiveAction[]` | Mock — out of scope; CAPA not a V2 EnvMon parity requirement |
 | `getEnvMonSwabVectors` | `EnvMonSwabVector[]` | Mock — business rules undefined; deferred indefinitely |
 
 ---
@@ -99,7 +99,7 @@ This is **static metadata** — not a runtime field from the API response. The E
 2. **Inspection type filter not DDL-confirmed** — run `SELECT DISTINCT INSPECTION_TYPE` to confirm '14' and 'Z14' are present
 3. **Group B em_* existence unknown** — zone, heatmap, and coordinates methods require app-managed tables that may not exist in connected_plant_uat; run `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` first
 4. **hygieneZone / areaType have no V1 source** — V1 em_location_zones has no hygiene classification columns; these V2 contract fields require new zone classification design, not migration
-5. **CAPA has no V1 source** — `getEnvMonCorrectiveActions` requires full new workflow design; do not default-implement
+5. **CAPA is out of scope for EnvMon V2 parity** — `getEnvMonCorrectiveActions` is intentionally not migrated; future CAPA belongs to a separate Quality Actions / Deviation / CAPA bounded context
 6. **Background image upload unknown** — no V1 upload handler found; image hosting solution must be clarified before designing V2 upload
 7. **No route path established** — EnvMon will use `/api/envmon/` (file does not yet exist)
 

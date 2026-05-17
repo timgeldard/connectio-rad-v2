@@ -1,7 +1,7 @@
 # EnvMon Native Databricks — Candidate Slice Ranking
 
-**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery)
-**Status:** SITE SUMMARY first (QuerySpec written) — all others deferred until DDL confirmed
+**Date:** 2026-05-17 (i.txt) | **Corrected:** 2026-05-17 (k.txt SAP QM recovery) | **Updated:** 2026-05-17 (o.txt — estate map / plant hotspot candidates added)
+**Status:** SITE SUMMARY first (QuerySpec written, route wired, DDL confirmed); estate map candidates after BV; all others deferred
 **Reference:** `docs/audit/envmon-sap-qm-source-model.md`, `docs/migration/envmon-v1-functional-recovery.md`
 
 ---
@@ -41,18 +41,19 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 - `totalSamples` ← `lots_tested` (lot-level count; not swab-level)
 - `positiveSamples` ← `active_fails` (location-level fail count)
 - `positiveRate` ← computed
-- `criticalZoneExposures`, `openCorrectiveActions`, `trendDirection` ← defaults (em_* / CAPA source not confirmed)
+- `criticalZoneExposures`, `trendDirection` ← defaults (em_* source not confirmed; period-over-period not implemented)
+- `openCorrectiveActions` ← contract compatibility fixed 0 (CAPA out of scope for EnvMon V2 parity)
 
-**Status:** QuerySpec written (confirmed-v1) — **DDL required before route wiring**
+**Status:** Route wired (n.txt, 2026-05-17) — DDL confirmed — browser verification pending
 
 | Item | Status |
 |---|---|
-| Source views | confirmed-v1 |
+| Source views | confirmed-ddl (DESCRIBE TABLE, 2026-05-17) |
 | V1 SQL recovered | Yes (plants.py `fetch_plant_kpis`) |
 | em_* dependency | None |
-| DDL run | No |
-| Route wired | No — deferred until DDL confirmed |
-| Browser-verified | No |
+| DDL run | Yes (2026-05-17) |
+| Route wired | Yes — `GET /api/envmon/site-summary` in `apps/api/routes/envmon.py` (n.txt) |
+| Browser-verified | No — pending UAT deployment |
 
 ---
 
@@ -94,6 +95,37 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 
 ---
 
+## Rank 3b — Plant Map (estate-level read model — PROPOSED)
+
+**Adapter method:** `getEnvMonPlantMap` — **PROPOSED; does not yet exist in envmon-adapter.ts or data-contracts**
+**Route (proposed):** `GET /api/envmon/plant-map`
+**Returns:** Plant lat/lon list for estate map rendering
+
+**Why here in sequence:**
+- Depends on `em_plant_geo` (confirmed-v1 DDL) and site-summary BV — both achievable after Rank 1 BV
+- `em_plant_geo` existence in UAT is the key gate (`SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'`)
+- Does NOT depend on any of the in-plant spatial tables (em_plant_floor, em_location_coordinates)
+- Simple read: one row per plant from `em_plant_geo`
+
+**Status:** **Planned** — depends on em_plant_geo in UAT + contract design + Rank 1 BV. Not yet implemented.
+
+---
+
+## Rank 3c — Plant Hotspots (estate-level composed read model — PROPOSED)
+
+**Adapter method:** `getEnvMonPlantHotspots` — **PROPOSED; does not yet exist in envmon-adapter.ts or data-contracts**
+**Route (proposed):** `GET /api/envmon/plant-hotspots`
+**Returns:** Plant hot spot status (fail/warn/compliant) per plant, combining em_plant_geo + observation aggregate
+
+**Why here in sequence:**
+- Builds on Rank 3b (plant map lat/lon) and Rank 1 (site-summary observation aggregate)
+- Composition: em_plant_geo provides coordinates; site-summary provides riskStatus / positiveCount per plant
+- No additional data tables required beyond what Rank 1 and Rank 3b already confirm
+
+**Status:** **Planned** — depends on Rank 3b + Rank 1 BV + contract design. Not yet implemented.
+
+---
+
 ## Rank 4 — Zones / Locations (reference data)
 
 **Adapter method:** `getEnvMonZones`
@@ -122,16 +154,14 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 
 ---
 
-## Rank 6 — Corrective Actions
+## Rank 6 — Corrective Actions (Out of scope)
 
 **Adapter method:** `getEnvMonCorrectiveActions`
 **Returns:** `EnvMonCorrectiveAction[]` — CAPA records
 
-**Why sixth:**
-- No CAPA/corrective action source identified in the gold layer
-- V1 app may have managed CAPAs in a separate app-managed table
-
-**Status:** **Blocked** — no source identified
+**Status:** **Out of scope** — CAPA/corrective actions are not a V2 EnvMon parity requirement.
+`getEnvMonCorrectiveActions` is intentionally not migrated. Any future CAPA capability belongs
+to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do not implement.
 
 ---
 
@@ -165,14 +195,15 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 
 ## Recommended Implementation Sequence
 
-1. Run DDL for all three primary views in Databricks SQL Editor
-2. Update `docs/audit/envmon-native-column-verification-checklist.md` with `confirmed-ddl` status
-3. Wire `GET /api/envmon/site-summary` route — Rank 1 (QuerySpec already exists)
-4. Browser-verify in UAT
-5. Implement Rank 2 QuerySpec (`envmon.get_swab_results`)
-6. Wire `GET /api/envmon/swab-results` route after DDL confirmed
-7. Implement Rank 3 (trends) — shares same views
-8. Proceed to Rank 4+ only when em_* table existence is confirmed
+1. ~~Run DDL for all three primary views~~ — DONE (n.txt, confirmed-ddl 2026-05-17)
+2. ~~Wire `GET /api/envmon/site-summary`~~ — DONE (n.txt, route wired)
+3. Browser-verify `GET /api/envmon/site-summary` in UAT
+4. Implement Rank 2 QuerySpec (`envmon.get_swab_results`); wire `GET /api/envmon/swab-results`
+5. `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` — gate for Rank 3b, 4, 7
+6. Design `getEnvMonPlantMap` contract; implement `GET /api/envmon/plant-map` (Rank 3b)
+7. Design `getEnvMonPlantHotspots` contract; implement `GET /api/envmon/plant-hotspots` (Rank 3c)
+8. Implement Rank 3 (trends) — shares same views as site summary
+9. Implement Rank 4+ (zones, coordinates, floors, heatmap) only after em_* confirmed and populated
 
 ---
 
@@ -180,11 +211,13 @@ The i.txt ranking had all candidates BLOCKED on "no source view". The V1 source 
 
 | Rank | Slice | Method | Source confidence | em_* dependency | Status |
 |---|---|---|---|---|---|
-| 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-v1 | None | **QuerySpec written — DDL pending** |
-| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-v1 | None | Deferred until Rank 1 DDL confirmed |
-| 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Deferred until Rank 1 DDL confirmed |
-| 4 | Zones | `getEnvMonZones` | assumed | em_location_zones | Blocked — em_* unknown |
+| 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-ddl | None | **Route wired — BV pending** |
+| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-v1 | None | Planned — after Rank 1 BV |
+| 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Planned — after Rank 1 BV |
+| 3b | Plant Map | `getEnvMonPlantMap` (PROPOSED) | confirmed-v1 | em_plant_geo | Planned — em_plant_geo in UAT unknown; contract not designed |
+| 3c | Plant Hotspots | `getEnvMonPlantHotspots` (PROPOSED) | confirmed-v1 | em_plant_geo (read) | Planned — depends on Rank 3b + Rank 1 BV |
+| 4 | Zones | `getEnvMonZones` | assumed | em_location_zones | Planned — em_* unknown |
 | 5 | Alerts | `getEnvMonAlerts` | partial (derivable) | None | Deferred — alert rules undefined |
-| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | none | unknown | Blocked — no CAPA source |
-| 7 | Heatmap | `getEnvMonHeatmap` | confirmed-v1 for views; app tables unknown | em_location_coordinates, em_plant_floor | Blocked — em_* unknown |
+| 6 | Corrective Actions | `getEnvMonCorrectiveActions` | none | N/A | Out of scope — CAPA not a V2 EnvMon parity requirement |
+| 7 | Heatmap | `getEnvMonHeatmap` | confirmed-v1 for views; app tables unknown | em_location_coordinates, em_plant_floor | Planned — em_* unknown |
 | 8 | Swab Vectors | `getEnvMonSwabVectors` | none | partial | Deferred indefinitely — business rules undefined |

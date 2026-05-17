@@ -3,7 +3,8 @@
 **Date:** 2026-05-17  
 **Scope:** All Databricks views and materialised views referenced by current or planned native adapters  
 **Catalog (default):** `connected_plant_uat`  
-**Reference:** `docs/audit/adapter-source-status-matrix.md`, `docs/audit/current-state-after-native-databricks-work.md`
+**Reference:** `docs/audit/adapter-source-status-matrix.md`, `docs/audit/current-state-after-native-databricks-work.md`  
+**Last updated:** 2026-05-17 (n.txt) — EnvMon DDL confirmed, route wired (`GET /api/envmon/site-summary`), 99 tests passing
 
 ---
 
@@ -98,15 +99,15 @@ All WH360 objects are planned only. The schema (`wh360`) is separate from `gold`
 **Catalog:** `TRACE_CATALOG` (same as Trace2 — default `connected_plant_uat`)  
 **Schema:** `TRACE_SCHEMA` (default `gold`)
 
-Gold views confirmed-v1 from V1 source code + entities.yaml. em_* table DDL confirmed-v1 from V1 migration scripts 001b–007. DDL not yet run in connected_plant_uat for any object.
+Gold views confirmed-ddl 2026-05-17 (Group A — all three via DESCRIBE TABLE in connected_plant_uat). em_* table DDL confirmed-v1 from V1 migration scripts 001b–007; existence in UAT unknown.
 
 ### Group A — SAP QM Gold Views
 
 | Object | Columns confirmed-v1 | Used by | Status |
 |---|---|---|---|
-| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
-| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
-| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE | `getEnvMonSiteSummary` (QuerySpec) | ⚠ confirmed-v1 — DDL not yet run |
+| `gold_inspection_lot` | INSPECTION_LOT_ID, PLANT_ID, INSPECTION_TYPE, CREATED_DATE, INSPECTION_END_DATE, MATERIAL_ID, BATCH_ID | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
+| `gold_inspection_point` | INSPECTION_LOT_ID (FK), INSPECTION_POINT_ID, FUNCTIONAL_LOCATION, OPERATION_ID, SAMPLE_ID, SAMPLE_HOUR | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
+| `gold_batch_quality_result_v` | INSPECTION_LOT_ID+OPERATION_ID+SAMPLE_ID (FK), MIC_NAME, INSPECTION_RESULT_VALUATION, QUANTITATIVE_RESULT, UPPER_TOLERANCE, LOWER_TOLERANCE | `getEnvMonSiteSummary` | ✓ E (DDL confirmed 2026-05-17) |
 
 ### Group B — App-Managed Spatial Configuration (em_* tables)
 
@@ -118,15 +119,17 @@ All em_* tables are in TRACE_CATALOG/TRACE_SCHEMA (same catalog). Existence in c
 | `em_location_coordinates` | plant_id, func_loc_id, floor_id, x_pos (%), y_pos (%), parent_zone_id, revision_id, validation_status | `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
 | `em_layout_revision` | revision_id (PK), plant_id, floor_id, revision_number, state (draft/published/superseded/rolled_back) | Floor/zone read queries | ❌ app-managed — existence unknown in UAT |
 | `em_location_zones` | zone_id (PK), plant_id, floor_id, zone_name, geometry_type (polygon/rectangle), geometry_json, centroid_x/y, revision_id, status | `getEnvMonZones`, `getEnvMonHeatmap` | ❌ app-managed — existence unknown in UAT |
-| `em_plant_geo` | plant_id, lat, lon | Site map (not yet designed) | ❌ app-managed — existence unknown in UAT |
+| `em_plant_geo` | plant_id, lat, lon, updated_at, updated_by | `getEnvMonPlantMap` (PROPOSED), `getEnvMonPlantHotspots` (PROPOSED) — estate map + hot spot markers | ❌ app-managed — existence unknown in UAT |
 
-**EnvMon QuerySpec written:** `apps/api/adapters/envmon/envmon_databricks_adapter.py` — `get_site_summary_spec`  
-**Key gaps:**
+**o.txt (2026-05-17):** em_plant_geo elevated from "site map not yet designed" to required dependency for Estate Monitoring BC; `getEnvMonPlantMap` and `getEnvMonPlantHotspots` added as proposed candidate routes.  
+**n.txt (2026-05-17):** DDL confirmed for all three Group A views; route wired in `apps/api/routes/envmon.py`; registered in `main.py`; 99 tests passing.  
+**m.txt:** QuerySpec hardened (LIMIT 1 fix); 56 tests added; DDD model + route plan created.  
+**Key gaps (unchanged):**
 - `hygieneZone` / `areaType` have no V1 column equivalent — em_location_zones has no hygiene classification
-- CAPA/corrective actions not in V1 at all — `getEnvMonCorrectiveActions` has no source
-- Silent defaults in `map_site_summary_rows` (`criticalZoneExposures: 0`, `openCorrectiveActions: 0`, `trendDirection: 'stable'`) are **temporary placeholders, not business facts**
+- CAPA/corrective actions are out of scope for EnvMon V2 parity — `getEnvMonCorrectiveActions` is intentionally not migrated; future CAPA belongs to a separate Quality Actions / Deviation / CAPA bounded context
+- `plantName: ""` in `map_site_summary_rows` is a PLACEHOLDER (no gold_plant JOIN); `openCorrectiveActions: 0` and `overdueActions: 0` are contract-compatibility fixed zeros (not business facts)
 
-**Next action:** Run `DESCRIBE TABLE` for all three Group A views, then `SHOW TABLES LIKE 'em_%'` for Group B. Route wiring deferred until Group A DDL confirmed. Heatmap/zone deferred until Group B existence confirmed.
+**Next action:** Deploy to UAT; run browser verification in `docs/deployment/envmon-native-browser-verification.md`. After BV: confirm em_* tables (including em_plant_geo) then implement estate map read model. Heatmap/zone deferred until Group B em_* existence confirmed.
 
 **Full spatial config model:** `docs/audit/envmon-spatial-configuration-model.md`
 
@@ -159,4 +162,5 @@ Full DDL checklist: `docs/audit/trace-native-column-verification-checklist.md`
 | `getTraceGraph` | `gold.gold_batch_lineage`, `gold.gold_material`⚠, `gold.gold_plant` | QS only — blocked |
 | `getMassBalanceSummary` | `gold.gold_batch_mass_balance_v`⚠ | QS only — blocked |
 | `getLabFailures` | `csm_process_order_history.vw_gold_process_order_plan`❌ | Blocked — view missing |
-| All other methods (74) | None — mock data | Mock only |
+| `getEnvMonSiteSummary` | `gold.gold_inspection_lot` + `gold.gold_inspection_point` + `gold.gold_batch_quality_result_v` | **✓ E** — `GET /api/envmon/site-summary` (n.txt) |
+| All other methods (73) | None — mock data | Mock only |

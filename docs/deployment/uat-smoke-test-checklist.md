@@ -197,6 +197,28 @@ See `docs/deployment/browser-verification-backlog.md` (BV-02) for full pass crit
 
 ---
 
+### C10 — EnvMon site summary (native Databricks) — EXECUTABLE, awaiting browser verification
+
+`GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17`
+
+**Status: IMPLEMENTED** — route wired (n.txt, 2026-05-17), DDL confirmed for all three Group A SAP QM views, 99 tests passing. Browser verification pending.
+
+- [ ] Returns HTTP 200 with JSON object
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Adapter-Mode: databricks-api` present
+- [ ] Response header `X-Query-Name: envmon.get_site_summary` present
+- [ ] Body has all 12 EnvMonSiteSummarySchema keys: `plantId`, `plantName`, `zonesMonitored`, `zonesWithAlerts`, `positiveCount`, `positiveRate`, `openCorrectiveActions`, `overdueActions`, `complianceRate`, `riskStatus`, `highestSeverity`, `confidence`
+- [ ] `plantName` is `""` — placeholder; no gold_plant JOIN
+- [ ] `openCorrectiveActions` is `0` — contract compatibility; CAPA is out of scope for EnvMon V2 parity
+- [ ] `overdueActions` is `0` — contract compatibility; CAPA is out of scope for EnvMon V2 parity
+- [ ] `positiveRate` is a 0–100 percentage, not a 0–1 fraction
+- [ ] `riskStatus` is one of `compliant`, `elevated`, `non-compliant`, `unknown`
+- [ ] No SPN/PAT token used — query executes as end-user identity
+
+See `docs/deployment/envmon-native-browser-verification.md` for full pass criteria and troubleshooting.
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
