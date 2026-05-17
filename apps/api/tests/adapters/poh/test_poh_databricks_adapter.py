@@ -701,19 +701,26 @@ class TestGetOrderGoodsMovementsSpec:
 # ---------------------------------------------------------------------------
 
 class TestMapMovementDirection:
+    # Confirmed ADP (Tulip) movement types from live DDL (2026-05-17)
+    def test_101_maps_to_output(self) -> None:
+        assert _map_movement_direction("101") == "output"
+
     def test_261_maps_to_input(self) -> None:
         assert _map_movement_direction("261") == "input"
 
     def test_262_maps_to_input(self) -> None:
         assert _map_movement_direction("262") == "input"
 
-    def test_101_maps_to_output(self) -> None:
-        assert _map_movement_direction("101") == "output"
+    def test_531_maps_to_output(self) -> None:
+        assert _map_movement_direction("531") == "output"
 
-    def test_102_maps_to_output(self) -> None:
-        assert _map_movement_direction("102") == "output"
+    def test_711_is_unmapped(self) -> None:
+        assert _map_movement_direction("711") is None
 
-    def test_unknown_returns_none(self) -> None:
+    def test_712_is_unmapped(self) -> None:
+        assert _map_movement_direction("712") is None
+
+    def test_999_is_unmapped(self) -> None:
         assert _map_movement_direction("999") is None
 
     def test_none_returns_none(self) -> None:

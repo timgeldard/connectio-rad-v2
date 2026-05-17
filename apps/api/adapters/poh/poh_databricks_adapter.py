@@ -389,16 +389,24 @@ def map_order_confirmations_rows(rows: list[dict]) -> list[dict]:
 # getOrderGoodsMovements
 # ---------------------------------------------------------------------------
 
-# MOVEMENT_TYPE → direction map for ADP movements.
-# Confirmed values will be filled in once DISTINCT MOVEMENT_TYPE, MOVEMENT, ITEM_TYPE
-# results are received from connected_plant_uat.csm_process_order_history.vw_gold_adp_movement.
-# Standard SAP BWART codes are listed as a starting point but may not match ADP values.
+# MOVEMENT_TYPE → direction map for ADP (Tulip) movements.
+# Confirmed from DISTINCT MOVEMENT_TYPE, MOVEMENT, ITEM_TYPE query (2026-05-17,
+# connected_plant_uat.csm_process_order_history.vw_gold_adp_movement):
+#   101  Goods Receipts          → output
+#   261  Goods Issues            → input  (also covers "Unplanned Goods Issues")
+#   262  Goods Issues (reversal) → input
+#   531  Goods Receipts ITEM_TYPE=B (by-product receipt) → output
+#   711  Write-On/Off            → unmapped (direction ambiguous for write-on/off)
+#   712  Write-On/Off            → unmapped
+#   999  (null MOVEMENT)         → unmapped
+#   null MOVEMENT_TYPE           → unmapped ("Productions", "Write-On/Off", or null)
+# Rows with unmapped MOVEMENT_TYPE are included in the response without a direction field;
+# the frontend adapter filters them out. Extend this map if direction is later confirmed.
 _MOVEMENT_DIRECTION_MAP: dict[str, str] = {
-    # Standard SAP BWART — to be verified or replaced with confirmed ADP values
     "101": "output",   # goods receipt from production order
-    "102": "output",   # reversal of 101
-    "261": "input",    # goods issue to order
-    "262": "input",    # reversal of 261
+    "261": "input",    # goods issue to order (standard and unplanned)
+    "262": "input",    # reversal of goods issue
+    "531": "output",   # by-product goods receipt (ITEM_TYPE=B)
 }
 
 
