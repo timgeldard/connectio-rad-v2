@@ -22,6 +22,16 @@ command:
   - --workers
   - "2"
 
+# SQL warehouse resource — declares that the app executes queries on behalf of users.
+# This causes Databricks to include the "sql" scope in the forwarded OAuth token,
+# which is required for the token to be accepted by the SQL statement API.
+resources:
+  - name: connectio-warehouse
+    description: SQL warehouse for Databricks native reads
+    sql_warehouse:
+      id: e76480b94bea6ed5
+      permission: CAN_USE
+
 env:
   # V1 backend URLs — format: valueFrom: scope/key
   - name: V1_TRACE_API_BASE_URL
@@ -41,36 +51,36 @@ env:
   - name: BACKEND_ADAPTER_MODE
     value: databricks-api
 
-  # Databricks connection — required when BACKEND_ADAPTER_MODE=databricks-api.
+  # Databricks connection — non-secret config values set as literals.
+  # The workspace host and warehouse ID are not credentials; no need for secret scope.
+  # Note: DAB ${var.*} substitution applies to databricks.yml only, not app.yaml.
+  # Per-environment values live in the targets section of databricks.yml.
   - name: DATABRICKS_HOST
-    valueFrom: connectio-v2/databricks-host
+    value: https://adb-604667594731808.8.azuredatabricks.net
 
   - name: SQL_WAREHOUSE_ID
-    valueFrom: connectio-v2/sql-warehouse-id
+    value: e76480b94bea6ed5
 
   # App behaviour (frontend adapter mode — baked into JS bundle at build time, informational only)
   - name: ADAPTER_MODE
     value: legacy-api
 
-  # Domain catalog/schema — required when BACKEND_ADAPTER_MODE=databricks-api.
-  # CQ_CATALOG falls back to TRACE_CATALOG if unset (CQ and Trace share a workspace).
-  # Schema env vars are optional; defaults: POH=csm_process_order_history, TRACE=gold.
+  # Domain catalog/schema — non-secret config set as literals.
+  # Per-environment values live in the targets section of databricks.yml.
   - name: POH_CATALOG
-    valueFrom: connectio-v2/poh-catalog
+    value: connected_plant_uat
 
   - name: CQ_CATALOG
-    valueFrom: connectio-v2/cq-catalog
+    value: connected_plant_uat
 
   # TRACE_CATALOG — uncomment if Trace databricks-api routes are activated.
   # Also used as CQ_CATALOG fallback if CQ_CATALOG is unset.
   # - name: TRACE_CATALOG
-  #   valueFrom: connectio-v2/trace-catalog
+  #   value: connected_plant_uat
 
-  # Auth diagnostics — enabled for initial verification only.
-  # Disable after OAuth headers are confirmed: remove this entry and redeploy.
+  # Auth diagnostics — DISABLED. OAuth headers confirmed 2026-05-17.
+  # Re-enable by adding: - name: ENABLE_AUTH_DIAGNOSTICS / value: "true"
   # GET /api/diagnostics/auth-headers returns token_present/user_header_present (never raw token).
-  - name: ENABLE_AUTH_DIAGNOSTICS
-    value: "true"
 
   # Python runtime
   - name: PYTHONUNBUFFERED
