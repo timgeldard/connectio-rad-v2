@@ -272,6 +272,12 @@ describe('OrderHistoryView', () => {
     // Verify chronological sorting in timeline (01:30 Goods movement -> 03:05 Confirmation)
     const timelineBlock = screen.getByText(/Chronological Event Timeline/i).parentElement
     expect(timelineBlock).toBeInTheDocument()
+    const content = timelineBlock?.textContent ?? ''
+    const idxGM = content.indexOf('MAT-RM-RAW-MILK')
+    const idxConf = content.indexOf('CONF-001')
+    expect(idxGM).toBeGreaterThan(-1)
+    expect(idxConf).toBeGreaterThan(-1)
+    expect(idxGM).toBeLessThan(idxConf)
 
     // Collapsible technical drawer click test
     const drawerBtn = screen.getByRole('button', { name: /Show Technical Query Diagnostics/i })

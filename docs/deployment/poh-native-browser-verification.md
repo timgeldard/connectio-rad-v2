@@ -4,7 +4,7 @@ This guide is designed for the model/engineer with active UAT/Databricks databas
 
 ## 1. Setup & Environment Verification
 Before starting browser testing:
-1. Ensure your local environment is configured with `VITE_ADAPTER_MODE=legacy-api` or `databricks-api`.
+1. Ensure your local environment is configured with `VITE_ADAPTER_MODE=legacy-api` (this directs the frontend to query the FastAPI proxy, where the backend `BACKEND_ADAPTER_MODE` environment variable decides if it queries live Databricks or V1 proxy APIs).
 2. Confirm the Fast API proxy server is running on port 8000:
    ```bash
    python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload --app-dir apps/api
@@ -39,7 +39,7 @@ Before starting browser testing:
 
 ## 4. Running E2E UAT Verification Sweep (Real Databricks)
 Now, change adapter mode to target the live database:
-1. Stop the Vite server, set `VITE_ADAPTER_MODE=legacy-api` (or `databricks-api` if OAuth is verified), and restart the server.
+1. Stop the Vite server, set `VITE_ADAPTER_MODE=legacy-api` to query the FastAPI backend proxy, and ensure the backend is configured with `BACKEND_ADAPTER_MODE=databricks-api` for real Databricks data. Restart the Vite server.
 2. In the query form, enter a known, verified UAT process order ID. Example:
    - **Process Order ID:** `7006965038`
    - **Plant ID:** `IE10`

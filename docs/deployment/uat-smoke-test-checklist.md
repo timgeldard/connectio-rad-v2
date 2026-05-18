@@ -463,7 +463,7 @@ Second deploy with LIMIT fix completed 2026-05-18. Re-test pending.
 Verify that the dashboard view renders cleanly at `?workspace=process-order-review` with the new interactive `order-history` view as default.
 
 **Primary URL:**
-```
+```text
 https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=process-order-review
 ```
 
@@ -474,7 +474,7 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=proce
 - [ ] Header, Operations, Confirmations, and Goods Movements tables render with correct columns
 - [ ] Chronological timeline sorts events correctly and lists any undated items separately
 - [ ] Collapsible technical diagnostics displays the correct endpoints and payloads
-- [ ] No SAP cerrar or closing operations write-back buttons are present on the screen
+- [ ] No SAP close or closing operations write-back buttons are present on the screen
 
 ---
 
