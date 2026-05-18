@@ -12,6 +12,8 @@ variables:
     description: Unity Catalog catalog name for Connected Quality Lab domain
   wh360_catalog:
     description: Unity Catalog catalog name for Warehouse360 domain
+  wh360_schema:
+    description: Unity Catalog schema name for Warehouse360 domain (e.g. sap)
 
 workspace:
   host: https://adb-604667594731808.8.azuredatabricks.net
@@ -27,6 +29,7 @@ targets:
       poh_catalog: connected_plant_uat
       cq_catalog: connected_plant_uat
       wh360_catalog: connected_plant_uat
+      wh360_schema: sap
 
 resources:
   apps:

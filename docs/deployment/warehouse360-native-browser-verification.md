@@ -19,7 +19,7 @@ Without `WH360_CATALOG`, `resolve_domain_object("wh360", ...)` raises `Databrick
 
 **Config confirmed (2026-05-18):**
 - `WH360_CATALOG=connected_plant_uat` — added to `app.yaml` (commit `33fe43a`)
-- `WH360_SCHEMA` — defaults to `"wh360"` (not set explicitly)
+- `WH360_SCHEMA=sap` — confirmed and set in `app.yaml`
 - Known warehouse IDs for UAT: **`104`** and **`105`**
 
 **Redeploy required:** `npm run prepare:databricks && databricks bundle deploy --target uat`
@@ -50,7 +50,7 @@ All routes filter by `warehouse_id`. Without a known valid ID from UAT data, res
 ## Pre-UAT Config Checklist
 
 - [x] `WH360_CATALOG=connected_plant_uat` confirmed and set in `app.yaml` (commit `33fe43a`)
-- [x] `WH360_SCHEMA` confirmed (default: `"wh360"`)
+- [x] `WH360_SCHEMA=sap` confirmed and set in `app.yaml`
 - [x] Known `warehouse_id` for UAT: **104** and **105**
 - [x] `apps/api/app.yaml` updated with `WH360_CATALOG`
 - [ ] App redeployed and state: RUNNING

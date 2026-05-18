@@ -86,9 +86,11 @@ env:
     value: gold
 
   # WH360 catalog/schema — required for GET /api/warehouse360/* native routes.
-  # WH360_SCHEMA defaults to "wh360" in object_resolver.py if unset.
   - name: WH360_CATALOG
     value: connected_plant_uat
+
+  - name: WH360_SCHEMA
+    value: sap
 
   # Auth diagnostics — DISABLED. OAuth headers confirmed 2026-05-17.
   # Re-enable by adding: - name: ENABLE_AUTH_DIAGNOSTICS / value: "true"

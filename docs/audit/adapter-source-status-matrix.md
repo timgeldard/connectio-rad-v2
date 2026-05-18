@@ -110,9 +110,9 @@ Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_c
 
 **Summary:** 9 legacy adapter methods — 1 wired legacy-api (not browser-verified), 8 mock only.
 
-**New native routes (f.txt tranche — config-blocked 2026-05-18):** 5 `GET /api/warehouse360/*` routes are wired in `apps/api/routes/warehouse360.py` with full QuerySpec adapters in `warehouse360_databricks_adapter.py`. All use `resolve_domain_object("wh360", ...)` which requires `WH360_CATALOG` env var. **WH360_CATALOG is NOT set in `app.yaml`** — all 5 routes will return HTTP 503 until configured and redeployed. `WH360_SCHEMA` defaults to `"wh360"` if unset.
+**New native routes (f.txt tranche):** 5 `GET /api/warehouse360/*` routes are wired in `apps/api/routes/warehouse360.py` with full QuerySpec adapters in `warehouse360_databricks_adapter.py`. `WH360_CATALOG=connected_plant_uat`, `WH360_SCHEMA=sap` — both confirmed and set in `app.yaml` (commit `52f6b44`). Known warehouse IDs for UAT: **104**, **105**. Pending redeploy and BV (C17–C21).
 
-**Additional risk:** inbound/outbound/staging/exceptions use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT (EnvMon avoided this by embedding a clamped integer after route-level clamping). Verify and fix if 500s occur.
+**Risk:** inbound/outbound/staging/exceptions use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT (EnvMon avoided this by embedding a clamped integer after route-level clamping). Verify and fix if 500s occur.
 
 | Native route | Source view | Status |
 |---|---|---|
@@ -323,10 +323,10 @@ Gold views: None identified
 | `/api/envmon/zones` | GET | EnvMon | `getEnvMonZones` | **Planned** — depends on em_location_zones in UAT; NOT wired |
 | `/api/envmon/heatmap` | GET | EnvMon | `getEnvMonHeatmap` | **Planned** — depends on observations + spatial config; NOT wired |
 
-| `/api/warehouse360/overview` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** (WH360_CATALOG unset) — returns 503 until configured |
-| `/api/warehouse360/inbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
-| `/api/warehouse360/outbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
-| `/api/warehouse360/staging` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
-| `/api/warehouse360/exceptions` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
+| `/api/warehouse360/overview` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set (WH360_CATALOG=connected_plant_uat, WH360_SCHEMA=sap) — **pending BV (C17)** |
+| `/api/warehouse360/inbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C18)** — LIMIT :max_rows risk |
+| `/api/warehouse360/outbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C19)** — LIMIT :max_rows risk |
+| `/api/warehouse360/staging` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C20)** — LIMIT :max_rows risk |
+| `/api/warehouse360/exceptions` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C21)** — LIMIT :max_rows risk |
 
 No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend. Planned routes are documented targets only — NOT wired.
