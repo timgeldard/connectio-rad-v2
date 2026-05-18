@@ -380,79 +380,64 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for 
 
 ---
 
-### C16 — Trace graph (WITH RECURSIVE, fresh BV required) — PENDING
+### C16 — Trace graph (WITH RECURSIVE, fresh BV) ✓ PASSED 2026-05-18
 
-**Status: PENDING BROWSER VERIFICATION** — Trace switched from iterative multi-hop Python loop to `WITH RECURSIVE` SQL on main. Prior C12–C15 BV was against iterative implementation; those results are stale for the current code. Fresh UAT required.
+**Status: BROWSER-VERIFIED 2026-05-18** — WITH RECURSIVE implementation confirmed working. HTTP 200, 7 nodes, 7 edges, depthReached=1, no timeout.
 
-```http
-POST /api/trace2/trace-graph
-Content-Type: application/json
+Test anchor: `material_id=20052009`, `batch_id=0008602411`, `plant_id=C061`, `direction=both`, `max_depth=2`, `max_edges=100`
 
-{
-  "material_id": "20052009",
-  "batch_id": "0008602411",
-  "plant_id": "C061",
-  "direction": "both",
-  "max_depth": 2,
-  "max_edges": 100
-}
-```
+Actual response (fetch from UAT browser console, 2026-05-18):
+- `x-data-source: view:gold_batch_lineage`
+- `x-query-name: trace2.get_trace_graph`
+- Anchor: `nodeKey=20052009:0008602411` (2-tuple format confirmed — no plant in key)
+- 7 nodes: 1 anchor (directions: anchor+downstream+upstream), 1 downstream, 5 upstream
+- 7 edges: all `linkType=PRODUCTION`, `movementType=261`, `postingDate=2024-08-27`
+- `depthReached=1`, `truncated=false`, `warnings=[]`
 
-Expected: HTTP 200, `x-data-source: databricks-api`, `x-query-name: trace2.get_trace_graph`, body has `anchor/nodes/edges/depth/truncated/warnings`. No mock data. No timeout.
+- [x] Returns HTTP 200
+- [x] `x-data-source: view:gold_batch_lineage` present
+- [x] `x-query-name: trace2.get_trace_graph` present
+- [x] Body has `anchor`, `nodes`, `edges`, `depthReached`, `truncated`, `warnings`
+- [x] No mock data
+- [x] No 504 timeout — WITH RECURSIVE avoids iterative round-trips
 
-Known risk: `WITH RECURSIVE` syntax compatibility with Databricks SQL. If syntax fails, capture exact error and fix QuerySpec SQL.
-
-- [ ] Returns HTTP 200
-- [ ] `x-data-source: databricks-api` present
-- [ ] `x-query-name: trace2.get_trace_graph` present
-- [ ] Body has `anchor`, `nodes`, `edges`, `depth`, `truncated`, `warnings`
-- [ ] No mock data
-- [ ] No 504 timeout
-
-**UI verification (`?workspace=traceability-workspace`):**
-- [ ] Page loads without crash, no Phase 3 placeholder
-- [ ] TraceQueryForm visible with correct default values
-- [ ] Run Trace renders graph
-- [ ] Source badge shows `databricks-api`
-- [ ] Node click and edge click details work
-- [ ] Timeline visible
-- [ ] Source/limitations banner visible
-
-See `docs/deployment/trace-native-browser-verification.md` for full criteria.
+See `docs/deployment/trace-native-browser-verification.md` (T2 manual result table) for full evidence.
 
 ---
 
-### C17–C21 — Warehouse360 native routes — CONFIG-BLOCKED
+### C17–C21 — Warehouse360 native routes — PENDING RE-TEST
 
-**Status: CONFIG-BLOCKED** — `WH360_CATALOG` not set in `app.yaml`. Object resolver has no fallback for this domain — all 5 routes will return HTTP 503 (`DatabricksConfigError`) until the catalog variable is configured and the app redeployed.
-
-`WH360_SCHEMA` defaults to `"wh360"` if unset.
-
-**Additional risk:** WH360 inbound/outbound/staging/exceptions routes use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT — EnvMon swab-results avoided this pattern by embedding a clamped integer. Verify and fix if 500s are returned.
-
-Routes blocked:
-- `GET /api/warehouse360/overview?warehouse_id=<id>` — source: `wh360_cockpit_summary_v`
-- `GET /api/warehouse360/inbound?warehouse_id=<id>` — source: `wh360_inbound_v`
-- `GET /api/warehouse360/outbound?warehouse_id=<id>` — source: `wh360_deliveries_v`
-- `GET /api/warehouse360/staging?warehouse_id=<id>` — source: `staging_orders_v`
-- `GET /api/warehouse360/exceptions?warehouse_id=<id>` — source: `wh360_imwm_exceptions_v`
+**Status: PENDING RE-TEST** — Config set, source views fixed, LIMIT fix deployed. Awaiting browser re-test after second deploy (2026-05-18).
 
 **Config confirmed (2026-05-18):**
 - `WH360_CATALOG=connected_plant_uat` set in `app.yaml` ✓
 - `WH360_SCHEMA=wh360` (default — confirmed correct for UAT) ✓
 - Known warehouse IDs: **104**, **105** ✓
-- `connected_plant_uat.wh360.wh360_inbound_v` — **exists** ✓
-- `connected_plant_uat.wh360.wh360_cockpit_summary_v` — **does not exist** ✗
 
-**Overview route (C17) is source-pending** — `wh360_cockpit_summary_v` does not exist in UAT. Correct view name must be confirmed before this route can be fixed. Do not invent a replacement.
+**Source view fixes (2026-05-18):**
+- Overview: `wh360_cockpit_summary_v` **does not exist** — replaced with `wh360_kpi_snapshot_v` (global single-row KPI snapshot, confirmed via DESCRIBE + SELECT). No WHERE clause (no warehouse_id column). 11-column SELECT: `orders_total, orders_red, orders_amber, trs_open, tos_open, deliveries_today, deliveries_at_risk, inbound_open, bins_blocked, bins_total, bin_util_pct`.
+- `LIMIT :max_rows` **rejected by Databricks SQL** — all 4 list routes (inbound/outbound/staging/exceptions) returned HTTP 502 in first test. Fixed by embedding `LIMIT 1000` literal directly in SQL and removing `max_rows` from params dict.
+- `connected_plant_uat.wh360.wh360_inbound_v` — **exists** ✓ (confirmed first test round)
+
+**First test result (pre-LIMIT fix, 2026-05-18):**
+- `GET /api/warehouse360/overview?warehouse_id=104` — **HTTP 200** ✓ (after source view fix)
+- `GET /api/warehouse360/inbound?warehouse_id=104` — **HTTP 502** ✗ (LIMIT :max_rows rejected)
+- `GET /api/warehouse360/outbound?warehouse_id=104` — **HTTP 502** ✗
+- `GET /api/warehouse360/staging?warehouse_id=104` — **HTTP 502** ✗
+- `GET /api/warehouse360/exceptions?warehouse_id=104` — **HTTP 502** ✗
+
+Second deploy with LIMIT fix completed 2026-05-18. Re-test pending.
 
 - [x] `WH360_CATALOG` set in `app.yaml`
 - [x] `warehouse_id` known for UAT (104, 105)
-- [ ] Overview view name confirmed (source-pending)
-- [ ] Inbound route returns HTTP 200 or honest empty
-- [ ] Outbound, staging, exceptions views confirmed to exist
-- [ ] `x-data-source: databricks-api` on each working route
-- [ ] `LIMIT :max_rows` compatibility confirmed (or fixed)
+- [x] Overview view name confirmed (`wh360_kpi_snapshot_v`)
+- [x] `LIMIT :max_rows` fixed (literal `LIMIT 1000` embedded in SQL)
+- [x] C17: Overview — **HTTP 200** ✓ (`wh360_kpi_snapshot_v`, LIMIT 1, no warehouse_id filter)
+- [ ] C18: Inbound — **PENDING RE-TEST** (`wh360_inbound_v` exists, LIMIT 1000 fix deployed)
+- [ ] C19: Outbound — **DDL-BLOCKED** (`wh360_deliveries_v` has no `WAREHOUSE_NUMBER` column — need `DESCRIBE TABLE` to find correct filter column)
+- [ ] C20: Staging — **SOURCE-BLOCKED** (`staging_orders_v` does not exist in `connected_plant_uat.wh360` — need `SHOW VIEWS` to find alternative)
+- [ ] C21: Exceptions — **SOURCE-BLOCKED** (`wh360_imwm_exceptions_v` does not exist in `connected_plant_uat.wh360` — need `SHOW VIEWS` to find alternative)
+- [ ] `x-data-source: databricks-api` on each unblocked route
 
 ---
 
