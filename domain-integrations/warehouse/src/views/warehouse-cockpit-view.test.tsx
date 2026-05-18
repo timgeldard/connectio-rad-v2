@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@testing-library/jest-dom'
 import { WarehouseCockpitView } from './warehouse-cockpit-view.js'
 import { warehouse360AdapterInstance } from '../adapters/warehouse-360-adapter-factory.js'
+import type { Warehouse360AdapterRequest } from '../adapters/warehouse-360-adapter.js'
 
 function makeQueryClient() {
   return new QueryClient({
