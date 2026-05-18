@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
-**Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
-**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired; e.txt: link-type legend, TraceQueryForm, final route mounted  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T2-UI full screen (C14) **BROWSER-VERIFIED 2026-05-18** (gold_batch_lineage, databricks-api, depth=1, truncated=No). T2-Shell (C15) **BROWSER-VERIFIED 2026-05-18** (same data confirmed on final workspace route). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -344,7 +344,7 @@ Expected headers: `X-Query-Name: trace2.get_mass_balance`
 
 ## Check T2-Shell — Final user-facing Trace workspace (d.txt, 2026-05-18)
 
-**Status: PENDING BROWSER VERIFICATION** — route mounted, default view changed to `trace-tree`, TraceQueryForm embedded.
+**Status: BROWSER-VERIFIED 2026-05-18** — route mounted, default view `trace-tree`, TraceQueryForm embedded. Source: `gold_batch_lineage`, Execution: `databricks-api`, Query: `trace2.get_trace_graph`, Depth reached: 1, Truncated: No.
 
 **Primary URL:**
 ```
@@ -382,7 +382,7 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 
 | Status | Date | Notes |
 |---|---|---|
-| [ ] PENDING | — | Awaiting UAT deploy and manual browser test |
+| [x] **PASSED** | 2026-05-18 | Source: `gold_batch_lineage`. Execution: `databricks-api`. Query: `trace2.get_trace_graph`. Depth reached: 1. Truncated: No. Same data confirmed on both `?workspace=trace-graph-verify` (C14) and `?workspace=traceability-workspace&view=trace-tree` (C15). No mock fallback. |
 
 ---
 

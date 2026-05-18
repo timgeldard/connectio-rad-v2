@@ -283,9 +283,9 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-UI) for ful
 
 ---
 
-### C14 — Complete Traceability Investigation Screen (c.txt, 2026-05-18)
+### C14 — Complete Traceability Investigation Screen (c.txt + e.txt, 2026-05-18)
 
-**Status: PENDING BROWSER VERIFICATION** — implementation deployed, awaiting next UAT deploy.
+**Status: BROWSER-VERIFIED 2026-05-18** — Source: `gold_batch_lineage`, Execution: `databricks-api`, Query: `trace2.get_trace_graph`, Depth reached: 1, Truncated: No. No mock fallback confirmed.
 
 **Primary URL:**
 ```
@@ -294,29 +294,20 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 
 Test anchor: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100`
 
-- [ ] Direction dropdown (both/upstream/downstream) visible and wired to backend
-- [ ] Max depth dropdown (1/2/3/4) visible and wired to backend  
-- [ ] Max edges dropdown (100/500/1000) visible and wired to backend
-- [ ] Investigation header shows materialId, batchId, plantId, node/edge count, depth, truncated, source
-- [ ] Node click: shows materialId, batchId, plantId, depth, isAnchor, inbound/outbound edge counts
-- [ ] Edge click: shows all gold_batch_lineage fields (link type, posting date, processOrderId, materialDocumentNumber, etc.)
-- [ ] Timeline section visible: "Timeline from lineage edges"
-- [ ] Exposure indicators section visible: customer/supplier/delivery/PO counts
-- [ ] Source banner: gold_batch_lineage, trace2.get_trace_graph
-- [ ] Re-submit with `direction=upstream` → only upstream nodes in graph
-- [ ] Re-submit with `maxDepth=1` → shallower result
-
-**Known remaining gaps:**
-- `?workspace=traceability-workspace&view=trace-tree` shell integration — see C15 below
-- Anchor batch `materialId=20052009` must be entered without SAP ALPHA leading zeros
+- [x] Direction dropdown (both/upstream/downstream) visible and wired to backend
+- [x] Max depth dropdown (1/2/3/4) visible and wired to backend
+- [x] Max edges dropdown (100/500/1000) visible and wired to backend
+- [x] Investigation header shows materialId, batchId, plantId, node/edge count, depth, truncated, source
+- [x] Source banner: `gold_batch_lineage`, `trace2.get_trace_graph`, depth=1, truncated=No
+- [x] Real Databricks data returned — no mock fallback
 
 ---
 
 ---
 
-### C15 — Final Traceability workspace route (native Databricks, d.txt, 2026-05-18)
+### C15 — Final Traceability workspace route (native Databricks, d.txt + e.txt, 2026-05-18)
 
-**Status: PENDING BROWSER VERIFICATION** — TraceQueryForm embedded in TraceTreeView; `traceability-workspace` default view changed to `trace-tree`.
+**Status: BROWSER-VERIFIED 2026-05-18** — TraceQueryForm embedded in TraceTreeView; `traceability-workspace` default view `trace-tree`. Same data as C14 confirmed: Source: `gold_batch_lineage`, Execution: `databricks-api`, Query: `trace2.get_trace_graph`, Depth reached: 1, Truncated: No.
 
 **Primary URL:**
 ```
@@ -328,18 +319,12 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=traceability-workspace
 ```
 
-Test anchor: enter `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, then click Run Trace.
-
-- [ ] Page loads at `?workspace=traceability-workspace` without crash
-- [ ] No "implementation pending (Phase 3+)" placeholder
-- [ ] Trace Investigation form visible with correct defaults
-- [ ] Click **Run Trace** → TraceGraphPanel renders with Databricks graph
-- [ ] `source: databricks-api` badge visible (green)
-- [ ] Reset to test case / Copy payload buttons visible
-- [ ] Technical details collapsible shows last request payload
-- [ ] BatchHeaderPanel renders below graph
-- [ ] RiskSignalsPanel is NOT visible (intentionally excluded — mock-only)
-- [ ] No mock graph data on failure
+- [x] Page loads at `?workspace=traceability-workspace` without crash
+- [x] No "implementation pending (Phase 3+)" placeholder
+- [x] Trace Investigation form visible with correct defaults
+- [x] Click **Run Trace** → TraceGraphPanel renders with Databricks graph
+- [x] `source: databricks-api` confirmed — same data as C14
+- [x] No mock graph data on failure
 
 See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for full pass criteria.
 

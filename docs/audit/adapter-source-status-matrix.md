@@ -291,7 +291,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, `materialId=20052009`, green badge, nodes+edges rendered; full workspace shell BV pending |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **C14 BV 2026-05-18** — `?workspace=trace-graph-verify`; **C15 BV 2026-05-18** — `?workspace=traceability-workspace&view=trace-tree`; source=gold_batch_lineage, execution=databricks-api, depth=1, truncated=No; no mock fallback |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
