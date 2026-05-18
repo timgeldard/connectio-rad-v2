@@ -77,10 +77,13 @@ env:
   - name: CQ_CATALOG
     value: connected_plant_uat
 
-  # TRACE_CATALOG — uncomment if Trace databricks-api routes are activated.
-  # Also used as CQ_CATALOG fallback if CQ_CATALOG is unset.
-  # - name: TRACE_CATALOG
-  #   value: connected_plant_uat
+  # TRACE_CATALOG / TRACE_SCHEMA — required for Trace and EnvMon databricks-api routes.
+  # Activated q.txt (2026-05-18): POST /api/trace2/trace-graph + GET /api/envmon/* routes.
+  - name: TRACE_CATALOG
+    value: connected_plant_uat
+
+  - name: TRACE_SCHEMA
+    value: gold
 
   # Auth diagnostics — DISABLED. OAuth headers confirmed 2026-05-17.
   # Re-enable by adding: - name: ENABLE_AUTH_DIAGNOSTICS / value: "true"

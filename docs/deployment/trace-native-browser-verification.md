@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
 **Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
-**Status:** T2 route executable — awaiting browser verification. T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -219,7 +219,7 @@ X-Query-Name: trace2.get_trace_graph
 
 | Status | Date | Notes |
 |---|---|---|
-| [ ] not yet tested | — | Route wired (q.txt, 2026-05-18) — deploy and browser-verify |
+| [x] **PASSED** | 2026-05-18 | HTTP 200 — `ok: true`. UC GRANT applied to `tim.geldard@kerry.com` on `connected_plant_uat.gold`. Test anchor: `material_id=20052009`, `batch_id=0008602411`, `plant_id=C061`, `direction=both`, `max_depth=2`. |
 
 ---
 
