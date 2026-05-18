@@ -353,6 +353,58 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for 
 
 ---
 
+### C16 — Warehouse360 Overview (native Databricks)
+
+`GET /api/warehouse360/overview?warehouse_id=<known_wh>`
+
+- [ ] Returns HTTP 200 with cockpit overview data
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_overview` present
+- [ ] No mock fallback on query failure
+
+### C17 — Warehouse360 Inbound (native Databricks)
+
+`GET /api/warehouse360/inbound?warehouse_id=<known_wh>&limit=100`
+
+- [ ] Returns HTTP 200 with inbound PO/STO items array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_inbound` present
+- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
+- [ ] No mock fallback on query failure
+
+### C18 — Warehouse360 Outbound (native Databricks)
+
+`GET /api/warehouse360/outbound?warehouse_id=<known_wh>&limit=100`
+
+- [ ] Returns HTTP 200 with outbound delivery lines array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_outbound` present
+- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
+- [ ] No mock fallback on query failure
+
+### C19 — Warehouse360 Staging (native Databricks)
+
+`GET /api/warehouse360/staging?warehouse_id=<known_wh>&limit=100`
+
+- [ ] Returns HTTP 200 with staging orders array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_staging` present
+- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
+- [ ] No mock fallback on query failure
+
+### C20 — Warehouse360 Exceptions (native Databricks)
+
+`GET /api/warehouse360/exceptions?warehouse_id=<known_wh>&limit=100`
+
+- [ ] Returns HTTP 200 with exception items array
+- [ ] Response header `X-Data-Source: databricks-api` present
+- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_exceptions` present
+- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
+- [ ] Exception severity is correctly mapped (expired=critical, <=7 days=high, <=30 days=medium, >30 days=low)
+- [ ] No mock fallback on query failure
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.

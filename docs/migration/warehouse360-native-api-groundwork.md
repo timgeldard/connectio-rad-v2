@@ -51,13 +51,13 @@ Since we are doing **read-only groundwork** without direct UAT access, we classi
 
 ---
 
-## 🚀 3. Recommended API Groundwork Sequence
+## 🚀 3. Recommended API Groundwork Sequence (COMPLETE & HARDENED — 2026-05-18)
 
-To establish a safe, highly modular native groundwork that Claude can later verify, we will implement the following read-only slices in order:
+We have fully implemented, hardened, and unit-tested all steps of the recommended sequence:
 
-1. **Object Resolver Alignment:** Add `wh360` domain to `object_resolver.py` to enable fully-qualified catalog/schema routing.
-2. **Data Contracts Expansion:** Write additive schemas in `packages/data-contracts` for `Warehouse360Overview`, `Warehouse360InboundItem`, `Warehouse360OutboundItem`, `Warehouse360StagingItem`, and `Warehouse360ExceptionItem`.
-3. **QuerySpec Factories & Row Mappers:** Create `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` implementing robust, injection-safe parameterised SQL queries and defensive null-safe row mappers.
-4. **FastAPI Route Shell:** Implement `/api/warehouse360/*` endpoints inside `apps/api/routes/warehouse360.py` supporting `databricks-api` mode checks, proper error status mapping, and native response headers.
-5. **Frontend Adapter Foundations:** Extend the frontend adapter layer with corresponding endpoints (gated, with no silent mock fallbacks in native mode).
-6. **Robust Test Verification:** Write unit tests for mappers, QuerySpecs, routes, and architecture guardrails.
+1. **Object Resolver Alignment:** Wired the `wh360` domain explicitly in `object_resolver.py` to target `WH360_CATALOG` and `WH360_SCHEMA`. (COMPLETE)
+2. **Data Contracts Expansion:** Added robust schemas in `packages/data-contracts` for `Warehouse360Overview`, `Warehouse360InboundItem`, `Warehouse360OutboundItem`, `Warehouse360StagingItem`, and `Warehouse360ExceptionItem` with defensive `.nullable().optional()` fallbacks for maximum resilience. (COMPLETE)
+3. **QuerySpec Factories & Row Mappers:** Created `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` supporting dynamic filters (`plant_id`, `date_from`, `date_to`) and secure bounded literal limit casting for maximum safety and efficiency. (COMPLETE)
+4. **FastAPI Route Shell:** Implemented dynamic query param parsing, validation and routing shell in `apps/api/routes/warehouse360.py` with standard `422 Unprocessable Entity` validations. (COMPLETE)
+5. **Frontend Adapter Foundations:** Extended client adapter layer in `warehouse-360-adapter.ts` and `warehouse-360-legacy-api-adapter.ts` to seamlessly forward user-supplied query filters to the backend. (COMPLETE)
+6. **Robust Test Verification:** Wrote extensive Vitest and Pytest validation tests ensuring correct parameter bounding and query forwarding. (COMPLETE)

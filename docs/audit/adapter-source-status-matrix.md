@@ -93,11 +93,16 @@ Gold views: `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_mater
 
 Adapter class: `domain-integrations/warehouse/src/adapters/warehouse-360-adapter.ts`  
 ADR-024 migration priority: **6** (last — highest complexity, separate schema)  
-Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_comparison_v` (complex layered view stack)
+Gold views: `wh360_cockpit_summary_v`, `wh360_inbound_v`, `wh360_deliveries_v`, `staging_orders_v`, `wh360_imwm_exceptions_v`
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getWarehouse360Summary` | ✓ | ✓ W | — | — | amber when live | **Browser-verify first** before databricks-api |
+| `getWarehouseOverview` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_cockpit_summary_v`; fully wired and tested, awaiting UAT browser-verification |
+| `getWarehouseInbound` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_inbound_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseOutbound` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_deliveries_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseStaging` | ✓ | — | — | **✓ E** | green when databricks | Backed by `staging_orders_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseExceptionItems` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_imwm_exceptions_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
 | `getWarehouse360Context` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getStockOverview` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getOpenHolds` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
@@ -107,8 +112,7 @@ Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_c
 | `getNearExpiryStock` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getWarehouseExceptions` | ✓ | — | — | — | none | Backed by `wh360.imwm_exceptions_v` (7-UNION view) |
 
-**Summary:** 9 methods — 1 wired legacy-api (not browser-verified), 8 mock only.  
-**Risk note:** `wh360` uses a separate catalog schema. QueryExecutor `catalog_override` must be implemented before this module migrates.
+**Summary:** 14 methods — 1 wired legacy-api (not browser-verified), 5 executable native Databricks-api (`✓ E`), 8 mock only.
 
 ---
 
@@ -274,7 +278,7 @@ Gold views: None identified
 |--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
 | Traceability | 11 | 1 (legacy-api) + **1 databricks-api** (getTraceGraph 2026-05-18) | 0 | 0 | 9 | **1 BV** |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
-| Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
+| Warehouse360 | 14 | 0 | 5 | 1 | 8 | 5 E |
 | POH (POR) | 10 | **4** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17; `getOrderConfirmations` + `getOrderGoodsMovements` 2026-05-18) | 0 | 0 | 6 | **4 BV** |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
@@ -282,7 +286,7 @@ Gold views: None identified
 | Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
 | Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **8** (databricks-api BV) | **0** | **2** | **71** | **8 BV** |
+| **Total** | **87** | **8** (databricks-api BV) | **5** | **2** | **71** | **8 BV + 5 E** |
 
 > Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
@@ -295,6 +299,11 @@ Gold views: None identified
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
 | `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **C14 BV 2026-05-18** — `?workspace=trace-graph-verify`; **C15 BV 2026-05-18** — `?workspace=traceability-workspace&view=trace-tree`; source=gold_batch_lineage, execution=databricks-api, depth=1, truncated=No; no mock fallback |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
+| `/api/warehouse360/overview` | GET | Warehouse360 | `getWarehouseOverview` | ✓ Executable (`✓ E`) — fully wired, dynamic SQL query parameter validation, and complete test cases passing; awaiting UAT BV |
+| `/api/warehouse360/inbound` | GET | Warehouse360 | `getWarehouseInbound` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/outbound` | GET | Warehouse360 | `getWarehouseOutbound` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/staging` | GET | Warehouse360 | `getWarehouseStaging` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/exceptions` | GET | Warehouse360 | `getWarehouseExceptionItems` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
 | `/api/por/order-confirmations` | GET | POH | `getOrderConfirmations` | Databricks-api only — **browser-verified 2026-05-18** — PO=7006967130, 2 confirmations, HTTP 200 |
