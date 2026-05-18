@@ -307,8 +307,41 @@ Test anchor: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direc
 - [ ] Re-submit with `maxDepth=1` → shallower result
 
 **Known remaining gaps:**
-- `?workspace=traceability-workspace&tab=trace` shell integration not tested
+- `?workspace=traceability-workspace&view=trace-tree` shell integration — see C15 below
 - Anchor batch `materialId=20052009` must be entered without SAP ALPHA leading zeros
+
+---
+
+---
+
+### C15 — Final Traceability workspace route (native Databricks, d.txt, 2026-05-18)
+
+**Status: PENDING BROWSER VERIFICATION** — TraceQueryForm embedded in TraceTreeView; `traceability-workspace` default view changed to `trace-tree`.
+
+**Primary URL:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=traceability-workspace&view=trace-tree
+```
+
+**Also verify bare URL (defaults to trace-tree):**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=traceability-workspace
+```
+
+Test anchor: enter `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, then click Run Trace.
+
+- [ ] Page loads at `?workspace=traceability-workspace` without crash
+- [ ] No "implementation pending (Phase 3+)" placeholder
+- [ ] Trace Investigation form visible with correct defaults
+- [ ] Click **Run Trace** → TraceGraphPanel renders with Databricks graph
+- [ ] `source: databricks-api` badge visible (green)
+- [ ] Reset to test case / Copy payload buttons visible
+- [ ] Technical details collapsible shows last request payload
+- [ ] BatchHeaderPanel renders below graph
+- [ ] RiskSignalsPanel is NOT visible (intentionally excluded — mock-only)
+- [ ] No mock graph data on failure
+
+See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for full pass criteria.
 
 ---
 

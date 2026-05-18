@@ -148,7 +148,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <TraceInvestigationWorkspace
           scope={activeScope}
           investigationId={investigationId ?? undefined}
-          viewId={viewId ?? 'overview'}
+          viewId={viewId ?? 'trace-tree'}
         />
       </div>
     )
