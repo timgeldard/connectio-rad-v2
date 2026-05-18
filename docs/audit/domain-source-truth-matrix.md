@@ -100,8 +100,9 @@
 
 **Adapter:** `domain-integrations/spc/src/adapters/spc-monitoring-adapter.ts`, `spc-signals-adapter.ts`  
 **FastAPI:** None  
-**Databricks MVs:** `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_material_dim_mv`, `spc_process_flow_source_mv` (all exist; DDL not run)  
-**ADR-024 priority:** 3
+**Databricks MVs:** `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_material_dim_mv`, `spc_process_flow_source_mv` (all exist; DDL not run due to blockade)  
+**ADR-024 priority:** 3  
+**Blockade:** Catalog alignment of the `spc_quality_metrics` schema is pending in UAT. As a result, SPC operates in a hardened, high-fidelity Sandbox mode with explicit user warning branding and relaxed schemas until the schema alignment blocker is resolved.
 
 | Method | Source | Status |
 |---|---|---|

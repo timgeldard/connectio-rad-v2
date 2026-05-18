@@ -13,10 +13,7 @@
       "!{projectRoot}/src/test-setup.[jt]s?(x)"
     ],
     "tsFiles": ["{projectRoot}/**/*.{ts,tsx}", "sharedGlobals"],
-    "sharedGlobals": [
-      "{workspaceRoot}/tsconfig.base.json",
-      "{workspaceRoot}/.prettierrc"
-    ]
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json", "{workspaceRoot}/.prettierrc"]
   },
   "plugins": [
     {
@@ -57,5 +54,6 @@
       "inputs": ["default", "^production"],
       "cache": true
     }
-  }
+  },
+  "analytics": false
 }

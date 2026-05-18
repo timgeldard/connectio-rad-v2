@@ -4,6 +4,7 @@ import { ControlChartPanel } from '../panels/control-chart-panel.js'
 import { CharacteristicCapabilityPanel } from '../panels/characteristic-capability-panel.js'
 import { useMonitoredCharacteristics } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
+import { SPCSandboxBanner } from './chart-overview-view.js'
 
 const PANEL_GRID: CSSProperties = {
   display: 'grid',
@@ -36,6 +37,7 @@ export function CharacteristicReviewView({ request }: CharacteristicReviewViewPr
 
   return (
     <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+      <SPCSandboxBanner />
       {characteristics.length > 0 && (
         <div
           role="group"
