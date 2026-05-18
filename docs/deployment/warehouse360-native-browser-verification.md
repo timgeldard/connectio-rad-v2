@@ -17,13 +17,12 @@ All 5 native WH360 routes are wired and tested locally (682 pytest pass with tes
 
 Without `WH360_CATALOG`, `resolve_domain_object("wh360", ...)` raises `DatabricksConfigError` and all routes return HTTP 503. No mock fallback, no silent legacy-api fallback — this is the expected and correct error behaviour.
 
-**Required before testing:**
-1. Confirm `WH360_CATALOG` value for the UAT Unity Catalog workspace (not derivable from current config or docs — must be supplied by user)
-2. Confirm `WH360_SCHEMA` if different from the default `"wh360"`
-3. Confirm a known `warehouse_id` value from UAT data
-4. Add `WH360_CATALOG` (and optionally `WH360_SCHEMA`) to `apps/api/app.yaml`
-5. Redeploy: `npm run prepare:databricks && databricks bundle deploy --target uat`
-6. Run verification below
+**Config confirmed (2026-05-18):**
+- `WH360_CATALOG=connected_plant_uat` — added to `app.yaml` (commit `33fe43a`)
+- `WH360_SCHEMA` — defaults to `"wh360"` (not set explicitly)
+- Known warehouse IDs for UAT: **`104`** and **`105`**
+
+**Redeploy required:** `npm run prepare:databricks && databricks bundle deploy --target uat`
 
 ---
 
@@ -50,10 +49,10 @@ All routes filter by `warehouse_id`. Without a known valid ID from UAT data, res
 
 ## Pre-UAT Config Checklist
 
-- [ ] `WH360_CATALOG` value confirmed (user to supply)
-- [ ] `WH360_SCHEMA` confirmed (default: `"wh360"`)
-- [ ] Known `warehouse_id` for UAT data (user to supply)
-- [ ] `apps/api/app.yaml` updated with `WH360_CATALOG`
+- [x] `WH360_CATALOG=connected_plant_uat` confirmed and set in `app.yaml` (commit `33fe43a`)
+- [x] `WH360_SCHEMA` confirmed (default: `"wh360"`)
+- [x] Known `warehouse_id` for UAT: **104** and **105**
+- [x] `apps/api/app.yaml` updated with `WH360_CATALOG`
 - [ ] App redeployed and state: RUNNING
 
 ---
