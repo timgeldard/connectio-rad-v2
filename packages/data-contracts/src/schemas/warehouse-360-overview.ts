@@ -191,3 +191,129 @@ export const WarehouseReconciliationExceptionSchema = z.object({
 })
 
 export type WarehouseReconciliationException = z.infer<typeof WarehouseReconciliationExceptionSchema>
+
+// ---------------------------------------------------------------------------
+// Warehouse360Overview
+// ---------------------------------------------------------------------------
+
+export const Warehouse360OverviewSchema = z.object({
+  plantId: z.string(),
+  warehouseId: z.string(),
+  inboundDueCount: z.number().int().min(0),
+  inboundOverdueCount: z.number().int().min(0),
+  outboundDueCount: z.number().int().min(0),
+  outboundOverdueCount: z.number().int().min(0),
+  stagingOpenCount: z.number().int().min(0),
+  stagingOverdueCount: z.number().int().min(0),
+  nearExpiryCount: z.number().int().min(0),
+  reconciliationExceptionCount: z.number().int().min(0),
+  blockedStockCount: z.number().int().min(0),
+  source: z.string().optional(),
+  warnings: z.array(z.string()).optional(),
+})
+
+export type Warehouse360Overview = z.infer<typeof Warehouse360OverviewSchema>
+
+// ---------------------------------------------------------------------------
+// Warehouse360InboundItem
+// ---------------------------------------------------------------------------
+
+export const Warehouse360InboundItemSchema = z.object({
+  documentType: z.enum(['PO', 'STO', 'unknown']),
+  purchaseOrderId: z.string(),
+  stockTransportOrderId: z.string(),
+  itemId: z.string(),
+  vendorId: z.string(),
+  supplyingPlantId: z.string(),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string(),
+  plantId: z.string(),
+  storageLocation: z.string(),
+  warehouseNumber: z.string(),
+  expectedDate: z.string(),
+  receivedDate: z.string(),
+  quantity: z.number(),
+  unitOfMeasure: z.string(),
+  status: z.string(),
+  exceptionReason: z.string(),
+})
+
+export type Warehouse360InboundItem = z.infer<typeof Warehouse360InboundItemSchema>
+
+// ---------------------------------------------------------------------------
+// Warehouse360OutboundItem
+// ---------------------------------------------------------------------------
+
+export const Warehouse360OutboundItemSchema = z.object({
+  deliveryId: z.string(),
+  deliveryItemId: z.string(),
+  customerId: z.string(),
+  salesOrderId: z.string(),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string(),
+  plantId: z.string(),
+  storageLocation: z.string(),
+  warehouseNumber: z.string(),
+  plannedGoodsIssueDate: z.string(),
+  actualGoodsIssueDate: z.string(),
+  quantity: z.number(),
+  unitOfMeasure: z.string(),
+  status: z.string(),
+  exceptionReason: z.string(),
+})
+
+export type Warehouse360OutboundItem = z.infer<typeof Warehouse360OutboundItemSchema>
+
+// ---------------------------------------------------------------------------
+// Warehouse360StagingItem
+// ---------------------------------------------------------------------------
+
+export const Warehouse360StagingItemSchema = z.object({
+  processOrderId: z.string(),
+  reservationId: z.string(),
+  reservationItemId: z.string(),
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string(),
+  plantId: z.string(),
+  storageLocation: z.string(),
+  warehouseNumber: z.string(),
+  requirementDate: z.string(),
+  requiredQuantity: z.number(),
+  stagedQuantity: z.number(),
+  openQuantity: z.number(),
+  unitOfMeasure: z.string(),
+  stagingStatus: z.string(),
+  exceptionReason: z.string(),
+})
+
+export type Warehouse360StagingItem = z.infer<typeof Warehouse360StagingItemSchema>
+
+// ---------------------------------------------------------------------------
+// Warehouse360ExceptionItem
+// ---------------------------------------------------------------------------
+
+export const Warehouse360ExceptionItemSchema = z.object({
+  exceptionType: z.string(),
+  severity: z.enum(['critical', 'high', 'medium', 'low']),
+  materialId: z.string(),
+  batchId: z.string(),
+  plantId: z.string(),
+  storageLocation: z.string(),
+  warehouseNumber: z.string(),
+  quantity: z.number(),
+  unitOfMeasure: z.string(),
+  expiryDate: z.string(),
+  daysToExpiry: z.number(),
+  documentId: z.string(),
+  processOrderId: z.string(),
+  deliveryId: z.string(),
+  purchaseOrderId: z.string(),
+  reason: z.string(),
+  recommendedReviewAction: z.string(),
+})
+
+export type Warehouse360ExceptionItem = z.infer<typeof Warehouse360ExceptionItemSchema>
+

@@ -8,6 +8,11 @@ import type {
   LocationCapacity,
   NearExpiryBatch,
   WarehouseReconciliationException,
+  Warehouse360Overview,
+  Warehouse360InboundItem,
+  Warehouse360OutboundItem,
+  Warehouse360StagingItem,
+  Warehouse360ExceptionItem,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -20,6 +25,11 @@ import {
   mockLocationCapacities,
   mockNearExpiryBatches,
   mockWarehouseReconciliationExceptions,
+  mockWarehouse360Overview,
+  mockWarehouse360InboundItems,
+  mockWarehouse360OutboundItems,
+  mockWarehouse360StagingItems,
+  mockWarehouse360ExceptionItems,
 } from './warehouse-360-mock-data.js'
 
 export interface Warehouse360AdapterRequest {
@@ -107,6 +117,36 @@ export class Warehouse360Adapter {
     _request: Warehouse360AdapterRequest
   ): Promise<AdapterResult<WarehouseReconciliationException[]>> {
     return ok(mockWarehouseReconciliationExceptions, this.now)
+  }
+
+  async getWarehouseOverview(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<Warehouse360Overview>> {
+    return ok(mockWarehouse360Overview, this.now)
+  }
+
+  async getWarehouseInbound(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<Warehouse360InboundItem[]>> {
+    return ok(mockWarehouse360InboundItems, this.now)
+  }
+
+  async getWarehouseOutbound(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<Warehouse360OutboundItem[]>> {
+    return ok(mockWarehouse360OutboundItems, this.now)
+  }
+
+  async getWarehouseStaging(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<Warehouse360StagingItem[]>> {
+    return ok(mockWarehouse360StagingItems, this.now)
+  }
+
+  async getWarehouseExceptionItems(
+    _request: Warehouse360AdapterRequest
+  ): Promise<AdapterResult<Warehouse360ExceptionItem[]>> {
+    return ok(mockWarehouse360ExceptionItems, this.now)
   }
 }
 

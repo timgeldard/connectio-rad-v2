@@ -178,3 +178,187 @@ describe('Warehouse360LegacyApiAdapter.getWarehouse360Summary', () => {
     expect(result.data.confidence).toBe(0.9)
   })
 })
+
+describe('Warehouse360LegacyApiAdapter native endpoints', () => {
+  const fakeOverview = {
+    plantId: 'IE10',
+    warehouseId: 'WH-IE10-MAIN',
+    inboundDueCount: 3,
+    inboundOverdueCount: 1,
+    outboundDueCount: 5,
+    outboundOverdueCount: 0,
+    stagingOpenCount: 8,
+    stagingOverdueCount: 2,
+    nearExpiryCount: 4,
+    reconciliationExceptionCount: 2,
+    blockedStockCount: 1,
+  }
+
+  const fakeInboundItem = {
+    documentType: 'PO',
+    purchaseOrderId: 'PO-001',
+    stockTransportOrderId: '',
+    itemId: '00010',
+    vendorId: 'VEND-01',
+    supplyingPlantId: '',
+    materialId: 'MAT-01',
+    materialDescription: 'Raw Milk',
+    batchId: 'B-001',
+    plantId: 'IE10',
+    storageLocation: 'SL01',
+    warehouseNumber: 'WH-IE10-MAIN',
+    expectedDate: '2026-05-18T00:00:00',
+    receivedDate: '',
+    quantity: 100,
+    unitOfMeasure: 'KG',
+    status: 'OPEN',
+    exceptionReason: '',
+  }
+
+  const fakeOutboundItem = {
+    deliveryId: 'DEL-01',
+    deliveryItemId: '000010',
+    customerId: 'CUST-01',
+    salesOrderId: 'SO-01',
+    materialId: 'MAT-02',
+    materialDescription: 'Emmental Block',
+    batchId: 'B-002',
+    plantId: 'IE10',
+    storageLocation: 'SL02',
+    warehouseNumber: 'WH-IE10-MAIN',
+    plannedGoodsIssueDate: '2026-05-18T15:00:00',
+    actualGoodsIssueDate: '',
+    quantity: 50,
+    unitOfMeasure: 'KG',
+    status: 'OPEN',
+    exceptionReason: '',
+  }
+
+  const fakeStagingItem = {
+    processOrderId: 'PO-001',
+    reservationId: 'RES-01',
+    reservationItemId: '0001',
+    materialId: 'MAT-03',
+    materialDescription: 'Starter Culture',
+    batchId: 'B-003',
+    plantId: 'IE10',
+    storageLocation: 'SL03',
+    warehouseNumber: 'WH-IE10-MAIN',
+    requirementDate: '2026-05-18T08:30:00',
+    requiredQuantity: 2.5,
+    stagedQuantity: 2.0,
+    openQuantity: 0.5,
+    unitOfMeasure: 'KG',
+    stagingStatus: 'PARTIAL',
+    exceptionReason: '',
+  }
+
+  const fakeExceptionItem = {
+    exceptionType: 'quantity-mismatch',
+    severity: 'high',
+    materialId: 'MAT-01',
+    batchId: 'B-001',
+    plantId: 'IE10',
+    storageLocation: 'SL01',
+    warehouseNumber: 'WH-IE10-MAIN',
+    quantity: 20,
+    unitOfMeasure: 'KG',
+    expiryDate: '2026-06-18T00:00:00',
+    daysToExpiry: 31,
+    documentId: 'DOC-01',
+    processOrderId: '',
+    deliveryId: '',
+    purchaseOrderId: '',
+    reason: 'Mismatch',
+    recommendedReviewAction: 'Count',
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch(200, fakeOverview))
+  })
+
+  it('getWarehouseOverview calls GET and returns source=databricks-api', async () => {
+    const result = await adapter.getWarehouseOverview(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.warehouseId).toBe('WH-IE10-MAIN')
+    expect(result.data.inboundDueCount).toBe(3)
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/warehouse360/overview?warehouse_id=WH-IE10-MAIN')
+    expect(opts?.method).toBe('GET')
+  })
+
+  it('getWarehouseInbound calls GET and returns source=databricks-api', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [fakeInboundItem]))
+    const result = await adapter.getWarehouseInbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.length).toBe(1)
+    expect(result.data[0].purchaseOrderId).toBe('PO-001')
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/warehouse360/inbound?warehouse_id=WH-IE10-MAIN')
+    expect(opts?.method).toBe('GET')
+  })
+
+  it('getWarehouseOutbound calls GET and returns source=databricks-api', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [fakeOutboundItem]))
+    const result = await adapter.getWarehouseOutbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.length).toBe(1)
+    expect(result.data[0].deliveryId).toBe('DEL-01')
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/warehouse360/outbound?warehouse_id=WH-IE10-MAIN')
+    expect(opts?.method).toBe('GET')
+  })
+
+  it('getWarehouseStaging calls GET and returns source=databricks-api', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [fakeStagingItem]))
+    const result = await adapter.getWarehouseStaging(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.length).toBe(1)
+    expect(result.data[0].processOrderId).toBe('PO-001')
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/warehouse360/staging?warehouse_id=WH-IE10-MAIN')
+    expect(opts?.method).toBe('GET')
+  })
+
+  it('getWarehouseExceptionItems calls GET and returns source=databricks-api', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [fakeExceptionItem]))
+    const result = await adapter.getWarehouseExceptionItems(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.length).toBe(1)
+    expect(result.data[0].documentId).toBe('DOC-01')
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/warehouse360/exceptions?warehouse_id=WH-IE10-MAIN')
+    expect(opts?.method).toBe('GET')
+  })
+
+  it('handles 401 unauthorized errors correctly in native mode', async () => {
+    vi.stubGlobal('fetch', mockFetch(401, {}, false))
+    const result = await adapter.getWarehouseOverview(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('unauthorized')
+    expect(result.displayState).toBe('unauthorized')
+    expect(result.source).toBe('databricks-api')
+  })
+})
+
