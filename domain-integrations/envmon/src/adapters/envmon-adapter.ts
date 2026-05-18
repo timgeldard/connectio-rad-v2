@@ -50,11 +50,11 @@ export const EnvMonNativeSwabResultSchema = z.object({
   micName: z.string().nullable(),
   micCode: z.string().nullable(),
   result: z.union([z.string(), z.number()]).nullable(),
-  quantitativeResult: z.number().nullable(),
+  quantitativeResult: z.union([z.number(), z.string()]).nullable(),
   qualitativeResult: z.string().nullable(),
-  targetValue: z.number().nullable(),
-  upperTolerance: z.number().nullable(),
-  lowerTolerance: z.number().nullable(),
+  targetValue: z.union([z.number(), z.string()]).nullable(),
+  upperTolerance: z.union([z.number(), z.string()]).nullable(),
+  lowerTolerance: z.union([z.number(), z.string()]).nullable(),
   unitOfMeasure: z.string().nullable(),
   valuation: z.string().nullable(),
   status: z.enum(['fail', 'warning', 'pending', 'pass']),
@@ -177,7 +177,9 @@ export class EnvMonAdapter {
       }
       const parsed = z.array(EnvMonNativeSwabResultSchema).safeParse(await response.json())
       if (!parsed.success) {
-        return databricksErr<EnvMonNativeSwabResult[]>('invalid-data', 'EnvMon swab results response did not match the expected contract')
+        const first = parsed.error.issues[0]
+        const detail = first ? ` [${first.path.join('.')}]: ${first.message}` : ''
+        return databricksErr<EnvMonNativeSwabResult[]>('invalid-data', `EnvMon swab results response did not match the expected contract${detail}`)
       }
       return databricksOk(parsed.data, this.now)
     } catch (e) {
