@@ -259,14 +259,24 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2) for full p
 
 ---
 
-### C13 — Trace Graph UI (frontend wiring) — EXECUTABLE, awaiting UI browser verification
+### C13 — Trace Graph UI (frontend wiring) — EXECUTABLE, UI BV pending
 
-**Status: IMPLEMENTED** — `Trace2LegacyApiAdapter.getTraceGraph` override wired (u.txt, 2026-05-18), TypeScript mapper in place, contract mismatch resolved, 113 tests passing. UI browser verification pending after next deploy.
+**Status: SHELL ROUTING FIXED** — adapter wired (u.txt, 2026-05-18), shell routing fixed (a.txt, 2026-05-18), 136 web tests passing. UI browser verification pending after next deploy.
 
-Test: open Trace Investigation workspace, enter `material_id=000000000020052009`, `batch_id=0008602411`, `plant_id=C061`. Navigate to the Trace Graph panel.
+**What changed (a.txt, 2026-05-18):**
+- `traceability-workspace` no longer renders placeholder — routes to real `TraceInvestigationWorkspace`
+- New verification page: `?workspace=trace-graph-verify` — input form (materialId/batchId/plantId) → Run Trace → renders `TraceGraphPanel` with submitted request. No mock fallback.
 
-- [ ] Trace Graph panel renders without crash
-- [ ] ReactFlow nodes and edges drawn (not empty — at least anchor node)
+**Primary URL:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
+```
+
+Test: navigate to `/?workspace=trace-graph-verify`, verify inputs pre-filled with `000000000020052009` / `0008602411` / `C061`, click **Run Trace**.
+
+- [ ] Page renders at `?workspace=trace-graph-verify` without crash
+- [ ] Inputs pre-filled with default test anchor values
+- [ ] Trace Graph panel renders after clicking Run Trace (at least anchor node)
 - [ ] `source: databricks-api` shown in panel source badge (green)
 - [ ] No mock graph data displayed when native call succeeds
 - [ ] No mock graph data displayed when native call fails — error state shown instead
@@ -275,6 +285,9 @@ Test: open Trace Investigation workspace, enter `material_id=000000000020052009`
 - [ ] Direction toggle (Both / Upstream / Downstream) filters nodes correctly
 - [ ] Warnings banner appears for truncated or max-depth-reached responses
 - [ ] Empty-state message appears when backend returns no nodes
+- [ ] `?workspace=traceability-workspace` no longer shows "implementation pending" placeholder
+
+See `docs/deployment/trace-native-browser-verification.md` (Check T2-UI) for full pass criteria and troubleshooting.
 
 ---
 

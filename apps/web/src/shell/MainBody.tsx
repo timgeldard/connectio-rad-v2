@@ -36,6 +36,7 @@ import { CutoverRecommendationPage } from '../pages/CutoverRecommendationPage.js
 import { GoNoGoAssessmentPage } from '../pages/GoNoGoAssessmentPage.js'
 import { RolloutWavePlanPage } from '../pages/RolloutWavePlanPage.js'
 import { LessonsLearnedPage } from '../pages/LessonsLearnedPage.js'
+import { TraceGraphVerifyPage } from '../pages/TraceGraphVerifyPage.js'
 
 /**
  * Lazily loaded workspace view renderer.
@@ -82,6 +83,8 @@ function ActivePage({ workspaceId }: { readonly workspaceId: string | null }) {
   if (workspaceId === 'admin-pilot-go-no-go') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-go-no-go"><GoNoGoAssessmentPage /></div>
   if (workspaceId === 'admin-pilot-rollout-plan') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-rollout-plan"><RolloutWavePlanPage /></div>
   if (workspaceId === 'admin-pilot-lessons-learned') return <div className="connectio-page" data-testid="workspace-view-admin-pilot-lessons-learned"><LessonsLearnedPage /></div>
+
+  if (workspaceId === 'trace-graph-verify') return <div className="connectio-page" data-testid="workspace-view-trace-graph-verify"><TraceGraphVerifyPage /></div>
 
   const found = workspaceRegistry.find(w => w.workspaceId === workspaceId)
   if (!found) return <div className="connectio-page"><NotFound /></div>

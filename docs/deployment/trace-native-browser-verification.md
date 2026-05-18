@@ -223,24 +223,36 @@ X-Query-Name: trace2.get_trace_graph
 
 ---
 
-## Check T2-UI — Trace Graph Panel (frontend wiring) — EXECUTABLE, awaiting deploy
+## Check T2-UI — Trace Graph Panel (frontend wiring) — EXECUTABLE, UI BV pending
 
-**Status:** Frontend wiring complete (u.txt, 2026-05-18). `Trace2LegacyApiAdapter.getTraceGraph` override wired, TypeScript mapper (`mapBackendTraceGraph`) in place, contract mismatch resolved, 113 tests passing. UI browser verification pending after next UAT deploy.
+**Status:** Frontend wiring complete (u.txt, 2026-05-18). Shell routing fixed (a.txt, 2026-05-18) — verification page added and `traceability-workspace` placeholder removed. UI browser verification pending after next UAT deploy.
+
+**What changed (a.txt, 2026-05-18):**
+- `traceability-workspace` in `WorkspaceViews.tsx` now renders `TraceInvestigationWorkspace` — no longer hits the "implementation pending" placeholder
+- New `trace-graph-verify` page added at `?workspace=trace-graph-verify` — form with materialId/batchId/plantId inputs and Run Trace button; renders `TraceGraphPanel` with the submitted request; no mock fallback
 
 **Prerequisites:** T2 API check must be PASSED first.
 
-**Test anchor:**
-- material_id: `000000000020052009`
-- batch_id: `0008602411`
-- plant_id: `C061`
+**Primary URL for UI BV:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
+```
+
+**Test anchor (pre-filled in form):**
+- Material ID: `000000000020052009`
+- Batch ID: `0008602411`
+- Plant ID: `C061`
 
 **Steps:**
-1. Open the Trace Investigation workspace in UAT
-2. Enter material/batch/plant as above
-3. Navigate to the Trace Graph panel
+1. Navigate to `/?workspace=trace-graph-verify`
+2. Confirm inputs are pre-filled with test anchor values
+3. Click **Run Trace**
+4. Verify the graph panel renders with data from the backend
 
 **Pass criteria:**
-- [ ] Trace Graph panel renders without JavaScript crash
+- [ ] Page loads at `?workspace=trace-graph-verify` without crash
+- [ ] Material ID, Batch ID, Plant ID inputs are visible with pre-filled default values
+- [ ] Click **Run Trace** — graph panel appears
 - [ ] ReactFlow canvas is visible with at least the anchor node
 - [ ] `source: databricks-api` badge visible (green) — NOT `source: mock`
 - [ ] Node count and edge count match what T2 API returns
@@ -251,10 +263,15 @@ X-Query-Name: trace2.get_trace_graph
 - [ ] Empty state message (`No lineage edges found for this material/batch/plant.`) appears when backend returns no edges
 - [ ] No mock data shown when native call fails — error state in panel instead
 
+**Also verify (Option A — shell fix):**
+- [ ] `?workspace=traceability-workspace&tab=trace` no longer shows "implementation pending (Phase 3+)"
+- [ ] It renders the `TraceInvestigationWorkspace` instead (scope will be empty, graph panel will show empty/error state — that is expected without scope context)
+
 **Troubleshooting:**
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| `?workspace=trace-graph-verify` returns NotFound | Build does not include a.txt changes | Redeploy UAT bundle |
 | Green badge not showing | `VITE_ADAPTER_MODE` not `legacy-api` in build | Check Vite build config |
 | Panel shows mock nodes only | `getTraceGraph` not calling backend | Check adapter factory — mode must be `legacy-api` |
 | React Flow crash | `undefined` on `node.type` or `edge.relationshipType` | Fixed in u.txt — check build includes latest panel |
@@ -264,7 +281,7 @@ X-Query-Name: trace2.get_trace_graph
 
 | Status | Date | Notes |
 |---|---|---|
-| [ ] not yet tested | — | Awaiting UAT deploy after u.txt changes |
+| [ ] not yet tested | — | Awaiting UAT deploy after a.txt changes |
 
 ---
 
