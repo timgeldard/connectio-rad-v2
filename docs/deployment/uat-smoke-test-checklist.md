@@ -5,6 +5,33 @@
 
 ---
 
+## f.txt Pre-flight baseline (2026-05-18)
+
+**Commit tested:** `0b9d86895dd0ad0e68e02cf56ba2553c5c36e9a1` (Merge PR #16 — EnvMon scope seeding fix)
+
+**Local tests run before UAT:**
+```
+npm exec nx -- run-many -t test --all --passWithNoTests   → 12 projects, all PASS
+cd apps/api && python -m pytest tests/ -x -q              → 682 passed
+```
+
+**Deployment config verified from `app.yaml`:**
+- `BACKEND_ADAPTER_MODE=databricks-api` ✓
+- `DATABRICKS_HOST=https://adb-604667594731808.8.azuredatabricks.net` ✓
+- `SQL_WAREHOUSE_ID=e76480b94bea6ed5` ✓
+- `TRACE_CATALOG=connected_plant_uat`, `TRACE_SCHEMA=gold` ✓
+- `POH_CATALOG=connected_plant_uat`, `CQ_CATALOG=connected_plant_uat` ✓
+- `WH360_CATALOG` — **NOT SET** — all 5 WH360 routes will return 503 until configured
+- `WH360_SCHEMA` — **NOT SET** — defaults to `"wh360"` in object_resolver.py
+- `user_api_scopes: [sql]` ✓ — no SPN/PAT config ✓
+
+**Pre-flight findings:**
+- SPC: `SPCSandboxBanner` was absent from 4 of 6 view tabs (active-signals, capability, alarm-history, chart-configuration-readonly). Fixed pre-UAT based on code audit — UAT to confirm by tab-walking each view.
+- Trace: WITH RECURSIVE implementation merged on main — prior BV (C12–C15) was against iterative approach; fresh verification required.
+- WH360: Config-blocked — `WH360_CATALOG` unknown from available sources. Cannot be derived from `databricks.yml`, `app.yaml`, or docs. User must supply the UAT catalog name before WH360 routes can be tested.
+
+---
+
 ## Section A — Deployment smoke test (PASSED 2026-05-17)
 
 These tests confirm the app deploys, starts, and serves its static UI. No data connectivity is required.
@@ -353,10 +380,100 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for 
 
 ---
 
+### C16 — Trace graph (WITH RECURSIVE, fresh BV required) — PENDING
+
+**Status: PENDING BROWSER VERIFICATION** — Trace switched from iterative multi-hop Python loop to `WITH RECURSIVE` SQL on main. Prior C12–C15 BV was against iterative implementation; those results are stale for the current code. Fresh UAT required.
+
+```http
+POST /api/trace2/trace-graph
+Content-Type: application/json
+
+{
+  "material_id": "20052009",
+  "batch_id": "0008602411",
+  "plant_id": "C061",
+  "direction": "both",
+  "max_depth": 2,
+  "max_edges": 100
+}
+```
+
+Expected: HTTP 200, `x-data-source: databricks-api`, `x-query-name: trace2.get_trace_graph`, body has `anchor/nodes/edges/depth/truncated/warnings`. No mock data. No timeout.
+
+Known risk: `WITH RECURSIVE` syntax compatibility with Databricks SQL. If syntax fails, capture exact error and fix QuerySpec SQL.
+
+- [ ] Returns HTTP 200
+- [ ] `x-data-source: databricks-api` present
+- [ ] `x-query-name: trace2.get_trace_graph` present
+- [ ] Body has `anchor`, `nodes`, `edges`, `depth`, `truncated`, `warnings`
+- [ ] No mock data
+- [ ] No 504 timeout
+
+**UI verification (`?workspace=traceability-workspace`):**
+- [ ] Page loads without crash, no Phase 3 placeholder
+- [ ] TraceQueryForm visible with correct default values
+- [ ] Run Trace renders graph
+- [ ] Source badge shows `databricks-api`
+- [ ] Node click and edge click details work
+- [ ] Timeline visible
+- [ ] Source/limitations banner visible
+
+See `docs/deployment/trace-native-browser-verification.md` for full criteria.
+
+---
+
+### C17–C21 — Warehouse360 native routes — CONFIG-BLOCKED
+
+**Status: CONFIG-BLOCKED** — `WH360_CATALOG` not set in `app.yaml`. Object resolver has no fallback for this domain — all 5 routes will return HTTP 503 (`DatabricksConfigError`) until the catalog variable is configured and the app redeployed.
+
+`WH360_SCHEMA` defaults to `"wh360"` if unset.
+
+**Additional risk:** WH360 inbound/outbound/staging/exceptions routes use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT — EnvMon swab-results avoided this pattern by embedding a clamped integer. Verify and fix if 500s are returned.
+
+Routes blocked:
+- `GET /api/warehouse360/overview?warehouse_id=<id>` — source: `wh360_cockpit_summary_v`
+- `GET /api/warehouse360/inbound?warehouse_id=<id>` — source: `wh360_inbound_v`
+- `GET /api/warehouse360/outbound?warehouse_id=<id>` — source: `wh360_deliveries_v`
+- `GET /api/warehouse360/staging?warehouse_id=<id>` — source: `staging_orders_v`
+- `GET /api/warehouse360/exceptions?warehouse_id=<id>` — source: `wh360_imwm_exceptions_v`
+
+**Required before testing:**
+1. Confirm `WH360_CATALOG` value for UAT workspace (not in `databricks.yml`, not in docs — must be supplied by user)
+2. Confirm a known `warehouse_id` value from UAT data
+3. Add `WH360_CATALOG` (and optionally `WH360_SCHEMA` if different from `"wh360"`) to `app.yaml`
+4. Redeploy, retest
+
+- [ ] `WH360_CATALOG` set in `app.yaml` (pending user input)
+- [ ] `warehouse_id` known for UAT (pending user input)
+- [ ] All 5 routes return HTTP 200 or honest empty
+- [ ] `x-data-source: databricks-api` on each route
+- [ ] `LIMIT :max_rows` compatibility confirmed (or fixed with embedded integer)
+- [ ] Views exist in UAT Unity Catalog
+
+---
+
+### C22 — SPC sandbox/demo labelling — PASS (code-audit fixed 2026-05-18)
+
+**Status: CODE-FIXED** — `SPCSandboxBanner` was present only on `chart-overview` and `characteristic-review` views. Added to `active-signals`, `capability`, `alarm-history`, and `chart-configuration-readonly` via f.txt code audit.
+
+**UAT: tab-walk each view tab at `?workspace=spc-monitoring` to confirm banner is visible on all 6 tabs.**
+
+- [ ] `chart-overview` tab — banner visible (was already present)
+- [ ] `active-signals` tab — banner visible (fixed 2026-05-18)
+- [ ] `characteristic-review` tab — banner visible (was already present)
+- [ ] `capability` tab — banner visible (fixed 2026-05-18)
+- [ ] `alarm-history` tab — banner visible (fixed 2026-05-18)
+- [ ] `chart-configuration-readonly` tab — banner visible (fixed 2026-05-18)
+- [ ] No view claims native Databricks or live production data
+- [ ] Charts load without crash (demo data)
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
 - `vw_gold_process_order_phase` DDL is confirmed (2026-05-17). No column-name blockers for order-operations route.
 - `vw_gold_confirmation` DDL confirmed 2026-05-17 — confirmations route is implemented and executable.
 - `vw_gold_adp_movement` DDL confirmed 2026-05-17 — goods movements route is implemented and executable.
+- C12–C15 BV rows remain in the checklist for historical record but are superseded by C16 (WITH RECURSIVE fresh BV).
 - All tests in this checklist require a human in the loop with valid Databricks workspace access. Do not attempt to automate against live Databricks in CI.

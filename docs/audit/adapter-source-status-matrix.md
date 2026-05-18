@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-18 — d.txt: TraceQueryForm + TraceTreeView form embedding; traceability-workspace default view → trace-tree; RiskSignalsPanel excluded (mock-only); C15 pending BV. 163 di-traceability tests.  
+**Last updated:** 2026-05-18 — f.txt: pre-flight baseline recorded (682 pytest, 12 nx projects pass); Trace WITH RECURSIVE — prior C12–C15 BV stale, fresh BV C16 pending; WH360 native routes wired but config-blocked (WH360_CATALOG not set); SPC SPCSandboxBanner added to 4 missing view tabs (code-fixed, UAT tab-walk pending C22).  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009`. **c.txt** — complete investigation screen: header, full edge detail, node detail, timeline, exposure indicators, source banner, direction/maxDepth/maxEdges controls. **d.txt** — TraceQueryForm embedded in TraceTreeView; final route `?workspace=traceability-workspace&view=trace-tree` (PENDING C15 BV); traceability-workspace defaults to trace-tree; RiskSignalsPanel excluded (always mock — no adapter override); 163 di-traceability tests. Node key is `material:batch:plant` (3-tuple). max_depth: default=3, route-cap=4, UI-default=2. Plant is context/display — not part of anchor filter SQL. |
+| `getTraceGraph` | ✓ | — | — | **✓ E (fresh BV pending)** | green | **API BV 2026-05-18 (stale — iterative approach)** — C12–C15 BV was against the old iterative multi-hop Python loop; implementation replaced by `WITH RECURSIVE` SQL on main. **Fresh BV required (C16).** Route wired; WITH RECURSIVE SQL in `get_trace_graph_recursive_spec`; max_depth capped at 4; no mock fallback. **d.txt** — TraceQueryForm embedded; final route `?workspace=traceability-workspace`; 163 di-traceability tests. |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -62,7 +62,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 | `getRelatedInvestigations` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getTraceExposureForRelease` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 
-**Summary:** 11 methods — 1 browser-verified legacy-api, **1 browser-verified databricks-api** (getTraceGraph 2026-05-18), 9 mock only.
+**Summary:** 11 methods — 1 browser-verified legacy-api, 1 executable databricks-api (getTraceGraph — wired, WITH RECURSIVE, **fresh BV C16 pending** after implementation change), 9 mock only.
 
 ---
 
@@ -86,6 +86,7 @@ Gold views: `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_mater
 | `getSPCSignals` | ✓ | — | — | — | none | Include in SPC databricks-api slice |
 
 **Summary:** 9 methods — all mock only. No legacy-api adapter. Cannot validate against V1 via parallel testing. MV infrastructure already exists — databricks-api migration is primarily a QuerySpec wrapping exercise.
+**SPC sandbox labelling (f.txt 2026-05-18):** `SPCSandboxBanner` added to `active-signals`, `capability`, `alarm-history`, and `chart-configuration-readonly` views (was only on `chart-overview` and `characteristic-review`). UAT tab-walk pending (C22).
 
 ---
 
@@ -107,8 +108,19 @@ Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_c
 | `getNearExpiryStock` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getWarehouseExceptions` | ✓ | — | — | — | none | Backed by `wh360.imwm_exceptions_v` (7-UNION view) |
 
-**Summary:** 9 methods — 1 wired legacy-api (not browser-verified), 8 mock only.  
-**Risk note:** `wh360` uses a separate catalog schema. QueryExecutor `catalog_override` must be implemented before this module migrates.
+**Summary:** 9 legacy adapter methods — 1 wired legacy-api (not browser-verified), 8 mock only.
+
+**New native routes (f.txt tranche — config-blocked 2026-05-18):** 5 `GET /api/warehouse360/*` routes are wired in `apps/api/routes/warehouse360.py` with full QuerySpec adapters in `warehouse360_databricks_adapter.py`. All use `resolve_domain_object("wh360", ...)` which requires `WH360_CATALOG` env var. **WH360_CATALOG is NOT set in `app.yaml`** — all 5 routes will return HTTP 503 until configured and redeployed. `WH360_SCHEMA` defaults to `"wh360"` if unset.
+
+**Additional risk:** inbound/outbound/staging/exceptions use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT (EnvMon avoided this by embedding a clamped integer after route-level clamping). Verify and fix if 500s occur.
+
+| Native route | Source view | Status |
+|---|---|---|
+| `GET /api/warehouse360/overview` | `wh360_cockpit_summary_v` | config-blocked (WH360_CATALOG unset) |
+| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | config-blocked + LIMIT risk |
+| `GET /api/warehouse360/outbound` | `wh360_deliveries_v` | config-blocked + LIMIT risk |
+| `GET /api/warehouse360/staging` | `staging_orders_v` | config-blocked + LIMIT risk |
+| `GET /api/warehouse360/exceptions` | `wh360_imwm_exceptions_v` | config-blocked + LIMIT risk |
 
 ---
 
@@ -272,7 +284,7 @@ Gold views: None identified
 
 | Domain | Total methods | Browser-verified (databricks-api) | Executable (not verified) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
 |--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
-| Traceability | 11 | 1 (legacy-api) + **1 databricks-api** (getTraceGraph 2026-05-18) | 0 | 0 | 9 | **1 BV** |
+| Traceability | 11 | 1 (legacy-api) | **1 E** (getTraceGraph — WITH RECURSIVE, fresh BV C16 pending) | 0 | 9 | 0 |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
 | POH (POR) | 10 | **4** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17; `getOrderConfirmations` + `getOrderGoodsMovements` 2026-05-18) | 0 | 0 | 6 | **4 BV** |
@@ -293,7 +305,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **C14 BV 2026-05-18** — `?workspace=trace-graph-verify`; **C15 BV 2026-05-18** — `?workspace=traceability-workspace&view=trace-tree`; source=gold_batch_lineage, execution=databricks-api, depth=1, truncated=No; no mock fallback |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — WITH RECURSIVE implementation — **fresh BV required (C16)**; prior C12–C15 BV was iterative approach and is stale; no mock fallback |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
@@ -310,5 +322,11 @@ Gold views: None identified
 | `/api/envmon/location-coordinates` | GET | EnvMon | *(not yet designed)* | **Planned** — depends on em_location_coordinates in UAT; NOT wired |
 | `/api/envmon/zones` | GET | EnvMon | `getEnvMonZones` | **Planned** — depends on em_location_zones in UAT; NOT wired |
 | `/api/envmon/heatmap` | GET | EnvMon | `getEnvMonHeatmap` | **Planned** — depends on observations + spatial config; NOT wired |
+
+| `/api/warehouse360/overview` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** (WH360_CATALOG unset) — returns 503 until configured |
+| `/api/warehouse360/inbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
+| `/api/warehouse360/outbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
+| `/api/warehouse360/staging` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
+| `/api/warehouse360/exceptions` | GET | Warehouse360 | *(native only)* | Databricks-api only — **config-blocked** + LIMIT :max_rows risk |
 
 No other domain-integration routes exist. Do not add routes without browser-verification against a live V1 backend. Planned routes are documented targets only — NOT wired.
