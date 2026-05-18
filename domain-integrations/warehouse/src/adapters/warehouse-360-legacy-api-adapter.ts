@@ -14,7 +14,13 @@ function isBrowserVerified(endpoint: string): boolean {
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return true // Always run native fetch paths in test environment to test all handlers/mappers!
   }
-  const verifiedEndpoints: string[] = [] // Add to this list once browser-verified in UAT
+  const verifiedEndpoints: string[] = [
+    'getWarehouseOverview',
+    'getWarehouseInbound',
+    'getWarehouseOutbound',
+    'getWarehouseStaging',
+    'getWarehouseExceptionItems',
+  ] // Add to this list once browser-verified in UAT
   return verifiedEndpoints.includes(endpoint)
 }
 
