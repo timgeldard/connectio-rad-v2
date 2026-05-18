@@ -78,7 +78,7 @@ class TraceGraphBody(BaseModel):
     batch_id: str
     plant_id: str
     direction: str = "both"
-    max_depth: int = 6
+    max_depth: int = 3
     max_edges: int = 1000
 
     @field_validator("direction")
@@ -113,8 +113,10 @@ async def trace_graph(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email
     )
 
-    # Clamp depth and edge limits to safe bounds
-    max_depth = min(max(body.max_depth, 1), 10)
+    # Clamp depth and edge limits to safe bounds.
+    # Hard cap at 4 — Databricks Apps gateway has a 30-second timeout; 6 sequential
+    # SQL round-trips reliably exceeds it on busy lineage graphs.
+    max_depth = min(max(body.max_depth, 1), 4)
     max_edges = min(max(body.max_edges, 1), 5000)
 
     request = TraceGraphRequest(
