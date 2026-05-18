@@ -98,16 +98,15 @@ The V2 warehouse domain has two workspaces:
 |---|---|
 | Near-expiry batch list (`wh360_near_expiry_batches_v`) not in V2 | Added `NearExpiryBatch` schema + `getNearExpiryStock()` + `NearExpiryStockPanel` |
 | IM/WM reconciliation exceptions (`wh360_imwm_exceptions_v`) not surfaced as individual exception records | Added `WarehouseReconciliationException` schema + `getWarehouseExceptions()` + `WarehouseReconciliationExceptionsPanel` |
+| No FastAPI native routes for WH360 | Added 5 native Databricks-API endpoints (`overview`, `inbound`, `outbound`, `staging`, `exceptions`) with dynamic filters, robust query parameter validation, and robust error handling |
 
 ### Remaining gaps
 
 | Gap | Severity | V1 source |
 |---|---|---|
-| No FastAPI proxy routes for WH360 | High | All WH360 endpoints |
 | Bin-level stock detail absent (only zone aggregates) | High | `wh360_bin_stock_v` |
 | Delivery detail panel absent | Medium | `wh360_deliveries_v` |
 | Inbound PO detail panel absent | Medium | `wh360_inbound_v` |
-| Cockpit / shift summary view absent | Medium | `wh360_cockpit_summary_v` |
 | Dispensary queue absent | Low | `wh360_dispensary_v` |
 | Line-side replenishment absent | Low | `wh360_lineside_v` |
 | IM/WM exception aging analytics absent | Low | `wh360_imwm_aging_v` |
