@@ -73,12 +73,14 @@ export function TraceInvestigationWorkspace({
 
   const activeView = resolveView(viewId, request)
 
+  const showActionSidebar = viewId !== 'trace-tree'
+
   return (
     <StandardWorkspaceTemplate
       registration={traceInvestigationRegistration}
       scope={scope}
       defaultViewId={isValidViewId(viewId) ? viewId : 'overview'}
-      actionSidebar={<TraceActionsPanel context={context} />}
+      actionSidebar={showActionSidebar ? <TraceActionsPanel context={context} /> : undefined}
     >
       {activeView}
     </StandardWorkspaceTemplate>
