@@ -11,7 +11,8 @@
         "typecheck": "nx run-many -t typecheck",
         "graph": "nx graph",
         "storybook": "nx run design-system:storybook",
-        "prepare:databricks": "node scripts/prepare-databricks-app.mjs"
+        "prepare:databricks": "node scripts/prepare-databricks-app.mjs",
+        "deploy:databricks": "node scripts/prepare-databricks-app.mjs --deploy"
     },
     "dependencies": {
         "@tanstack/react-query": "^5.81.1",

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Prepare the Databricks Apps deploy artifact.
+ * Prepare (and optionally deploy) the Databricks Apps artifact.
  *
  * Run from the repository root:
- *   npm run prepare:databricks
- *   (or: node scripts/prepare-databricks-app.mjs)
+ *   npm run prepare:databricks            # build + copy only
+ *   npm run deploy:databricks             # build + copy + bundle deploy + force restart
+ *   node scripts/prepare-databricks-app.mjs --deploy
  *
  * What it does:
  *   1. Applies safe defaults for VITE_* env vars (same-origin deployment)
@@ -12,9 +13,10 @@
  *   3. Removes stale apps/api/static/
  *   4. Copies apps/web/dist → apps/api/static/
  *   5. Verifies apps/api/static/index.html exists
- *
- * After running this script, deploy with:
- *   databricks apps deploy connectio-v2 --source-code-path apps/api
+ *   6. (--deploy only) Runs `databricks bundle deploy --target uat`
+ *   7. (--deploy only) Stops and starts the app to force pick-up of new bundle
+ *      (bundle deploy uploads files but does NOT restart the app; without a
+ *      stop/start the running container continues to serve the old bundle).
  */
 
 import { execSync } from 'node:child_process'
@@ -27,6 +29,14 @@ const distDir = join(root, 'apps', 'web', 'dist')
 const staticDir = join(root, 'apps', 'api', 'static')
 const envLocal = join(root, 'apps', 'web', '.env.local')
 const envLocalBak = join(root, 'apps', 'web', '.env.local.bak')
+
+const args = process.argv.slice(2)
+const shouldDeploy = args.includes('--deploy')
+const target = (() => {
+  const i = args.indexOf('--target')
+  return i >= 0 && args[i + 1] ? args[i + 1] : 'uat'
+})()
+const appName = 'connectio-v2'
 
 // ── 1. Environment defaults ────────────────────────────────────────────────
 // For same-origin Databricks Apps deployment, all base URLs must be empty so
@@ -97,6 +107,26 @@ if (!existsSync(indexHtml)) {
 }
 
 console.log('\nStep 3/3: Verified apps/api/static/index.html present.')
-console.log()
-console.log('Ready to deploy:')
-console.log('  databricks apps deploy connectio-v2 --source-code-path apps/api')
+
+if (!shouldDeploy) {
+  console.log()
+  console.log('Build artifact ready. To deploy + force restart, run:')
+  console.log('  npm run deploy:databricks')
+  process.exit(0)
+}
+
+// ── 6. Bundle deploy ──────────────────────────────────────────────────────
+console.log(`\nStep 4/6: databricks bundle deploy --target ${target}`)
+execSync(`databricks bundle deploy --target ${target}`, { cwd: root, stdio: 'inherit' })
+
+// ── 7. Force restart (stop + start) ───────────────────────────────────────
+// `bundle deploy` uploads files to the workspace but the running app keeps
+// serving its previous snapshot. A stop/start cycle is required to pick up
+// the new files. `apps start` automatically deploys from the workspace path.
+console.log(`\nStep 5/6: databricks apps stop ${appName}`)
+execSync(`databricks apps stop ${appName}`, { cwd: root, stdio: 'inherit' })
+
+console.log(`\nStep 6/6: databricks apps start ${appName} (force restart)`)
+execSync(`databricks apps start ${appName}`, { cwd: root, stdio: 'inherit' })
+
+console.log('\nDeploy + restart complete. The app picks up the new bundle.')
