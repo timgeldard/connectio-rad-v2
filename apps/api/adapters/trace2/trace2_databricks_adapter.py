@@ -2,7 +2,7 @@
 
 Implemented slices:
   - get_batch_header_summary_spec / map_batch_header_rows
-  - get_trace_graph_anchor_spec + get_trace_graph_hop_spec / map_trace_graph
+  - get_trace_graph_recursive_spec / map_trace_graph
   - get_mass_balance_spec / map_mass_balance_rows
 
 Deferred slices:
@@ -13,9 +13,9 @@ IMPORTANT: All gold_batch_summary_v column names are unverified (marked TODO).
 Column names for gold_batch_stock_v, gold_batch_lineage, gold_material, gold_plant,
 gold_batch_mass_balance_v are confirmed from V1 source inspection (trace2-functional-parity-audit.md §3).
 
-Trace graph uses iterative multi-hop expansion (not recursive CTE) — WITH RECURSIVE support
-under the Databricks Statement API cannot be verified against UAT without DDL execution.
-The route orchestrates one QuerySpec call per depth hop in a Python loop.
+Trace graph uses a single WITH RECURSIVE SQL query (server-side traversal) — replaces the
+former iterative multi-hop Python loop that caused 504 Gateway Timeouts on dense lineage graphs
+by exhausting the 30-second Databricks Apps gateway limit with N sequential SQL calls.
 """
 from __future__ import annotations
 
@@ -41,9 +41,9 @@ class Trace2BatchHeaderRequest:
 class TraceGraphRequest:
     material_id: str
     batch_id: str
-    plant_id: str
+    plant_id: str = ""        # optional — stored on nodes for display, not used in SQL filter
     direction: str = "both"   # "upstream" | "downstream" | "both"
-    max_depth: int = 6
+    max_depth: int = 3
     max_edges: int = 1000
 
 
@@ -151,71 +151,133 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Slice 2 — getTraceGraph (iterative multi-hop expansion)
+# Slice 2 — getTraceGraph (single WITH RECURSIVE query)
 # ---------------------------------------------------------------------------
 
-# All 18 confirmed DDL columns from gold_batch_lineage, aliased lowercase so
-# Databricks Statement API returns consistent lowercase dict keys.
-_TRACE_GRAPH_SELECT = """\
-    SELECT
-        PARENT_MATERIAL_ID        AS parent_material_id,
-        PARENT_BATCH_ID           AS parent_batch_id,
-        PARENT_PLANT_ID           AS parent_plant_id,
-        CHILD_MATERIAL_ID         AS child_material_id,
-        CHILD_BATCH_ID            AS child_batch_id,
-        CHILD_PLANT_ID            AS child_plant_id,
-        LINK_TYPE                 AS link_type,
-        PROCESS_ORDER_ID          AS process_order_id,
-        MATERIAL_DOCUMENT_NUMBER  AS material_document_number,
-        PURCHASE_ORDER_ID         AS purchase_order_id,
-        SUPPLIER_ID               AS supplier_id,
-        CUSTOMER_ID               AS customer_id,
-        DELIVERY_ID               AS delivery_id,
-        SALES_ORDER_ID            AS sales_order_id,
-        QUANTITY                  AS quantity,
-        BASE_UNIT_OF_MEASURE      AS base_unit_of_measure,
-        POSTING_DATE              AS posting_date,
-        MOVEMENT_TYPE             AS movement_type"""
+def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
+    """QuerySpec for trace graph — single WITH RECURSIVE server-side traversal.
 
+    Replaces the former iterative multi-hop Python loop. One SQL call instead of
+    N sequential calls, keeping well within the 30-second Databricks Apps gateway limit.
 
-def get_trace_graph_anchor_spec(request: TraceGraphRequest) -> QuerySpec:
-    """QuerySpec for hop 0 — edges directly touching the anchor node.
+    Anchor matched on material_id + batch_id only (no plant_id filter).
+    Returns hop_depth (1-based) and traversal_dir per edge row; the route converts
+    hop_depth to 0-based when building tagged_rows for map_trace_graph.
 
-    Anchor (material_id, batch_id, plant_id) is bound as named params — user input.
-    Direction controls which side of the edge the anchor must appear on:
-      downstream → anchor must be PARENT (anchor produced something)
-      upstream   → anchor must be CHILD  (something produced anchor)
-      both       → either side
+    Cycle detection: path column tracks visited 2-tuple keys (material_id:batch_id).
+    Recursive join uses plant_id for correct edge resolution; cycle guard uses 2-tuple.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
     tbl = resolve_domain_object("trace2", "gold_batch_lineage")
 
+    # Base CTE: deduplicate all lineage edges.
+    # Only material_id + batch_id are required non-null (used in path/cycle keys).
+    # plant_id may be null in gold_batch_lineage; <=> (null-safe equals) in recursive
+    # JOINs below ensures null plant_ids are traversed rather than silently dropped.
+    ue_cte = f"""\
+  ue AS (
+    SELECT DISTINCT
+      PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID,
+      CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID,
+      LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER,
+      PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
+      SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE
+    FROM {tbl}
+    WHERE PARENT_MATERIAL_ID IS NOT NULL AND PARENT_BATCH_ID IS NOT NULL
+      AND CHILD_MATERIAL_ID IS NOT NULL AND CHILD_BATCH_ID IS NOT NULL
+  )"""
+
+    # Downstream CTE: anchor is PARENT, recurse following CHILD edges forward
+    ds_cte = """\
+  ds AS (
+    SELECT
+      1 AS hop_depth, 'downstream' AS traversal_dir,
+      PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID,
+      CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID,
+      LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER,
+      PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
+      SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
+      CONCAT('|', :material_id, ':', :batch_id, '|',
+             CHILD_MATERIAL_ID, ':', CHILD_BATCH_ID, '|') AS path
+    FROM ue  -- CTE: deduped `gold_batch_lineage` rows
+    WHERE PARENT_MATERIAL_ID = :material_id AND PARENT_BATCH_ID = :batch_id
+    UNION ALL
+    SELECT
+      t.hop_depth + 1, 'downstream',
+      e.PARENT_MATERIAL_ID, e.PARENT_BATCH_ID, e.PARENT_PLANT_ID,
+      e.CHILD_MATERIAL_ID, e.CHILD_BATCH_ID, e.CHILD_PLANT_ID,
+      e.LINK_TYPE, e.PROCESS_ORDER_ID, e.MATERIAL_DOCUMENT_NUMBER,
+      e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
+      e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
+      CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')
+    FROM ue e  -- CTE: deduped `gold_batch_lineage` rows
+    JOIN ds t  -- CTE `ds`: downstream recursive accumulator
+      ON e.PARENT_MATERIAL_ID = t.CHILD_MATERIAL_ID
+      AND e.PARENT_BATCH_ID = t.CHILD_BATCH_ID
+      AND e.PARENT_PLANT_ID <=> t.CHILD_PLANT_ID
+    WHERE t.hop_depth < :max_depth
+      AND INSTR(t.path, CONCAT('|', e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')) = 0
+  )"""
+
+    # Upstream CTE: anchor is CHILD, recurse following PARENT edges backward
+    us_cte = """\
+  us AS (
+    SELECT
+      1 AS hop_depth, 'upstream' AS traversal_dir,
+      PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID,
+      CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID,
+      LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER,
+      PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
+      SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
+      CONCAT('|', :material_id, ':', :batch_id, '|',
+             PARENT_MATERIAL_ID, ':', PARENT_BATCH_ID, '|') AS path
+    FROM ue  -- CTE: deduped `gold_batch_lineage` rows
+    WHERE CHILD_MATERIAL_ID = :material_id AND CHILD_BATCH_ID = :batch_id
+    UNION ALL
+    SELECT
+      t.hop_depth + 1, 'upstream',
+      e.PARENT_MATERIAL_ID, e.PARENT_BATCH_ID, e.PARENT_PLANT_ID,
+      e.CHILD_MATERIAL_ID, e.CHILD_BATCH_ID, e.CHILD_PLANT_ID,
+      e.LINK_TYPE, e.PROCESS_ORDER_ID, e.MATERIAL_DOCUMENT_NUMBER,
+      e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
+      e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
+      CONCAT(t.path, e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')
+    FROM ue e  -- CTE: deduped `gold_batch_lineage` rows
+    JOIN us t  -- CTE `us`: upstream recursive accumulator
+      ON e.CHILD_MATERIAL_ID = t.PARENT_MATERIAL_ID
+      AND e.CHILD_BATCH_ID = t.PARENT_BATCH_ID
+      AND e.CHILD_PLANT_ID <=> t.PARENT_PLANT_ID
+    WHERE t.hop_depth < :max_depth
+      AND INSTR(t.path, CONCAT('|', e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')) = 0
+  )"""
+
+    select_cols = """\
+    hop_depth, traversal_dir,
+    PARENT_MATERIAL_ID AS parent_material_id, PARENT_BATCH_ID AS parent_batch_id, PARENT_PLANT_ID AS parent_plant_id,
+    CHILD_MATERIAL_ID AS child_material_id, CHILD_BATCH_ID AS child_batch_id, CHILD_PLANT_ID AS child_plant_id,
+    LINK_TYPE AS link_type, PROCESS_ORDER_ID AS process_order_id, MATERIAL_DOCUMENT_NUMBER AS material_document_number,
+    PURCHASE_ORDER_ID AS purchase_order_id, SUPPLIER_ID AS supplier_id, CUSTOMER_ID AS customer_id,
+    DELIVERY_ID AS delivery_id, SALES_ORDER_ID AS sales_order_id, QUANTITY AS quantity,
+    BASE_UNIT_OF_MEASURE AS base_unit_of_measure, POSTING_DATE AS posting_date, MOVEMENT_TYPE AS movement_type"""
+
     if request.direction == "downstream":
-        where = (
-            "PARENT_MATERIAL_ID = :material_id"
-            " AND PARENT_BATCH_ID = :batch_id"
-            " AND PARENT_PLANT_ID = :plant_id"
+        sql = (
+            f"WITH RECURSIVE\n{ue_cte},\n{ds_cte}\n"
+            f"SELECT DISTINCT\n{select_cols}\nFROM ds"
         )
     elif request.direction == "upstream":
-        where = (
-            "CHILD_MATERIAL_ID = :material_id"
-            " AND CHILD_BATCH_ID = :batch_id"
-            " AND CHILD_PLANT_ID = :plant_id"
+        sql = (
+            f"WITH RECURSIVE\n{ue_cte},\n{us_cte}\n"
+            f"SELECT DISTINCT\n{select_cols}\nFROM us"
         )
-    else:  # both
-        where = (
-            "(PARENT_MATERIAL_ID = :material_id"
-            " AND PARENT_BATCH_ID = :batch_id"
-            " AND PARENT_PLANT_ID = :plant_id)"
-            "\n       OR (CHILD_MATERIAL_ID = :material_id"
-            " AND CHILD_BATCH_ID = :batch_id"
-            " AND CHILD_PLANT_ID = :plant_id)"
+    else:  # both — two independent recursive CTEs in one WITH RECURSIVE block
+        sql = (
+            f"WITH RECURSIVE\n{ue_cte},\n{ds_cte},\n{us_cte}\n"
+            f"SELECT DISTINCT\n{select_cols}\nFROM ds\n"
+            f"UNION ALL\n"
+            f"SELECT DISTINCT\n{select_cols}\nFROM us"
         )
-
-    sql = f"""
-{_TRACE_GRAPH_SELECT}
-    FROM {tbl}
-    WHERE {where}
-    """
 
     return QuerySpec(
         name="trace2.get_trace_graph",
@@ -225,59 +287,8 @@ def get_trace_graph_anchor_spec(request: TraceGraphRequest) -> QuerySpec:
         params={
             "material_id": request.material_id,
             "batch_id": request.batch_id,
-            "plant_id": request.plant_id,
+            "max_depth": request.max_depth,
         },
-        cache_policy=CacheTier.PER_USER_60S,
-        source_badge="view:gold_batch_lineage",
-        tags=["trace2", "trace-graph", "lineage"],
-    )
-
-
-def get_trace_graph_hop_spec(
-    frontier: list[tuple[str, str, str]],
-    direction: str,
-) -> QuerySpec:
-    """QuerySpec for hops 1..N in iterative traversal.
-
-    frontier: server-generated (material_id, batch_id, plant_id) tuples produced
-    by the previous hop — safe to embed as SQL tuple literals.
-    No user input reaches this SQL; anchor params are only in the hop-0 spec.
-    """
-    tbl = resolve_domain_object("trace2", "gold_batch_lineage")
-
-    tuple_list = ", ".join(
-        f"({_sql_str(m)}, {_sql_str(b)}, {_sql_str(p)})"
-        for m, b, p in frontier
-    )
-
-    if direction == "downstream":
-        where = (
-            f"(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)"
-            f" IN ({tuple_list})"
-        )
-    elif direction == "upstream":
-        where = (
-            f"(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)"
-            f" IN ({tuple_list})"
-        )
-    else:  # both
-        where = (
-            f"(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID) IN ({tuple_list})"
-            f"\n       OR (CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID) IN ({tuple_list})"
-        )
-
-    sql = f"""
-{_TRACE_GRAPH_SELECT}
-    FROM {tbl}
-    WHERE {where}
-    """
-
-    return QuerySpec(
-        name="trace2.get_trace_graph",
-        module="trace2",
-        endpoint="/api/trace2/trace-graph",
-        sql=sql,
-        params={},  # frontier values are server-generated and embedded as literals
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_lineage",
         tags=["trace2", "trace-graph", "lineage"],
@@ -296,7 +307,7 @@ def map_trace_graph(
     Anchor node is always included even when tagged_rows is empty.
     Nodes and edges are deduped by key; leading zeros preserved (no numeric casting).
     """
-    anchor_key = _node_key(request.material_id, request.batch_id, request.plant_id)
+    anchor_key = _node_key(request.material_id, request.batch_id)
 
     nodes: dict[str, dict] = {
         anchor_key: {
@@ -314,16 +325,8 @@ def map_trace_graph(
     warnings: list[str] = []
 
     for row, hop, direction in tagged_rows:
-        parent_key = _node_key(
-            row["parent_material_id"],
-            row["parent_batch_id"],
-            row["parent_plant_id"],
-        )
-        child_key = _node_key(
-            row["child_material_id"],
-            row["child_batch_id"],
-            row["child_plant_id"],
-        )
+        parent_key = _node_key(row["parent_material_id"], row["parent_batch_id"])
+        child_key = _node_key(row["child_material_id"], row["child_batch_id"])
 
         # Assign depth: for downstream the parent was found at hop, child is one step further.
         # For upstream the child was found at hop, parent is one step further.
@@ -493,22 +496,14 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _node_key(material_id: str, batch_id: str, plant_id: str) -> str:
-    """Unique key for a batch node — includes plant_id to prevent collisions."""
-    return f"{material_id}:{batch_id}:{plant_id}"
+def _node_key(material_id: str, batch_id: str) -> str:
+    """Unique key for a batch node — 2-tuple (material_id:batch_id).
 
-
-def _sql_str(value: str | None) -> str:
-    """Embed a server-generated string as a SQL single-quoted literal.
-
-    Only call with values produced by a prior Databricks query result, never with
-    raw user input. Single-quotes within the value are escaped by doubling.
-    None guard: the route filters NULL-key rows before building the frontier,
-    but if one slips through, NULL in the IN clause matches nothing rather than crashing.
+    plant_id intentionally excluded: a batch is identified by material+batch
+    regardless of plant. plantId is stored on each node for display but does
+    not participate in dedup or cycle detection.
     """
-    if value is None:
-        return "NULL"
-    return "'" + value.replace("'", "''") + "'"
+    return f"{material_id}:{batch_id}"
 
 
 def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
@@ -517,7 +512,7 @@ def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
     bat = row[f"{prefix}_batch_id"]
     pla = row[f"{prefix}_plant_id"]
     return {
-        "nodeKey": _node_key(mat, bat, pla),
+        "nodeKey": _node_key(mat, bat),
         "materialId": mat,
         "batchId": bat,
         "plantId": pla,

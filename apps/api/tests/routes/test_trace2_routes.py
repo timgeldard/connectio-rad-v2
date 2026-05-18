@@ -39,8 +39,10 @@ _VALID_BODY = {
     "max_edges": 1000,
 }
 
-# A single downstream edge row returned by the mocked executor
+# A single downstream edge row returned by the mocked executor (WITH RECURSIVE shape)
 _FAKE_LINEAGE_ROW = {
+    "hop_depth": 1,
+    "traversal_dir": "downstream",
     "parent_material_id": "000000000020052009",
     "parent_batch_id": "0008602411",
     "parent_plant_id": "C061",
@@ -144,12 +146,13 @@ class TestTraceGraphValidation:
             response = await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
         assert response.status_code == 422
 
-    async def test_missing_plant_id_returns_422(self, monkeypatch) -> None:
+    async def test_plant_id_is_optional(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         body = {k: v for k, v in _VALID_BODY.items() if k != "plant_id"}
-        async with _make_client() as client:
-            response = await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
-        assert response.status_code == 422
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
 
     async def test_upstream_direction_is_valid(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
@@ -347,7 +350,7 @@ class TestTraceGraphSuccess:
         assert anchor["materialId"] == "000000000020052009"
         assert anchor["batchId"] == "0008602411"
 
-    async def test_max_depth_clamped_to_10(self, monkeypatch) -> None:
+    async def test_max_depth_clamped_to_4(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         body = {**_VALID_BODY, "max_depth": 99}
         with _patch_executor([]):
