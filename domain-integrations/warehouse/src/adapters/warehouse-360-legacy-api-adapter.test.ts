@@ -447,5 +447,29 @@ describe('Warehouse360LegacyApiAdapter native endpoints', () => {
       expect(result.source).toBeUndefined() // Mock adapter doesn't set source
     }
   })
+
+  it('appends optional query parameters when provided in request', async () => {
+    const filterRequest: Warehouse360AdapterRequest = {
+      warehouseId: 'WH-IE10-MAIN',
+      plantId: 'IE10',
+      dateFrom: '2026-05-01',
+      dateTo: '2026-05-31',
+      limit: 150,
+    }
+
+    vi.stubGlobal('fetch', mockFetch(200, [fakeInboundItem]))
+    const result = await adapter.getWarehouseInbound(filterRequest)
+    expect(result.ok).toBe(true)
+
+    const fetchMock = vi.mocked(global.fetch)
+    const [url] = fetchMock.mock.calls[0]
+    const urlObj = new URL(String(url))
+    expect(urlObj.searchParams.get('warehouse_id')).toBe('WH-IE10-MAIN')
+    expect(urlObj.searchParams.get('plant_id')).toBe('IE10')
+    expect(urlObj.searchParams.get('date_from')).toBe('2026-05-01')
+    expect(urlObj.searchParams.get('date_to')).toBe('2026-05-31')
+    expect(urlObj.searchParams.get('limit')).toBe('150')
+  })
 })
+
 

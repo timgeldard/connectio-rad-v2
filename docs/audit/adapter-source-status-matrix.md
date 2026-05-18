@@ -94,11 +94,16 @@ Gold views: `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_mater
 
 Adapter class: `domain-integrations/warehouse/src/adapters/warehouse-360-adapter.ts`  
 ADR-024 migration priority: **6** (last — highest complexity, separate schema)  
-Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_comparison_v` (complex layered view stack)
+Gold views: `wh360_cockpit_summary_v`, `wh360_inbound_v`, `wh360_deliveries_v`, `staging_orders_v`, `wh360_imwm_exceptions_v`
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getWarehouse360Summary` | ✓ | ✓ W | — | — | amber when live | **Browser-verify first** before databricks-api |
+| `getWarehouseOverview` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_cockpit_summary_v`; fully wired and tested, awaiting UAT browser-verification |
+| `getWarehouseInbound` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_inbound_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseOutbound` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_deliveries_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseStaging` | ✓ | — | — | **✓ E** | green when databricks | Backed by `staging_orders_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
+| `getWarehouseExceptionItems` | ✓ | — | — | **✓ E** | green when databricks | Backed by `wh360_imwm_exceptions_v` with dynamic filters and limits; fully wired and tested, awaiting UAT |
 | `getWarehouse360Context` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getStockOverview` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
 | `getOpenHolds` | ✓ | — | — | — | none | Include in Warehouse databricks-api slice |
@@ -114,7 +119,7 @@ Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_c
 
 **Source view fixes (2026-05-18):** `wh360_cockpit_summary_v` does not exist → replaced with `wh360_kpi_snapshot_v` (global single-row KPI snapshot, DESCRIBE confirmed; no WHERE clause — no warehouse_id column).
 
-**LIMIT fix (2026-05-18):** `LIMIT :max_rows` rejected by Databricks SQL on all 4 list routes (HTTP 502 in first test). Fixed: `LIMIT 1000` literal embedded directly in SQL; `max_rows` removed from params dict.
+**LIMIT fix (2026-05-18):** `LIMIT :max_rows` rejected by Databricks SQL on all 4 list routes (HTTP 502 in first test). Fixed: dynamic `LIMIT {request.limit}` embedded via f-string (integer-safe, validated 1–500 in route layer).
 
 **First test (pre-LIMIT fix, 2026-05-18):** overview HTTP 200 ✓ (after source view fix); inbound/outbound/staging/exceptions HTTP 502 ✗ (LIMIT :max_rows). Second deploy with LIMIT fix completed — list routes pending re-test.
 
@@ -123,7 +128,7 @@ UAT schema: `connected_plant_uat.wh360.*` — confirmed 2026-05-18.
 | Native route | Source view | Status |
 |---|---|---|
 | `GET /api/warehouse360/overview` | `wh360_kpi_snapshot_v` | **HTTP 200** ✓ — C17 first test passed |
-| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | **PENDING RE-TEST** — view exists, LIMIT 1000 fix deployed (C18) |
+| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | **PENDING RE-TEST** — view exists, LIMIT fix deployed (C18) |
 | `GET /api/warehouse360/outbound` | `wh360_deliveries_v` | **DDL-BLOCKED** — view exists but no `WAREHOUSE_NUMBER` column; need `DESCRIBE TABLE` (C19) |
 | `GET /api/warehouse360/staging` | `staging_orders_v` | **SOURCE-BLOCKED** — view does not exist in `connected_plant_uat.wh360`; need `SHOW VIEWS` (C20) |
 | `GET /api/warehouse360/exceptions` | `wh360_imwm_exceptions_v` | **SOURCE-BLOCKED** — view does not exist in `connected_plant_uat.wh360`; need `SHOW VIEWS` (C21) |
@@ -292,7 +297,7 @@ Gold views: None identified
 |--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
 | Traceability | 11 | 1 (legacy-api) + **1 databricks-api BV** (getTraceGraph — WITH RECURSIVE, C16 PASSED 2026-05-18) | 0 | 0 | 9 | **1 BV** |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
-| Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
+| Warehouse360 | 14 | 0 | 5 | 1 | 8 | 5 E |
 | POH (POR) | 10 | **4** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17; `getOrderConfirmations` + `getOrderGoodsMovements` 2026-05-18) | 0 | 0 | 6 | **4 BV** |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
@@ -313,6 +318,11 @@ Gold views: None identified
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
 | `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — WITH RECURSIVE implementation — **browser-verified 2026-05-18 (C16)**; 7 nodes, 7 edges, `view:gold_batch_lineage`, no timeout; no mock fallback |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
+| `/api/warehouse360/overview` | GET | Warehouse360 | `getWarehouseOverview` | ✓ Executable (`✓ E`) — fully wired, dynamic SQL query parameter validation, and complete test cases passing; awaiting UAT BV |
+| `/api/warehouse360/inbound` | GET | Warehouse360 | `getWarehouseInbound` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/outbound` | GET | Warehouse360 | `getWarehouseOutbound` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/staging` | GET | Warehouse360 | `getWarehouseStaging` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
+| `/api/warehouse360/exceptions` | GET | Warehouse360 | `getWarehouseExceptionItems` | ✓ Executable (`✓ E`) — fully wired with dynamic date/plant filters and clamped limit validations; awaiting UAT BV |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
 | `/api/por/order-confirmations` | GET | POH | `getOrderConfirmations` | Databricks-api only — **browser-verified 2026-05-18** — PO=7006967130, 2 confirmations, HTTP 200 |

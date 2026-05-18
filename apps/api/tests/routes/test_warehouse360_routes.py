@@ -342,3 +342,67 @@ class TestWarehouseExceptionsRoute:
                 )
 
         assert response.status_code == 502
+
+
+class TestWarehouse360ParameterValidation:
+    async def test_empty_warehouse_id_returns_422(self, wh360_databricks_env) -> None:
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/warehouse360/overview",
+                params={"warehouse_id": "   "},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 422
+        assert "warehouse_id cannot be empty" in response.json()["detail"]
+
+    async def test_limit_out_of_bounds_low_returns_422(self, wh360_databricks_env) -> None:
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/warehouse360/inbound",
+                params={"warehouse_id": "WH01", "limit": 0},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 422
+        assert "limit must be between 1 and 500" in response.json()["detail"]
+
+    async def test_limit_out_of_bounds_high_returns_422(self, wh360_databricks_env) -> None:
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/warehouse360/outbound",
+                params={"warehouse_id": "WH01", "limit": 501},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 422
+        assert "limit must be between 1 and 500" in response.json()["detail"]
+
+    async def test_successful_filtering_params_forwarding(self, wh360_databricks_env) -> None:
+        fake_rows = []
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=fake_rows,
+        ) as mock_exec:
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/warehouse360/inbound",
+                    params={
+                        "warehouse_id": "WH01",
+                        "plant_id": "PL10",
+                        "date_from": "2026-05-01",
+                        "date_to": "2026-05-31",
+                        "limit": 150,
+                    },
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+            assert response.status_code == 200
+            # Verify the QuerySpec execution received the correct filtered parameters
+            mock_exec.assert_called_once()
+            args, kwargs = mock_exec.call_args
+            called_sql = kwargs.get("sql") or args[0]
+            called_params = kwargs.get("params") or args[1]
+            assert called_params["plant_id"] == "PL10"
+            assert called_params["date_from"] == "2026-05-01"
+            assert called_params["date_to"] == "2026-05-31"
+            assert "LIMIT 150" in called_sql
+
+

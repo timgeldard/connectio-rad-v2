@@ -46,7 +46,7 @@ class TestWarehouseOverviewSpec:
         assert spec.name == "warehouse360.get_overview"
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/overview"
-        assert spec.cache_policy == CacheTier.PER_USER_60S
+        assert spec.cache_policy == CacheTier.GLOBAL_300S
         assert spec.params == {}
         assert "wh360_kpi_snapshot_v" in spec.sql
         assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_kpi_snapshot_v`" in spec.sql
@@ -104,6 +104,76 @@ class TestWarehouseExceptionsSpec:
         assert spec.params["warehouse_id"] == "WH01"
         assert "wh360_imwm_exceptions_v" in spec.sql
         assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_imwm_exceptions_v`" in spec.sql
+
+
+class TestQuerySpecDynamicFiltering:
+    def test_inbound_with_all_filters(self) -> None:
+        req = WarehouseInboundRequest(
+            warehouse_id="WH01",
+            plant_id="PL10",
+            date_from="2026-05-01",
+            date_to="2026-05-31",
+            limit=250,
+        )
+        spec = get_warehouse_inbound_spec(req)
+        assert spec.params["plant_id"] == "PL10"
+        assert spec.params["date_from"] == "2026-05-01"
+        assert spec.params["date_to"] == "2026-05-31"
+        assert "PLANT_ID = :plant_id" in spec.sql
+        assert "EXPECTED_DATE >= :date_from" in spec.sql
+        assert "EXPECTED_DATE <= :date_to" in spec.sql
+        assert "LIMIT 250" in spec.sql
+
+    def test_outbound_with_all_filters(self) -> None:
+        req = WarehouseOutboundRequest(
+            warehouse_id="WH01",
+            plant_id="PL10",
+            date_from="2026-05-01",
+            date_to="2026-05-31",
+            limit=250,
+        )
+        spec = get_warehouse_outbound_spec(req)
+        assert spec.params["plant_id"] == "PL10"
+        assert spec.params["date_from"] == "2026-05-01"
+        assert spec.params["date_to"] == "2026-05-31"
+        assert "PLANT_ID = :plant_id" in spec.sql
+        assert "PLANNED_GOODS_ISSUE_DATE >= :date_from" in spec.sql
+        assert "PLANNED_GOODS_ISSUE_DATE <= :date_to" in spec.sql
+        assert "LIMIT 250" in spec.sql
+
+    def test_staging_with_all_filters(self) -> None:
+        req = WarehouseStagingRequest(
+            warehouse_id="WH01",
+            plant_id="PL10",
+            date_from="2026-05-01",
+            date_to="2026-05-31",
+            limit=250,
+        )
+        spec = get_warehouse_staging_spec(req)
+        assert spec.params["plant_id"] == "PL10"
+        assert spec.params["date_from"] == "2026-05-01"
+        assert spec.params["date_to"] == "2026-05-31"
+        assert "PLANT_ID = :plant_id" in spec.sql
+        assert "REQUIREMENT_DATE >= :date_from" in spec.sql
+        assert "REQUIREMENT_DATE <= :date_to" in spec.sql
+        assert "LIMIT 250" in spec.sql
+
+    def test_exceptions_with_all_filters(self) -> None:
+        req = WarehouseExceptionRequest(
+            warehouse_id="WH01",
+            plant_id="PL10",
+            date_from="2026-05-01",
+            date_to="2026-05-31",
+            limit=250,
+        )
+        spec = get_warehouse_exceptions_spec(req)
+        assert spec.params["plant_id"] == "PL10"
+        assert spec.params["date_from"] == "2026-05-01"
+        assert spec.params["date_to"] == "2026-05-31"
+        assert "PLANT_ID = :plant_id" in spec.sql
+        assert "EXPIRY_DATE >= :date_from" in spec.sql
+        assert "EXPIRY_DATE <= :date_to" in spec.sql
+        assert "LIMIT 250" in spec.sql
 
 
 # ---------------------------------------------------------------------------

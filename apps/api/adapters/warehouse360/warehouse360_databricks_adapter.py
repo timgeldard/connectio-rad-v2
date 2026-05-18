@@ -16,26 +16,46 @@ from shared.query_service.query_spec import QuerySpec
 @dataclass
 class WarehouseOverviewRequest:
     warehouse_id: str
+    plant_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    limit: int = 100
 
 
 @dataclass
 class WarehouseInboundRequest:
     warehouse_id: str
+    plant_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    limit: int = 100
 
 
 @dataclass
 class WarehouseOutboundRequest:
     warehouse_id: str
+    plant_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    limit: int = 100
 
 
 @dataclass
 class WarehouseStagingRequest:
     warehouse_id: str
+    plant_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    limit: int = 100
 
 
 @dataclass
 class WarehouseExceptionRequest:
     warehouse_id: str
+    plant_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    limit: int = 100
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +160,7 @@ def get_warehouse_overview_spec(request: WarehouseOverviewRequest) -> QuerySpec:
         endpoint="/api/warehouse360/overview",
         sql=sql,
         params={},
-        cache_policy=CacheTier.PER_USER_60S,
+        cache_policy=CacheTier.GLOBAL_300S,
         tags=["wh360", "cockpit", "overview"],
     )
 
@@ -191,6 +211,20 @@ def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
     Source view: wh360_inbound_v
     """
     view = resolve_domain_object("wh360", "wh360_inbound_v")
+    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
+    params = {"warehouse_id": request.warehouse_id}
+
+    if request.plant_id:
+        where_clauses.append("PLANT_ID = :plant_id")
+        params["plant_id"] = request.plant_id
+    if request.date_from:
+        where_clauses.append("EXPECTED_DATE >= :date_from")
+        params["date_from"] = request.date_from
+    if request.date_to:
+        where_clauses.append("EXPECTED_DATE <= :date_to")
+        params["date_to"] = request.date_to
+
+    where_str = " AND ".join(where_clauses)
     sql = f"""
     SELECT
         DOCUMENT_TYPE             AS document_type,
@@ -212,15 +246,15 @@ def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
         STATUS                    AS status,
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
-    WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT 1000
+    WHERE {where_str}
+    LIMIT {request.limit}
     """
     return QuerySpec(
         name="warehouse360.get_inbound",
         module="wh360",
         endpoint="/api/warehouse360/inbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params=params,
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "inbound", "receipts"],
     )
@@ -267,6 +301,20 @@ def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
     Source view: wh360_deliveries_v
     """
     view = resolve_domain_object("wh360", "wh360_deliveries_v")
+    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
+    params = {"warehouse_id": request.warehouse_id}
+
+    if request.plant_id:
+        where_clauses.append("PLANT_ID = :plant_id")
+        params["plant_id"] = request.plant_id
+    if request.date_from:
+        where_clauses.append("PLANNED_GOODS_ISSUE_DATE >= :date_from")
+        params["date_from"] = request.date_from
+    if request.date_to:
+        where_clauses.append("PLANNED_GOODS_ISSUE_DATE <= :date_to")
+        params["date_to"] = request.date_to
+
+    where_str = " AND ".join(where_clauses)
     sql = f"""
     SELECT
         DELIVERY_ID               AS delivery_id,
@@ -286,15 +334,15 @@ def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
         STATUS                    AS status,
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
-    WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT 1000
+    WHERE {where_str}
+    LIMIT {request.limit}
     """
     return QuerySpec(
         name="warehouse360.get_outbound",
         module="wh360",
         endpoint="/api/warehouse360/outbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params=params,
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "outbound", "deliveries"],
     )
@@ -331,6 +379,20 @@ def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
     Source view: staging_orders_v
     """
     view = resolve_domain_object("wh360", "staging_orders_v")
+    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
+    params = {"warehouse_id": request.warehouse_id}
+
+    if request.plant_id:
+        where_clauses.append("PLANT_ID = :plant_id")
+        params["plant_id"] = request.plant_id
+    if request.date_from:
+        where_clauses.append("REQUIREMENT_DATE >= :date_from")
+        params["date_from"] = request.date_from
+    if request.date_to:
+        where_clauses.append("REQUIREMENT_DATE <= :date_to")
+        params["date_to"] = request.date_to
+
+    where_str = " AND ".join(where_clauses)
     sql = f"""
     SELECT
         PROCESS_ORDER_ID          AS process_order_id,
@@ -350,15 +412,15 @@ def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
         STAGING_STATUS            AS staging_status,
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
-    WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT 1000
+    WHERE {where_str}
+    LIMIT {request.limit}
     """
     return QuerySpec(
         name="warehouse360.get_staging",
         module="wh360",
         endpoint="/api/warehouse360/staging",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params=params,
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "production", "staging"],
     )
@@ -395,6 +457,20 @@ def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySp
     Source view: wh360_imwm_exceptions_v
     """
     view = resolve_domain_object("wh360", "wh360_imwm_exceptions_v")
+    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
+    params = {"warehouse_id": request.warehouse_id}
+
+    if request.plant_id:
+        where_clauses.append("PLANT_ID = :plant_id")
+        params["plant_id"] = request.plant_id
+    if request.date_from:
+        where_clauses.append("EXPIRY_DATE >= :date_from")
+        params["date_from"] = request.date_from
+    if request.date_to:
+        where_clauses.append("EXPIRY_DATE <= :date_to")
+        params["date_to"] = request.date_to
+
+    where_str = " AND ".join(where_clauses)
     sql = f"""
     SELECT
         EXCEPTION_TYPE            AS exception_type,
@@ -415,15 +491,15 @@ def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySp
         REASON                    AS reason,
         RECOMMENDED_REVIEW_ACTION  AS recommended_review_action
     FROM {view}
-    WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT 1000
+    WHERE {where_str}
+    LIMIT {request.limit}
     """
     return QuerySpec(
         name="warehouse360.get_exceptions",
         module="wh360",
         endpoint="/api/warehouse360/exceptions",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params=params,
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "reconciliation", "exceptions"],
     )

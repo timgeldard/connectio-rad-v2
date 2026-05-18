@@ -75,3 +75,43 @@ export function useWarehouseExceptions(request: Warehouse360AdapterRequest) {
     staleTime: STALE,
   })
 }
+
+export function useWarehouseOverview(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-overview-native', request.warehouseId ?? null, request.plantId ?? null, request.dateFrom ?? null, request.dateTo ?? null, request.limit ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseOverview(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouseInbound(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-inbound-native', request.warehouseId ?? null, request.plantId ?? null, request.dateFrom ?? null, request.dateTo ?? null, request.limit ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseInbound(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouseOutbound(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-outbound-native', request.warehouseId ?? null, request.plantId ?? null, request.dateFrom ?? null, request.dateTo ?? null, request.limit ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseOutbound(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouseStaging(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-staging-native', request.warehouseId ?? null, request.plantId ?? null, request.dateFrom ?? null, request.dateTo ?? null, request.limit ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseStaging(request),
+    staleTime: STALE,
+  })
+}
+
+export function useWarehouseExceptionItems(request: Warehouse360AdapterRequest) {
+  return useQuery({
+    queryKey: ['warehouse-exceptions-native', request.warehouseId ?? null, request.plantId ?? null, request.dateFrom ?? null, request.dateTo ?? null, request.limit ?? null],
+    queryFn: () => warehouse360Adapter.getWarehouseExceptionItems(request),
+    staleTime: STALE,
+  })
+}

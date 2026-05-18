@@ -14,8 +14,29 @@ function isBrowserVerified(endpoint: string): boolean {
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return true // Always run native fetch paths in test environment to test all handlers/mappers!
   }
-  const verifiedEndpoints: string[] = [] // Add to this list once browser-verified in UAT
+  const verifiedEndpoints: string[] = [
+    'getWarehouseOverview',
+    'getWarehouseInbound',
+    'getWarehouseOutbound',
+    'getWarehouseStaging',
+    'getWarehouseExceptionItems',
+  ] // Add to this list once browser-verified in UAT
   return verifiedEndpoints.includes(endpoint)
+}
+
+function appendOptionalParams(url: URL, request: Warehouse360AdapterRequest): void {
+  if (request.plantId) {
+    url.searchParams.set('plant_id', request.plantId)
+  }
+  if (request.dateFrom) {
+    url.searchParams.set('date_from', request.dateFrom)
+  }
+  if (request.dateTo) {
+    url.searchParams.set('date_to', request.dateTo)
+  }
+  if (request.limit !== undefined) {
+    url.searchParams.set('limit', String(request.limit))
+  }
 }
 
 /**
@@ -107,6 +128,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/overview`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -163,6 +185,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/inbound`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -233,6 +256,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/outbound`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -301,6 +325,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/staging`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -369,6 +394,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/exceptions`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',

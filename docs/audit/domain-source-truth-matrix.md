@@ -4,7 +4,7 @@
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
 **Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
-**Last updated:** 2026-05-18 (d.txt) — Trace final route mounted (`?workspace=traceability-workspace&view=trace-tree`); TraceQueryForm + TraceTreeView rewrite; link-type legend; 163 di-traceability tests; C15 BV pending UAT
+**Last updated:** 2026-05-18 — Warehouse360 API hardened: added 5 native Databricks-API endpoints (`getWarehouseOverview`, `getWarehouseInbound`, `getWarehouseOutbound`, `getWarehouseStaging`, `getWarehouseExceptionItems`), dynamic parameters validation & clamping, complete vitest/pytest coverage, awaiting browser-verification in UAT.
 
 ---
 
@@ -124,13 +124,17 @@
 
 **Adapter:** `domain-integrations/warehouse/src/adapters/warehouse-360-adapter.ts`  
 **FastAPI:** `apps/api/routes/warehouse360.py`  
-**Databricks views:** `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_comparison_v`  
+**Databricks views:** `wh360_cockpit_summary_v`, `wh360_inbound_v`, `wh360_deliveries_v`, `staging_orders_v`, `wh360_imwm_exceptions_v`  
 **ADR-024 priority:** 6 (last)  
-**Infrastructure gap:** `QueryExecutor` requires `catalog_override` for `wh360` schema
 
 | Method | Source | Status |
 |---|---|---|
 | `getWarehouse360Summary` | V1 proxy | ✓ W — not BV; V1 STOPPED → 503 |
+| `getWarehouseOverview` | `wh360_cockpit_summary_v` | ✓ E (FastAPI wired, tests passing, awaiting browser verification in UAT) |
+| `getWarehouseInbound` | `wh360_inbound_v` | ✓ E (FastAPI wired, tests passing, awaiting browser verification in UAT) |
+| `getWarehouseOutbound` | `wh360_deliveries_v` | ✓ E (FastAPI wired, tests passing, awaiting browser verification in UAT) |
+| `getWarehouseStaging` | `staging_orders_v` | ✓ E (FastAPI wired, tests passing, awaiting browser verification in UAT) |
+| `getWarehouseExceptionItems` | `wh360_imwm_exceptions_v` | ✓ E (FastAPI wired, tests passing, awaiting browser verification in UAT) |
 | `getWarehouse360Context` | — | Mock |
 | `getStockOverview` | `wh360.imwm_stock_v` | Mock |
 | `getOpenHolds` | — | Mock |
@@ -140,7 +144,7 @@
 | `getNearExpiryStock` | — | Mock |
 | `getWarehouseExceptions` | `wh360.imwm_exceptions_v` | Mock |
 
-**Total: 9 methods — 1 wired (not BV), 8 mock**
+**Total: 14 methods — 5 E (FastAPI wired, tests passing), 1 W (legacy-api proxy), 8 mock**
 
 ---
 
@@ -275,18 +279,18 @@
 | Ops Plan Risk | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | Trace | 11 | 0 | **1** | 2 | 0 | 7 | 1 |
 | SPC | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
-| WH360 | 9 | 0 | 0 | 0 | 1 | 8 | 0 |
+| WH360 | 14 | 0 | **5** | 0 | 1 | 8 | 0 |
 | CQ Lab | 2 | 1 | 0 | 0 | 0 | 0 | 1 |
 | EnvMon | 9 | 0 | **2** | 0 | 0 | 7 | 0 |
 | Maintenance | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
 | Prod Staging | 9 | 0 | 0 | 0 | 0 | 9 | 0 |
 | Quality Release | 7 | 0 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **5** | **2** | **1** | **69** | **2** |
+| **Total** | **87** | **3** | **10** | **2** | **1** | **69** | **2** |
 
-**3 of 82 methods (3.7%) are browser-verified with live Databricks data (BV).**  
-**5 of 82 methods (6.1%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`, `getEnvMonSwabResults`, `getTraceGraph`.**  
-**1 of 82 methods (1.2%) has a legacy-api proxy wired but is not browser-verified (W).**  
-**69 of 82 methods (84.1%) are mock-only — no wired route of any kind.**  
+**3 of 87 methods (3.4%) are browser-verified with live Databricks data (BV).**  
+**10 of 87 methods (11.5%) are executable — databricks-api route wired, DDL confirmed, awaiting browser verification (E): `getOrderConfirmations`, `getOrderGoodsMovements`, `getEnvMonSiteSummary`, `getEnvMonSwabResults`, `getTraceGraph`, `getWarehouseOverview`, `getWarehouseInbound`, `getWarehouseOutbound`, `getWarehouseStaging`, `getWarehouseExceptionItems`.**  
+**1 of 87 methods (1.1%) has a legacy-api proxy wired but is not browser-verified (W).**  
+**69 of 87 methods (79.3%) are mock-only — no wired route of any kind.**  
 *(2 methods have a databricks-api QuerySpec written but no route wired — getBatchHeaderSummary + getMassBalanceSummary (Trace); 2 are blocked by missing view or undefined business rules.)*
 
 **EnvMon correction (k.txt + l.txt, 2026-05-17):** EnvMon is a **hybrid domain** — SAP QM inspection lots (k.txt) plus app-managed spatial configuration — 5 em_* Delta tables in TRACE_CATALOG/TRACE_SCHEMA (l.txt). Three gold views confirmed-v1. QuerySpec written for `getEnvMonSiteSummary`. All five em_* tables confirmed-v1 from V1 migrations. DDL for all pending in UAT. See `docs/audit/envmon-spatial-configuration-model.md`.
