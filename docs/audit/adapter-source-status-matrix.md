@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage confirmed-ddl), 47 new tests, 655 total; frontend wiring deferred (TraceGraphSchema contract mismatch)  
+**Last updated:** 2026-05-18 — u.txt: Trace Graph frontend wiring complete — `TraceGraph` contract mismatch resolved (`type`/`relationshipType` optional, `warnings`/`truncated` added), TypeScript mapper (`mapBackendTraceGraph`), `Trace2LegacyApiAdapter.getTraceGraph` override, 113 tests; UI browser verification pending  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, material_id=20052009, batch_id=0008602411, plant_id=C061; UC GRANT applied; frontend wiring deferred (TraceGraphSchema contract mismatch — see trace-lineage-to-graph-contract-map.md) |
+| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200; frontend wired 2026-05-18 (u.txt) — `Trace2LegacyApiAdapter.getTraceGraph` override, TypeScript mapper, contract mismatch resolved; **awaiting UI browser verification** |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -291,7 +291,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200; gold_batch_lineage confirmed-ddl; iterative multi-hop; frontend wiring deferred (TraceGraphSchema contract mismatch) |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200; gold_batch_lineage confirmed-ddl; iterative multi-hop; **frontend wired 2026-05-18** — TypeScript mapper + `Trace2LegacyApiAdapter.getTraceGraph` override; UI BV pending |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |

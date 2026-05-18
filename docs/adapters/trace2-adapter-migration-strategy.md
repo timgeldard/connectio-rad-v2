@@ -1,6 +1,6 @@
 # Trace2 Adapter Migration Strategy
 
-**Date:** 2026-05-16
+**Date:** 2026-05-18 (updated u.txt)
 **Domain:** `di-traceability`
 **Reference:** `docs/adapters/adapter-migration-strategy.md` (general lifecycle)
 
@@ -14,11 +14,11 @@ mock
   → databricks-api (direct Databricks SQL / Unity Catalog)
 ```
 
-`Trace2LegacyApiAdapter` extends `Trace2Adapter` and overrides methods one at a time as V1 endpoints are confirmed and browser-verified. The new `trace2_databricks_adapter.py` module provides QuerySpec factories and row-mapping functions for the Databricks-api tier; route wiring and a TypeScript `Trace2DatabricksApiAdapter` are deferred until ADR-024 open questions #1/#7 are resolved.
+`Trace2LegacyApiAdapter` extends `Trace2Adapter` and overrides methods one at a time as endpoints are confirmed and browser-verified. The new `trace2_databricks_adapter.py` module provides QuerySpec factories; `Trace2LegacyApiAdapter` now overrides both `getBatchHeaderSummary` (via V1 proxy) and `getTraceGraph` (via native Databricks route). No separate `Trace2DatabricksApiAdapter` class is needed — FastAPI routes mediate the Databricks tier.
 
 ---
 
-## Current State (2026-05-16)
+## Current State (2026-05-18)
 
 | Method | V2 tier | V1 endpoint | Proxy route | Browser verified | Databricks QuerySpec |
 |---|---|---|---|---|---|
@@ -52,21 +52,23 @@ mock
 
 Stock status priority (descending): `blocked > quality-inspection > returns > transit > unrestricted`
 
-### `getTraceGraph` (depth=1)
+### `getTraceGraph`
 
 | Attribute | Value |
 |---|---|
 | QuerySpec name | `trace2.get_trace_graph` |
-| Source views | `gold_batch_lineage` + `gold_material` + `gold_plant` |
+| Source views | `gold_batch_lineage` |
 | Cache policy | `PER_USER_60S` |
 | Source badge | `view:gold_batch_lineage` |
-| max_rows | 500 |
-| Row mapper | `map_trace_graph_rows(rows, root_batch)` |
-| Parallel validation | Not possible — no legacy-api override exists |
-| Depth | 1 only; recursive traversal deferred |
+| max_edges | 1000 (default) |
+| Row mapper | `map_trace_graph(rows, anchor)` → `BackendTraceGraphResponse` |
+| TS mapper | `mapBackendTraceGraph(raw)` in `trace2-graph-mapper.ts` |
+| TypeScript override | `Trace2LegacyApiAdapter.getTraceGraph` — wired u.txt 2026-05-18; no mock/legacy fallback |
+| Parallel validation | Not applicable — no V1 trace-graph endpoint exists |
+| Depth | Iterative multi-hop up to `max_depth=6`; Python adapter expands hop-by-hop |
 
-Node dedup key: `(material_id, batch_id)` — same batch appearing as parent and child deduplicated.
-Edge dedup key: `(source_id, target_id, relationship_type)` — same pair with same type collapsed.
+Node dedup key: `nodeKey = materialId:batchId:plantId`.
+Edge dedup key: `id = source|target|linkType|docNum|hop`.
 
 ### `getMassBalanceSummary`
 

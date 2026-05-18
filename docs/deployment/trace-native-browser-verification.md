@@ -223,6 +223,51 @@ X-Query-Name: trace2.get_trace_graph
 
 ---
 
+## Check T2-UI — Trace Graph Panel (frontend wiring) — EXECUTABLE, awaiting deploy
+
+**Status:** Frontend wiring complete (u.txt, 2026-05-18). `Trace2LegacyApiAdapter.getTraceGraph` override wired, TypeScript mapper (`mapBackendTraceGraph`) in place, contract mismatch resolved, 113 tests passing. UI browser verification pending after next UAT deploy.
+
+**Prerequisites:** T2 API check must be PASSED first.
+
+**Test anchor:**
+- material_id: `000000000020052009`
+- batch_id: `0008602411`
+- plant_id: `C061`
+
+**Steps:**
+1. Open the Trace Investigation workspace in UAT
+2. Enter material/batch/plant as above
+3. Navigate to the Trace Graph panel
+
+**Pass criteria:**
+- [ ] Trace Graph panel renders without JavaScript crash
+- [ ] ReactFlow canvas is visible with at least the anchor node
+- [ ] `source: databricks-api` badge visible (green) — NOT `source: mock`
+- [ ] Node count and edge count match what T2 API returns
+- [ ] Click any node → detail panel shows materialId, batchId, plantId
+- [ ] Click any edge → detail panel shows relationship type, quantity, movement type
+- [ ] Direction toggle (Both / Upstream / Downstream) filters the graph
+- [ ] Warnings banner appears when backend returns `truncated: true` or `max_depth_reached`
+- [ ] Empty state message (`No lineage edges found for this material/batch/plant.`) appears when backend returns no edges
+- [ ] No mock data shown when native call fails — error state in panel instead
+
+**Troubleshooting:**
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Green badge not showing | `VITE_ADAPTER_MODE` not `legacy-api` in build | Check Vite build config |
+| Panel shows mock nodes only | `getTraceGraph` not calling backend | Check adapter factory — mode must be `legacy-api` |
+| React Flow crash | `undefined` on `node.type` or `edge.relationshipType` | Fixed in u.txt — check build includes latest panel |
+| Empty nodes/edges from a batch that T2 returned data for | Mapper bug | Check `mapBackendTraceGraph` output vs raw response |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|---|---|---|
+| [ ] not yet tested | — | Awaiting UAT deploy after u.txt changes |
+
+---
+
 ## Check T3 — POST /api/trace2/mass-balance (deferred)
 
 Route not yet wired — `gold_batch_mass_balance_v` WHERE column names unverified.

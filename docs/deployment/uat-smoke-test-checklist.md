@@ -259,6 +259,25 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2) for full p
 
 ---
 
+### C13 — Trace Graph UI (frontend wiring) — EXECUTABLE, awaiting UI browser verification
+
+**Status: IMPLEMENTED** — `Trace2LegacyApiAdapter.getTraceGraph` override wired (u.txt, 2026-05-18), TypeScript mapper in place, contract mismatch resolved, 113 tests passing. UI browser verification pending after next deploy.
+
+Test: open Trace Investigation workspace, enter `material_id=000000000020052009`, `batch_id=0008602411`, `plant_id=C061`. Navigate to the Trace Graph panel.
+
+- [ ] Trace Graph panel renders without crash
+- [ ] ReactFlow nodes and edges drawn (not empty — at least anchor node)
+- [ ] `source: databricks-api` shown in panel source badge (green)
+- [ ] No mock graph data displayed when native call succeeds
+- [ ] No mock graph data displayed when native call fails — error state shown instead
+- [ ] Node click shows material/batch details in selection panel
+- [ ] Edge click shows relationship type, quantity, document reference
+- [ ] Direction toggle (Both / Upstream / Downstream) filters nodes correctly
+- [ ] Warnings banner appears for truncated or max-depth-reached responses
+- [ ] Empty-state message appears when backend returns no nodes
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.

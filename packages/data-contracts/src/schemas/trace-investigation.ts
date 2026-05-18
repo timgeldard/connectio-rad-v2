@@ -68,7 +68,7 @@ export const TraceNodeSchema = z.object({
     'customer-delivery',
     'supplier-lot',
     'process-order',
-  ]),
+  ]).optional(),
   materialId: z.string(),
   materialDescription: z.string(),
   batchId: z.string().optional(),
@@ -96,7 +96,7 @@ export const TraceEdgeSchema = z.object({
     'merged-into',
     'transferred-to',
     'delivered-to',
-  ]),
+  ]).optional(),
   quantity: z.number().optional(),
   uom: z.string().optional(),
   movementType: z.string().optional(),
@@ -118,6 +118,8 @@ export const TraceGraphSchema = z.object({
   upstreamCount: z.number().int().min(0),
   downstreamCount: z.number().int().min(0),
   unresolvedNodeCount: z.number().int().min(0),
+  warnings: z.array(z.string()).optional(),
+  truncated: z.boolean().optional(),
 })
 
 export type TraceGraph = z.infer<typeof TraceGraphSchema>

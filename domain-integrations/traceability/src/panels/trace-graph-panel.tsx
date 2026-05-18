@@ -67,11 +67,11 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
         boxShadow: isRoot ? `0 0 0 3px ${border}40` : undefined,
         cursor: 'pointer',
       }}
-      aria-label={`${node.materialDescription} — ${node.type}`}
+      aria-label={`${node.materialDescription}${node.type ? ` — ${node.type}` : ''}`}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
         <span style={{ fontSize: 9, fontWeight: 600, color: textColor, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
-          {NODE_TYPE_LABEL[node.type] ?? node.type}
+          {node.type ? (NODE_TYPE_LABEL[node.type] ?? node.type) : undefined}
         </span>
         {isRoot && (
           <span style={{ fontSize: 8, background: '#2563EB', color: '#fff', borderRadius: 3, padding: '1px 4px', flexShrink: 0 }}>
@@ -134,7 +134,7 @@ function SelectedNodeDetail({ node, graphEdges }: { node: TraceNode; graphEdges:
         Selected node
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-        <Detail label="Type" value={NODE_TYPE_LABEL[node.type] ?? node.type} />
+        <Detail label="Type" value={node.type ? (NODE_TYPE_LABEL[node.type] ?? node.type) : '—'} />
         <Detail label="Risk" value={risk} />
         <Detail label="Material" value={node.materialId ?? '—'} />
         {node.batchId && <Detail label="Batch" value={node.batchId} />}
@@ -150,7 +150,7 @@ function SelectedNodeDetail({ node, graphEdges }: { node: TraceNode; graphEdges:
           {connectedEdges.map(e => (
             <div key={e.id} style={{ fontSize: 10, color: '#374151', padding: '2px 0', display: 'flex', gap: 4 }}>
               <span style={{ color: '#9CA3AF' }}>{e.source === node.id ? '→' : '←'}</span>
-              <span>{e.relationshipType.replace(/-/g, ' ')}</span>
+              <span>{e.relationshipType?.replace(/-/g, ' ')}</span>
               {e.documentReference && (
                 <span style={{ color: '#6B7280', fontFamily: 'monospace' }}>({e.documentReference})</span>
               )}
@@ -185,7 +185,7 @@ function SelectedEdgeDetail({ edge, nodes }: { edge: TraceEdge; nodes: TraceNode
         Selected relationship
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-        <Detail label="Type" value={edge.relationshipType.replace(/-/g, ' ')} />
+        <Detail label="Type" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
         {edge.quantity != null && (
           <Detail label="Quantity" value={`${edge.quantity}${edge.uom ? ` ${edge.uom}` : ''}`} />
         )}
@@ -368,6 +368,25 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
             <GraphStat label="Unresolved" value={graph.unresolvedNodeCount} highlight={graph.unresolvedNodeCount > 0} />
           </div>
 
+          {/* Warnings / truncation banner */}
+          {(graph.truncated || graph.warnings?.includes('max_depth_reached')) && (
+            <div
+              role="status"
+              style={{
+                fontSize: 11,
+                color: '#92400E',
+                background: '#FFFBEB',
+                border: '1px solid #D97706',
+                borderRadius: 4,
+                padding: '4px 8px',
+                marginBottom: 10,
+              }}
+            >
+              {graph.truncated && <span>Graph truncated — edge limit reached. Not all lineage is shown. </span>}
+              {graph.warnings?.includes('max_depth_reached') && <span>Maximum trace depth reached.</span>}
+            </div>
+          )}
+
           {/* Direction toggle + root metadata */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
             <DirectionToggle active={activeDirection} onChange={setActiveDirection} />
@@ -390,7 +409,7 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
                 fontSize: 13,
               }}
             >
-              No batch lineage found.
+              No lineage edges found for this material/batch/plant.
             </div>
           ) : (
             <div

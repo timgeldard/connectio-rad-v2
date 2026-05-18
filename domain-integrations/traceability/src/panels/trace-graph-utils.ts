@@ -200,7 +200,7 @@ export function mapToFlowEdges(graph: TraceGraph): Edge[] {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    label: edge.relationshipType.replace(/-/g, ' '),
+    label: edge.relationshipType?.replace(/-/g, ' ') ?? '',
     style: { stroke: '#9CA3AF', strokeWidth: 1.5 },
     labelStyle: { fontSize: 10, fill: '#6B7280' },
     labelBgStyle: { fill: 'var(--shell-bg, #ffffff)', fillOpacity: 0.85 },

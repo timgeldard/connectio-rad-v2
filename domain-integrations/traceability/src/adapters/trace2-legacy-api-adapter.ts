@@ -1,8 +1,9 @@
 import { BatchHeaderSummarySchema, ApiError } from '@connectio/data-contracts'
-import type { BatchHeaderSummary } from '@connectio/data-contracts'
+import type { BatchHeaderSummary, TraceGraph } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
 import type { Trace2AdapterRequest } from './trace2-adapter.js'
+import { mapBackendTraceGraph } from './trace2-graph-mapper.js'
 
 interface V1BatchHeaderResponse {
   material_id: string
@@ -58,10 +59,10 @@ function mapReleaseStatus(r: V1BatchHeaderResponse): BatchHeaderSummary['release
 }
 
 /**
- * Tier: legacy-api
- * Verified methods: getBatchHeaderSummary (browser-verified against V1 Trace2)
- * Fallback: Trace2Adapter (mock) — all other methods return mock data via super
- * Next tier: databricks-api (pending V1 Trace2 retirement)
+ * Tier: legacy-api (HTTP calls to FastAPI backend)
+ * getBatchHeaderSummary: proxies to V1 Trace2 (browser-verified)
+ * getTraceGraph: calls native Databricks route POST /api/trace2/trace-graph (browser-verified 2026-05-18)
+ * All other methods: fall through to Trace2Adapter mock
  */
 export class Trace2LegacyApiAdapter extends Trace2Adapter {
   private readonly baseUrl: string
@@ -142,6 +143,73 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         error: { code: 'unknown', message, retryable: true },
         displayState: 'error',
         source: 'legacy-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — calls native POST /api/trace2/trace-graph (browser-verified 2026-05-18).
+   * No mock fallback. No legacy-api fallback. Returns error if required params are missing.
+   */
+  override async getTraceGraph(request: Trace2AdapterRequest): Promise<AdapterResult<TraceGraph>> {
+    if (!request.batchId || !request.materialId || !request.plantId) {
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'material_id, batch_id, and plant_id are required for trace graph',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/trace-graph`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+          plant_id: request.plantId,
+          direction: 'both',
+          max_depth: 6,
+          max_edges: 1000,
+        }),
+      })
+
+      if (!response.ok) {
+        const code =
+          response.status === 401
+            ? ('unauthorized' as const)
+            : response.status === 404
+              ? ('not-found' as const)
+              : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Trace graph request failed: ${response.status}`,
+            retryable: response.status >= 500,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const mapped = mapBackendTraceGraph(raw)
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      const code = message.includes('parse') || message.includes('schema') ? 'invalid-data' as const : 'unknown' as const
+      return {
+        ok: false,
+        error: { code, message, retryable: code === 'unknown' },
+        displayState: 'error',
+        source: 'databricks-api',
       }
     }
   }

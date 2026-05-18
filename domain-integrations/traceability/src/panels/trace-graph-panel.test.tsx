@@ -306,3 +306,54 @@ describe('TraceGraphPanel — direction toggle', () => {
     expect(screen.queryByText('Selected node')).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Empty state and warnings banner tests
+// ---------------------------------------------------------------------------
+
+describe('TraceGraphPanel — empty state', () => {
+  it('shows empty-state message when graph has no nodes', () => {
+    const emptyGraph: TraceGraph = {
+      ...mockGraph,
+      nodes: [],
+      edges: [],
+      upstreamCount: 0,
+      downstreamCount: 0,
+    }
+    vi.mocked(useTraceGraph).mockReturnValue({
+      data: { ok: true, data: emptyGraph, fetchedAt: '2024-03-08T15:00:00.000Z', source: 'databricks-api' },
+      isLoading: false,
+    } as ReturnType<typeof useTraceGraph>)
+    render(<TraceGraphPanel request={request} />)
+    expect(screen.getByText(/No lineage edges found for this material\/batch\/plant/i)).toBeDefined()
+  })
+})
+
+describe('TraceGraphPanel — warnings banner', () => {
+  it('shows truncation warning when graph is truncated', () => {
+    const truncatedGraph: TraceGraph = {
+      ...mockGraph,
+      truncated: true,
+      warnings: ['max_edges_reached'],
+    }
+    vi.mocked(useTraceGraph).mockReturnValue({
+      data: { ok: true, data: truncatedGraph, fetchedAt: '2024-03-08T15:00:00.000Z', source: 'databricks-api' },
+      isLoading: false,
+    } as ReturnType<typeof useTraceGraph>)
+    render(<TraceGraphPanel request={request} />)
+    expect(screen.getByText(/Graph truncated/i)).toBeDefined()
+  })
+
+  it('shows max-depth warning when max_depth_reached in warnings', () => {
+    const depthWarningGraph: TraceGraph = {
+      ...mockGraph,
+      warnings: ['max_depth_reached'],
+    }
+    vi.mocked(useTraceGraph).mockReturnValue({
+      data: { ok: true, data: depthWarningGraph, fetchedAt: '2024-03-08T15:00:00.000Z', source: 'databricks-api' },
+      isLoading: false,
+    } as ReturnType<typeof useTraceGraph>)
+    render(<TraceGraphPanel request={request} />)
+    expect(screen.getByText(/Maximum trace depth reached/i)).toBeDefined()
+  })
+})
