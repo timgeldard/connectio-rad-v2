@@ -27,7 +27,7 @@ export function TraceTreeView({ request }: TraceTreeViewProps) {
   const [submittedRequest, setSubmittedRequest] = useState<Trace2AdapterRequest | null>(null)
 
   return (
-    <div style={{ display: 'grid', gap: 12, padding: 16 }}>
+    <div style={{ display: 'grid', gap: 12, padding: 16, gridColumn: '1 / -1' }}>
       <div>
         <p style={{ fontSize: 12, color: 'var(--shell-fg-2)', margin: '0 0 8px 0' }}>
           Native Databricks trace graph — <code>gold_batch_lineage</code>. No mock fallback.
