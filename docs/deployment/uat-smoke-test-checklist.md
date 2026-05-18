@@ -458,6 +458,26 @@ Second deploy with LIMIT fix completed 2026-05-18. Re-test pending.
 
 ---
 
+### C23 — POH Cockpit View (order-history)
+
+Verify that the dashboard view renders cleanly at `?workspace=process-order-review` with the new interactive `order-history` view as default.
+
+**Primary URL:**
+```text
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=process-order-review
+```
+
+- [ ] Page loads cleanly without crashing
+- [ ] Header banner visible with "UAT verification pending" notice
+- [ ] "Load Demo Preset" button loads PO-240308-3847 offline mock data successfully
+- [ ] Typing a real UAT process order (e.g. `7006965038`) and plant (e.g. `IE10`), and clicking "Run / Refresh" loads live Databricks-sourced data
+- [ ] Header, Operations, Confirmations, and Goods Movements tables render with correct columns
+- [ ] Chronological timeline sorts events correctly and lists any undated items separately
+- [ ] Collapsible technical diagnostics displays the correct endpoints and payloads
+- [ ] No SAP close or closing operations write-back buttons are present on the screen
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.

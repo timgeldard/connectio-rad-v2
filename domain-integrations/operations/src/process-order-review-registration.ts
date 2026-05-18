@@ -26,10 +26,19 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
   },
   defaultViews: [
     {
+      viewId: 'order-history',
+      displayName: 'Order History',
+      lifecycle: 'pilot',
+      sortOrder: 0,
+      defaultPanels: [
+        { panelId: 'order-history-cockpit', defaultVisible: true, defaultOrder: 0 },
+      ],
+    },
+    {
       viewId: 'order-overview',
       displayName: 'Order Overview',
       lifecycle: 'pilot',
-      sortOrder: 0,
+      sortOrder: 1,
       defaultPanels: [
         { panelId: 'process-order-header', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'order-progress', defaultVisible: true, defaultOrder: 1 },
@@ -40,7 +49,7 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
       viewId: 'execution-timeline',
       displayName: 'Execution Timeline',
       lifecycle: 'pilot',
-      sortOrder: 1,
+      sortOrder: 2,
       defaultPanels: [
         { panelId: 'execution-timeline', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'order-progress', defaultVisible: true, defaultOrder: 1 },
@@ -50,7 +59,7 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
       viewId: 'yield-losses',
       displayName: 'Yield & Losses',
       lifecycle: 'pilot',
-      sortOrder: 2,
+      sortOrder: 3,
       defaultPanels: [
         { panelId: 'order-progress', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'process-order-header', defaultVisible: true, defaultOrder: 1 },
@@ -60,7 +69,7 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
       viewId: 'quality-context',
       displayName: 'Quality Context',
       lifecycle: 'pilot',
-      sortOrder: 3,
+      sortOrder: 4,
       defaultPanels: [
         { panelId: 'order-quality-context', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'related-batch-context', defaultVisible: true, defaultOrder: 1 },
@@ -70,7 +79,7 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
       viewId: 'staging-context',
       displayName: 'Staging Context',
       lifecycle: 'pilot',
-      sortOrder: 4,
+      sortOrder: 5,
       defaultPanels: [
         { panelId: 'order-staging-context', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'order-progress', defaultVisible: true, defaultOrder: 1 },
@@ -80,7 +89,7 @@ export const processOrderReviewRegistration: WorkspaceRegistration = {
       viewId: 'related-batches',
       displayName: 'Related Batches',
       lifecycle: 'pilot',
-      sortOrder: 5,
+      sortOrder: 6,
       defaultPanels: [
         { panelId: 'related-batch-context', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'order-quality-context', defaultVisible: true, defaultOrder: 1 },

@@ -1,8 +1,10 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProcessOrderReviewWorkspace } from './process-order-review-workspace.js'
 import type { ScopeContext } from '@connectio/data-contracts'
+import '@testing-library/jest-dom'
 
 function makeQueryClient() {
   return new QueryClient({
@@ -27,6 +29,19 @@ describe('ProcessOrderReviewWorkspace', () => {
         <ProcessOrderReviewWorkspace scope={scope} />
       </Wrapper>
     )
+  })
+
+  it('renders order-history view', async () => {
+    render(
+      <Wrapper>
+        <ProcessOrderReviewWorkspace scope={scope} viewId="order-history" />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      const form = document.querySelector('[data-testid="poh-query-form"]')
+      expect(form).not.toBeNull()
+    })
   })
 
   it('renders order-overview view panels', async () => {
@@ -81,7 +96,7 @@ describe('ProcessOrderReviewWorkspace', () => {
     })
   })
 
-  it('falls back to order-overview for unknown viewId', async () => {
+  it('falls back to order-history for unknown viewId', async () => {
     render(
       <Wrapper>
         <ProcessOrderReviewWorkspace scope={scope} viewId="not-a-view" />
@@ -89,8 +104,8 @@ describe('ProcessOrderReviewWorkspace', () => {
     )
 
     await waitFor(() => {
-      const panel = document.querySelector('[data-testid="evidence-panel-process-order-header"]')
-      expect(panel).not.toBeNull()
+      const form = document.querySelector('[data-testid="poh-query-form"]')
+      expect(form).not.toBeNull()
     })
   })
 })
