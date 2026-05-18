@@ -132,34 +132,26 @@ def _map_exception_severity(severity_raw: object, days_to_expiry_raw: object) ->
 # ---------------------------------------------------------------------------
 
 def get_warehouse_overview_spec(request: WarehouseOverviewRequest) -> QuerySpec:
-    """Return QuerySpec for Warehouse Cockpit Overview.
+    """Return QuerySpec for Warehouse KPI Snapshot.
 
-    Source view: wh360_cockpit_summary_v
+    Source view: wh360_kpi_snapshot_v — global single-row KPI summary.
+    No warehouse_id filter: the view pre-aggregates across all warehouses.
     """
-    view = resolve_domain_object("wh360", "wh360_cockpit_summary_v")
-    where_clauses = ["WAREHOUSE_ID = :warehouse_id"]
-    params = {"warehouse_id": request.warehouse_id}
-
-    if request.plant_id:
-        where_clauses.append("PLANT_ID = :plant_id")
-        params["plant_id"] = request.plant_id
-
-    where_str = " AND ".join(where_clauses)
+    view = resolve_domain_object("wh360", "wh360_kpi_snapshot_v")
     sql = f"""
     SELECT
-        PLANT_ID                  AS plant_id,
-        WAREHOUSE_ID              AS warehouse_id,
-        INBOUND_DUE_COUNT         AS inbound_due_count,
-        INBOUND_OVERDUE_COUNT     AS inbound_overdue_count,
-        OUTBOUND_DUE_COUNT        AS outbound_due_count,
-        OUTBOUND_OVERDUE_COUNT    AS outbound_overdue_count,
-        STAGING_OPEN_COUNT        AS staging_open_count,
-        STAGING_OVERDUE_COUNT     AS staging_overdue_count,
-        NEAR_EXPIRY_COUNT         AS near_expiry_count,
-        RECONCILIATION_EXCEPTION_COUNT AS reconciliation_exception_count,
-        BLOCKED_STOCK_COUNT       AS blocked_stock_count
+        orders_total,
+        orders_red,
+        orders_amber,
+        trs_open,
+        tos_open,
+        deliveries_today,
+        deliveries_at_risk,
+        inbound_open,
+        bins_blocked,
+        bins_total,
+        bin_util_pct
     FROM {view}
-    WHERE {where_str}
     LIMIT 1
     """
     return QuerySpec(
@@ -167,45 +159,49 @@ def get_warehouse_overview_spec(request: WarehouseOverviewRequest) -> QuerySpec:
         module="wh360",
         endpoint="/api/warehouse360/overview",
         sql=sql,
-        params=params,
-        cache_policy=CacheTier.PER_USER_60S,
+        params={},
+        cache_policy=CacheTier.GLOBAL_300S,
         tags=["wh360", "cockpit", "overview"],
     )
 
 
 def map_warehouse_overview_rows(rows: list[dict], request: WarehouseOverviewRequest) -> dict:
     """Map raw overview rows to Warehouse360Overview schema.
-    
-    If empty, returns a safe default structure based on request parameters.
+
+    wh360_kpi_snapshot_v is a global single-row summary with no warehouse_id
+    column. warehouseId in the response is populated from the request for
+    API consistency.
     """
     if not rows:
         return {
-            "plantId": "",
             "warehouseId": request.warehouse_id,
-            "inboundDueCount": 0,
-            "inboundOverdueCount": 0,
-            "outboundDueCount": 0,
-            "outboundOverdueCount": 0,
-            "stagingOpenCount": 0,
-            "stagingOverdueCount": 0,
-            "nearExpiryCount": 0,
-            "reconciliationExceptionCount": 0,
-            "blockedStockCount": 0,
+            "ordersTotal": 0,
+            "ordersRed": 0,
+            "ordersAmber": 0,
+            "trsOpen": 0,
+            "tosOpen": 0,
+            "deliveriesToday": 0,
+            "deliveriesAtRisk": 0,
+            "inboundOpen": 0,
+            "binsBlocked": 0,
+            "binsTotal": 0,
+            "binUtilPct": 0.0,
         }
-    
+
     row = rows[0]
     return {
-        "plantId": str(row.get("plant_id") or ""),
-        "warehouseId": str(row.get("warehouse_id") or request.warehouse_id),
-        "inboundDueCount": _safe_int(row.get("inbound_due_count")),
-        "inboundOverdueCount": _safe_int(row.get("inbound_overdue_count")),
-        "outboundDueCount": _safe_int(row.get("outbound_due_count")),
-        "outboundOverdueCount": _safe_int(row.get("outbound_overdue_count")),
-        "stagingOpenCount": _safe_int(row.get("staging_open_count")),
-        "stagingOverdueCount": _safe_int(row.get("staging_overdue_count")),
-        "nearExpiryCount": _safe_int(row.get("near_expiry_count")),
-        "reconciliationExceptionCount": _safe_int(row.get("reconciliation_exception_count")),
-        "blockedStockCount": _safe_int(row.get("blocked_stock_count")),
+        "warehouseId": request.warehouse_id,
+        "ordersTotal": _safe_int(row.get("orders_total")),
+        "ordersRed": _safe_int(row.get("orders_red")),
+        "ordersAmber": _safe_int(row.get("orders_amber")),
+        "trsOpen": _safe_int(row.get("trs_open")),
+        "tosOpen": _safe_int(row.get("tos_open")),
+        "deliveriesToday": _safe_int(row.get("deliveries_today")),
+        "deliveriesAtRisk": _safe_int(row.get("deliveries_at_risk")),
+        "inboundOpen": _safe_int(row.get("inbound_open")),
+        "binsBlocked": _safe_int(row.get("bins_blocked")),
+        "binsTotal": _safe_int(row.get("bins_total")),
+        "binUtilPct": _safe_float(row.get("bin_util_pct")),
     }
 
 

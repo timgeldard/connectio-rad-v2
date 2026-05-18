@@ -63,17 +63,17 @@ class TestWarehouseOverviewRoute:
 
     async def test_returns_200_with_mapped_overview(self, wh360_databricks_env) -> None:
         fake_row = {
-            "plant_id": "IE10",
-            "warehouse_id": "WH01",
-            "inbound_due_count": 3,
-            "inbound_overdue_count": 1,
-            "outbound_due_count": 5,
-            "outbound_overdue_count": 0,
-            "staging_open_count": 8,
-            "staging_overdue_count": 2,
-            "near_expiry_count": 4,
-            "reconciliation_exception_count": 2,
-            "blocked_stock_count": 1,
+            "orders_total": 24,
+            "orders_red": 2,
+            "orders_amber": 5,
+            "trs_open": 9573882,
+            "tos_open": 0,
+            "deliveries_today": 12,
+            "deliveries_at_risk": 3,
+            "inbound_open": 18671,
+            "bins_blocked": 16614,
+            "bins_total": 352027,
+            "bin_util_pct": "56.8",
         }
 
         with patch(
@@ -84,14 +84,16 @@ class TestWarehouseOverviewRoute:
             async with _make_client() as client:
                 response = await client.get(
                     "/api/warehouse360/overview",
-                    params={"warehouse_id": "WH01"},
+                    params={"warehouse_id": "104"},
                     headers=_HEADERS_WITH_TOKEN,
                 )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["warehouseId"] == "WH01"
-        assert data["inboundDueCount"] == 3
+        assert data["warehouseId"] == "104"
+        assert data["ordersTotal"] == 24
+        assert data["inboundOpen"] == 18671
+        assert data["binUtilPct"] == 56.8
         assert response.headers.get("x-data-source") == "databricks-api"
         assert response.headers.get("x-adapter-mode") == "databricks-api"
         assert "warehouse360.get_overview" in response.headers.get("x-query-name", "")

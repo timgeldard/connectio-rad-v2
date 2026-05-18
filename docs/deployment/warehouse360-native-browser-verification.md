@@ -1,82 +1,163 @@
-# Warehouse360 Native API Hardening & Browser Verification Guide
+# Warehouse360 Native API — Browser Verification Log
 
-This guide documents the technical details of the Warehouse360 API hardening tranche, detailing Unity Catalog views, dynamic date/plant filtering logic, security constraints, and steps for final UAT browser-verification.
-
----
-
-## 1. Hardened Native API Architecture
-
-V2 integrates directly with production Databricks Unity Catalog views using the authenticated end user's OAuth identity. There is **no service-principal fallback** and **no PAT fallback** — if the OAuth token is absent, the system propagates a standard `401 Unauthorized` state.
-
-### Mapped Unity Catalog Views
-Each of the 5 native `GET` routes maps to a corresponding Unity Catalog view, dynamically filtering on `PLANT_ID` and specific date fields:
-
-| Endpoint | Unity Catalog View | Mapped Date Column |
-| :--- | :--- | :--- |
-| `GET /api/warehouse360/overview` | `wh360_cockpit_summary_v` | *N/A (Overview aggregations)* |
-| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | `EXPECTED_DATE` |
-| `GET /api/warehouse360/outbound` | `wh360_deliveries_v` | `PLANNED_GOODS_ISSUE_DATE` |
-| `GET /api/warehouse360/staging` | `staging_orders_v` | `REQUIREMENT_DATE` |
-| `GET /api/warehouse360/exceptions` | `wh360_imwm_exceptions_v` | `EXPIRY_DATE` |
+**Domain:** Warehouse360  
+**Routes:** `GET /api/warehouse360/{overview,inbound,outbound,staging,exceptions}`  
+**Source schema:** Unity Catalog — `WH360_CATALOG.WH360_SCHEMA.*`  
+**Adapters:** `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py`  
+**Routes file:** `apps/api/routes/warehouse360.py`
 
 ---
 
-## 2. Dynamic Filtering & Security Safeguards
+## Current Status: DDL-BLOCKED (3 of 5 routes)
 
-To support rich cockpit operations, we added dynamic filtering in both the FastAPI routes and Databricks query factories:
+**Date:** 2026-05-18  
 
-### Query Parameters Mapped E2E
-- `warehouse_id` (Mandatory, non-empty) — e.g. `WH-IE10-MAIN`
-- `plant_id` (Optional) — e.g. `IE10`
-- `date_from` (Optional, ISO `YYYY-MM-DD` / `YYYY-MM-DDTHH:MM:SS`)
-- `date_to` (Optional, ISO `YYYY-MM-DD` / `YYYY-MM-DDTHH:MM:SS`)
-- `limit` (Optional, defaults to `100`, clamped `[1, 500]`)
+| Route | Status |
+|---|---|
+| W1 Overview | **HTTP 200** ✓ — `wh360_kpi_snapshot_v` confirmed, LIMIT 1 embedded |
+| W2 Inbound | **PENDING RE-TEST** — `wh360_inbound_v` confirmed to exist, LIMIT 1000 fix deployed |
+| W3 Outbound | **DDL-BLOCKED** — `wh360_deliveries_v` exists but has no `WAREHOUSE_NUMBER` column; need `DESCRIBE TABLE` to find correct filter column |
+| W4 Staging | **SOURCE-BLOCKED** — `staging_orders_v` does not exist in `connected_plant_uat.wh360` |
+| W5 Exceptions | **SOURCE-BLOCKED** — `wh360_imwm_exceptions_v` does not exist in `connected_plant_uat.wh360` |
 
-### Security Invariants & Clamped LIMIT
-1. **No SQL Injection on LIMIT**: Databricks does not allow standard binding (e.g. `LIMIT :limit`) for the row limit clause in SQL statements.
-2. **Safe Literal Interpolation**: To support customizable limits dynamically, we perform literal interpolation (`LIMIT {request.limit}`) in the SQL factory.
-3. **Strict Validation Constraint**: This is completely safe and robust because the FastAPI routes aggressively validate and clamp the `limit` input parameters:
-   - Must be a valid integer.
-   - Clamped strictly between **1** and **500**.
-   - If the limit is outside `[1, 500]`, the FastAPI route immediately intercepts and returns a `422 Unprocessable Entity` response, completely blocking any downstream query construction or statement execution.
+**Unblock actions required:**
+1. Run `DESCRIBE TABLE connected_plant_uat.wh360.wh360_deliveries_v` → find warehouse filter column → fix W3 QuerySpec WHERE clause
+2. Run `SHOW VIEWS IN connected_plant_uat.wh360` → identify correct views for staging and exceptions → update W4/W5 QuerySpecs or confirm routes must be blocked
+
+Do not invent replacement view names. Update adapter only after DDL is confirmed.
+
+**Config confirmed (2026-05-18):**
+- `WH360_CATALOG=connected_plant_uat` — set in `app.yaml` ✓
+- `WH360_SCHEMA=wh360` — default in `object_resolver.py`; confirmed correct for UAT ✓
+- Known warehouse IDs for UAT: **`104`** and **`105`** ✓
+- `LIMIT :max_rows` bound parameter — **FIXED** — all 4 list QuerySpecs now use `LIMIT 1000` literal ✓
 
 ---
 
-## 3. Developer & UAT Verification Playbook (For Claude's sweep)
+## Known Issues (UAT findings, 2026-05-18)
 
-Since UAT/Databricks-connected verification sweeps are executed by Claude, follow these steps to verify in UAT:
+### 1. `LIMIT :max_rows` — FIXED
 
-### Phase A: FastAPI Swagger API Playground Validation
-1. Deploy the api service to the UAT container.
-2. Authenticate as an authorized UAT supervisor user.
-3. Open the FastAPI documentation (`/docs`) in your browser.
-4. Try out the Warehouse360 endpoints. Verify that:
-   - Requesting with an empty `warehouse_id` returns `422`.
-   - Requesting with a `limit` of `0` or `501` returns `422`.
-   - Requesting with `plant_id` and date limits dynamically generates correct SQL queries with `PLANT_ID = :plant_id` and date bound params in the logs.
+`LIMIT :max_rows` bound parameter was confirmed incompatible with Databricks SQL — all 4 list routes returned HTTP 502 in first test. Fixed by embedding `LIMIT 1000` as a literal integer in all 4 list QuerySpecs and removing `max_rows` from params dict.
 
-### Phase B: Frontend Adapter Route Activation
-Before performing browser tests in UAT, activate the native endpoints in `warehouse-360-legacy-api-adapter.ts` by adding them to the `verifiedEndpoints` list:
+### 2. `wh360_deliveries_v` — wrong filter column (W3 DDL-BLOCKED)
 
-```typescript
-function isBrowserVerified(endpoint: string): boolean {
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    return true
-  }
-  const verifiedEndpoints: string[] = [
-    'getWarehouseOverview',
-    'getWarehouseInbound',
-    'getWarehouseOutbound',
-    'getWarehouseStaging',
-    'getWarehouseExceptionItems'
-  ]
-  return verifiedEndpoints.includes(endpoint)
-}
+`wh360_deliveries_v` exists in `connected_plant_uat.wh360` but does not have a `WAREHOUSE_NUMBER` column. The outbound QuerySpec `WHERE WAREHOUSE_NUMBER = :warehouse_id` is incorrect. Need `DESCRIBE TABLE connected_plant_uat.wh360.wh360_deliveries_v` to find the correct column name.
+
+### 3. `staging_orders_v` — does not exist (W4 SOURCE-BLOCKED)
+
+`staging_orders_v` is not present in `connected_plant_uat.wh360`. Staging route returns HTTP 502. Need `SHOW VIEWS IN connected_plant_uat.wh360` to identify the correct view, or confirm staging is not available in UAT.
+
+### 4. `wh360_imwm_exceptions_v` — does not exist (W5 SOURCE-BLOCKED)
+
+`wh360_imwm_exceptions_v` is not present in `connected_plant_uat.wh360`. Exceptions route returns HTTP 502. Same unblock path as W4.
+
+---
+
+## Pre-UAT Config Checklist
+
+- [x] `WH360_CATALOG=connected_plant_uat` confirmed and set in `app.yaml` (commit `33fe43a`)
+- [x] `WH360_SCHEMA=wh360` (default, confirmed correct for UAT)
+- [x] Known `warehouse_id` for UAT: **104** and **105**
+- [x] `apps/api/app.yaml` updated with `WH360_CATALOG`
+- [ ] App redeployed and state: RUNNING
+
+---
+
+## Verification — API Routes
+
+### W1 — Overview — SOURCE-PENDING
+
+```
+GET /api/warehouse360/overview?warehouse_id=<id>
 ```
 
-### Phase C: Workspace E2E Navigation & Filters Verification
-1. Open the V2 UI at `?workspace=warehouse-workspace` in your browser.
-2. Verify that:
-   - Selecting different plants or timebounds automatically fires the fetch requests with correct query strings (e.g. `?warehouse_id=WH-IE10-MAIN&plant_id=IE10&date_from=2026-05-01&date_to=2026-05-31&limit=50`).
-   - Mock data fallbacks do not activate for cockpit views when these are marked as browser-verified.
-   - Real data loads correctly with `x-data-source: databricks-api` and `x-adapter-mode: databricks-api` headers on the responses.
+**Status: SOURCE-PENDING** — `connected_plant_uat.wh360.wh360_cockpit_summary_v` does not exist in UAT. Route will return an error (502 or 500) until the correct view name is confirmed. Do not invent a replacement.
+
+**Required:** Confirm the actual UAT view name for the WH360 cockpit/overview summary (the V1-equivalent of `wh360_cockpit_summary_v`). Once known, update `get_warehouse_overview_spec` in `warehouse360_databricks_adapter.py`.
+
+- [ ] Actual overview view name confirmed: ___
+- [ ] QuerySpec updated with correct view name
+- [ ] HTTP status: ___
+- [ ] `x-data-source`: ___
+- [ ] `x-query-name`: ___
+
+### W2 — Inbound
+
+```
+GET /api/warehouse360/inbound?warehouse_id=<id>
+```
+
+Expected:
+- HTTP 200 or honest empty list `[]`
+- `x-data-source: databricks-api`
+- `x-query-name: warehouse360.get_inbound`
+- Body: array of inbound items
+
+Watch for: HTTP 500 → likely `LIMIT :max_rows` incompatibility. Fix: embed clamped integer in SQL.
+
+- [ ] HTTP status: ___
+- [ ] `x-data-source`: ___
+- [ ] `x-query-name`: ___
+- [ ] Body shape valid: ___
+- [ ] `LIMIT :max_rows` compatibility: ___
+- [ ] Notes: ___
+
+### W3 — Outbound — DDL-BLOCKED
+
+```
+GET /api/warehouse360/outbound?warehouse_id=<id>
+```
+
+**Status: DDL-BLOCKED** — `wh360_deliveries_v` exists but has no `WAREHOUSE_NUMBER` column. QuerySpec WHERE clause is incorrect.
+
+**Unblock:** `DESCRIBE TABLE connected_plant_uat.wh360.wh360_deliveries_v` → find warehouse filter column → update `get_warehouse_outbound_spec` WHERE clause in adapter.
+
+- [ ] Correct filter column confirmed: ___
+- [ ] QuerySpec WHERE updated
+- [ ] HTTP status: ___
+- [ ] `x-data-source`: ___
+- [ ] `x-query-name`: ___
+
+### W4 — Staging — SOURCE-BLOCKED
+
+```
+GET /api/warehouse360/staging?warehouse_id=<id>
+```
+
+**Status: SOURCE-BLOCKED** — `staging_orders_v` does not exist in `connected_plant_uat.wh360`.
+
+**Unblock:** `SHOW VIEWS IN connected_plant_uat.wh360` → identify correct staging view → update `get_warehouse_staging_spec`, or confirm staging is unavailable in UAT and mark route as permanently blocked.
+
+- [ ] Correct view name confirmed: ___
+- [ ] QuerySpec updated or route blocked
+- [ ] HTTP status: ___
+
+### W5 — Exceptions — SOURCE-BLOCKED
+
+```
+GET /api/warehouse360/exceptions?warehouse_id=<id>
+```
+
+**Status: SOURCE-BLOCKED** — `wh360_imwm_exceptions_v` does not exist in `connected_plant_uat.wh360`.
+
+**Unblock:** Same as W4 — `SHOW VIEWS IN connected_plant_uat.wh360` → identify correct exceptions view.
+
+- [ ] Correct view name confirmed: ___
+- [ ] QuerySpec updated or route blocked
+- [ ] HTTP status: ___
+
+---
+
+## Verification History
+
+| Date | Commit | Route | Status | HTTP | x-query-name | Notes |
+|------|--------|-------|--------|------|--------------|-------|
+| 2026-05-18 | 0b9d868 | all 5 | CONFIG-BLOCKED | 503 (expected) | n/a | WH360_CATALOG not set in app.yaml |
+| 2026-05-18 | 9b50467 | overview | SOURCE-PENDING | n/a | n/a | wh360_cockpit_summary_v does not exist in connected_plant_uat.wh360 |
+| 2026-05-18 | 9b50467 | inbound | PENDING BV | — | — | wh360_inbound_v confirmed to exist; pending redeploy + browser test |
+| 2026-05-18 | — | overview | **HTTP 200** ✓ | 200 | warehouse360.get_overview | wh360_kpi_snapshot_v confirmed; LIMIT 1; no warehouse_id filter |
+| 2026-05-18 | — | inbound | PENDING RE-TEST | — | — | LIMIT 1000 fix deployed; wh360_inbound_v exists; re-test required |
+| 2026-05-18 | — | outbound | **DDL-BLOCKED** | 502 | n/a | wh360_deliveries_v exists but no WAREHOUSE_NUMBER column; need DESCRIBE |
+| 2026-05-18 | — | staging | **SOURCE-BLOCKED** | 502 | n/a | staging_orders_v does not exist in connected_plant_uat.wh360 |
+| 2026-05-18 | — | exceptions | **SOURCE-BLOCKED** | 502 | n/a | wh360_imwm_exceptions_v does not exist in connected_plant_uat.wh360 |

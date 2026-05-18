@@ -94,7 +94,7 @@ describe('ActiveSPCSignalsPanel', () => {
     vi.mocked(useActiveSPCSignals).mockReturnValue({
       data: { ok: true, data: [], fetchedAt: '2026-05-14T10:00:00.000Z' },
       isLoading: false,
-    } as ReturnType<typeof useActiveSPCSignals>)
+    } as unknown as ReturnType<typeof useActiveSPCSignals>)
     render(<ActiveSPCSignalsPanel request={request} />)
     expect(screen.getByText(/No active signals/)).toBeDefined()
   })

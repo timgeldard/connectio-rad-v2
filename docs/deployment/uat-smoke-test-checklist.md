@@ -5,6 +5,33 @@
 
 ---
 
+## f.txt Pre-flight baseline (2026-05-18)
+
+**Commit tested:** `0b9d86895dd0ad0e68e02cf56ba2553c5c36e9a1` (Merge PR #16 — EnvMon scope seeding fix)
+
+**Local tests run before UAT:**
+```
+npm exec nx -- run-many -t test --all --passWithNoTests   → 12 projects, all PASS
+cd apps/api && python -m pytest tests/ -x -q              → 682 passed
+```
+
+**Deployment config verified from `app.yaml`:**
+- `BACKEND_ADAPTER_MODE=databricks-api` ✓
+- `DATABRICKS_HOST=https://adb-604667594731808.8.azuredatabricks.net` ✓
+- `SQL_WAREHOUSE_ID=e76480b94bea6ed5` ✓
+- `TRACE_CATALOG=connected_plant_uat`, `TRACE_SCHEMA=gold` ✓
+- `POH_CATALOG=connected_plant_uat`, `CQ_CATALOG=connected_plant_uat` ✓
+- `WH360_CATALOG` — **NOT SET** — all 5 WH360 routes will return 503 until configured
+- `WH360_SCHEMA` — **NOT SET** — defaults to `"wh360"` in object_resolver.py
+- `user_api_scopes: [sql]` ✓ — no SPN/PAT config ✓
+
+**Pre-flight findings:**
+- SPC: `SPCSandboxBanner` was absent from 4 of 6 view tabs (active-signals, capability, alarm-history, chart-configuration-readonly). Fixed pre-UAT based on code audit — UAT to confirm by tab-walking each view.
+- Trace: WITH RECURSIVE implementation merged on main — prior BV (C12–C15) was against iterative approach; fresh verification required.
+- WH360: Config-blocked — `WH360_CATALOG` unknown from available sources. Cannot be derived from `databricks.yml`, `app.yaml`, or docs. User must supply the UAT catalog name before WH360 routes can be tested.
+
+---
+
 ## Section A — Deployment smoke test (PASSED 2026-05-17)
 
 These tests confirm the app deploys, starts, and serves its static UI. No data connectivity is required.
@@ -353,55 +380,81 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for 
 
 ---
 
-### C16 — Warehouse360 Overview (native Databricks)
+### C16 — Trace graph (WITH RECURSIVE, fresh BV) ✓ PASSED 2026-05-18
 
-`GET /api/warehouse360/overview?warehouse_id=<known_wh>`
+**Status: BROWSER-VERIFIED 2026-05-18** — WITH RECURSIVE implementation confirmed working. HTTP 200, 7 nodes, 7 edges, depthReached=1, no timeout.
 
-- [ ] Returns HTTP 200 with cockpit overview data
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_overview` present
-- [ ] No mock fallback on query failure
+Test anchor: `material_id=20052009`, `batch_id=0008602411`, `plant_id=C061`, `direction=both`, `max_depth=2`, `max_edges=100`
 
-### C17 — Warehouse360 Inbound (native Databricks)
+Actual response (fetch from UAT browser console, 2026-05-18):
+- `x-data-source: view:gold_batch_lineage`
+- `x-query-name: trace2.get_trace_graph`
+- Anchor: `nodeKey=20052009:0008602411` (2-tuple format confirmed — no plant in key)
+- 7 nodes: 1 anchor (directions: anchor+downstream+upstream), 1 downstream, 5 upstream
+- 7 edges: all `linkType=PRODUCTION`, `movementType=261`, `postingDate=2024-08-27`
+- `depthReached=1`, `truncated=false`, `warnings=[]`
 
-`GET /api/warehouse360/inbound?warehouse_id=<known_wh>&limit=100`
+- [x] Returns HTTP 200
+- [x] `x-data-source: view:gold_batch_lineage` present
+- [x] `x-query-name: trace2.get_trace_graph` present
+- [x] Body has `anchor`, `nodes`, `edges`, `depthReached`, `truncated`, `warnings`
+- [x] No mock data
+- [x] No 504 timeout — WITH RECURSIVE avoids iterative round-trips
 
-- [ ] Returns HTTP 200 with inbound PO/STO items array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_inbound` present
-- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
-- [ ] No mock fallback on query failure
+See `docs/deployment/trace-native-browser-verification.md` (T2 manual result table) for full evidence.
 
-### C18 — Warehouse360 Outbound (native Databricks)
+---
 
-`GET /api/warehouse360/outbound?warehouse_id=<known_wh>&limit=100`
+### C17–C21 — Warehouse360 native routes — PENDING RE-TEST
 
-- [ ] Returns HTTP 200 with outbound delivery lines array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_outbound` present
-- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
-- [ ] No mock fallback on query failure
+**Status: PENDING RE-TEST** — Config set, source views fixed, LIMIT fix deployed. Awaiting browser re-test after second deploy (2026-05-18).
 
-### C19 — Warehouse360 Staging (native Databricks)
+**Config confirmed (2026-05-18):**
+- `WH360_CATALOG=connected_plant_uat` set in `app.yaml` ✓
+- `WH360_SCHEMA=wh360` (default — confirmed correct for UAT) ✓
+- Known warehouse IDs: **104**, **105** ✓
 
-`GET /api/warehouse360/staging?warehouse_id=<known_wh>&limit=100`
+**Source view fixes (2026-05-18):**
+- Overview: `wh360_cockpit_summary_v` **does not exist** — replaced with `wh360_kpi_snapshot_v` (global single-row KPI snapshot, confirmed via DESCRIBE + SELECT). No WHERE clause (no warehouse_id column). 11-column SELECT: `orders_total, orders_red, orders_amber, trs_open, tos_open, deliveries_today, deliveries_at_risk, inbound_open, bins_blocked, bins_total, bin_util_pct`.
+- `LIMIT :max_rows` **rejected by Databricks SQL** — all 4 list routes (inbound/outbound/staging/exceptions) returned HTTP 502 in first test. Fixed by embedding `LIMIT 1000` literal directly in SQL and removing `max_rows` from params dict.
+- `connected_plant_uat.wh360.wh360_inbound_v` — **exists** ✓ (confirmed first test round)
 
-- [ ] Returns HTTP 200 with staging orders array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_staging` present
-- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
-- [ ] No mock fallback on query failure
+**First test result (pre-LIMIT fix, 2026-05-18):**
+- `GET /api/warehouse360/overview?warehouse_id=104` — **HTTP 200** ✓ (after source view fix)
+- `GET /api/warehouse360/inbound?warehouse_id=104` — **HTTP 502** ✗ (LIMIT :max_rows rejected)
+- `GET /api/warehouse360/outbound?warehouse_id=104` — **HTTP 502** ✗
+- `GET /api/warehouse360/staging?warehouse_id=104` — **HTTP 502** ✗
+- `GET /api/warehouse360/exceptions?warehouse_id=104` — **HTTP 502** ✗
 
-### C20 — Warehouse360 Exceptions (native Databricks)
+Second deploy with LIMIT fix completed 2026-05-18. Re-test pending.
 
-`GET /api/warehouse360/exceptions?warehouse_id=<known_wh>&limit=100`
+- [x] `WH360_CATALOG` set in `app.yaml`
+- [x] `warehouse_id` known for UAT (104, 105)
+- [x] Overview view name confirmed (`wh360_kpi_snapshot_v`)
+- [x] `LIMIT :max_rows` fixed (literal `LIMIT 1000` embedded in SQL)
+- [x] C17: Overview — **HTTP 200** ✓ (`wh360_kpi_snapshot_v`, LIMIT 1, no warehouse_id filter)
+- [ ] C18: Inbound — **PENDING RE-TEST** (`wh360_inbound_v` exists, LIMIT 1000 fix deployed)
+- [ ] C19: Outbound — **DDL-BLOCKED** (`wh360_deliveries_v` has no `WAREHOUSE_NUMBER` column — need `DESCRIBE TABLE` to find correct filter column)
+- [ ] C20: Staging — **SOURCE-BLOCKED** (`staging_orders_v` does not exist in `connected_plant_uat.wh360` — need `SHOW VIEWS` to find alternative)
+- [ ] C21: Exceptions — **SOURCE-BLOCKED** (`wh360_imwm_exceptions_v` does not exist in `connected_plant_uat.wh360` — need `SHOW VIEWS` to find alternative)
+- [ ] `x-data-source: databricks-api` on each unblocked route
 
-- [ ] Returns HTTP 200 with exception items array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: warehouse360.get_warehouse_exceptions` present
-- [ ] Supports optional `plant_id`, `date_from`, `date_to` parameters
-- [ ] Exception severity is correctly mapped (expired=critical, <=7 days=high, <=30 days=medium, >30 days=low)
-- [ ] No mock fallback on query failure
+---
+
+### C22 — SPC sandbox/demo labelling — PASS (code-audit fixed 2026-05-18)
+
+**Status: CODE-FIXED** — `SPCSandboxBanner` was present only on `chart-overview` and `characteristic-review` views. Added to `active-signals`, `capability`, `alarm-history`, and `chart-configuration-readonly` via f.txt code audit.
+
+**UAT: tab-walk each view tab at `?workspace=spc-monitoring` to confirm banner is visible on all 6 tabs.**
+
+- [ ] `chart-overview` tab — banner visible (was already present)
+- [ ] `active-signals` tab — banner visible (fixed 2026-05-18)
+- [ ] `characteristic-review` tab — banner visible (was already present)
+- [ ] `capability` tab — banner visible (fixed 2026-05-18)
+- [ ] `alarm-history` tab — banner visible (fixed 2026-05-18)
+- [ ] `chart-configuration-readonly` tab — banner visible (fixed 2026-05-18)
+- [ ] No view claims native Databricks or live production data
+- [ ] Charts load without crash (demo data)
 
 ---
 
@@ -411,4 +464,5 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-Shell) for 
 - `vw_gold_process_order_phase` DDL is confirmed (2026-05-17). No column-name blockers for order-operations route.
 - `vw_gold_confirmation` DDL confirmed 2026-05-17 — confirmations route is implemented and executable.
 - `vw_gold_adp_movement` DDL confirmed 2026-05-17 — goods movements route is implemented and executable.
+- C12–C15 BV rows remain in the checklist for historical record but are superseded by C16 (WITH RECURSIVE fresh BV).
 - All tests in this checklist require a human in the loop with valid Databricks workspace access. Do not attempt to automate against live Databricks in CI.
