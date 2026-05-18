@@ -14,8 +14,15 @@ import type {
 } from '@connectio/data-contracts'
 import { VerificationStatusBanner } from '@connectio/design-system'
 
+interface QueryLike {
+  data?: { ok: boolean; source?: any; error?: { code: string; message: string } };
+  isLoading: boolean;
+  isError: boolean;
+  error?: any;
+}
+
 function getSourceStatus(
-  query: { data?: { ok: boolean; source?: string }; isLoading: boolean; isError: boolean },
+  query: QueryLike,
   isMockSelected: boolean,
   isEmpty?: boolean
 ) {
@@ -50,7 +57,7 @@ function getSourceStatus(
   return { label: 'source unavailable', bg: '#374151', color: '#9CA3AF' }
 }
 
-function getQueryError(query: { data?: { ok: boolean; error?: { code: string; message: string } }; isError: boolean; error?: any }) {
+function getQueryError(query: QueryLike) {
   if (query.isError) {
     return {
       code: 'unknown',
@@ -195,10 +202,10 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     (goodsMovementsQuery.data?.ok && goodsMovementsQuery.data.data && goodsMovementsQuery.data.data.length > 0)
 
   const hasAnyError =
-    (headerQuery.data && !headerQuery.data.ok) ||
-    (operationsQuery.data && !operationsQuery.data.ok) ||
-    (confirmationsQuery.data && !confirmationsQuery.data.ok) ||
-    (goodsMovementsQuery.data && !goodsMovementsQuery.data.ok)
+    headerQuery.isError || (headerQuery.data && !headerQuery.data.ok) ||
+    operationsQuery.isError || (operationsQuery.data && !operationsQuery.data.ok) ||
+    confirmationsQuery.isError || (confirmationsQuery.data && !confirmationsQuery.data.ok) ||
+    goodsMovementsQuery.isError || (goodsMovementsQuery.data && !goodsMovementsQuery.data.ok)
 
   // Form Handling
   const handleInputChange = (field: keyof QueryFormState, val: string) => {
@@ -294,15 +301,15 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   const confirmations: ProcessOrderConfirmation[] = confirmationsQuery.data?.ok ? confirmationsQuery.data.data : []
   const goodsMovements: ProcessOrderGoodsMovement[] = goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : []
 
-  const headerErr = getQueryError(headerQuery as any)
-  const operationsErr = getQueryError(operationsQuery as any)
-  const confirmationsErr = getQueryError(confirmationsQuery as any)
-  const goodsMovementsErr = getQueryError(goodsMovementsQuery as any)
+  const headerErr = getQueryError(headerQuery)
+  const operationsErr = getQueryError(operationsQuery)
+  const confirmationsErr = getQueryError(confirmationsQuery)
+  const goodsMovementsErr = getQueryError(goodsMovementsQuery)
 
-  const headerStatus = getSourceStatus(headerQuery as any, isMockFixtureSelected, !headerData)
-  const operationsStatus = getSourceStatus(operationsQuery as any, isMockFixtureSelected, operations.length === 0)
-  const confirmationsStatus = getSourceStatus(confirmationsQuery as any, isMockFixtureSelected, confirmations.length === 0)
-  const goodsMovementsStatus = getSourceStatus(goodsMovementsQuery as any, isMockFixtureSelected, goodsMovements.length === 0)
+  const headerStatus = getSourceStatus(headerQuery, isMockFixtureSelected, !headerData)
+  const operationsStatus = getSourceStatus(operationsQuery, isMockFixtureSelected, operations.length === 0)
+  const confirmationsStatus = getSourceStatus(confirmationsQuery, isMockFixtureSelected, confirmations.length === 0)
+  const goodsMovementsStatus = getSourceStatus(goodsMovementsQuery, isMockFixtureSelected, goodsMovements.length === 0)
 
   const metrics = useMemo(() => {
     const inputs = goodsMovements.filter(m => m.direction === 'input')
