@@ -4,7 +4,7 @@
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
 **Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
-**Last updated:** 2026-05-18 (q.txt) — Trace getTraceGraph route wired (iterative multi-hop, gold_batch_lineage confirmed-ddl), 47 new tests, 655 total
+**Last updated:** 2026-05-18 (d.txt) — Trace final route mounted (`?workspace=traceability-workspace&view=trace-tree`); TraceQueryForm + TraceTreeView rewrite; link-type legend; 163 di-traceability tests; C15 BV pending UAT
 
 ---
 
@@ -81,7 +81,7 @@
 | Method | Source | Status |
 |---|---|---|
 | `getBatchHeaderSummary` | `gold_batch_stock_v` + `gold_batch_summary_v`⚠ + `gold_material`⚠ + `gold_plant` | ✓ QS — DDL blockers (6 TODOs); V1 proxy returns 503 |
-| `getTraceGraph` | `gold_batch_lineage` (confirmed-ddl, 18 cols) | ✓ BV — route BV (q.txt, 2026-05-18); iterative multi-hop; frontend wired (u.txt, 2026-05-18) — Trace2LegacyApiAdapter override, mapBackendTraceGraph mapper, contract mismatch resolved; UI BV pending |
+| `getTraceGraph` | `gold_batch_lineage` (confirmed-ddl, 18 cols) | ✓ BV — API BV (q.txt, 2026-05-18); C14 UI BV 2026-05-18 (`?workspace=trace-graph-verify`); C15 UI BV 2026-05-18 (`?workspace=traceability-workspace&view=trace-tree`); source=gold_batch_lineage, execution=databricks-api, depth=1, truncated=No; no mock fallback |
 | `getMassBalanceSummary` | `gold_batch_mass_balance_v`⚠ | ✓ QS — WHERE columns unverified |
 | `getInvestigationContext` | — | Mock |
 | `getCustomerExposureSummary` | Unknown | Blocked — business rules undefined |

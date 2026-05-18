@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
-**Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
-**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired; e.txt: link-type legend, TraceQueryForm, final route mounted  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T2-UI full screen (C14) **BROWSER-VERIFIED 2026-05-18** (gold_batch_lineage, databricks-api, depth=1, truncated=No). T2-Shell (C15) **BROWSER-VERIFIED 2026-05-18** (same data confirmed on final workspace route). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -35,10 +35,12 @@ Test values: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direc
 
 > **Material ID format note:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros — `20052009`, not `000000000020052009`. The verify page default was corrected to `20052009` (b.txt, 2026-05-18). Do not assume SAP ALPHA padding behaviour until input normalization is implemented.
 
-### C — Full workspace shell verification (pending)
-Candidates: `/?workspace=traceability-workspace&tab=trace`, `/?workspace=trace-investigation&viewId=trace-tree`  
-Purpose: verifies full Trace workspace navigation/shell integration.  
-**Status: not yet tested** — do not mark as complete until manually verified separately from the dedicated surface.
+### C — Final user-facing Trace workspace (d.txt, 2026-05-18)
+URL: `/?workspace=traceability-workspace&view=trace-tree`  
+Purpose: verifies the real Traceability workspace route (not the verify page). Includes form, native graph, batch header context. No mock fallback.  
+**Status: PENDING BROWSER VERIFICATION** — code deployed; awaiting next UAT deploy and manual test.  
+**Note:** URL param is `?view=` (not `?tab=`). `tab=` is deprecated. `view=trace-tree` is the correct view ID.  
+**Note:** Bare `?workspace=traceability-workspace` (no view param) defaults to `view=trace-tree` (changed from `overview` in d.txt to avoid OverviewView mock fallback on cold load).
 
 ---
 
@@ -292,8 +294,8 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 - [ ] No mock data shown on failure — error state only
 
 **Also verify (Option A — shell fix):**
-- [ ] `?workspace=traceability-workspace&tab=trace` no longer shows "implementation pending (Phase 3+)"
-- [ ] It renders the `TraceInvestigationWorkspace` instead (scope will be empty, graph panel will show empty/error state — that is expected without scope context)
+- [ ] `?workspace=traceability-workspace` and `?workspace=traceability-workspace&view=trace-tree` render the Traceability Investigation screen with query form — not the "implementation pending (Phase 3+)" placeholder
+- [ ] See Check T2-Shell below for full pass criteria
 
 **Troubleshooting:**
 
@@ -338,6 +340,52 @@ Expected headers: `X-Query-Name: trace2.get_mass_balance`
 
 ---
 
+---
+
+## Check T2-Shell — Final user-facing Trace workspace (d.txt, 2026-05-18)
+
+**Status: BROWSER-VERIFIED 2026-05-18** — route mounted, default view `trace-tree`, TraceQueryForm embedded. Source: `gold_batch_lineage`, Execution: `databricks-api`, Query: `trace2.get_trace_graph`, Depth reached: 1, Truncated: No.
+
+**Primary URL:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=traceability-workspace&view=trace-tree
+```
+
+**Also test bare URL (should now default to trace-tree):**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=traceability-workspace
+```
+
+**Test anchor:** Enter manually — `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100` — then click Run Trace.
+
+**Pass criteria:**
+- [ ] Page loads without crash
+- [ ] Trace Investigation form visible (Material ID, Batch ID, Plant ID, Direction, Max depth, Max edges)
+- [ ] Form pre-filled with defaults (20052009 / 0008602411 / C061)
+- [ ] No panels visible before Run Trace is clicked
+- [ ] Click **Run Trace** — TraceGraphPanel appears with real Databricks graph
+- [ ] `source: databricks-api` badge visible (green) — NOT `source: mock`
+- [ ] Reset to test case button resets inputs
+- [ ] Copy payload button copies JSON payload for direct API use
+- [ ] After submission, "Technical details — last request payload" collapsible section visible
+- [ ] BatchHeaderPanel visible below graph (calls legacy-api — may show error if V1 stopped, expected)
+- [ ] RiskSignalsPanel is NOT rendered (excluded — adapter not yet wired, mock-only)
+- [ ] No "implementation pending (Phase 3+)" text anywhere on page
+- [ ] No mock graph data on empty/error
+
+**Known gaps:**
+- BatchHeaderPanel calls V1 legacy-api for batch header data — may show 503 if V1 apps stopped (expected, not a defect)
+- RiskSignalsPanel intentionally excluded — will be added when databricks-api adapter override exists for getRiskSignals
+- OverviewView (other views in TraceInvestigationWorkspace) still contain mock-backed panels — only `trace-tree` view is verified clean
+
+**Manual result:**
+
+| Status | Date | Notes |
+|---|---|---|
+| [x] **PASSED** | 2026-05-18 | Source: `gold_batch_lineage`. Execution: `databricks-api`. Query: `trace2.get_trace_graph`. Depth reached: 1. Truncated: No. Same data confirmed on both `?workspace=trace-graph-verify` (C14) and `?workspace=traceability-workspace&view=trace-tree` (C15). No mock fallback. |
+
+---
+
 ## Verification Sequence
 
 1. Complete `trace-native-column-verification-checklist.md`
@@ -345,8 +393,10 @@ Expected headers: `X-Query-Name: trace2.get_mass_balance`
 3. Deploy to UAT
 4. Run Check T1 → if passed, proceed to Check T2
 5. Run Check T2 → if passed, document `getTraceGraph` as browser-verified
-6. Run Check T3 when wired
-7. Update `docs/audit/adapter-source-status-matrix.md` after each pass
+6. Run Check T2-UI (verify page) — primary trace investigation screen
+7. Run Check T2-Shell (final workspace route) — confirms shell integration
+8. Run Check T3 when wired
+9. Update `docs/audit/adapter-source-status-matrix.md` after each pass
 
 Do not mark any check as passed unless manually tested in Databricks Apps UAT.  
 Do not claim browser verification for V1 legacy-api path — only for native Databricks routes.

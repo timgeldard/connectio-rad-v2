@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-18 — b.txt: C8/C9 BV'd (confirmations + goods-movements PASSED 2026-05-18); C13 Trace Graph UI BV'd (`materialId=20052009`); `DEFAULT_MATERIAL` corrected in verify page; 8 databricks-api methods BV'd total  
+**Last updated:** 2026-05-18 — d.txt: TraceQueryForm + TraceTreeView form embedding; traceability-workspace default view → trace-tree; RiskSignalsPanel excluded (mock-only); C15 pending BV. 163 di-traceability tests.  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009`. **c.txt 2026-05-18** — complete investigation screen: investigation header, full edge detail (all gold_batch_lineage fields), node detail (depth/isAnchor/edge counts), timeline, exposure indicators, source banner, direction/maxDepth/maxEdges controls wired to backend. 134 di-traceability tests passing. Full workspace shell (`?workspace=traceability-workspace`) pending C14 BV. |
+| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009`. **c.txt** — complete investigation screen: header, full edge detail, node detail, timeline, exposure indicators, source banner, direction/maxDepth/maxEdges controls. **d.txt** — TraceQueryForm embedded in TraceTreeView; final route `?workspace=traceability-workspace&view=trace-tree` (PENDING C15 BV); traceability-workspace defaults to trace-tree; RiskSignalsPanel excluded (always mock — no adapter override); 163 di-traceability tests. Node key is `material:batch:plant` (3-tuple). max_depth: default=3, route-cap=4, UI-default=2. Plant is context/display — not part of anchor filter SQL. |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -292,7 +292,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, `materialId=20052009`, green badge, nodes+edges rendered; full workspace shell BV pending |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **C14 BV 2026-05-18** — `?workspace=trace-graph-verify`; **C15 BV 2026-05-18** — `?workspace=traceability-workspace&view=trace-tree`; source=gold_batch_lineage, execution=databricks-api, depth=1, truncated=No; no mock fallback |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |

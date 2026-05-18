@@ -426,6 +426,46 @@ function DirectionToggle({
 }
 
 // ---------------------------------------------------------------------------
+// Link type legend
+// ---------------------------------------------------------------------------
+
+const LINK_TYPE_COLORS: Record<string, string> = {
+  'goods-movement': '#2563EB',
+  'production-order': '#7C3AED',
+  'purchase-order': '#D97706',
+  'sales-order': '#059669',
+  transfer: '#0891B2',
+}
+
+function LinkTypeLegend({ edges }: { edges: TraceEdge[] }) {
+  const types = [...new Set(edges.flatMap(e => e.relationshipType != null ? [e.relationshipType] : []))]
+  if (types.length === 0) return null
+  return (
+    <div
+      style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginBottom: 8 }}
+      aria-label="Link type legend"
+      data-testid="link-type-legend"
+    >
+      {types.map(lt => (
+        <span key={lt} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#374151' }}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: 16,
+              height: 2,
+              background: LINK_TYPE_COLORS[lt] ?? '#6B7280',
+              borderRadius: 1,
+              flexShrink: 0,
+            }}
+          />
+          {lt.replace(/-/g, ' ')}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main panel
 // ---------------------------------------------------------------------------
 
@@ -583,6 +623,9 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
               {graph.rootBatch}
             </span>
           </div>
+
+          {/* Link type legend — derived from current directed graph */}
+          {directedGraph && <LinkTypeLegend edges={directedGraph.edges} />}
 
           {/* React Flow graph or empty state */}
           {directedGraph && directedGraph.nodes.length === 0 ? (

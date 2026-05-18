@@ -226,3 +226,38 @@ The following Group A items were implemented in this parity pass:
 | A3 — Edge detail in trace graph | Implemented |
 | A4 — Graph robustness | Implemented |
 | A5 — Richer selected node detail | Implemented |
+
+**c.txt (2026-05-18) — TraceGraphPanel full product build:**
+
+| Item | Status |
+|------|--------|
+| Investigation header (materialId, batchId, plantId, counts, source, truncated) | Implemented |
+| Full edge detail — all gold_batch_lineage fields in SelectedEdgeDetail | Implemented |
+| Full node detail — depth, isAnchor, directions, inbound/outbound counts | Implemented |
+| Timeline from lineage edges — sorted by postingDate, undated grouped | Implemented |
+| Exposure indicators — distinct customer/supplier/delivery/PO/process-order counts | Implemented |
+| Source/limitation banner — gold_batch_lineage, query name, depth, truncated, material ID caveat | Implemented |
+| Direction/maxDepth/maxEdges controls — form at page level, passed to adapter | Implemented |
+| TraceEdge schema extended — 8 new optional gold_batch_lineage fields | Implemented |
+| TraceNode schema extended — depth, directions, isAnchor | Implemented |
+| Trace2AdapterRequest extended — direction, maxDepth, maxEdges optional | Implemented |
+| Adapter params wired — getTraceGraph uses request.direction/maxDepth/maxEdges | Implemented |
+| Edge labels — mapToFlowEdges sets label from relationshipType | Implemented |
+
+**d.txt (2026-05-18) — Final Traceability workspace route:**
+
+| Item | Status |
+|------|--------|
+| TraceQueryForm — shared form with recent searches, copy payload, reset, material ID suggestion | Implemented |
+| TraceTreeView rewrite — embeds TraceQueryForm; panels gated behind submitted request | Implemented |
+| Final route — `?workspace=traceability-workspace&view=trace-tree` mounted; defaults to trace-tree | Implemented (C15 BV pending UAT) |
+| OverviewView mock fallback prevented — traceability-workspace default view changed to trace-tree | Implemented |
+| RiskSignalsPanel excluded — always mock, excluded until databricks-api adapter exists | Implemented |
+| BatchHeaderPanel gating — shown only when batchId+materialId present | Implemented |
+| Collapsible technical details section — shows last submitted request JSON | Implemented |
+| Link type legend — inline legend showing distinct link types in current directed graph | Implemented |
+| B5 — Batch entry context | Implemented via TraceQueryForm (editable picker, not investigation-creation) |
+
+**B3 — Depth controls:** Implemented as maxDepth select in TraceQueryForm.
+
+**Note:** B1 (customer detail table), B2 (supplier detail table), B4 (cross-workspace drill-through), C1–C5 remain backlog.

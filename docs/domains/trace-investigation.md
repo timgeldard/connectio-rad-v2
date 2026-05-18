@@ -2,7 +2,7 @@
 
 **Domain:** traceability  
 **Workspace:** trace-investigation  
-**Lifecycle:** active — V1 proxy wired for batch-header; `POST /api/trace2/trace-graph` native Databricks route wired (q.txt, 2026-05-18); c.txt 2026-05-18: complete Traceability investigation screen implemented at `?workspace=trace-graph-verify`
+**Lifecycle:** active — V1 proxy wired for batch-header; `POST /api/trace2/trace-graph` native Databricks route wired (q.txt); c.txt 2026-05-18: complete Traceability investigation screen at `?workspace=trace-graph-verify`; d.txt 2026-05-18: final route `?workspace=traceability-workspace&view=trace-tree` mounted with TraceQueryForm, no mock fallback (C15 BV pending)
 
 ---
 
@@ -21,10 +21,12 @@ Given a `batchId` and `investigationId`, the workspace surfaces:
 
 ## Views
 
-| View ID | Description |
-|---------|-------------|
-| `overview` | Batch header + trace graph + risk signals |
-| `trace-tree` | Full-screen trace graph with direction controls |
+URL param: `?view=` (not `?tab=`). `?workspace=traceability-workspace` defaults to `trace-tree` (changed from `overview` in d.txt to avoid OverviewView mock panel fallback on cold load).
+
+| View ID | Description | Status |
+|---------|-------------|--------|
+| `overview` | Batch header + trace graph + risk signals | Mock panels on cold load — not default |
+| `trace-tree` | Native trace graph with embedded query form + BatchHeaderPanel | **Default view — primary real-data surface** (d.txt, C15 BV pending) |
 | `mass-balance` | Mass balance totals + movements table + trace graph |
 | `recall-readiness` | Customer impact + supplier exposure |
 | `quality` | CoA release status |

@@ -63,6 +63,10 @@ export type { RiskSignalsPanelProps } from './panels/risk-signals-panel.js'
 export { TraceExposureForReleasePanel } from './panels/trace-exposure-for-release-panel.js'
 export type { TraceExposureForReleasePanelProps } from './panels/trace-exposure-for-release-panel.js'
 
+// Forms
+export { TraceQueryForm } from './forms/trace-query-form.js'
+export type { TraceQueryFormProps } from './forms/trace-query-form.js'
+
 // Adapter and queries
 export { Trace2Adapter, trace2Adapter } from './adapters/trace2-adapter.js'
 export type { Trace2AdapterRequest } from './adapters/trace2-adapter.js'
