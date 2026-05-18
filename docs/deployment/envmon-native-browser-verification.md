@@ -1,8 +1,8 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-18 (EnvMon read-only monitoring screen added; UI BV pending)
-**Status:** site-summary and swab-results APIs browser-verified 2026-05-18; read-only UI screen implemented, browser verification pending next deploy
+**Updated:** 2026-05-18 (UI browser-verified; numeric schema widening deployed)
+**Status:** site-summary and swab-results APIs browser-verified 2026-05-18; read-only monitoring screen (`?workspace=envmon-monitoring`) browser-verified 2026-05-18
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
@@ -23,7 +23,7 @@ Previously blocking items (all resolved):
 - [x] Route registered in FastAPI app (`main.py`)
 - [x] `GET /api/envmon/site-summary`: 99 tests passing (n.txt)
 - [x] `GET /api/envmon/swab-results`: 56 new tests (adapter + route) passing (p.txt)
-- [ ] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api` — **pending**
+- [x] App deployed to UAT with `BACKEND_ADAPTER_MODE=databricks-api` — deployed 2026-05-18 (f.txt)
 
 ---
 
@@ -184,7 +184,7 @@ and zoneName cannot be sourced from SAP QM alone.
 
 ## UI: `?workspace=envmon-monitoring`
 
-**Status: IMPLEMENTED — browser verification pending next UAT deploy**
+**Status: BROWSER-VERIFIED 2026-05-18**
 
 Primary screen sections:
 
@@ -198,17 +198,17 @@ Explicitly out of scope in the screen: CAPA/corrective actions, floorplan upload
 coordinate maintenance, L4/hygiene zone maintenance, spatial write APIs, heatmap editor,
 alert acknowledgement, and reswab scheduling workflows.
 
-UI verification checklist:
+UI verification checklist (PASSED 2026-05-18, tim.geldard@kerry.com):
 
-- [ ] Open `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=envmon-monitoring`
-- [ ] Enter `plant_id=C061`, `period_start=2026-01-01`, `period_end=2026-05-18`, `limit=100`
-- [ ] Click Run / Refresh
-- [ ] Site summary renders or shows an honest empty/error state
-- [ ] Swab results table renders or shows an honest empty/error state
-- [ ] Source banner is visible
-- [ ] CAPA is shown only as out of scope
-- [ ] Spatial/floorplan/zone/heatmap is shown only as deferred
-- [ ] No mock heatmap, mock CAPA, or mock alert workflow appears on the primary path
+- [x] Open `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=envmon-monitoring`
+- [x] Enter `plant_id=C061`, `period_start=2026-01-01`, `period_end=2026-05-18`, `limit=100`
+- [x] Click Run / Refresh
+- [x] Site summary renders or shows an honest empty/error state
+- [x] Swab results table renders or shows an honest empty/error state
+- [x] Source banner is visible
+- [x] CAPA is shown only as out of scope
+- [x] Spatial/floorplan/zone/heatmap is shown only as deferred
+- [x] No mock heatmap, mock CAPA, or mock alert workflow appears on the primary path
 
 ### Expected: error cases
 
@@ -267,3 +267,4 @@ plant geo and floorplan routes both depend on `SHOW TABLES IN connected_plant_ua
 | 2026-05-17 | n.txt | DDL confirmed; route wired; status EXECUTABLE; body shape updated to V2 contract (EnvMonSiteSummarySchema); placeholder/derivation distinction clarified |
 | 2026-05-17 | o.txt | Candidate future routes section added (plant-map, plant-hotspots, floors, floorplan, location-coordinates, zones, heatmap); all marked planned/not wired |
 | 2026-05-17 | p.txt | Swab-results route section added (`GET /api/envmon/swab-results`); route wired in `apps/api/routes/envmon.py`; DDL confirmed (same Group A SAP QM views); 56 new tests; BV pending; frontend wiring deferred (zoneId/zoneName unavailable from SAP QM alone) |
+| 2026-05-18 | f.txt | UI BV complete. `WorkspaceViews.tsx` routing fixed (was defaulting to mock `scope-overview`). `EnvMonNativeSwabResultSchema` numeric fields widened to `z.union([z.number(), z.string()])` — Databricks returns DECIMAL/FLOAT as strings. Test updated to use invalid enum instead of string numeric. All three sections (UI `?workspace=envmon-monitoring`, `GET /api/envmon/site-summary`, `GET /api/envmon/swab-results`) now fully browser-verified. |
