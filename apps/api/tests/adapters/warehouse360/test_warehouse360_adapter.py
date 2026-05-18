@@ -47,9 +47,10 @@ class TestWarehouseOverviewSpec:
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/overview"
         assert spec.cache_policy == CacheTier.PER_USER_60S
-        assert spec.params["warehouse_id"] == "WH01"
-        assert "wh360_cockpit_summary_v" in spec.sql
-        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_cockpit_summary_v`" in spec.sql
+        assert spec.params == {}
+        assert "wh360_kpi_snapshot_v" in spec.sql
+        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_kpi_snapshot_v`" in spec.sql
+        assert "WHERE" not in spec.sql
 
     def test_missing_catalog_raises_error(self, monkeypatch) -> None:
         monkeypatch.delenv("WH360_CATALOG", raising=False)
@@ -154,28 +155,32 @@ class TestUtilityHelpers:
 class TestWarehouseRowMappers:
     def test_map_overview_rows(self) -> None:
         rows = [{
-            "plant_id": "IE10",
-            "warehouse_id": "WH01",
-            "inbound_due_count": 5,
-            "inbound_overdue_count": 1,
-            "outbound_due_count": 10,
-            "outbound_overdue_count": 2,
-            "staging_open_count": 15,
-            "staging_overdue_count": 3,
-            "near_expiry_count": 4,
-            "reconciliation_exception_count": 2,
-            "blocked_stock_count": 1,
+            "orders_total": 24,
+            "orders_red": 2,
+            "orders_amber": 5,
+            "trs_open": 9573882,
+            "tos_open": 0,
+            "deliveries_today": 12,
+            "deliveries_at_risk": 3,
+            "inbound_open": 18671,
+            "bins_blocked": 16614,
+            "bins_total": 352027,
+            "bin_util_pct": "56.8",
         }]
-        res = map_warehouse_overview_rows(rows, WarehouseOverviewRequest("WH01"))
-        assert res["plantId"] == "IE10"
-        assert res["warehouseId"] == "WH01"
-        assert res["inboundDueCount"] == 5
-        assert res["blockedStockCount"] == 1
+        res = map_warehouse_overview_rows(rows, WarehouseOverviewRequest("104"))
+        assert res["warehouseId"] == "104"
+        assert res["ordersTotal"] == 24
+        assert res["ordersRed"] == 2
+        assert res["deliveriesToday"] == 12
+        assert res["inboundOpen"] == 18671
+        assert res["binsBlocked"] == 16614
+        assert res["binUtilPct"] == 56.8
 
     def test_map_overview_empty_rows(self) -> None:
-        res = map_warehouse_overview_rows([], WarehouseOverviewRequest("WH-MOCK"))
-        assert res["warehouseId"] == "WH-MOCK"
-        assert res["inboundDueCount"] == 0
+        res = map_warehouse_overview_rows([], WarehouseOverviewRequest("104"))
+        assert res["warehouseId"] == "104"
+        assert res["ordersTotal"] == 0
+        assert res["binUtilPct"] == 0.0
 
     def test_map_inbound_rows_preserves_sap_ids(self) -> None:
         rows = [{
