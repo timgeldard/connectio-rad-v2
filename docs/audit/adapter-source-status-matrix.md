@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-18 — f.txt: C16 Trace WITH RECURSIVE BV PASSED (HTTP 200, 7 nodes/edges, `view:gold_batch_lineage`, no timeout); WH360 config set + source view fixed (`wh360_kpi_snapshot_v`) + LIMIT fix deployed — list routes pending re-test; SPC SPCSandboxBanner added to 4 missing view tabs (code-fixed, UAT tab-walk pending C22).  
+**Last updated:** 2026-05-18 — g.txt/h.txt/i.txt sweep, commit `491c6a6`. Trace `trace-graph` API + UI BV PASSED (full-width fix in `518d9bb`). EnvMon API + UI BV PASSED. WH360 `overview` API BV PASSED; `inbound`/`outbound` query/schema blocked (real DDL captured); `staging`/`exceptions` source/config blocked (real DDL captured). POH all 4 routes SQL-verified by direct DESCRIBE/SELECT; HTTP/UI BV pending. SPC SPCSandboxBanner present in all 6 views (code-confirmed). Full evidence: [`docs/deployment/uat-evidence-ledger.md`](../deployment/uat-evidence-ledger.md). Remediation: [`docs/migration/uat-remediation-backlog.md`](../migration/uat-remediation-backlog.md).  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 

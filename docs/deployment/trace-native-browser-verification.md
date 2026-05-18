@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
 **Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired; e.txt: link-type legend, TraceQueryForm, final route mounted  
-**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T2-UI full screen (C14) **BROWSER-VERIFIED 2026-05-18** (gold_batch_lineage, databricks-api, depth=1, truncated=No). T2-Shell (C15) **BROWSER-VERIFIED 2026-05-18** (same data confirmed on final workspace route). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T2-UI full screen (C14) **BROWSER-VERIFIED 2026-05-18** (gold_batch_lineage, databricks-api, depth=1, truncated=No). T2-Shell (C15) **BROWSER-VERIFIED 2026-05-18** (same data confirmed on final workspace route). C16 (WITH RECURSIVE) **BROWSER-VERIFIED 2026-05-18** (HTTP 200, 7 nodes, 7 edges, depthReached=1, no warnings, no timeout). C16-UI **BROWSER-VERIFIED 2026-05-18 commit `518d9bb`** — graph fills full width after `?workspace=traceability-workspace` layout fixes (hide action sidebar for trace-tree view + `gridColumn: '1 / -1'` to span EvidenceGrid columns). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -38,7 +38,9 @@ Test values: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direc
 ### C — Final user-facing Trace workspace (d.txt, 2026-05-18)
 URL: `/?workspace=traceability-workspace&view=trace-tree`  
 Purpose: verifies the real Traceability workspace route (not the verify page). Includes form, native graph, batch header context. No mock fallback.  
-**Status: PENDING BROWSER VERIFICATION** — code deployed; awaiting next UAT deploy and manual test.  
+**Status: BROWSER-VERIFIED 2026-05-18, commit `518d9bb`** — graph renders real Databricks data and fills the full content width after two g.txt/h.txt layout fixes:
+- `55171f3` — hide `TraceActionsPanel` action sidebar for `trace-tree` view (sidebar had `minWidth: 200` and all buttons were permanently disabled because `context=null` without V1 backend).
+- `518d9bb` — add `gridColumn: '1 / -1'` to `TraceTreeView` outer div so it spans every EvidenceGrid column (was occupying col 1 only at typical viewports).  
 **Note:** URL param is `?view=` (not `?tab=`). `tab=` is deprecated. `view=trace-tree` is the correct view ID.  
 **Note:** Bare `?workspace=traceability-workspace` (no view param) defaults to `view=trace-tree` (changed from `overview` in d.txt to avoid OverviewView mock fallback on cold load).
 

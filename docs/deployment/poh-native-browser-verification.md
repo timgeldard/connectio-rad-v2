@@ -2,6 +2,25 @@
 
 This guide is designed for the model/engineer with active UAT/Databricks database permissions (Claude) to verify the E2E integrity of the newly implemented Process Order History review screen.
 
+---
+
+## SQL-layer verification (2026-05-18, commit `491c6a6`)
+
+Direct evidence captured via Databricks statement API. All 4 POH views match adapter schema and return real UAT data.
+
+| Route | View | Test order | Rows | Status |
+|---|---|---|---|---|
+| `POST /api/por/order-header` | `vw_gold_process_order` | `7006965038` (plant C113, status CLOSED, material 70373871 "MIXED BERRY FLV LQD") | 1 | **SQL OK** |
+| `GET /api/por/order-operations` | `vw_gold_process_order_phase` | `7006965038` → 11 rows; `7006965039` → 13 rows | 11–13 | **SQL OK** |
+| `GET /api/por/order-confirmations` | `vw_gold_confirmation` | `7006965039` → 15 rows (sample: 375 KG, real timestamps 2025-10-31, 2025-11-03). View total: 1,711 rows. | 0–15 | **SQL OK** |
+| `GET /api/por/order-goods-movements` | `vw_gold_adp_movement` | `7006965479` → 901 rows (sample: MATERIAL_ID 20029773, MOVEMENT_TYPE 261 "Goods Issues"). View total: 5,933 rows. | 0–901 | **SQL OK** |
+
+**Note (h.txt correction):** h.txt §6 suggested test order `7006965038 / IE10`. The actual order's plant is `C113`, not IE10. Hard-coded `IE10` fixtures for this order will return empty.
+
+**HTTP/UI BV:** pending user browser sweep — see [`uat-evidence-ledger.md`](./uat-evidence-ledger.md). Backlog: [`uat-remediation-backlog.md`](../migration/uat-remediation-backlog.md) items POH-001 to POH-003.
+
+---
+
 ## 1. Setup & Environment Verification
 Before starting browser testing:
 1. Ensure your local environment is configured with `VITE_ADAPTER_MODE=legacy-api` (this directs the frontend to query the FastAPI proxy, where the backend `BACKEND_ADAPTER_MODE` environment variable decides if it queries live Databricks or V1 proxy APIs).

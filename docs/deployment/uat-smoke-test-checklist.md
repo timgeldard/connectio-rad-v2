@@ -1,7 +1,39 @@
 # UAT Smoke-Test Checklist — ConnectIO V2
 
 **Environment:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`
-**Last updated:** 2026-05-18
+**Last updated:** 2026-05-18 (g.txt + h.txt + i.txt sweep, commit `491c6a6`)
+
+> **Authoritative status: see [`uat-evidence-ledger.md`](./uat-evidence-ledger.md)** and remediation in [`uat-remediation-backlog.md`](../migration/uat-remediation-backlog.md).
+> This checklist remains the historical log of each f.txt → i.txt tranche.
+
+---
+
+## g.txt + h.txt + i.txt sweep (2026-05-18, commit `491c6a6`)
+
+| Domain | API BV | UI BV | Notes |
+|---|---|---|---|
+| Trace `trace-graph` (C16) | ✅ PASSED | ✅ PASSED | 7 nodes/edges, depth=1. UI layout fixed (`55171f3`, `518d9bb`) — graph now fills full width. |
+| EnvMon `site-summary` (C17) | ✅ PASSED | ✅ PASSED | 12-key payload, complianceRate=0 truthful empty. |
+| EnvMon `swab-results` (C17) | ✅ PASSED | ✅ PASSED | 0 rows truthful empty. |
+| WH360 `overview` (C18) | ✅ PASSED | — | 12-key global KPI snapshot (no warehouse filter — P1 copy fix WH-005). |
+| WH360 `inbound` (C19) | ❌ schema-blocked | — | View `wh360_inbound_v` has no warehouse col; entire schema is PO-tracking. P0 WH-001. |
+| WH360 `outbound` (C20) | ❌ schema-blocked | — | View uses `lgnum` for warehouse + different col names (`planned_gi_date` etc.). P0 WH-002. |
+| WH360 `staging` (C21) | ❌ source-blocked | — | `staging_orders_v` does not exist. Candidate replacement: `wh360_process_orders_v`. P0 WH-003. |
+| WH360 `exceptions` (C22) | ❌ source-blocked | — | Actual view name is `imwm_exceptions_v`, schema also different. P0 WH-004. |
+| POH `order-header` (C23) | ✅ SQL OK | ⏳ pending user | Order 7006965038 plant is C113, not IE10 (h.txt brief was wrong). |
+| POH `order-operations` (C24) | ✅ SQL OK | ⏳ pending user | 11–13 rows on real orders. |
+| POH `order-confirmations` (C25) | ✅ SQL OK | ⏳ pending user | View has 1,711 total rows, 15 visible for order 7006965039. |
+| POH `order-goods-movements` (C26) | ✅ SQL OK | ⏳ pending user | View has 5,933 total rows, 901 for order 7006965479 (MOVEMENT_TYPE=261). |
+| SPC banner (C27) | n/a | ⏳ pending tab-walk | Code: `SPCSandboxBanner` rendered in all 6 view files. |
+
+**Tranche fixes landed (small, evidence-driven):**
+- `b6813b3` — rebuilt static assets to include PR #18 SPC banner + PR #19 POH changes.
+- `55171f3` — hide action sidebar on `trace-tree` view.
+- `518d9bb` — `gridColumn: '1 / -1'` on `TraceTreeView` outer div.
+- `7f572d9` — `npm run deploy:databricks` with force restart (bundle deploy alone was not restarting the app).
+- `491c6a6` — server-side log of actual `DatabricksQueryError.detail` so future UAT diagnostics surface the real SQL error.
+
+---
 
 ---
 
