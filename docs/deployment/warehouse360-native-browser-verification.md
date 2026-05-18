@@ -18,9 +18,13 @@ All 5 native WH360 routes are wired and tested locally (682 pytest pass with tes
 Without `WH360_CATALOG`, `resolve_domain_object("wh360", ...)` raises `DatabricksConfigError` and all routes return HTTP 503. No mock fallback, no silent legacy-api fallback — this is the expected and correct error behaviour.
 
 **Config confirmed (2026-05-18):**
-- `WH360_CATALOG=connected_plant_uat` — added to `app.yaml` (commit `33fe43a`)
-- `WH360_SCHEMA=sap` — confirmed and set in `app.yaml`
+- `WH360_CATALOG=connected_plant_uat` — added to `app.yaml`
+- `WH360_SCHEMA=wh360` — default in `object_resolver.py`; confirmed correct for UAT (`connected_plant_uat.wh360.*`)
 - Known warehouse IDs for UAT: **`104`** and **`105`**
+
+**Source view finding (2026-05-18):**
+- `connected_plant_uat.wh360.wh360_inbound_v` — **EXISTS** ✓
+- `connected_plant_uat.wh360.wh360_cockpit_summary_v` — **DOES NOT EXIST** ✗ — overview route blocked pending correct view name
 
 **Redeploy required:** `npm run prepare:databricks && databricks bundle deploy --target uat`
 
@@ -50,7 +54,7 @@ All routes filter by `warehouse_id`. Without a known valid ID from UAT data, res
 ## Pre-UAT Config Checklist
 
 - [x] `WH360_CATALOG=connected_plant_uat` confirmed and set in `app.yaml` (commit `33fe43a`)
-- [x] `WH360_SCHEMA=sap` confirmed and set in `app.yaml`
+- [x] `WH360_SCHEMA=wh360` (default, confirmed correct for UAT)
 - [x] Known `warehouse_id` for UAT: **104** and **105**
 - [x] `apps/api/app.yaml` updated with `WH360_CATALOG`
 - [ ] App redeployed and state: RUNNING
@@ -59,24 +63,21 @@ All routes filter by `warehouse_id`. Without a known valid ID from UAT data, res
 
 ## Verification — API Routes
 
-### W1 — Overview
+### W1 — Overview — SOURCE-PENDING
 
 ```
 GET /api/warehouse360/overview?warehouse_id=<id>
 ```
 
-Expected:
-- HTTP 200 (or 200 with empty counts if no data for warehouse)
-- `x-data-source: databricks-api`
-- `x-query-name: warehouse360.get_overview`
-- Body: `{ "warehouseId": "...", "totalLocations": N, ... }`
-- No mock data, no write endpoints
+**Status: SOURCE-PENDING** — `connected_plant_uat.wh360.wh360_cockpit_summary_v` does not exist in UAT. Route will return an error (502 or 500) until the correct view name is confirmed. Do not invent a replacement.
 
+**Required:** Confirm the actual UAT view name for the WH360 cockpit/overview summary (the V1-equivalent of `wh360_cockpit_summary_v`). Once known, update `get_warehouse_overview_spec` in `warehouse360_databricks_adapter.py`.
+
+- [ ] Actual overview view name confirmed: ___
+- [ ] QuerySpec updated with correct view name
 - [ ] HTTP status: ___
 - [ ] `x-data-source`: ___
 - [ ] `x-query-name`: ___
-- [ ] Body shape valid: ___
-- [ ] Notes: ___
 
 ### W2 — Inbound
 
@@ -148,3 +149,5 @@ Same pattern as W2. Source: `wh360_imwm_exceptions_v`.
 | Date | Commit | Route | Status | HTTP | x-query-name | Notes |
 |------|--------|-------|--------|------|--------------|-------|
 | 2026-05-18 | 0b9d868 | all 5 | CONFIG-BLOCKED | 503 (expected) | n/a | WH360_CATALOG not set in app.yaml |
+| 2026-05-18 | 9b50467 | overview | SOURCE-PENDING | n/a | n/a | wh360_cockpit_summary_v does not exist in connected_plant_uat.wh360 |
+| 2026-05-18 | 9b50467 | inbound | PENDING BV | — | — | wh360_inbound_v confirmed to exist; pending redeploy + browser test |

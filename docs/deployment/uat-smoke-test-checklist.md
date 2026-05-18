@@ -437,18 +437,22 @@ Routes blocked:
 - `GET /api/warehouse360/staging?warehouse_id=<id>` — source: `staging_orders_v`
 - `GET /api/warehouse360/exceptions?warehouse_id=<id>` — source: `wh360_imwm_exceptions_v`
 
-**Required before testing:**
-1. Confirm `WH360_CATALOG` value for UAT workspace (not in `databricks.yml`, not in docs — must be supplied by user)
-2. Confirm a known `warehouse_id` value from UAT data
-3. Add `WH360_CATALOG` (and optionally `WH360_SCHEMA` if different from `"wh360"`) to `app.yaml`
-4. Redeploy, retest
+**Config confirmed (2026-05-18):**
+- `WH360_CATALOG=connected_plant_uat` set in `app.yaml` ✓
+- `WH360_SCHEMA=wh360` (default — confirmed correct for UAT) ✓
+- Known warehouse IDs: **104**, **105** ✓
+- `connected_plant_uat.wh360.wh360_inbound_v` — **exists** ✓
+- `connected_plant_uat.wh360.wh360_cockpit_summary_v` — **does not exist** ✗
 
-- [ ] `WH360_CATALOG` set in `app.yaml` (pending user input)
-- [ ] `warehouse_id` known for UAT (pending user input)
-- [ ] All 5 routes return HTTP 200 or honest empty
-- [ ] `x-data-source: databricks-api` on each route
-- [ ] `LIMIT :max_rows` compatibility confirmed (or fixed with embedded integer)
-- [ ] Views exist in UAT Unity Catalog
+**Overview route (C17) is source-pending** — `wh360_cockpit_summary_v` does not exist in UAT. Correct view name must be confirmed before this route can be fixed. Do not invent a replacement.
+
+- [x] `WH360_CATALOG` set in `app.yaml`
+- [x] `warehouse_id` known for UAT (104, 105)
+- [ ] Overview view name confirmed (source-pending)
+- [ ] Inbound route returns HTTP 200 or honest empty
+- [ ] Outbound, staging, exceptions views confirmed to exist
+- [ ] `x-data-source: databricks-api` on each working route
+- [ ] `LIMIT :max_rows` compatibility confirmed (or fixed)
 
 ---
 

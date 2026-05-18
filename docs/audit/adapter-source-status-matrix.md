@@ -114,13 +114,15 @@ Gold views: `wh360.imwm_stock_v`, `wh360.imwm_exceptions_v`, `wh360.imwm_stock_c
 
 **Risk:** inbound/outbound/staging/exceptions use `LIMIT :max_rows` bound parameter. Databricks SQL may reject parameterised LIMIT (EnvMon avoided this by embedding a clamped integer after route-level clamping). Verify and fix if 500s occur.
 
+UAT schema: `connected_plant_uat.wh360.*` — confirmed 2026-05-18.
+
 | Native route | Source view | Status |
 |---|---|---|
-| `GET /api/warehouse360/overview` | `wh360_cockpit_summary_v` | config-blocked (WH360_CATALOG unset) |
-| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | config-blocked + LIMIT risk |
-| `GET /api/warehouse360/outbound` | `wh360_deliveries_v` | config-blocked + LIMIT risk |
-| `GET /api/warehouse360/staging` | `staging_orders_v` | config-blocked + LIMIT risk |
-| `GET /api/warehouse360/exceptions` | `wh360_imwm_exceptions_v` | config-blocked + LIMIT risk |
+| `GET /api/warehouse360/overview` | `wh360_cockpit_summary_v` | **SOURCE-PENDING** — view does not exist in `connected_plant_uat.wh360`; correct name TBD |
+| `GET /api/warehouse360/inbound` | `wh360_inbound_v` | view confirmed to exist — pending BV (C18) |
+| `GET /api/warehouse360/outbound` | `wh360_deliveries_v` | existence unconfirmed — pending BV (C19) |
+| `GET /api/warehouse360/staging` | `staging_orders_v` | existence unconfirmed — pending BV (C20) |
+| `GET /api/warehouse360/exceptions` | `wh360_imwm_exceptions_v` | existence unconfirmed — pending BV (C21) |
 
 ---
 
@@ -323,7 +325,7 @@ Gold views: None identified
 | `/api/envmon/zones` | GET | EnvMon | `getEnvMonZones` | **Planned** — depends on em_location_zones in UAT; NOT wired |
 | `/api/envmon/heatmap` | GET | EnvMon | `getEnvMonHeatmap` | **Planned** — depends on observations + spatial config; NOT wired |
 
-| `/api/warehouse360/overview` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set (WH360_CATALOG=connected_plant_uat, WH360_SCHEMA=sap) — **pending BV (C17)** |
+| `/api/warehouse360/overview` | GET | Warehouse360 | *(native only)* | Databricks-api only — **SOURCE-PENDING** — `wh360_cockpit_summary_v` does not exist in `connected_plant_uat.wh360`; correct view name TBD |
 | `/api/warehouse360/inbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C18)** — LIMIT :max_rows risk |
 | `/api/warehouse360/outbound` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C19)** — LIMIT :max_rows risk |
 | `/api/warehouse360/staging` | GET | Warehouse360 | *(native only)* | Databricks-api only — config set — **pending BV (C20)** — LIMIT :max_rows risk |
