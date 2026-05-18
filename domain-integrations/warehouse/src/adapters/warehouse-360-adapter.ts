@@ -36,6 +36,9 @@ export interface Warehouse360AdapterRequest {
   readonly warehouseId?: string
   readonly plantId?: string
   readonly storageLocationId?: string
+  readonly dateFrom?: string
+  readonly dateTo?: string
+  readonly limit?: number
 }
 
 type NowFn = () => string

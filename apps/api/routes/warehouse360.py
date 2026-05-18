@@ -91,6 +91,10 @@ async def warehouse_summary(
 async def warehouse_overview(
     warehouse_id: str,
     response: Response,
+    plant_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 100,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
@@ -107,20 +111,43 @@ async def warehouse_overview(
             detail="Warehouse overview requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    w_id = warehouse_id.strip() if warehouse_id else ""
+    if not w_id:
+        raise HTTPException(status_code=422, detail="warehouse_id cannot be empty")
+
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+
+    p_id = plant_id.strip() if plant_id else None
+    d_from = date_from.strip() if date_from else None
+    d_to = date_to.strip() if date_to else None
+
+    req = WarehouseOverviewRequest(
+        warehouse_id=w_id,
+        plant_id=p_id,
+        date_from=d_from,
+        date_to=d_to,
+        limit=limit,
+    )
+
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
     rows, spec = await run_query(
-        lambda: get_warehouse_overview_spec(WarehouseOverviewRequest(warehouse_id=warehouse_id)),
+        lambda: get_warehouse_overview_spec(req),
         identity, host, db_warehouse_id,
     )
     set_databricks_response_headers(response, spec)
-    return map_warehouse_overview_rows(rows, WarehouseOverviewRequest(warehouse_id=warehouse_id))
+    return map_warehouse_overview_rows(rows, req)
 
 
 @router.get("/warehouse360/inbound")
 async def warehouse_inbound(
     warehouse_id: str,
     response: Response,
+    plant_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 100,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
@@ -137,10 +164,29 @@ async def warehouse_inbound(
             detail="Warehouse inbound list requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    w_id = warehouse_id.strip() if warehouse_id else ""
+    if not w_id:
+        raise HTTPException(status_code=422, detail="warehouse_id cannot be empty")
+
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+
+    p_id = plant_id.strip() if plant_id else None
+    d_from = date_from.strip() if date_from else None
+    d_to = date_to.strip() if date_to else None
+
+    req = WarehouseInboundRequest(
+        warehouse_id=w_id,
+        plant_id=p_id,
+        date_from=d_from,
+        date_to=d_to,
+        limit=limit,
+    )
+
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
     rows, spec = await run_query(
-        lambda: get_warehouse_inbound_spec(WarehouseInboundRequest(warehouse_id=warehouse_id)),
+        lambda: get_warehouse_inbound_spec(req),
         identity, host, db_warehouse_id,
     )
     set_databricks_response_headers(response, spec)
@@ -151,6 +197,10 @@ async def warehouse_inbound(
 async def warehouse_outbound(
     warehouse_id: str,
     response: Response,
+    plant_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 100,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
@@ -167,10 +217,29 @@ async def warehouse_outbound(
             detail="Warehouse outbound list requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    w_id = warehouse_id.strip() if warehouse_id else ""
+    if not w_id:
+        raise HTTPException(status_code=422, detail="warehouse_id cannot be empty")
+
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+
+    p_id = plant_id.strip() if plant_id else None
+    d_from = date_from.strip() if date_from else None
+    d_to = date_to.strip() if date_to else None
+
+    req = WarehouseOutboundRequest(
+        warehouse_id=w_id,
+        plant_id=p_id,
+        date_from=d_from,
+        date_to=d_to,
+        limit=limit,
+    )
+
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
     rows, spec = await run_query(
-        lambda: get_warehouse_outbound_spec(WarehouseOutboundRequest(warehouse_id=warehouse_id)),
+        lambda: get_warehouse_outbound_spec(req),
         identity, host, db_warehouse_id,
     )
     set_databricks_response_headers(response, spec)
@@ -181,6 +250,10 @@ async def warehouse_outbound(
 async def warehouse_staging(
     warehouse_id: str,
     response: Response,
+    plant_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 100,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
@@ -197,10 +270,29 @@ async def warehouse_staging(
             detail="Warehouse staging list requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    w_id = warehouse_id.strip() if warehouse_id else ""
+    if not w_id:
+        raise HTTPException(status_code=422, detail="warehouse_id cannot be empty")
+
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+
+    p_id = plant_id.strip() if plant_id else None
+    d_from = date_from.strip() if date_from else None
+    d_to = date_to.strip() if date_to else None
+
+    req = WarehouseStagingRequest(
+        warehouse_id=w_id,
+        plant_id=p_id,
+        date_from=d_from,
+        date_to=d_to,
+        limit=limit,
+    )
+
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
     rows, spec = await run_query(
-        lambda: get_warehouse_staging_spec(WarehouseStagingRequest(warehouse_id=warehouse_id)),
+        lambda: get_warehouse_staging_spec(req),
         identity, host, db_warehouse_id,
     )
     set_databricks_response_headers(response, spec)
@@ -211,6 +303,10 @@ async def warehouse_staging(
 async def warehouse_exceptions(
     warehouse_id: str,
     response: Response,
+    plant_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 100,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
@@ -227,10 +323,29 @@ async def warehouse_exceptions(
             detail="Warehouse exceptions requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    w_id = warehouse_id.strip() if warehouse_id else ""
+    if not w_id:
+        raise HTTPException(status_code=422, detail="warehouse_id cannot be empty")
+
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 500")
+
+    p_id = plant_id.strip() if plant_id else None
+    d_from = date_from.strip() if date_from else None
+    d_to = date_to.strip() if date_to else None
+
+    req = WarehouseExceptionRequest(
+        warehouse_id=w_id,
+        plant_id=p_id,
+        date_from=d_from,
+        date_to=d_to,
+        limit=limit,
+    )
+
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
     rows, spec = await run_query(
-        lambda: get_warehouse_exceptions_spec(WarehouseExceptionRequest(warehouse_id=warehouse_id)),
+        lambda: get_warehouse_exceptions_spec(req),
         identity, host, db_warehouse_id,
     )
     set_databricks_response_headers(response, spec)

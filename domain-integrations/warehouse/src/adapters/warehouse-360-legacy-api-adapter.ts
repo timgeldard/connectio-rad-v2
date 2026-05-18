@@ -18,6 +18,21 @@ function isBrowserVerified(endpoint: string): boolean {
   return verifiedEndpoints.includes(endpoint)
 }
 
+function appendOptionalParams(url: URL, request: Warehouse360AdapterRequest): void {
+  if (request.plantId) {
+    url.searchParams.set('plant_id', request.plantId)
+  }
+  if (request.dateFrom) {
+    url.searchParams.set('date_from', request.dateFrom)
+  }
+  if (request.dateTo) {
+    url.searchParams.set('date_to', request.dateTo)
+  }
+  if (request.limit !== undefined) {
+    url.searchParams.set('limit', String(request.limit))
+  }
+}
+
 /**
  * Tier: legacy-api / databricks-api
  * Verified methods: none yet — awaiting browser-verification in UAT
@@ -107,6 +122,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/overview`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -163,6 +179,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/inbound`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -233,6 +250,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/outbound`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -301,6 +319,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/staging`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -369,6 +388,7 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     try {
       const url = new URL(`${this.baseUrl}/api/warehouse360/exceptions`)
       url.searchParams.set('warehouse_id', request.warehouseId)
+      appendOptionalParams(url, request)
 
       const response = await fetch(url.toString(), {
         method: 'GET',
