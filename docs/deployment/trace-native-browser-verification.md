@@ -22,15 +22,35 @@ Before running any check:
 
 ---
 
+## Verification Surfaces
+
+### A — API verification
+Route: `POST /api/trace2/trace-graph`  
+Purpose: verifies backend route, OAuth, Databricks config, UC grants, query execution, and response shape.
+
+### B — Dedicated UI verification (primary surface)
+URL: `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify`  
+Purpose: verifies browser UI, frontend adapter, graph mapper, ReactFlow panel rendering, no mock fallback, warnings/truncation display, and source badge.  
+Test values: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100`
+
+> **Material ID format note:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros — `20052009`, not `000000000020052009`. The verify page default was corrected to `20052009` (b.txt, 2026-05-18). Do not assume SAP ALPHA padding behaviour until input normalization is implemented.
+
+### C — Full workspace shell verification (pending)
+Candidates: `/?workspace=traceability-workspace&tab=trace`, `/?workspace=trace-investigation&viewId=trace-tree`  
+Purpose: verifies full Trace workspace navigation/shell integration.  
+**Status: not yet tested** — do not mark as complete until manually verified separately from the dedicated surface.
+
+---
+
 ## Test Anchor
 
 | Field | Value |
 |---|---|
-| material_id | `000000000020052009` |
+| material_id | `20052009` (stored key — no SAP ALPHA leading zeros in `gold_batch_lineage`) |
 | batch_id | `0008602411` |
 | plant_id | `C061` |
 
-If this anchor has no rows, identify an alternate batch from `gold_batch_stock_v` that has known stock.
+If this anchor has no rows, identify an alternate batch from `gold_batch_lineage` with known rows.
 
 ---
 
@@ -241,7 +261,7 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 ```
 
 **Test anchor (pre-filled in form):**
-- Material ID: `000000000020052009`
+- Material ID: `20052009` (stored key — corrected from `000000000020052009` in b.txt 2026-05-18)
 - Batch ID: `0008602411`
 - Plant ID: `C061`
 
@@ -283,7 +303,7 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 
 | Status | Date | Notes |
 |---|---|---|
-| [x] **PASSED** | 2026-05-18 | Green `source: databricks-api` badge confirmed. ReactFlow canvas rendered with nodes and edges. |
+| [x] **PASSED** | 2026-05-18 | Green `source: databricks-api` badge confirmed. ReactFlow canvas rendered with nodes and edges. `materialId=20052009` (user-edited from long-form default). Node click, edge click, direction toggle, warnings, and traceability-workspace shell integration not separately confirmed — remaining items pending. |
 
 ---
 

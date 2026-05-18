@@ -1,7 +1,7 @@
 # Adapter Source Status Matrix
 
 **Generated:** 2026-05-16  
-**Last updated:** 2026-05-18 — u.txt: Trace Graph frontend wiring complete — `TraceGraph` contract mismatch resolved (`type`/`relationshipType` optional, `warnings`/`truncated` added), TypeScript mapper (`mapBackendTraceGraph`), `Trace2LegacyApiAdapter.getTraceGraph` override, 113 tests; UI browser verification pending  
+**Last updated:** 2026-05-18 — b.txt: C8/C9 BV'd (confirmations + goods-movements PASSED 2026-05-18); C13 Trace Graph UI BV'd (`materialId=20052009`); `DEFAULT_MATERIAL` corrected in verify page; 8 databricks-api methods BV'd total  
 **Scope:** All domain-integration adapter methods across all 10 domains  
 **Reference:** ADR-024 (`docs/adr/ADR-024-native-databricks-data-access-architecture.md`)
 
@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200; frontend wired 2026-05-18 (u.txt) — `Trace2LegacyApiAdapter.getTraceGraph` override, TypeScript mapper, contract mismatch resolved; **awaiting UI browser verification** |
+| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009` (stored key — no SAP ALPHA leading zeros in gold_batch_lineage). Full workspace shell integration pending. |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -127,8 +127,8 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getOrderStagingContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getRelatedBatchContext` | ✓ | — | — | — | none | Include in POH databricks-api slice |
 | `getOrderOperations` | ✓ | — | — | **✓ BV 2026-05-17** | green when databricks | `GET /api/por/order-operations` — browser-verified 2026-05-17; 11 operations returned for PO 7006965038 |
-| `getOrderConfirmations` | ✓ | — | — | **✓ E** | green when databricks | Databricks-api route wired (`GET /api/por/order-confirmations`); DDL confirmed 2026-05-17; `operationText` + `isFinalConfirmation` absent from view (schema relaxed to optional); browser verification pending |
-| `getOrderGoodsMovements` | ✓ | — | — | **✓ E** | green when databricks | Databricks-api route wired (`GET /api/por/order-goods-movements`); DDL confirmed 2026-05-17; `materialDescription` absent from view (optional); Tulip movement types confirmed (101/261/262/531 mapped; 711/712/999/null direction-unknown); browser verification pending |
+| `getOrderConfirmations` | ✓ | — | — | **✓ BV 2026-05-18** | green when databricks | **Browser-verified 2026-05-18** — PO=7006967130, 2 confirmations, `confirmationId=100001669`, `confirmedYield=646.88 KG`; `operationText` + `isFinalConfirmation` absent from view by design |
+| `getOrderGoodsMovements` | ✓ | — | — | **✓ BV 2026-05-18** | green when databricks | **Browser-verified 2026-05-18** — PO=7006965479, 901 movements; `direction=input` confirmed for MOVEMENT_TYPE=261; `materialDescription` absent from view by design |
 
 **POH (Plan Risk) — `OperationsPlanRiskAdapter`** (no legacy adapter):
 
@@ -144,7 +144,7 @@ Gold views: `vw_gold_order_summary`, `metric_yield_per_order`, `metric_yield_dai
 | `getShiftHandoverItems` | ✓ | — | — | — | none | Requires planning-data gold views |
 | `getOperationsActionQueue` | ✓ | — | — | — | none | Requires planning-data gold views |
 
-**Summary (POR):** 10 + 9 = 19 methods — `getProcessOrderHeader` and `getOrderOperations` are databricks-api browser-verified (2026-05-17); `getOrderConfirmations` and `getOrderGoodsMovements` are executable (DDL confirmed, routes wired) but not yet browser-verified; remaining POR and plan-risk methods are mock-only.
+**Summary (POR):** 10 + 9 = 19 methods — `getProcessOrderHeader`, `getOrderOperations`, `getOrderConfirmations`, and `getOrderGoodsMovements` are databricks-api browser-verified (2026-05-17/18); remaining POR and plan-risk methods are mock-only.
 
 ---
 
@@ -273,14 +273,14 @@ Gold views: None identified
 | Traceability | 11 | 1 (legacy-api) + **1 databricks-api** (getTraceGraph 2026-05-18) | 0 | 0 | 9 | **1 BV** |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
-| POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
+| POH (POR) | 10 | **4** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17; `getOrderConfirmations` + `getOrderGoodsMovements` 2026-05-18) | 0 | 0 | 6 | **4 BV** |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
 | EnvMon | 9 | **2** (`getEnvMonSiteSummary` + `getEnvMonSwabResults` 2026-05-18) | 0 | 0 | 7 | **2 BV** |
 | Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
 | Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **6** (databricks-api BV) | **2** (E: confirmations + movements) | **2** | **71** | **8** (6 BV + 2 E) |
+| **Total** | **82** | **8** (databricks-api BV) | **0** | **2** | **71** | **8 BV** |
 
 > Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
@@ -291,12 +291,12 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200; gold_batch_lineage confirmed-ddl; iterative multi-hop; **frontend wired 2026-05-18** — TypeScript mapper + `Trace2LegacyApiAdapter.getTraceGraph` override; UI BV pending |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE, gold_batch_lineage; **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, `materialId=20052009`, green badge, nodes+edges rendered; full workspace shell BV pending |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
-| `/api/por/order-confirmations` | GET | POH | `getOrderConfirmations` | Databricks-api only — **executable, not browser-verified** — `vw_gold_confirmation` DDL confirmed 2026-05-17; `operationText` + `isFinalConfirmation` absent from view |
-| `/api/por/order-goods-movements` | GET | POH | `getOrderGoodsMovements` | Databricks-api only — **executable, not browser-verified** — `vw_gold_adp_movement` DDL confirmed 2026-05-17; Tulip movement types mapped; `materialDescription` absent from view |
+| `/api/por/order-confirmations` | GET | POH | `getOrderConfirmations` | Databricks-api only — **browser-verified 2026-05-18** — PO=7006967130, 2 confirmations, HTTP 200 |
+| `/api/por/order-goods-movements` | GET | POH | `getOrderGoodsMovements` | Databricks-api only — **browser-verified 2026-05-18** — PO=7006965479, 901 movements, HTTP 200 |
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
 | `/api/envmon/site-summary` | GET | EnvMon | `getEnvMonSiteSummary` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200, plant_id=C061, all 12 schema keys present |

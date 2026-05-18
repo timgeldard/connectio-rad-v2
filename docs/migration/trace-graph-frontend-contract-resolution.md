@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-18 (u.txt)  
 **Domain:** `di-traceability`  
-**Status:** Complete — 113 tests passing, TypeScript typecheck clean, UI BV pending
+**Status:** Complete — 113 tests passing, TypeScript typecheck clean, UI BV confirmed 2026-05-18
 
 ---
 
@@ -142,8 +142,21 @@ if (!request.batchId || !request.materialId || !request.plantId) {
 
 ---
 
-## Remaining Steps
+## Verification Status (b.txt, 2026-05-18)
 
-1. **Deploy** u.txt changes to UAT
-2. **Browser-verify UI** per `docs/deployment/trace-native-browser-verification.md` (Check T2-UI) and `docs/deployment/uat-smoke-test-checklist.md` (C13)
-3. Mark C13 and T2-UI as PASSED once confirmed
+**Canonical UI verification URL:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
+```
+
+**Confirmed test values:**
+- `materialId`: `20052009` — stored key in `gold_batch_lineage` (**without** SAP ALPHA leading zeros)
+- `batchId`: `0008602411` — string-preserved
+- `plantId`: `C061`
+- `direction`: `both`, `maxDepth`: 2, `maxEdges`: 100
+
+**Material ID format note:** `gold_batch_lineage` stores material IDs without SAP ALPHA leading zeros (`20052009`, not `000000000020052009`). The verify page default was corrected from `000000000020052009` to `20052009` in b.txt. Do not assume ALPHA-format normalization is applied anywhere in the current stack. A future improvement could normalize user input to the stored format.
+
+**C13 result (2026-05-18):** PASSED — green `source: databricks-api` badge confirmed; ReactFlow canvas rendered with nodes and edges. Node/edge click interactions, direction toggle, warnings banner, and `traceability-workspace` shell integration not separately confirmed — pending follow-up.
+
+**Full workspace shell integration:** `?workspace=traceability-workspace&tab=trace` and `?workspace=trace-investigation&viewId=trace-tree` have NOT been separately tested. Do not claim Trace workspace parity is complete.

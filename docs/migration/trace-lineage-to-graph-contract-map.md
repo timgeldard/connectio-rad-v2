@@ -2,7 +2,7 @@
 
 **Status:** Contract mismatch resolved — frontend wired (u.txt, 2026-05-18)  
 **Backend:** `POST /api/trace2/trace-graph` — browser-verified (q.txt, 2026-05-18)  
-**Frontend:** `Trace2LegacyApiAdapter.getTraceGraph` override wired; `mapBackendTraceGraph` mapper in place; UI BV pending
+**Frontend:** `Trace2LegacyApiAdapter.getTraceGraph` override wired; `mapBackendTraceGraph` mapper in place; UI BV confirmed 2026-05-18 (`materialId=20052009`, green badge, nodes+edges rendered)
 
 ---
 
@@ -107,6 +107,12 @@ See `docs/migration/trace-graph-frontend-contract-resolution.md` for full detail
 
 ---
 
-## Remaining
+## Status (b.txt, 2026-05-18)
 
-- UI browser verification (C13 / T2-UI in `docs/deployment/uat-smoke-test-checklist.md`) — pending UAT deploy
+**UI BV PASSED** — C13 confirmed 2026-05-18. `materialId=20052009`, green `source: databricks-api` badge, nodes and edges rendered.
+
+**Material ID format:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros. The confirmed working input key is `20052009`, not `000000000020052009`. Batch IDs (`0008602411`) are string-preserved and do include leading zeros. The backend does not apply ALPHA normalization; users must enter the stored format. Future: input normalization to accept either format.
+
+**Remaining:**
+- Node/edge click interactions, direction toggle, warnings banner — not separately confirmed
+- `?workspace=traceability-workspace` full shell integration — not tested; do not claim Trace parity is complete

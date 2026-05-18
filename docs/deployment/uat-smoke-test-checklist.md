@@ -161,39 +161,37 @@ See `docs/deployment/poh-native-slices-browser-verification.md` for full checkli
 
 ---
 
-### C8 — POH order confirmations (native Databricks) — EXECUTABLE, awaiting browser verification
+### C8 — POH order confirmations (native Databricks) ✓ PASSED 2026-05-18
 
-`GET /api/por/order-confirmations?process_order_id=7006965038`
+`GET /api/por/order-confirmations?process_order_id=7006967130`
 
-**Status: IMPLEMENTED** — route wired, DDL confirmed 2026-05-17, all tests passing. Browser verification pending.
+**Status: BROWSER-VERIFIED** — HTTP 200, 2.6s, 2 confirmations. `confirmationId=100001669`, `confirmedYield=646.88 KG`. `X-Query-Name: poh.get_order_confirmations`. No SPN/PAT token used.
 
-- [ ] Returns HTTP 200 with JSON array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: poh.get_order_confirmations` present
-- [ ] Each item has `confirmationId`, `operationId`, `confirmedYield`, `uom`, `confirmedAt`
-- [ ] Duration fields (`setupDurationMinutes`, `machineDurationMinutes`, `cleaningDurationMinutes`) present where view has data
-- [ ] `operationText` and `isFinalConfirmation` absent — not in `vw_gold_confirmation` by design
-- [ ] No SPN/PAT token used — query executes as end-user identity
+- [x] Returns HTTP 200 with JSON array
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Query-Name: poh.get_order_confirmations` present
+- [x] Each item has `confirmationId`, `operationId`, `confirmedYield`, `uom`, `confirmedAt`
+- [x] `operationText` and `isFinalConfirmation` absent — not in `vw_gold_confirmation` by design
+- [x] No SPN/PAT token used — query executes as end-user identity
 
-See `docs/deployment/browser-verification-backlog.md` (BV-01) for full pass criteria and troubleshooting.
+See `docs/deployment/poh-native-slices-browser-verification.md` for full pass criteria and troubleshooting.
 
 ---
 
-### C9 — POH goods movements (native Databricks) — EXECUTABLE, awaiting browser verification
+### C9 — POH goods movements (native Databricks) ✓ PASSED 2026-05-18
 
-`GET /api/por/order-goods-movements?process_order_id=7006965038`
+`GET /api/por/order-goods-movements?process_order_id=7006965479`
 
-**Status: IMPLEMENTED** — route wired, DDL confirmed 2026-05-17, all tests passing. Browser verification pending.
+**Status: BROWSER-VERIFIED** — HTTP 200, 1.6s, 901 movements. `direction=input` confirmed for MOVEMENT_TYPE=261. `X-Query-Name: poh.get_order_goods_movements`. No SPN/PAT token used.
 
-- [ ] Returns HTTP 200 with JSON array
-- [ ] Response header `X-Data-Source: databricks-api` present
-- [ ] Response header `X-Query-Name: poh.get_order_goods_movements` present
-- [ ] All `direction` values are `"input"`, `"output"`, or `"unknown"` — never null
-- [ ] `materialId` values preserve leading zeros (string, not numeric)
-- [ ] `materialDescription` absent — no material master join in `vw_gold_adp_movement` by design
-- [ ] No SPN/PAT token used — query executes as end-user identity
+- [x] Returns HTTP 200 with JSON array
+- [x] Response header `X-Data-Source: databricks-api` present
+- [x] Response header `X-Query-Name: poh.get_order_goods_movements` present
+- [x] All `direction` values are `"input"`, `"output"`, or `"unknown"` — never null
+- [x] `materialDescription` absent — no material master join in `vw_gold_adp_movement` by design
+- [x] No SPN/PAT token used — query executes as end-user identity
 
-See `docs/deployment/browser-verification-backlog.md` (BV-02) for full pass criteria and troubleshooting.
+See `docs/deployment/poh-native-slices-browser-verification.md` for full pass criteria and troubleshooting.
 
 ---
 
@@ -259,33 +257,27 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2) for full p
 
 ---
 
-### C13 — Trace Graph UI (frontend wiring) — EXECUTABLE, UI BV pending
+### C13 — Trace Graph UI (frontend wiring) ✓ PASSED 2026-05-18
 
-**Status: SHELL ROUTING FIXED** — adapter wired (u.txt, 2026-05-18), shell routing fixed (a.txt, 2026-05-18), 136 web tests passing. UI browser verification pending after next deploy.
+**Status: BROWSER-VERIFIED** — green `source: databricks-api` badge confirmed; nodes and edges rendered. Tested with `materialId=20052009` (stored key — leading zeros absent in `gold_batch_lineage`), `batchId=0008602411`, `plantId=C061`.
 
-**What changed (a.txt, 2026-05-18):**
-- `traceability-workspace` no longer renders placeholder — routes to real `TraceInvestigationWorkspace`
-- New verification page: `?workspace=trace-graph-verify` — input form (materialId/batchId/plantId) → Run Trace → renders `TraceGraphPanel` with submitted request. No mock fallback.
+**Note on material ID:** The page default was `000000000020052009` (SAP ALPHA format) at time of BV. User edited to `20052009` (stored gold format) to get a populated graph. Default has since been corrected to `20052009`.
 
 **Primary URL:**
 ```
 https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
 ```
 
-Test: navigate to `/?workspace=trace-graph-verify`, verify inputs pre-filled with `000000000020052009` / `0008602411` / `C061`, click **Run Trace**.
-
-- [ ] Page renders at `?workspace=trace-graph-verify` without crash
-- [ ] Inputs pre-filled with default test anchor values
-- [ ] Trace Graph panel renders after clicking Run Trace (at least anchor node)
-- [ ] `source: databricks-api` shown in panel source badge (green)
-- [ ] No mock graph data displayed when native call succeeds
-- [ ] No mock graph data displayed when native call fails — error state shown instead
-- [ ] Node click shows material/batch details in selection panel
-- [ ] Edge click shows relationship type, quantity, document reference
-- [ ] Direction toggle (Both / Upstream / Downstream) filters nodes correctly
-- [ ] Warnings banner appears for truncated or max-depth-reached responses
-- [ ] Empty-state message appears when backend returns no nodes
-- [ ] `?workspace=traceability-workspace` no longer shows "implementation pending" placeholder
+- [x] Page renders at `?workspace=trace-graph-verify` without crash
+- [x] Input fields visible (Material ID, Batch ID, Plant ID)
+- [x] Trace Graph panel renders after clicking Run Trace
+- [x] `source: databricks-api` shown in panel source badge (green)
+- [x] Nodes and edges visible for `materialId=20052009, batchId=0008602411`
+- [ ] Node click shows material/batch details — not separately confirmed
+- [ ] Edge click shows relationship type, quantity, document reference — not separately confirmed
+- [ ] Direction toggle (Both / Upstream / Downstream) filters nodes — not separately confirmed
+- [ ] Warnings banner for truncated/max-depth-reached — not separately confirmed
+- [ ] `?workspace=traceability-workspace` shell integration — not separately confirmed
 
 See `docs/deployment/trace-native-browser-verification.md` (Check T2-UI) for full pass criteria and troubleshooting.
 

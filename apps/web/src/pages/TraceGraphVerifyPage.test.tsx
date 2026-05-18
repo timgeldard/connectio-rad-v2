@@ -31,7 +31,7 @@ describe('TraceGraphVerifyPage', () => {
     expect(materialInput).not.toBeNull()
     expect(batchInput).not.toBeNull()
     expect(plantInput).not.toBeNull()
-    expect(materialInput.value).toBe('000000000020052009')
+    expect(materialInput.value).toBe('20052009')
     expect(batchInput.value).toBe('0008602411')
     expect(plantInput.value).toBe('C061')
     expect(screen.getByTestId('btn-run-trace')).not.toBeNull()
@@ -48,7 +48,7 @@ describe('TraceGraphVerifyPage', () => {
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     expect(mockPanel).toHaveBeenCalledWith({
       investigationId: '',
-      materialId: '000000000020052009',
+      materialId: '20052009',
       batchId: '0008602411',
       plantId: 'C061',
     })
@@ -78,7 +78,7 @@ describe('TraceGraphVerifyPage', () => {
     render(<TraceGraphVerifyPage />)
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     const panel = screen.getByTestId('trace-graph-panel')
-    expect(panel.getAttribute('data-material-id')).toBe('000000000020052009')
+    expect(panel.getAttribute('data-material-id')).toBe('20052009')
   })
 
   it('passes updated input values to the panel on re-submit', () => {

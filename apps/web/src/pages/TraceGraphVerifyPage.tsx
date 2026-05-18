@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { TraceGraphPanel } from '@connectio/di-traceability'
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
 
-const DEFAULT_MATERIAL = '000000000020052009'
+// gold_batch_lineage stores material IDs without SAP ALPHA leading zeros.
+// '20052009' is the confirmed stored key — not '000000000020052009'.
+const DEFAULT_MATERIAL = '20052009'
 const DEFAULT_BATCH = '0008602411'
 const DEFAULT_PLANT = 'C061'
 
