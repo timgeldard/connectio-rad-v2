@@ -174,3 +174,6 @@ export type { RelatedBatchesViewProps } from './views/related-batches-view.js'
 
 export { ProcessOrderReviewActionsPanel } from './actions/process-order-review-actions-panel.js'
 export type { ProcessOrderReviewActionsPanelProps } from './actions/process-order-review-actions-panel.js'
+
+export { OrderHistoryView } from './views/order-history-view.js'
+export type { OrderHistoryViewProps } from './views/order-history-view.js'

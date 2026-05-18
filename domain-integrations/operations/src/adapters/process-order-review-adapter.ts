@@ -29,6 +29,7 @@ export interface ProcessOrderReviewAdapterRequest {
   readonly plantId?: string
   readonly lineId?: string
   readonly batchId?: string
+  readonly materialId?: string
 }
 
 type NowFn = () => string

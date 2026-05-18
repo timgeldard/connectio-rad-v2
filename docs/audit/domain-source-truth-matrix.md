@@ -4,7 +4,7 @@
 **Scope:** All 10 domain-integration adapter domains — per-domain data source status  
 **Detail:** Per-method breakdown → see `docs/audit/adapter-source-status-matrix.md`  
 **Reference:** `docs/audit/current-state-after-native-databricks-work.md`, ADR-024  
-**Last updated:** 2026-05-18 — Warehouse360 API hardened: added 5 native Databricks-API endpoints (`getWarehouseOverview`, `getWarehouseInbound`, `getWarehouseOutbound`, `getWarehouseStaging`, `getWarehouseExceptionItems`), dynamic parameters validation & clamping, complete vitest/pytest coverage, awaiting browser-verification in UAT.
+**Last updated:** 2026-05-18 — Hardened operations workspace: implemented premium, read-only Process Order History investigation cockpit (`OrderHistoryView`) as default view, complete with query specs presets, chronological timelines, mixed UOM and data quality exception alerts, and comprehensive E2E unit tests (all passing).
 
 ---
 
