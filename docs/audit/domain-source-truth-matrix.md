@@ -81,7 +81,7 @@
 | Method | Source | Status |
 |---|---|---|
 | `getBatchHeaderSummary` | `gold_batch_stock_v` + `gold_batch_summary_v`⚠ + `gold_material`⚠ + `gold_plant` | ✓ QS — DDL blockers (6 TODOs); V1 proxy returns 503 |
-| `getTraceGraph` | `gold_batch_lineage` (confirmed-ddl, 18 cols) | ✓ E — route wired (q.txt, 2026-05-18); iterative multi-hop; no gold_material/gold_plant joins (deferred); BV pending; frontend wiring deferred (TraceGraphSchema contract mismatch) |
+| `getTraceGraph` | `gold_batch_lineage` (confirmed-ddl, 18 cols) | ✓ BV — route BV (q.txt, 2026-05-18); iterative multi-hop; frontend wired (u.txt, 2026-05-18) — Trace2LegacyApiAdapter override, mapBackendTraceGraph mapper, contract mismatch resolved; UI BV pending |
 | `getMassBalanceSummary` | `gold_batch_mass_balance_v`⚠ | ✓ QS — WHERE columns unverified |
 | `getInvestigationContext` | — | Mock |
 | `getCustomerExposureSummary` | Unknown | Blocked — business rules undefined |

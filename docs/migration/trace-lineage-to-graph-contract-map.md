@@ -1,14 +1,24 @@
 # Trace Lineage → Graph Contract Map
 
-**Status:** Frontend wiring deferred (q.txt, 2026-05-18)  
-**Backend:** `POST /api/trace2/trace-graph` — executable, awaiting BV  
-**Frontend:** `getTraceGraph` in `trace2-adapter.ts` — mock-only, contract mismatch
+**Status:** Contract mismatch resolved — frontend wired (u.txt, 2026-05-18)  
+**Backend:** `POST /api/trace2/trace-graph` — browser-verified (q.txt, 2026-05-18)  
+**Frontend:** `Trace2LegacyApiAdapter.getTraceGraph` override wired; `mapBackendTraceGraph` mapper in place; UI BV confirmed 2026-05-18 (`materialId=20052009`, green badge, nodes+edges rendered)
 
 ---
 
-## Why Frontend Wiring Is Deferred
+## Resolution (u.txt, 2026-05-18)
 
-The V2 backend route returns the q.txt response shape. The existing `TraceGraphSchema` in `packages/data-contracts/src/schemas/trace-investigation.ts` uses a different contract. The mismatch is too large to bridge without redesigning the frontend adapter and Zod schema.
+The mismatch was resolved without redesigning the frontend adapter or Zod schema. Instead:
+- `TraceNode.type` and `TraceEdge.relationshipType` made optional in `TraceGraphSchema`
+- `warnings` and `truncated` added to `TraceGraphSchema`
+- `mapBackendTraceGraph` mapper in `trace2-graph-mapper.ts` bridges the two shapes
+- `Trace2LegacyApiAdapter.getTraceGraph` posts to `POST /api/trace2/trace-graph` and maps via the above
+
+See `docs/migration/trace-graph-frontend-contract-resolution.md` for full detail.
+
+---
+
+## Original Mismatch Analysis (q.txt — historical context)
 
 ---
 
@@ -77,28 +87,32 @@ The V2 backend route returns the q.txt response shape. The existing `TraceGraphS
 
 ---
 
-## What Is Needed to Wire Frontend
+## What Was Done (u.txt)
 
-1. **Update `TraceGraphSchema`** in `packages/data-contracts` to match q.txt response shape.
-   - New fields: `anchor`, `depthReached`, `truncated`, `warnings`
-   - Node: rename `id` → `nodeKey`, add `depth`, `directions`, `isAnchor`, `label`; remove `type`, `materialDescription`, `status`, `riskLevel`
-   - Edge: rename `relationshipType` → `linkType`; add all 18 DDL context fields; rename `uom` → `baseUnitOfMeasure`
-   - Direction enum: `"forward"` → `"downstream"`, `"reverse"` → `"upstream"`
+1. **`TraceGraphSchema`** — additive/relaxing changes only (no rename, no breaking change):
+   - `TraceNode.type`: `.optional()`
+   - `TraceEdge.relationshipType`: `.optional()`
+   - Added `warnings: z.array(z.string()).optional()`
+   - Added `truncated: z.boolean().optional()`
 
-2. **Update `getTraceGraph` in `trace2-adapter.ts`** from mock to `POST /api/trace2/trace-graph`.
+2. **`trace2-graph-mapper.ts`** — new file mapping `BackendTraceGraphResponse` → `TraceGraph`:
+   - `id ← nodeKey`; `type ← undefined`; `materialDescription ← ''`
+   - `relationshipType ← LINK_TYPE_MAP[linkType]` (8-entry map mirroring Python)
+   - `documentReference ← materialDocumentNumber ?? processOrderId`
+   - `rootBatch ← anchor.batchId`; `direction ← 'both'`; `depth ← depthReached`
 
-3. **Update `TraceGraphPanel`** to consume the new node/edge shape.
+3. **`Trace2LegacyApiAdapter.getTraceGraph`** — new override; no mock/legacy fallback.
 
-4. **Verify with `TraceGraphPanel`** that `nodeKey` can substitute for `id` in graph layout library.
-
-The frontend redesign is a separate tranche. The backend route is executable and returns real multi-hop data; the frontend continues to show mock data until wired.
+4. **`TraceGraphPanel`** — two TS2538 crash sites fixed (`node.type ?` guard at lines 74 and 137).
 
 ---
 
-## Recommended Wiring Order
+## Status (b.txt, 2026-05-18)
 
-1. Browser-verify `POST /api/trace2/trace-graph` (BV checklist in `docs/deployment/trace-native-browser-verification.md`)
-2. Update data-contracts Zod schemas (requires design review)
-3. Update `trace2-adapter.ts`
-4. Update `TraceGraphPanel` component
-5. Test end-to-end in browser
+**UI BV PASSED** — C13 confirmed 2026-05-18. `materialId=20052009`, green `source: databricks-api` badge, nodes and edges rendered.
+
+**Material ID format:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros. The confirmed working input key is `20052009`, not `000000000020052009`. Batch IDs (`0008602411`) are string-preserved and do include leading zeros. The backend does not apply ALPHA normalization; users must enter the stored format. Future: input normalization to accept either format.
+
+**Remaining:**
+- Node/edge click interactions, direction toggle, warnings banner — not separately confirmed
+- `?workspace=traceability-workspace` full shell integration — not tested; do not claim Trace parity is complete

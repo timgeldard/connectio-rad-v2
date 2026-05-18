@@ -142,6 +142,18 @@ export default function WorkspaceViews({ workspaceId }: Props) {
     )
   }
 
+  if (workspaceId === 'traceability-workspace') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-traceability-workspace">
+        <TraceInvestigationWorkspace
+          scope={activeScope}
+          investigationId={investigationId ?? undefined}
+          viewId={viewId ?? 'overview'}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="connectio-page" data-testid={`workspace-view-${workspaceId}`}>
       <div style={{ padding: 32, color: 'var(--shell-fg-2)', fontSize: 13 }}>

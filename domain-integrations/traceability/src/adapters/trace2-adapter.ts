@@ -38,6 +38,9 @@ export interface Trace2AdapterRequest {
   readonly batchId?: string
   readonly plantId?: string
   readonly materialId?: string
+  readonly direction?: 'both' | 'upstream' | 'downstream'
+  readonly maxDepth?: number
+  readonly maxEdges?: number
 }
 
 /**

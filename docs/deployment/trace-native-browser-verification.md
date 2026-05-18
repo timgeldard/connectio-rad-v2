@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
 **Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
-**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -22,15 +22,35 @@ Before running any check:
 
 ---
 
+## Verification Surfaces
+
+### A — API verification
+Route: `POST /api/trace2/trace-graph`  
+Purpose: verifies backend route, OAuth, Databricks config, UC grants, query execution, and response shape.
+
+### B — Dedicated UI verification (primary surface) — Traceability Investigation Screen
+URL: `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify`  
+Purpose: Complete Traceability investigation screen (c.txt, 2026-05-18). Verifies: direction/depth/edges controls, investigation header, edge detail (all gold_batch_lineage fields), node detail, timeline, exposure indicators, source banner, no mock fallback.  
+Test values: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100`
+
+> **Material ID format note:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros — `20052009`, not `000000000020052009`. The verify page default was corrected to `20052009` (b.txt, 2026-05-18). Do not assume SAP ALPHA padding behaviour until input normalization is implemented.
+
+### C — Full workspace shell verification (pending)
+Candidates: `/?workspace=traceability-workspace&tab=trace`, `/?workspace=trace-investigation&viewId=trace-tree`  
+Purpose: verifies full Trace workspace navigation/shell integration.  
+**Status: not yet tested** — do not mark as complete until manually verified separately from the dedicated surface.
+
+---
+
 ## Test Anchor
 
 | Field | Value |
 |---|---|
-| material_id | `000000000020052009` |
+| material_id | `20052009` (stored key — no SAP ALPHA leading zeros in `gold_batch_lineage`) |
 | batch_id | `0008602411` |
 | plant_id | `C061` |
 
-If this anchor has no rows, identify an alternate batch from `gold_batch_stock_v` that has known stock.
+If this anchor has no rows, identify an alternate batch from `gold_batch_lineage` with known rows.
 
 ---
 
@@ -210,6 +230,7 @@ X-Query-Name: trace2.get_trace_graph
 | 503 (mode) | `BACKEND_ADAPTER_MODE` ≠ `databricks-api` | Check `app.yaml` |
 | 503 (catalog) | `TRACE_CATALOG` not set | Add to `app.yaml` |
 | 401 | OAuth token missing or `sql` scope absent | Re-deploy bundle; check `user_api_scopes: [sql]` |
+| 403 | Stale OAuth token (session expired) | Hard-refresh browser or log out and back in to get a fresh token |
 | 403 | No SELECT on `gold_batch_lineage` | `GRANT SELECT ON TABLE connected_plant_uat.gold.gold_batch_lineage TO <user>` |
 | 422 | Invalid `direction` value | Use `upstream`, `downstream`, or `both` |
 | 502 | SQL execution error | Check `databricks apps logs connectio-v2` |
@@ -220,6 +241,75 @@ X-Query-Name: trace2.get_trace_graph
 | Status | Date | Notes |
 |---|---|---|
 | [x] **PASSED** | 2026-05-18 | HTTP 200 — `ok: true`. UC GRANT applied to `tim.geldard@kerry.com` on `connected_plant_uat.gold`. Test anchor: `material_id=20052009`, `batch_id=0008602411`, `plant_id=C061`, `direction=both`, `max_depth=2`. |
+| [x] **PASSED (WITH RECURSIVE)** | 2026-05-18 | Refactored to single WITH RECURSIVE query (504 fix). `material_id=20052009, batch_id=0008602411, direction=both, max_depth=4` → HTTP 200, 3.2s, 7 nodes, 7 edges, nodeKey=2-tuple. Dense anchor `20732244/0008545768, depth=3` → HTTP 200, 3.7s, 299 nodes, 307 edges. No timeout. Note: gold_batch_lineage stores material_id WITHOUT leading zeros. |
+
+---
+
+## Check T2-UI — Trace Graph Panel (frontend wiring) — EXECUTABLE, UI BV pending
+
+**Status:** Frontend wiring complete (u.txt, 2026-05-18). Shell routing fixed (a.txt, 2026-05-18) — verification page added and `traceability-workspace` placeholder removed. UI browser verification pending after next UAT deploy.
+
+**What changed (a.txt, 2026-05-18):**
+- `traceability-workspace` in `WorkspaceViews.tsx` now renders `TraceInvestigationWorkspace` — no longer hits the "implementation pending" placeholder
+- New `trace-graph-verify` page added at `?workspace=trace-graph-verify` — form with materialId/batchId/plantId inputs and Run Trace button; renders `TraceGraphPanel` with the submitted request; no mock fallback
+
+**Prerequisites:** T2 API check must be PASSED first.
+
+**Primary URL for UI BV:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
+```
+
+**Test anchor (pre-filled in form):**
+- Material ID: `20052009` (stored key — corrected from `000000000020052009` in b.txt 2026-05-18)
+- Batch ID: `0008602411`
+- Plant ID: `C061`
+
+**Steps:**
+1. Navigate to `/?workspace=trace-graph-verify`
+2. Confirm inputs are pre-filled with test anchor values
+3. Click **Run Trace**
+4. Verify the graph panel renders with data from the backend
+
+**Pass criteria — complete Traceability investigation screen (c.txt, 2026-05-18):**
+- [ ] Page loads at `?workspace=trace-graph-verify` without crash
+- [ ] Material ID, Batch ID, Plant ID inputs pre-filled; Direction/Max depth/Max edges dropdowns visible
+- [ ] Click **Run Trace** — graph panel appears
+- [ ] ReactFlow canvas visible with at least the anchor node
+- [ ] `source: databricks-api` badge visible (green) — NOT `source: mock`
+- [ ] Investigation header visible: materialId, batchId, plantId, node count, edge count, depth reached, truncated, source
+- [ ] Node count and edge count match T2 API response
+- [ ] Click any node → detail panel shows materialId, batchId, plantId, depth, isAnchor, inbound/outbound edge counts
+- [ ] Click any edge → detail panel shows link type, movement type, posting date, quantity, source batch, target batch, plus any available: processOrderId, materialDocumentNumber, purchaseOrderId, deliveryId, salesOrderId, supplierId, customerId
+- [ ] Direction dropdown (both/upstream/downstream) wired to backend — re-submit with "upstream" returns only upstream nodes
+- [ ] Max depth dropdown (1/2/3/4) wired to backend
+- [ ] Max edges dropdown (100/500/1000) wired to backend
+- [ ] Timeline section visible: "Timeline from lineage edges" label, dated events sorted by posting date, or "No dated events available" if none
+- [ ] Exposure indicators section visible: distinct customer/supplier/delivery/PO/process-order counts
+- [ ] Source banner visible: gold_batch_lineage, trace2.get_trace_graph, depth, truncated
+- [ ] Warnings banner appears when backend returns `truncated: true` or `max_depth_reached`
+- [ ] Empty state message (`No lineage edges found for this material/batch/plant.`) when no edges
+- [ ] No mock data shown on failure — error state only
+
+**Also verify (Option A — shell fix):**
+- [ ] `?workspace=traceability-workspace&tab=trace` no longer shows "implementation pending (Phase 3+)"
+- [ ] It renders the `TraceInvestigationWorkspace` instead (scope will be empty, graph panel will show empty/error state — that is expected without scope context)
+
+**Troubleshooting:**
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `?workspace=trace-graph-verify` returns NotFound | Build does not include a.txt changes | Redeploy UAT bundle |
+| Green badge not showing | `VITE_ADAPTER_MODE` not `legacy-api` in build | Check Vite build config |
+| Panel shows mock nodes only | `getTraceGraph` not calling backend | Check adapter factory — mode must be `legacy-api` |
+| React Flow crash | `undefined` on `node.type` or `edge.relationshipType` | Fixed in u.txt — check build includes latest panel |
+| Empty nodes/edges from a batch that T2 returned data for | Mapper bug | Check `mapBackendTraceGraph` output vs raw response |
+
+**Manual result:**
+
+| Status | Date | Notes |
+|---|---|---|
+| [x] **PASSED** | 2026-05-18 | Green `source: databricks-api` badge confirmed. ReactFlow canvas rendered with nodes and edges. `materialId=20052009` (user-edited from long-form default). Node click, edge click, direction toggle, warnings, and traceability-workspace shell integration not separately confirmed — remaining items pending. |
 
 ---
 

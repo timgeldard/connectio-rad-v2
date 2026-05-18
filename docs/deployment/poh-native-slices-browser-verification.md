@@ -1,7 +1,7 @@
 # POH Native Slices — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Status:** C7 (order-operations) PASSED 2026-05-17; C8 (confirmations) and C9 (goods-movements) IMPLEMENTED — executable, awaiting browser verification  
+**Status:** C7 (order-operations) PASSED 2026-05-17; C8 (confirmations) PASSED 2026-05-18; C9 (goods-movements) PASSED 2026-05-18  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:** `docs/audit/adapter-source-status-matrix.md`
 
@@ -80,9 +80,9 @@ X-Query-Name: poh.get_order_operations
 
 ---
 
-## 2. `GET /api/por/order-confirmations` — IMPLEMENTED, NOT BROWSER-VERIFIED
+## 2. `GET /api/por/order-confirmations` — BROWSER-VERIFIED 2026-05-18
 
-**Status: IMPLEMENTED** — route exists; DDL confirmed 2026-05-17. Awaiting browser verification in UAT.
+**Status: PASSED** — HTTP 200 confirmed in UAT 2026-05-18.
 
 **UI navigation path:** Would appear in the Execution Timeline view → Confirmations panel (`OrderConfirmationsPanel`).
 
@@ -140,13 +140,13 @@ X-Query-Name: poh.get_order_confirmations
 
 | Status | Date | Notes |
 |--------|------|-------|
-| [ ] not yet tested | — | Awaiting UAT deployment |
+| [x] **PASSED** | 2026-05-18 | HTTP 200, 2.6s. PO=7006967130 → 2 confirmations. `confirmationId=100001669`, `confirmedYield=646.88 KG`. `X-Data-Source: databricks-api`, `X-Query-Name: poh.get_order_confirmations`. |
 
 ---
 
-## 3. `GET /api/por/order-goods-movements` — IMPLEMENTED, NOT BROWSER-VERIFIED
+## 3. `GET /api/por/order-goods-movements` — BROWSER-VERIFIED 2026-05-18
 
-**Status: IMPLEMENTED** — route exists; DDL confirmed 2026-05-17; Tulip movement types confirmed. Awaiting browser verification in UAT.
+**Status: PASSED** — HTTP 200 confirmed in UAT 2026-05-18.
 
 **UI navigation path:** Would appear in the Execution Timeline view → Goods Movements panel (`ProcessOrderGoodsMovementsPanel`).
 
@@ -211,7 +211,7 @@ X-Query-Name: poh.get_order_goods_movements
 
 | Status | Date | Notes |
 |--------|------|-------|
-| [ ] not yet tested | — | Awaiting UAT deployment |
+| [x] **PASSED** | 2026-05-18 | HTTP 200, 1.6s. PO=7006965479 → 901 movements. `direction=input` confirmed for MOVEMENT_TYPE=261. `X-Data-Source: databricks-api`, `X-Query-Name: poh.get_order_goods_movements`. |
 
 ---
 

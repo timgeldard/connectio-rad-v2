@@ -7,8 +7,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     TraceGraphRequest,
     get_batch_header_summary_spec,
     get_mass_balance_spec,
-    get_trace_graph_anchor_spec,
-    get_trace_graph_hop_spec,
+    get_trace_graph_recursive_spec,
     map_batch_header_rows,
     map_mass_balance_rows,
     map_trace_graph,
@@ -64,7 +63,7 @@ _LINEAGE_ROW_A_TO_B = {
 _ANCHOR_MATERIAL_ID = "000000000020052009"
 _ANCHOR_BATCH_ID = "0008602411"
 _ANCHOR_PLANT_ID = "C061"
-_ANCHOR_KEY = f"{_ANCHOR_MATERIAL_ID}:{_ANCHOR_BATCH_ID}:{_ANCHOR_PLANT_ID}"
+_ANCHOR_KEY = f"{_ANCHOR_MATERIAL_ID}:{_ANCHOR_BATCH_ID}"
 
 
 # ---------------------------------------------------------------------------
@@ -258,61 +257,66 @@ class TestMapBatchHeaderRows:
 
 
 # ---------------------------------------------------------------------------
-# TestGetTraceGraphAnchorSpec
+# TestGetTraceGraphRecursiveSpec
 # ---------------------------------------------------------------------------
 
-class TestGetTraceGraphAnchorSpec:
+class TestGetTraceGraphRecursiveSpec:
     @pytest.fixture(autouse=True)
     def _set_trace_catalog(self, monkeypatch):
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
         monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
-    def _req(self, direction: str = "both") -> TraceGraphRequest:
+    def _req(self, direction: str = "both", max_depth: int = 3) -> TraceGraphRequest:
         return TraceGraphRequest(
-            _ANCHOR_MATERIAL_ID, _ANCHOR_BATCH_ID, _ANCHOR_PLANT_ID, direction=direction
+            _ANCHOR_MATERIAL_ID, _ANCHOR_BATCH_ID, _ANCHOR_PLANT_ID,
+            direction=direction, max_depth=max_depth,
         )
 
     def test_name(self) -> None:
-        assert get_trace_graph_anchor_spec(self._req()).name == "trace2.get_trace_graph"
+        assert get_trace_graph_recursive_spec(self._req()).name == "trace2.get_trace_graph"
 
     def test_module(self) -> None:
-        assert get_trace_graph_anchor_spec(self._req()).module == "trace2"
+        assert get_trace_graph_recursive_spec(self._req()).module == "trace2"
 
     def test_endpoint(self) -> None:
-        assert get_trace_graph_anchor_spec(self._req()).endpoint == "/api/trace2/trace-graph"
+        assert get_trace_graph_recursive_spec(self._req()).endpoint == "/api/trace2/trace-graph"
 
     def test_cache_policy_is_per_user(self) -> None:
-        assert get_trace_graph_anchor_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
+        assert get_trace_graph_recursive_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
 
     def test_source_badge_is_gold_batch_lineage(self) -> None:
-        assert get_trace_graph_anchor_spec(self._req()).source_badge == "view:gold_batch_lineage"
+        assert get_trace_graph_recursive_spec(self._req()).source_badge == "view:gold_batch_lineage"
 
     def test_tags(self) -> None:
-        spec = get_trace_graph_anchor_spec(self._req())
+        spec = get_trace_graph_recursive_spec(self._req())
         assert "trace2" in spec.tags
         assert "trace-graph" in spec.tags
         assert "lineage" in spec.tags
 
-    def test_params_contain_all_three_anchor_fields(self) -> None:
-        spec = get_trace_graph_anchor_spec(self._req())
+    def test_params_contain_material_batch_max_depth_no_plant(self) -> None:
+        spec = get_trace_graph_recursive_spec(self._req(max_depth=5))
         assert spec.params["material_id"] == _ANCHOR_MATERIAL_ID
         assert spec.params["batch_id"] == _ANCHOR_BATCH_ID
-        assert spec.params["plant_id"] == _ANCHOR_PLANT_ID
+        assert spec.params["max_depth"] == 5
+        assert "plant_id" not in spec.params
+
+    def test_sql_contains_with_recursive(self) -> None:
+        assert "WITH RECURSIVE" in get_trace_graph_recursive_spec(self._req()).sql
 
     def test_sql_references_gold_batch_lineage(self) -> None:
-        assert "gold_batch_lineage" in get_trace_graph_anchor_spec(self._req()).sql
+        assert "gold_batch_lineage" in get_trace_graph_recursive_spec(self._req()).sql
 
     def test_sql_uses_fully_qualified_table(self) -> None:
-        sql = get_trace_graph_anchor_spec(self._req()).sql
+        sql = get_trace_graph_recursive_spec(self._req()).sql
         assert "`connected_plant_uat`" in sql
         assert "`gold`" in sql
         assert "FROM gold_batch_lineage" not in sql
 
     def test_sql_has_no_todo_markers(self) -> None:
-        assert "TODO" not in get_trace_graph_anchor_spec(self._req()).sql
+        assert "TODO" not in get_trace_graph_recursive_spec(self._req()).sql
 
     def test_sql_includes_all_18_confirmed_columns(self) -> None:
-        sql = get_trace_graph_anchor_spec(self._req()).sql
+        sql = get_trace_graph_recursive_spec(self._req()).sql
         for col in [
             "PARENT_MATERIAL_ID", "PARENT_BATCH_ID", "PARENT_PLANT_ID",
             "CHILD_MATERIAL_ID", "CHILD_BATCH_ID", "CHILD_PLANT_ID",
@@ -321,105 +325,47 @@ class TestGetTraceGraphAnchorSpec:
             "SALES_ORDER_ID", "QUANTITY", "BASE_UNIT_OF_MEASURE",
             "POSTING_DATE", "MOVEMENT_TYPE",
         ]:
-            assert col in sql, f"Column {col} missing from anchor spec SQL"
+            assert col in sql, f"Column {col} missing from recursive spec SQL"
 
-    def test_downstream_where_uses_parent_columns(self) -> None:
-        sql = get_trace_graph_anchor_spec(self._req("downstream")).sql
+    def test_sql_includes_hop_depth_and_traversal_dir(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req()).sql
+        assert "hop_depth" in sql
+        assert "traversal_dir" in sql
+
+    def test_downstream_sql_has_parent_anchor_where(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("downstream")).sql
         assert "PARENT_MATERIAL_ID = :material_id" in sql
         assert "PARENT_BATCH_ID = :batch_id" in sql
-        assert "PARENT_PLANT_ID = :plant_id" in sql
+
+    def test_downstream_sql_does_not_have_child_anchor_where(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("downstream")).sql
         assert "CHILD_MATERIAL_ID = :material_id" not in sql
 
-    def test_upstream_where_uses_child_columns(self) -> None:
-        sql = get_trace_graph_anchor_spec(self._req("upstream")).sql
+    def test_upstream_sql_has_child_anchor_where(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("upstream")).sql
         assert "CHILD_MATERIAL_ID = :material_id" in sql
         assert "CHILD_BATCH_ID = :batch_id" in sql
-        assert "CHILD_PLANT_ID = :plant_id" in sql
+
+    def test_upstream_sql_does_not_have_parent_anchor_where(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("upstream")).sql
         assert "PARENT_MATERIAL_ID = :material_id" not in sql
 
-    def test_both_where_has_or_with_parent_and_child(self) -> None:
-        sql = get_trace_graph_anchor_spec(self._req("both")).sql
-        assert "PARENT_MATERIAL_ID = :material_id" in sql
-        assert "CHILD_MATERIAL_ID = :material_id" in sql
-        assert " OR " in sql
+    def test_both_sql_has_ds_and_us_ctes(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("both")).sql
+        assert " ds " in sql or "\n  ds AS" in sql
+        assert " us " in sql or "\n  us AS" in sql
+
+    def test_both_sql_has_union_all(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("both")).sql
+        assert "UNION ALL" in sql
+
+    def test_sql_has_instr_cycle_guard(self) -> None:
+        assert "INSTR" in get_trace_graph_recursive_spec(self._req()).sql
 
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
         with pytest.raises(DatabricksConfigError):
-            get_trace_graph_anchor_spec(self._req())
-
-
-# ---------------------------------------------------------------------------
-# TestGetTraceGraphHopSpec
-# ---------------------------------------------------------------------------
-
-class TestGetTraceGraphHopSpec:
-    @pytest.fixture(autouse=True)
-    def _set_trace_catalog(self, monkeypatch):
-        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
-        monkeypatch.setenv("TRACE_SCHEMA", "gold")
-
-    _FRONTIER = [("MAT_B", "BATCH_B", "C061")]
-
-    def test_name(self) -> None:
-        assert get_trace_graph_hop_spec(self._FRONTIER, "both").name == "trace2.get_trace_graph"
-
-    def test_sql_references_gold_batch_lineage(self) -> None:
-        assert "gold_batch_lineage" in get_trace_graph_hop_spec(self._FRONTIER, "both").sql
-
-    def test_sql_uses_fully_qualified_table(self) -> None:
-        sql = get_trace_graph_hop_spec(self._FRONTIER, "both").sql
-        assert "`connected_plant_uat`" in sql
-        assert "`gold`" in sql
-
-    def test_params_are_empty_frontier_values_are_literals(self) -> None:
-        assert get_trace_graph_hop_spec(self._FRONTIER, "downstream").params == {}
-
-    def test_downstream_where_uses_parent_in(self) -> None:
-        sql = get_trace_graph_hop_spec(self._FRONTIER, "downstream").sql
-        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" in sql
-        assert "IN (" in sql
-        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" not in sql
-
-    def test_upstream_where_uses_child_in(self) -> None:
-        sql = get_trace_graph_hop_spec(self._FRONTIER, "upstream").sql
-        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" in sql
-        assert "IN (" in sql
-        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" not in sql
-
-    def test_both_where_has_or_clause(self) -> None:
-        sql = get_trace_graph_hop_spec(self._FRONTIER, "both").sql
-        assert "(PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID)" in sql
-        assert "(CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID)" in sql
-        assert " OR " in sql
-
-    def test_frontier_values_embedded_as_single_quoted_literals(self) -> None:
-        sql = get_trace_graph_hop_spec(self._FRONTIER, "downstream").sql
-        assert "'MAT_B'" in sql
-        assert "'BATCH_B'" in sql
-        assert "'C061'" in sql
-
-    def test_leading_zeros_preserved_in_literals(self) -> None:
-        frontier = [("000000000020052009", "0008602411", "C061")]
-        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
-        assert "'000000000020052009'" in sql
-        assert "'0008602411'" in sql
-
-    def test_single_quote_in_value_is_escaped(self) -> None:
-        frontier = [("MAT'X", "BATCH_B", "C061")]
-        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
-        assert "'MAT''X'" in sql
-
-    def test_multiple_frontier_nodes_all_appear(self) -> None:
-        frontier = [("MAT_B", "BATCH_B", "C061"), ("MAT_C", "BATCH_C", "C061")]
-        sql = get_trace_graph_hop_spec(frontier, "downstream").sql
-        assert "'MAT_B'" in sql
-        assert "'MAT_C'" in sql
-
-    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
-        monkeypatch.delenv("TRACE_CATALOG", raising=False)
-        with pytest.raises(DatabricksConfigError):
-            get_trace_graph_hop_spec(self._FRONTIER, "both")
+            get_trace_graph_recursive_spec(self._req())
 
 
 # ---------------------------------------------------------------------------
@@ -490,11 +436,12 @@ class TestMapTraceGraph:
         assert len(non_anchor) == 1
         assert non_anchor[0]["directions"] == ["upstream"]
 
-    def test_node_key_includes_plant_id(self) -> None:
+    def test_node_key_is_material_and_batch_only(self) -> None:
         tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         child = next(n for n in result["nodes"] if not n["isAnchor"])
-        assert child["nodeKey"] == "MAT_B:BATCH_B:C061"
+        assert child["nodeKey"] == "MAT_B:BATCH_B"
+        assert child["plantId"] == "C061"
 
     def test_duplicate_rows_produce_single_edge(self) -> None:
         tagged = [
