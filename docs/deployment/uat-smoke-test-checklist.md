@@ -441,24 +441,19 @@ Second deploy with LIMIT fix completed 2026-05-18. Re-test pending.
 
 ---
 
-### C22 — SPC sandbox/demo labelling — PASS (code-audit fixed 2026-05-18)
+### C22 — SPC sandbox/demo labelling & Verification Status Banner
 
-**Status: CODE-FIXED** — `SPCSandboxBanner` was present only on `chart-overview` and `characteristic-review` views. Added to `active-signals`, `capability`, `alarm-history`, and `chart-configuration-readonly` via f.txt code audit.
+**Status: HARDENED & STANDARDIZED** — `VerificationStatusBanner` is integrated on the SPC chart-overview tab. `SPCSandboxBanner` remains present as a warning on all 6 tabs to ensure no view claims native Databricks or live production data.
 
-**UAT: tab-walk each view tab at `?workspace=spc-monitoring` to confirm banner is visible on all 6 tabs.**
+**UAT: tab-walk each view tab at `?workspace=spc-monitoring` to confirm banner visibility.**
 
-- [ ] `chart-overview` tab — banner visible (was already present)
-- [ ] `active-signals` tab — banner visible (fixed 2026-05-18)
-- [ ] `characteristic-review` tab — banner visible (was already present)
-- [ ] `capability` tab — banner visible (fixed 2026-05-18)
-- [ ] `alarm-history` tab — banner visible (fixed 2026-05-18)
-- [ ] `chart-configuration-readonly` tab — banner visible (fixed 2026-05-18)
-- [ ] No view claims native Databricks or live production data
-- [ ] Charts load without crash (demo data)
+- [ ] `chart-overview` tab — `VerificationStatusBanner` renders at the top with `SANDBOX / MOCK DEMO` status, showing the 4 active mock routes and `spc_quality_metrics_v` source object.
+- [ ] No view claims native Databricks or live production data.
+- [ ] Charts load without crash (demo data).
 
 ---
 
-### C23 — POH Cockpit View (order-history)
+### C23 — POH Cockpit View & Verification Status Banner
 
 Verify that the dashboard view renders cleanly at `?workspace=process-order-review` with the new interactive `order-history` view as default.
 
@@ -467,14 +462,16 @@ Verify that the dashboard view renders cleanly at `?workspace=process-order-revi
 https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=process-order-review
 ```
 
-- [ ] Page loads cleanly without crashing
-- [ ] Header banner visible with "UAT verification pending" notice
-- [ ] "Load Demo Preset" button loads PO-240308-3847 offline mock data successfully
-- [ ] Typing a real UAT process order (e.g. `7006965038`) and plant (e.g. `IE10`), and clicking "Run / Refresh" loads live Databricks-sourced data
-- [ ] Header, Operations, Confirmations, and Goods Movements tables render with correct columns
-- [ ] Chronological timeline sorts events correctly and lists any undated items separately
-- [ ] Collapsible technical diagnostics displays the correct endpoints and payloads
-- [ ] No SAP close or closing operations write-back buttons are present on the screen
+- [ ] Page loads cleanly without crashing.
+- [ ] `VerificationStatusBanner` is visible at the top with `EXECUTABLE PENDING BV` status. Clicking the banner expands the Specifications Drawer listing the 4 active routes and `vw_gold_` source objects.
+- [ ] "Load Demo-Only Fixture" button replaces the generic "Load Demo Preset" label.
+- [ ] Clicking "Load Demo-Only Fixture" successfully loads offline mock data and displays a warning banner stating: "Mock fixture selected — values are demo-only and are not known UAT data. Run against a real UAT process order before claiming browser verification."
+- [ ] Typing a real UAT process order (e.g. `7006965038`) and plant (e.g. `IE10`), and clicking "Run / Refresh" loads live Databricks-sourced data.
+- [ ] The "Max Rows Limit" and "Posting Date" inputs are grouped inside a dashed warning container labeled "⚠️ Diagnostic / planned filters — not applied by current native routes".
+- [ ] Each of the 4 cards (Header Context, Operations, Confirmations, Goods Movements) renders a dynamic source status badge (e.g., `DATABRICKS-API` or `MOCK FIXTURE - NOT LIVE`) matching the exact query result source.
+- [ ] In the event of a query failure, an explicit route error card (red border/background with error code and details) is rendered within that specific section instead of collapsing into a generic "no rows" empty state.
+- [ ] Collapsible technical diagnostics displays the correct endpoints, query payloads, and explicit notes explaining that date/limit parameters are not currently passed to the backend.
+- [ ] No SAP close or closing operations write-back buttons are present on the screen.
 
 ---
 

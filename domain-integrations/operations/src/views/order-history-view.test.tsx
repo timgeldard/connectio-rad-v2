@@ -115,7 +115,7 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const presetBtn = screen.getByRole('button', { name: /Load Demo Preset/i })
+    const presetBtn = screen.getByRole('button', { name: /Load Demo-Only Fixture/i })
     fireEvent.click(presetBtn)
 
     const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i) as HTMLInputElement
@@ -123,6 +123,41 @@ describe('OrderHistoryView', () => {
 
     const plantInput = screen.getByPlaceholderText(/e.g. IE10/i) as HTMLInputElement
     expect(plantInput.value).toBe('IE10')
+  })
+
+  it('displays mock fixture warning banner and diagnostic fieldset when preset is clicked, and auto-dismisses on input change or reset', async () => {
+    render(
+      <Wrapper>
+        <OrderHistoryView />
+      </Wrapper>
+    )
+
+    // Verify diagnostic filters container
+    expect(screen.getByText(/Diagnostic \/ planned filters — not applied by current native routes/i)).toBeInTheDocument()
+
+    const presetBtn = screen.getByRole('button', { name: /Load Demo-Only Fixture/i })
+    fireEvent.click(presetBtn)
+
+    // Warning banner should be present
+    expect(screen.getByText(/Mock fixture selected/i)).toBeInTheDocument()
+
+    // Edit process order input
+    const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
+    fireEvent.change(orderInput, { target: { value: 'NEW-PO-ID' } })
+
+    // Warning banner should disappear
+    expect(screen.queryByText(/Mock fixture selected/i)).toBeNull()
+
+    // Click preset again to restore warning
+    fireEvent.click(presetBtn)
+    expect(screen.getByText(/Mock fixture selected/i)).toBeInTheDocument()
+
+    // Click reset
+    const resetBtn = screen.getByRole('button', { name: /Reset/i })
+    fireEvent.click(resetBtn)
+
+    // Warning banner should disappear
+    expect(screen.queryByText(/Mock fixture selected/i)).toBeNull()
   })
 
   it('renders loading indicator when parallel queries are active', () => {
@@ -284,5 +319,105 @@ describe('OrderHistoryView', () => {
     fireEvent.click(drawerBtn)
     expect(screen.getByText(/Active Endpoints/i)).toBeInTheDocument()
     expect(screen.getByText(/POST \/api\/por\/order-header/i)).toBeInTheDocument()
+  })
+
+  it('displays preset helper text', () => {
+    render(
+      <Wrapper>
+        <OrderHistoryView />
+      </Wrapper>
+    )
+    expect(screen.getByText(/Mock fixture values are for UI testing only and are not known UAT process orders/i)).toBeInTheDocument()
+  })
+
+  it('renders section-level route error cards and does not render success content for that section', async () => {
+    // Setup a query failure on Operations, but other queries succeed
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: 'PO-240308-3847',
+          orderType: 'process-order',
+          materialId: 'MAT-1',
+          materialDescription: 'Mat 1',
+          plantId: 'IE10',
+          confirmedQuantity: 10,
+          plannedQuantity: 100,
+          uom: 'KG',
+          plannedStart: '2024-03-08T00:00:00.000Z',
+          plannedFinish: '2024-03-08T23:59:00.000Z',
+          orderStatus: 'in-process',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderOperations).mockReturnValue({
+      data: {
+        ok: false,
+        error: {
+          code: '503',
+          message: 'Databricks SQL warehouse integration is unavailable (BACKEND_ADAPTER_MODE not set).',
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderOperations>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
+      </Wrapper>
+    )
+
+    // Header context succeeds and renders
+    expect(screen.getByText(/Process Order Header Context/i)).toBeInTheDocument()
+
+    // Operations fails and renders route-specific error card with guidance
+    expect(screen.getByText(/Operations Query Failed/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/BACKEND_ADAPTER_MODE/i).length).toBeGreaterThan(0)
+  })
+
+  it('renders empty dynamic source status and empty state for a succeeded but empty route', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: 'PO-240308-3847',
+          orderType: 'process-order',
+          materialId: 'MAT-1',
+          materialDescription: 'Mat 1',
+          plantId: 'IE10',
+          confirmedQuantity: 10,
+          plannedQuantity: 100,
+          uom: 'KG',
+          plannedStart: '2024-03-08T00:00:00.000Z',
+          plannedFinish: '2024-03-08T23:59:00.000Z',
+          orderStatus: 'in-process',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    // Succeeded but returned empty array
+    vi.mocked(useOrderOperations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderOperations>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
+      </Wrapper>
+    )
+
+    // Expect the empty badge and empty placeholder for Operations
+    expect(screen.getByText(/No process operations or phases recorded/i)).toBeInTheDocument()
+    expect(screen.getByText(/EMPTY/i)).toBeInTheDocument()
   })
 })

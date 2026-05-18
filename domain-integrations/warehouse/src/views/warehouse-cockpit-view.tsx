@@ -1,11 +1,7 @@
 import { useState, useTransition } from 'react'
+import { VerificationStatusBanner } from '@connectio/design-system'
 import type { CSSProperties } from 'react'
-import type {
-  Warehouse360InboundItem,
-  Warehouse360OutboundItem,
-  Warehouse360StagingItem,
-  Warehouse360ExceptionItem,
-} from '@connectio/data-contracts'
+
 import {
   useWarehouseOverview,
   useWarehouseInbound,
@@ -306,6 +302,32 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </span>
         </div>
       </div>
+
+      <VerificationStatusBanner
+        title="Warehouse360 Integration Specifications"
+        status="executable-pending-bv"
+        sourceLabel="Databricks Unity Catalog wh360 Schema"
+        routes={[
+          'GET /api/warehouse360/overview',
+          'GET /api/warehouse360/inbound',
+          'GET /api/warehouse360/outbound',
+          'GET /api/warehouse360/staging',
+          'GET /api/warehouse360/exceptions'
+        ]}
+        sourceObjects={[
+          'wh360_cockpit_summary_v',
+          'wh360_inbound_v',
+          'wh360_deliveries_v',
+          'staging_orders_v',
+          'wh360_imwm_exceptions_v'
+        ]}
+        limitations={[
+          'UAT verification pending Claude',
+          'No write-back or transactional executions allowed',
+          'Read-only direct query mode against Unity Catalog views'
+        ]}
+        lastVerified="Pending Claude UAT Sweep"
+      />
 
       {/* Safety Notice Warning */}
       <div style={{
@@ -1076,9 +1098,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       { type: 'Staging', path: '/api/warehouse360/staging', query: stagingQuery },
                       { type: 'Exceptions', path: '/api/warehouse360/exceptions', query: exceptionsQuery },
                     ].map((endpoint, idx) => {
-                      const isSuccess = endpoint.query.data?.ok
+                      const isSuccess = endpoint.query.data?.ok === true
                       const source = endpoint.query.data?.source
-                      const fetched = endpoint.query.data?.fetchedAt
+
                       return (
                         <div key={idx} style={{
                           backgroundColor: '#ffffff',
@@ -1130,7 +1152,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ borderTop: `1px solid ${COLORS.slate100}`, paddingTop: 12 }}>
                   <span style={{ color: COLORS.slate600, display: 'block', marginBottom: 4 }}>Last Sync Run Clock:</span>
                   <span style={{ color: COLORS.slate800, fontWeight: 600 }}>
-                    {overviewQuery.data?.fetchedAt ? new Date(overviewQuery.data.fetchedAt).toLocaleString() : 'Never'}
+                    {(overviewQuery.data && overviewQuery.data.ok) ? new Date(overviewQuery.data.fetchedAt).toLocaleString() : 'Never'}
                   </span>
                 </div>
               </div>

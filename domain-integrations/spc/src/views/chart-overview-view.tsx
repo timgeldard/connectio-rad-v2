@@ -1,3 +1,4 @@
+import { VerificationStatusBanner } from '@connectio/design-system'
 import type { CSSProperties } from 'react'
 import { SPCSummaryPanel } from '../panels/spc-summary-panel.js'
 import { ActiveSPCSignalsPanel } from '../panels/active-spc-signals-panel.js'
@@ -29,6 +30,28 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
   return (
     <div style={{ padding: 16, display: 'grid', gap: 12 }}>
       <SPCSandboxBanner />
+      
+      <VerificationStatusBanner
+        title="Statistical Process Control (SPC) Quality Metrics"
+        status="mock-demo"
+        sourceLabel="In-Memory Mock Simulation"
+        routes={[
+          'GET /api/spc/summary',
+          'GET /api/spc/active-signals',
+          'GET /api/spc/monitored-characteristics',
+          'GET /api/spc/control-chart'
+        ]}
+        sourceObjects={[
+          'spc_quality_metrics_v'
+        ]}
+        limitations={[
+          'Demo-Only sandbox environment',
+          'Not linked to live production data',
+          'Native Databricks integration pending catalog alignment'
+        ]}
+        lastVerified="Pending UAT Catalog Alignment"
+      />
+
       <div style={HEADER_GRID}>
         <SPCSummaryPanel request={request} />
         <ActiveSPCSignalsPanel request={request} />
