@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@connectio/product-model": "*",
+    "@connectio/design-system": "*",
     "@connectio/data-contracts": "*",
     "@connectio/evidence-panel-runtime": "*",
     "@connectio/source-adapters": "*",

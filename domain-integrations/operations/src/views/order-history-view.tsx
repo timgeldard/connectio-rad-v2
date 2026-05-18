@@ -12,6 +12,103 @@ import type {
   ProcessOrderConfirmation,
   ProcessOrderGoodsMovement,
 } from '@connectio/data-contracts'
+import { VerificationStatusBanner } from '@connectio/design-system'
+
+function getSourceStatus(
+  query: { data?: { ok: boolean; source?: string }; isLoading: boolean; isError: boolean },
+  isMockSelected: boolean,
+  isEmpty?: boolean
+) {
+  if (query.isLoading) {
+    return { label: 'Loading...', bg: '#1E293B', color: '#94A3B8' }
+  }
+  if (query.isError || (query.data && !query.data.ok)) {
+    return { label: 'error', bg: '#7F1D1D', color: '#FCA5A5' }
+  }
+  if (!query.data) {
+    return { label: 'not loaded', bg: '#334155', color: '#94A3B8' }
+  }
+  if (isEmpty) {
+    return { label: 'empty', bg: '#374151', color: '#9CA3AF' }
+  }
+  
+  if (isMockSelected) {
+    return { label: 'mock fixture — not live', bg: '#451A03', color: '#FDBA74' }
+  }
+
+  const source = query.data.source
+  if (source === 'databricks-api') {
+    return { label: 'databricks-api', bg: '#065F46', color: '#34D399' }
+  }
+  if (source === 'legacy-api') {
+    return { label: 'legacy-api', bg: '#1E3A8A', color: '#93C5FD' }
+  }
+  if (source === 'mock') {
+    return { label: 'mock fixture — not live', bg: '#451A03', color: '#FDBA74' }
+  }
+  
+  return { label: 'source unavailable', bg: '#374151', color: '#9CA3AF' }
+}
+
+function getQueryError(query: { data?: { ok: boolean; error?: { code: string; message: string } }; isError: boolean; error?: any }) {
+  if (query.isError) {
+    return {
+      code: 'unknown',
+      message: String(query.error?.message || query.error || 'React Query failed')
+    }
+  }
+  if (query.data && !query.data.ok) {
+    return query.data.error
+  }
+  return null
+}
+
+function renderRouteError(
+  title: string,
+  error: { code: string; message: string } | undefined,
+  endpoint: string
+) {
+  if (!error) return null
+  let guidance = 'The request failed. Please check backend connection logs.'
+  const codeStr = String(error.code)
+  
+  if (codeStr.includes('401') || error.message.includes('401')) {
+    guidance = 'Authentication failed. Please verify your user token / OAuth identity.'
+  } else if (codeStr.includes('403') || error.message.includes('403')) {
+    guidance = 'Access denied. You do not have the required Unity Catalog or database permissions.'
+  } else if (codeStr.includes('502') || error.message.includes('502')) {
+    guidance = 'Upstream gateway error. This usually indicates a source / query column mismatch or unreachable backend V1 endpoint.'
+  } else if (codeStr.includes('504') || error.message.includes('504')) {
+    guidance = 'Upstream timeout. The Databricks SQL Warehouse took too long to return the query results.'
+  } else if (codeStr.includes('503') || error.message.includes('503')) {
+    guidance = 'Service unavailable. Order operations, confirmations, and goods movements require BACKEND_ADAPTER_MODE=databricks-api. They are not available in legacy-api mode.'
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(239, 68, 68, 0.05)',
+      border: '1px solid rgba(239, 68, 68, 0.3)',
+      borderRadius: 8,
+      padding: 16,
+      marginBottom: 16,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#f87171', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>❌</span> {title} Query Failed ({error.code})
+        </h4>
+        <span style={{ fontSize: 9, fontFamily: 'monospace', background: '#374151', color: '#9CA3AF', padding: '2px 4px', borderRadius: 3 }}>
+          {endpoint}
+        </span>
+      </div>
+      <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#F3F4F6' }}>
+        <strong>Error Message:</strong> {error.message}
+      </p>
+      <div style={{ fontSize: 11, color: '#FCA5A5', background: 'rgba(239, 68, 68, 0.1)', padding: 8, borderRadius: 4 }}>
+        <strong>💡 Troubleshooting:</strong> {guidance}
+      </div>
+    </div>
+  )
+}
 
 export interface OrderHistoryViewProps {
   readonly request?: ProcessOrderReviewAdapterRequest
@@ -38,6 +135,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     dateTo: '',
     limit: '100',
   })
+  const [isMockFixtureSelected, setIsMockFixtureSelected] = useState(false)
 
   // State to trigger the actual parallel React queries
   const [queryParams, setQueryParams] = useState<ProcessOrderReviewAdapterRequest & { limit?: number; dateFrom?: string; dateTo?: string } | null>(
@@ -96,10 +194,17 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     (confirmationsQuery.data?.ok && confirmationsQuery.data.data && confirmationsQuery.data.data.length > 0) ||
     (goodsMovementsQuery.data?.ok && goodsMovementsQuery.data.data && goodsMovementsQuery.data.data.length > 0)
 
+  const hasAnyError =
+    (headerQuery.data && !headerQuery.data.ok) ||
+    (operationsQuery.data && !operationsQuery.data.ok) ||
+    (confirmationsQuery.data && !confirmationsQuery.data.ok) ||
+    (goodsMovementsQuery.data && !goodsMovementsQuery.data.ok)
+
   // Form Handling
   const handleInputChange = (field: keyof QueryFormState, val: string) => {
     setForm(prev => ({ ...prev, [field]: val }))
     setValidationError(null)
+    setIsMockFixtureSelected(false)
   }
 
   const handlePresetClick = () => {
@@ -113,6 +218,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       limit: '100',
     })
     setValidationError(null)
+    setIsMockFixtureSelected(true)
   }
 
   const handleReset = () => {
@@ -127,6 +233,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     })
     setQueryParams(null)
     setValidationError(null)
+    setIsMockFixtureSelected(false)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -186,6 +293,16 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   const operations: ProcessOrderOperation[] = operationsQuery.data?.ok ? operationsQuery.data.data : []
   const confirmations: ProcessOrderConfirmation[] = confirmationsQuery.data?.ok ? confirmationsQuery.data.data : []
   const goodsMovements: ProcessOrderGoodsMovement[] = goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : []
+
+  const headerErr = getQueryError(headerQuery as any)
+  const operationsErr = getQueryError(operationsQuery as any)
+  const confirmationsErr = getQueryError(confirmationsQuery as any)
+  const goodsMovementsErr = getQueryError(goodsMovementsQuery as any)
+
+  const headerStatus = getSourceStatus(headerQuery as any, isMockFixtureSelected, !headerData)
+  const operationsStatus = getSourceStatus(operationsQuery as any, isMockFixtureSelected, operations.length === 0)
+  const confirmationsStatus = getSourceStatus(confirmationsQuery as any, isMockFixtureSelected, confirmations.length === 0)
+  const goodsMovementsStatus = getSourceStatus(goodsMovementsQuery as any, isMockFixtureSelected, goodsMovements.length === 0)
 
   const metrics = useMemo(() => {
     const inputs = goodsMovements.filter(m => m.direction === 'input')
@@ -412,6 +529,32 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         </div>
       </div>
 
+      <VerificationStatusBanner
+        title="Process Order History Integration Specifications"
+        status="executable-pending-bv"
+        sourceLabel="Databricks Unity Catalog Kerry Manufacturing Schema"
+        routes={[
+          'POST /api/por/order-header',
+          'GET /api/por/order-operations',
+          'GET /api/por/order-confirmations',
+          'GET /api/por/order-goods-movements'
+        ]}
+        sourceObjects={[
+          'vw_gold_process_order',
+          'vw_gold_process_order_phase',
+          'vw_gold_confirmation',
+          'vw_gold_adp_movement'
+        ]}
+        limitations={[
+          'UAT verification pending Claude',
+          'no write-back',
+          'no SAP transaction execution',
+          'mock fixture is UI-only',
+          'date/limit filters captured but not applied by current native routes'
+        ]}
+        lastVerified="Pending Claude UAT Sweep"
+      />
+
       {/* B. Query Form */}
       <div style={cardStyle} data-testid="poh-query-form">
         <h2 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
@@ -505,73 +648,106 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                Posting Date From
-              </label>
-              <input
-                type="datetime-local"
-                value={form.dateFrom}
-                onChange={e => handleInputChange('dateFrom', e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#111827',
-                  border: '1px solid #4B5563',
-                  borderRadius: 4,
-                  padding: '7px 10px',
-                  color: '#fff',
-                  fontSize: 12,
-                }}
-              />
+          <div style={{
+            marginTop: 12,
+            marginBottom: 16,
+            padding: '12px 14px',
+            background: 'rgba(245, 158, 11, 0.03)',
+            border: '1px dashed rgba(245, 158, 11, 0.2)',
+            borderRadius: 6,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#FBBF24', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>⚠️</span>
+              <span>Diagnostic / planned filters — not applied by current native routes</span>
             </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                Posting Date To
-              </label>
-              <input
-                type="datetime-local"
-                value={form.dateTo}
-                onChange={e => handleInputChange('dateTo', e.target.value)}
-                style={{
-                  width: '100%',
-                  background: '#111827',
-                  border: '1px solid #4B5563',
-                  borderRadius: 4,
-                  padding: '7px 10px',
-                  color: '#fff',
-                  fontSize: 12,
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>
-                <span>Max Rows Limit</span>
-                <span style={{ fontWeight: 'bold', color: '#38bdf8' }}>{form.limit}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
+                  Posting Date From
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.dateFrom}
+                  onChange={e => handleInputChange('dateFrom', e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: '#111827',
+                    border: '1px solid #4B5563',
+                    borderRadius: 4,
+                    padding: '7px 10px',
+                    color: '#fff',
+                    fontSize: 12,
+                  }}
+                />
               </div>
-              <input
-                type="range"
-                min="1"
-                max="500"
-                value={form.limit}
-                onChange={e => handleInputChange('limit', e.target.value)}
-                style={{
-                  width: '100%',
-                  accentColor: '#38bdf8',
-                  background: '#111827',
-                  height: 6,
-                  borderRadius: 3,
-                  outline: 'none',
-                }}
-              />
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
+                  Posting Date To
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.dateTo}
+                  onChange={e => handleInputChange('dateTo', e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: '#111827',
+                    border: '1px solid #4B5563',
+                    borderRadius: 4,
+                    padding: '7px 10px',
+                    color: '#fff',
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>
+                  <span>Max Rows Limit</span>
+                  <span style={{ fontWeight: 'bold', color: '#38bdf8' }}>{form.limit}</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="500"
+                  value={form.limit}
+                  onChange={e => handleInputChange('limit', e.target.value)}
+                  style={{
+                    width: '100%',
+                    accentColor: '#38bdf8',
+                    background: '#111827',
+                    height: 6,
+                    borderRadius: 3,
+                    outline: 'none',
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {validationError && (
             <div style={{ color: '#FCA5A5', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginBottom: 12 }}>
               ⚠ {validationError}
+            </div>
+          )}
+
+          {isMockFixtureSelected && (
+            <div style={{
+              color: '#FDBA74',
+              background: '#451A03',
+              border: '1px solid #B45309',
+              padding: '10px 14px',
+              borderRadius: 6,
+              fontSize: 12,
+              marginBottom: 12,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span>🧪</span>
+              <span>
+                <strong>Mock fixture selected</strong> — values are demo-only and are not known UAT data. Run against a real UAT process order before claiming browser verification.
+              </span>
             </div>
           )}
 
@@ -612,40 +788,45 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               </button>
             </div>
             
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                onClick={handlePresetClick}
-                style={{
-                  background: '#1F2937',
-                  color: '#10B981',
-                  border: '1px solid #059669',
-                  borderRadius: 4,
-                  padding: '8px 16px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Load Demo Preset
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleCopyRequestDetails}
-                style={{
-                  background: 'transparent',
-                  color: '#38bdf8',
-                  border: '1px solid #0284c7',
-                  borderRadius: 4,
-                  padding: '8px 16px',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                {isCopied ? 'Copied URLs!' : 'Copy API Request Details'}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={handlePresetClick}
+                  style={{
+                    background: '#1F2937',
+                    color: '#10B981',
+                    border: '1px solid #059669',
+                    borderRadius: 4,
+                    padding: '8px 16px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Load Demo-Only Fixture
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleCopyRequestDetails}
+                  style={{
+                    background: 'transparent',
+                    color: '#38bdf8',
+                    border: '1px solid #0284c7',
+                    borderRadius: 4,
+                    padding: '8px 16px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isCopied ? 'Copied URLs!' : 'Copy API Request Details'}
+                </button>
+              </div>
+              <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic', marginTop: 2 }}>
+                Mock fixture values are for UI testing only and are not known UAT process orders.
+              </span>
             </div>
           </div>
         </form>
@@ -697,7 +878,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          {!isAnyLoading && !hasAnyData && (
+          {!isAnyLoading && !hasAnyData && !hasAnyError && (
             <div style={{
               textAlign: 'center',
               padding: 32,
@@ -709,7 +890,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             }}>
               <div style={{ fontSize: 20, marginBottom: 8 }}>❌</div>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#D1D5DB' }}>
-                Native route returned no rows for this process order.
+                Native routes returned no rows for this process order.
               </h3>
               <p style={{ margin: '4px 0 0 0', fontSize: 12 }}>
                 Please verify if order ID "{queryParams.processOrderId}" exists in your UAT Databricks schema.
@@ -718,7 +899,11 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           )}
 
           {/* C. Order Context Card */}
-          {headerData && (
+          {headerErr && (
+            renderRouteError("Header Context", headerErr, "POST /api/por/order-header")
+          )}
+
+          {headerData && !headerErr && (
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: '1px solid #374151', paddingBottom: 8 }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
@@ -731,10 +916,10 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     fontWeight: 'bold',
                     padding: '2px 6px',
                     borderRadius: 3,
-                    background: headerQuery.data?.source === 'databricks-api' ? '#065F46' : 'var(--shell-bg-3)',
-                    color: headerQuery.data?.source === 'databricks-api' ? '#34D399' : '#fff'
+                    background: headerStatus.bg,
+                    color: headerStatus.color
                   }}>
-                    {headerQuery.data?.source?.toUpperCase() || 'MOCK'}
+                    {headerStatus.label.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -783,14 +968,34 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           )}
 
           {/* D. Operations Table */}
-          {operations.length > 0 && (
+          {operationsErr && (
+            renderRouteError("Operations", operationsErr, "GET /api/por/order-operations")
+          )}
+
+          {operationsQuery.data?.ok && operations.length === 0 && !operationsErr && (
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Operations & Process Phases
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: '#065F46', color: '#34D399' }}>
-                  {operationsQuery.data?.source?.toUpperCase() || 'DATABRICKS-API'}
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: operationsStatus.bg, color: operationsStatus.color }}>
+                  {operationsStatus.label.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                ℹ️ No process operations or phases recorded for this order.
+              </div>
+            </div>
+          )}
+
+          {operations.length > 0 && !operationsErr && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                  Operations & Process Phases
+                </h3>
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: operationsStatus.bg, color: operationsStatus.color }}>
+                  {operationsStatus.label.toUpperCase()}
                 </span>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -844,14 +1049,34 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           )}
 
           {/* E. Confirmations Table */}
-          {confirmations.length > 0 && (
+          {confirmationsErr && (
+            renderRouteError("Confirmations", confirmationsErr, "GET /api/por/order-confirmations")
+          )}
+
+          {confirmationsQuery.data?.ok && confirmations.length === 0 && !confirmationsErr && (
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Posted Yield Confirmations
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: '#065F46', color: '#34D399' }}>
-                  {confirmationsQuery.data?.source?.toUpperCase() || 'DATABRICKS-API'}
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: confirmationsStatus.bg, color: confirmationsStatus.color }}>
+                  {confirmationsStatus.label.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                ℹ️ No posted yield confirmations recorded for this order.
+              </div>
+            </div>
+          )}
+
+          {confirmations.length > 0 && !confirmationsErr && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                  Posted Yield Confirmations
+                </h3>
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: confirmationsStatus.bg, color: confirmationsStatus.color }}>
+                  {confirmationsStatus.label.toUpperCase()}
                 </span>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -896,14 +1121,34 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           )}
 
           {/* F. Goods Movements Table */}
-          {goodsMovements.length > 0 && (
+          {goodsMovementsErr && (
+            renderRouteError("Goods Movements", goodsMovementsErr, "GET /api/por/order-goods-movements")
+          )}
+
+          {goodsMovementsQuery.data?.ok && goodsMovements.length === 0 && !goodsMovementsErr && (
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Goods Movements (Material Documents)
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: '#065F46', color: '#34D399' }}>
-                  {goodsMovementsQuery.data?.source?.toUpperCase() || 'DATABRICKS-API'}
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: goodsMovementsStatus.bg, color: goodsMovementsStatus.color }}>
+                  {goodsMovementsStatus.label.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                ℹ️ No goods movements recorded for this order.
+              </div>
+            </div>
+          )}
+
+          {goodsMovements.length > 0 && !goodsMovementsErr && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                  Goods Movements (Material Documents)
+                </h3>
+                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: goodsMovementsStatus.bg, color: goodsMovementsStatus.color }}>
+                  {goodsMovementsStatus.label.toUpperCase()}
                 </span>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -1116,6 +1361,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     <pre style={{ margin: 0, background: '#111827', padding: 8, borderRadius: 4, fontSize: 11, color: '#E5E7EB', overflowX: 'auto', fontFamily: 'monospace' }}>
                       {JSON.stringify(queryParams, null, 2)}
                     </pre>
+                    <div style={{ fontSize: 11, color: '#FBBF24', background: 'rgba(245, 158, 11, 0.08)', padding: '6px 10px', borderRadius: 4, marginTop: 4 }}>
+                      ⚠️ <strong>Note:</strong> Posting date ranges and row limits are diagnostic inputs and are not currently applied by the upstream FastAPI proxy endpoints.
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
@@ -1126,6 +1374,16 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     <div>
                       <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>Auth Bearer Status</div>
                       <div style={{ fontSize: 12, color: '#E5E7EB', marginTop: 2 }}>Scoped User OAuth Context</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>Section Source Statuses</div>
+                      <div style={{ fontSize: 11, color: '#E5E7EB', marginTop: 2 }}>
+                        Header: {headerStatus.label} | Ops: {operationsStatus.label} | Conf: {confirmationsStatus.label} | Movements: {goodsMovementsStatus.label}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>UAT Verification Status</div>
+                      <div style={{ fontSize: 12, color: '#FBBF24', fontWeight: 600, marginTop: 2 }}>Pending Claude UAT Sweep</div>
                     </div>
                   </div>
                 </div>

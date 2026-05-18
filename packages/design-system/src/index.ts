@@ -61,3 +61,6 @@ export type { LoadingStateProps } from './components/manufacturing/loading-state
 
 export { CommandPalette } from './components/manufacturing/command-palette'
 export type { CommandPaletteProps, CommandPaletteItem } from './components/manufacturing/command-palette'
+
+export { VerificationStatusBanner } from './components/manufacturing/verification-status-banner'
+export type { VerificationStatusBannerProps, VerificationStatus } from './components/manufacturing/verification-status-banner'
