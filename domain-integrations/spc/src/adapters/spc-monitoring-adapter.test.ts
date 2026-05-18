@@ -76,7 +76,7 @@ describe('SPCMonitoringAdapter', () => {
     it('UCL is greater than LCL', async () => {
       const result = await adapter.getControlChartSeries(request)
       if (!result.ok) throw new Error('Expected ok result')
-      expect(result.data.upperControlLimit).toBeGreaterThan(result.data.lowerControlLimit)
+      expect(result.data.upperControlLimit!).toBeGreaterThan(result.data.lowerControlLimit!)
     })
   })
 
@@ -184,7 +184,7 @@ describe('SPCMonitoringAdapter', () => {
       for (const id of ['CHAR-PH-001', 'CHAR-MOISTURE-001', 'CHAR-FAT-001', 'CHAR-SALT-001', 'CHAR-TEXTURE-001']) {
         const result = await adapter.getControlChartSeries({ ...request, characteristicId: id })
         if (!result.ok) throw new Error(`Expected ok result for ${id}`)
-        expect(result.data.upperControlLimit).toBeGreaterThan(result.data.lowerControlLimit)
+        expect(result.data.upperControlLimit!).toBeGreaterThan(result.data.lowerControlLimit!)
       }
     })
   })
