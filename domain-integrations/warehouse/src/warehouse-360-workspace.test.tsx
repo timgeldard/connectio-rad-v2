@@ -1,6 +1,8 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import '@testing-library/jest-dom'
 import { Warehouse360Workspace } from './warehouse-360-workspace.js'
 import type { ScopeContext } from '@connectio/data-contracts'
 
@@ -81,7 +83,7 @@ describe('Warehouse360Workspace', () => {
     })
   })
 
-  it('falls back to warehouse-overview for unknown viewId', async () => {
+  it('falls back to warehouse-cockpit for unknown viewId', async () => {
     render(
       <Wrapper>
         <Warehouse360Workspace scope={scope} viewId="not-a-view" />
@@ -89,8 +91,7 @@ describe('Warehouse360Workspace', () => {
     )
 
     await waitFor(() => {
-      const panel = document.querySelector('[data-testid="evidence-panel-warehouse-360-summary"]')
-      expect(panel).not.toBeNull()
+      expect(document.body.innerHTML).toContain('Warehouse360 Cockpit (Native)')
     })
   })
 })

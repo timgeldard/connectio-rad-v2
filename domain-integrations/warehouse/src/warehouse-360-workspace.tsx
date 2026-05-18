@@ -9,8 +9,10 @@ import { StockStatusView } from './views/stock-status-view.js'
 import { HoldsManagementView } from './views/holds-management-view.js'
 import { GoodsMovementsView } from './views/goods-movements-view.js'
 import { ReplenishmentView } from './views/replenishment-view.js'
+import { WarehouseCockpitView } from './views/warehouse-cockpit-view.js'
 
 export type Warehouse360ViewId =
+  | 'warehouse-cockpit'
   | 'warehouse-overview'
   | 'stock-status'
   | 'holds-management'
@@ -25,7 +27,7 @@ export interface Warehouse360WorkspaceProps {
 
 export function Warehouse360Workspace({
   scope,
-  viewId = 'warehouse-overview',
+  viewId = 'warehouse-cockpit',
   onNavigateToWorkspace,
 }: Warehouse360WorkspaceProps) {
   const request: Warehouse360AdapterRequest = {
@@ -41,7 +43,7 @@ export function Warehouse360Workspace({
     <StandardWorkspaceTemplate
       registration={warehouse360Registration}
       scope={scope}
-      defaultViewId={isValidViewId(viewId) ? viewId : 'warehouse-overview'}
+      defaultViewId={isValidViewId(viewId) ? viewId : 'warehouse-cockpit'}
       actionSidebar={<Warehouse360ActionsPanel context={context} />}
     >
       {resolveView(viewId, request, onNavigateToWorkspace)}
@@ -51,6 +53,8 @@ export function Warehouse360Workspace({
 
 function resolveView(viewId: string, request: Warehouse360AdapterRequest, onNavigateToWorkspace?: (workspaceId: string) => void): React.ReactNode {
   switch (viewId as Warehouse360ViewId) {
+    case 'warehouse-cockpit':
+      return <WarehouseCockpitView request={request} onHoldNavigate={onNavigateToWorkspace} />
     case 'warehouse-overview':
       return <WarehouseOverviewView request={request} onHoldNavigate={onNavigateToWorkspace} />
     case 'stock-status':
@@ -62,12 +66,13 @@ function resolveView(viewId: string, request: Warehouse360AdapterRequest, onNavi
     case 'replenishment':
       return <ReplenishmentView request={request} />
     default:
-      return <WarehouseOverviewView request={request} onHoldNavigate={onNavigateToWorkspace} />
+      return <WarehouseCockpitView request={request} onHoldNavigate={onNavigateToWorkspace} />
   }
 }
 
 function isValidViewId(viewId: string): viewId is Warehouse360ViewId {
   const valid: Warehouse360ViewId[] = [
+    'warehouse-cockpit',
     'warehouse-overview',
     'stock-status',
     'holds-management',

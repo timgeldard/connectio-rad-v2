@@ -29,10 +29,19 @@ export const warehouse360Registration: WorkspaceRegistration = {
   },
   defaultViews: [
     {
+      viewId: 'warehouse-cockpit',
+      displayName: 'Warehouse Cockpit (Native)',
+      lifecycle: 'pilot',
+      sortOrder: 0,
+      defaultPanels: [
+        { panelId: 'warehouse-cockpit', defaultVisible: true, defaultOrder: 0 },
+      ],
+    },
+    {
       viewId: 'warehouse-overview',
       displayName: 'Warehouse Overview',
       lifecycle: 'pilot',
-      sortOrder: 0,
+      sortOrder: 1,
       defaultPanels: [
         { panelId: 'warehouse-360-summary', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'stock-overview', defaultVisible: true, defaultOrder: 1 },
@@ -43,7 +52,7 @@ export const warehouse360Registration: WorkspaceRegistration = {
       viewId: 'stock-status',
       displayName: 'Stock Status',
       lifecycle: 'pilot',
-      sortOrder: 1,
+      sortOrder: 2,
       defaultPanels: [
         { panelId: 'stock-overview', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'location-capacity', defaultVisible: true, defaultOrder: 1 },
@@ -53,7 +62,7 @@ export const warehouse360Registration: WorkspaceRegistration = {
       viewId: 'holds-management',
       displayName: 'Holds Management',
       lifecycle: 'pilot',
-      sortOrder: 2,
+      sortOrder: 3,
       defaultPanels: [
         { panelId: 'open-holds', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'warehouse-360-summary', defaultVisible: true, defaultOrder: 1 },
@@ -63,7 +72,7 @@ export const warehouse360Registration: WorkspaceRegistration = {
       viewId: 'goods-movements',
       displayName: 'Goods Movements',
       lifecycle: 'pilot',
-      sortOrder: 3,
+      sortOrder: 4,
       defaultPanels: [
         { panelId: 'goods-movement-activity', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'warehouse-360-summary', defaultVisible: true, defaultOrder: 1 },
@@ -73,7 +82,7 @@ export const warehouse360Registration: WorkspaceRegistration = {
       viewId: 'replenishment',
       displayName: 'Replenishment',
       lifecycle: 'pilot',
-      sortOrder: 4,
+      sortOrder: 5,
       defaultPanels: [
         { panelId: 'replenishment-needs', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'stock-overview', defaultVisible: true, defaultOrder: 1 },
