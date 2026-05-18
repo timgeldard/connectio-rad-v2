@@ -141,7 +141,7 @@ class TestResolveDomainObject:
 
     def test_unknown_domain_raises_value_error(self, monkeypatch) -> None:
         with pytest.raises(ValueError, match="Unknown domain"):
-            resolve_domain_object("wh360", "some_table")
+            resolve_domain_object("unknown_domain", "some_table")
 
     # ── Object names are code constants — user params cannot affect them ──────
 

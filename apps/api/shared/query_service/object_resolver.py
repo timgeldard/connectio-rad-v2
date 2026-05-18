@@ -9,6 +9,7 @@ V1-compatible fallback chains (verified from ConnectIO-RAD source):
   TRACE_SCHEMA  → defaults to "gold"
   ENVMON domain → shares TRACE_CATALOG / TRACE_SCHEMA (confirmed from V1 em_config.py:
     LOT_TBL_NAME, POINT_TBL_NAME, RESULT_TBL_NAME all use f"{TRACE_CATALOG}.{TRACE_SCHEMA}.*")
+  WH360 domain → uses WH360_CATALOG / WH360_SCHEMA (default: "wh360")
 
 Object names passed to these functions must be code constants — never user-supplied
 request parameters. Caller is responsible for this invariant.
@@ -24,6 +25,7 @@ _CATALOG_ENV: dict[str, str] = {
     "cq": "CQ_CATALOG",
     "trace2": "TRACE_CATALOG",
     "envmon": "TRACE_CATALOG",
+    "wh360": "WH360_CATALOG",
 }
 
 _SCHEMA_ENV: dict[str, tuple[str, str]] = {
@@ -31,6 +33,7 @@ _SCHEMA_ENV: dict[str, tuple[str, str]] = {
     "cq": ("CQ_SCHEMA", "csm_process_order_history"),
     "trace2": ("TRACE_SCHEMA", "gold"),
     "envmon": ("TRACE_SCHEMA", "gold"),
+    "wh360": ("WH360_SCHEMA", "wh360"),
 }
 
 
@@ -61,7 +64,7 @@ def resolve_domain_object(
     catalog cannot be resolved (missing env var and no override).
 
     Args:
-        domain: One of "poh", "cq", "trace2", "envmon".
+        domain: One of "poh", "cq", "trace2", "envmon", "wh360".
         object_name: Code constant — the table/view name without qualification.
             Must never be a user-supplied value.
         schema_override: When set, bypasses the schema env var (e.g., "gold" for
