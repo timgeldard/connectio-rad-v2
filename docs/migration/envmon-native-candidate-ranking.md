@@ -209,12 +209,13 @@ to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do
 1. ~~Run DDL for all three primary views~~ — DONE (n.txt, confirmed-ddl 2026-05-17)
 2. ~~Wire `GET /api/envmon/site-summary`~~ — DONE (n.txt, route wired)
 3. ~~Implement Rank 2 QuerySpec (`envmon.get_swab_results`); wire `GET /api/envmon/swab-results`~~ — DONE (p.txt, route wired)
-4. Browser-verify `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` in UAT
-5. `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` — gate for Rank 3b, 4, 7
-6. Design `getEnvMonPlantMap` contract; implement `GET /api/envmon/plant-map` (Rank 3b)
-7. Design `getEnvMonPlantHotspots` contract; implement `GET /api/envmon/plant-hotspots` (Rank 3c)
-8. Implement Rank 3 (trends) — shares same views as site summary
-9. Implement Rank 4+ (zones, coordinates, floors, heatmap) only after em_* confirmed and populated
+4. ~~Browser-verify `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` in UAT~~ — DONE 2026-05-18
+5. Browser-verify read-only monitoring UI at `?workspace=envmon-monitoring` — PENDING next deploy
+6. `SHOW TABLES IN connected_plant_uat.gold LIKE 'em_%'` — gate for Rank 3b, 4, 7
+7. Design `getEnvMonPlantMap` contract; implement `GET /api/envmon/plant-map` (Rank 3b)
+8. Design `getEnvMonPlantHotspots` contract; implement `GET /api/envmon/plant-hotspots` (Rank 3c)
+9. Implement Rank 3 (trends) — shares same views as site summary
+10. Implement Rank 4+ (zones, coordinates, floors, heatmap) only after em_* confirmed and populated
 
 ---
 
@@ -222,8 +223,8 @@ to a separate Quality Actions / Deviation / CAPA bounded context, not EnvMon. Do
 
 | Rank | Slice | Method | Source confidence | em_* dependency | Status |
 |---|---|---|---|---|---|
-| 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-ddl | None | **Route wired — BV pending** |
-| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-ddl | None | **Route wired — BV pending** |
+| 1 | Site Summary | `getEnvMonSiteSummary` | confirmed-ddl | None | **API BV 2026-05-18; UI BV pending** |
+| 2 | Swab Results | `getEnvMonSwabResults` | confirmed-ddl | None | **API BV 2026-05-18; native read-only UI added** |
 | 3 | Trends | `getEnvMonTrends` | confirmed-v1 | None | Planned — after Rank 1 BV |
 | 3b | Plant Map | `getEnvMonPlantMap` (PROPOSED) | confirmed-v1 | em_plant_geo | Planned — em_plant_geo in UAT unknown; contract not designed |
 | 3c | Plant Hotspots | `getEnvMonPlantHotspots` (PROPOSED) | confirmed-v1 | em_plant_geo (read) | Planned — depends on Rank 3b + Rank 1 BV |

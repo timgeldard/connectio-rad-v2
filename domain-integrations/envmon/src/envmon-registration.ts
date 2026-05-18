@@ -35,10 +35,19 @@ export const envmonRegistration: WorkspaceRegistration = {
   },
   defaultViews: [
     {
+      viewId: 'native-monitoring',
+      displayName: 'Monitoring',
+      lifecycle: 'live',
+      sortOrder: 0,
+      defaultPanels: [
+        { panelId: 'envmon-native-monitoring', defaultVisible: true, defaultOrder: 0 },
+      ],
+    },
+    {
       viewId: 'scope-overview',
       displayName: 'Overview',
       lifecycle: 'live',
-      sortOrder: 0,
+      sortOrder: 1,
       defaultPanels: [
         { panelId: 'envmon-site-summary', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-alerts', defaultVisible: true, defaultOrder: 1 },
@@ -49,7 +58,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'plant-monitoring',
       displayName: 'Plant Monitoring',
       lifecycle: 'live',
-      sortOrder: 1,
+      sortOrder: 2,
       defaultPanels: [
         { panelId: 'envmon-site-summary', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-zone-status', defaultVisible: true, defaultOrder: 1 },
@@ -60,7 +69,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'heatmap',
       displayName: 'Zone Heatmap',
       lifecycle: 'live',
-      sortOrder: 2,
+      sortOrder: 3,
       defaultPanels: [
         { panelId: 'envmon-heatmap', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-zone-status', defaultVisible: true, defaultOrder: 1 },
@@ -70,7 +79,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'alerts',
       displayName: 'Alerts',
       lifecycle: 'live',
-      sortOrder: 3,
+      sortOrder: 4,
       defaultPanels: [
         { panelId: 'envmon-alerts', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-corrective-actions', defaultVisible: true, defaultOrder: 1 },
@@ -80,7 +89,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'swab-vectors',
       displayName: 'Swab Vectors',
       lifecycle: 'live',
-      sortOrder: 4,
+      sortOrder: 5,
       defaultPanels: [
         { panelId: 'envmon-swab-vectors', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-swab-results', defaultVisible: true, defaultOrder: 1 },
@@ -90,7 +99,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'trends',
       displayName: 'Trends',
       lifecycle: 'live',
-      sortOrder: 5,
+      sortOrder: 6,
       defaultPanels: [
         { panelId: 'envmon-trends', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-site-summary', defaultVisible: true, defaultOrder: 1 },
@@ -100,7 +109,7 @@ export const envmonRegistration: WorkspaceRegistration = {
       viewId: 'corrective-actions',
       displayName: 'Corrective Actions',
       lifecycle: 'live',
-      sortOrder: 6,
+      sortOrder: 7,
       defaultPanels: [
         { panelId: 'envmon-corrective-actions', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'envmon-alerts', defaultVisible: true, defaultOrder: 1 },
@@ -108,14 +117,15 @@ export const envmonRegistration: WorkspaceRegistration = {
     },
   ],
   defaultPanels: [
-    { panelId: 'envmon-site-summary', defaultVisible: true, defaultOrder: 0 },
-    { panelId: 'envmon-zone-status', defaultVisible: true, defaultOrder: 1 },
-    { panelId: 'envmon-alerts', defaultVisible: true, defaultOrder: 2 },
-    { panelId: 'envmon-heatmap', defaultVisible: true, defaultOrder: 3 },
-    { panelId: 'envmon-swab-results', defaultVisible: true, defaultOrder: 4 },
-    { panelId: 'envmon-trends', defaultVisible: true, defaultOrder: 5 },
-    { panelId: 'envmon-corrective-actions', defaultVisible: true, defaultOrder: 6 },
-    { panelId: 'envmon-swab-vectors', defaultVisible: true, defaultOrder: 7 },
+    { panelId: 'envmon-native-monitoring', defaultVisible: true, defaultOrder: 0 },
+    { panelId: 'envmon-site-summary', defaultVisible: true, defaultOrder: 1 },
+    { panelId: 'envmon-zone-status', defaultVisible: true, defaultOrder: 2 },
+    { panelId: 'envmon-alerts', defaultVisible: true, defaultOrder: 3 },
+    { panelId: 'envmon-heatmap', defaultVisible: true, defaultOrder: 4 },
+    { panelId: 'envmon-swab-results', defaultVisible: true, defaultOrder: 5 },
+    { panelId: 'envmon-trends', defaultVisible: true, defaultOrder: 6 },
+    { panelId: 'envmon-corrective-actions', defaultVisible: true, defaultOrder: 7 },
+    { panelId: 'envmon-swab-vectors', defaultVisible: true, defaultOrder: 8 },
   ],
   route: '/envmon/monitoring',
   personalizationPolicy: {

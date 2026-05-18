@@ -16,7 +16,7 @@ import type { EnvMonAdapterRequest } from './envmon-adapter.js'
 
 const STALE_TIME_MS = 5 * 60 * 1000
 
-export function useEnvMonContext(request: EnvMonAdapterRequest) {
+export function useEnvMonContext(request: EnvMonAdapterRequest, options: { enabled?: boolean } = {}) {
   return useQuery<AdapterResult<EnvMonContext>>({
     queryKey: ['envmon', 'context', request.plantId ?? null, request.regionId ?? null],
     queryFn: async () => {
@@ -27,6 +27,7 @@ export function useEnvMonContext(request: EnvMonAdapterRequest) {
       }
     },
     staleTime: STALE_TIME_MS,
+    enabled: options.enabled ?? true,
   })
 }
 

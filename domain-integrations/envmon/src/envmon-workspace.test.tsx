@@ -43,11 +43,11 @@ describe('EnvMonWorkspace', () => {
     )
 
     await waitFor(() => {
-      expect(screen.queryByText('Environmental Monitoring')).not.toBeNull()
+      expect(screen.queryAllByText('Environmental Monitoring').length).toBeGreaterThan(0)
     })
   })
 
-  it('renders the scope-overview view by default', async () => {
+  it('renders the native monitoring view by default', async () => {
     render(
       <Wrapper>
         <EnvMonWorkspace scope={testScope} />
@@ -55,8 +55,7 @@ describe('EnvMonWorkspace', () => {
     )
 
     await waitFor(() => {
-      const panel = document.querySelector('[data-testid="evidence-panel-envmon-site-summary"]')
-      expect(panel).not.toBeNull()
+      expect(screen.getByTestId('envmon-native-monitoring-screen')).toBeInTheDocument()
     })
   })
 
@@ -73,7 +72,7 @@ describe('EnvMonWorkspace', () => {
     })
   })
 
-  it('falls back to scope-overview for unknown viewId', async () => {
+  it('falls back to native monitoring for unknown viewId', async () => {
     render(
       <Wrapper>
         <EnvMonWorkspace scope={testScope} viewId="nonexistent-view" />
@@ -81,15 +80,27 @@ describe('EnvMonWorkspace', () => {
     )
 
     await waitFor(() => {
-      const panel = document.querySelector('[data-testid="evidence-panel-envmon-site-summary"]')
-      expect(panel).not.toBeNull()
+      expect(screen.getByTestId('envmon-native-monitoring-screen')).toBeInTheDocument()
     })
   })
 
-  it('renders the actions sidebar', async () => {
+  it('does not render write action sidebar on the native monitoring view', async () => {
     render(
       <Wrapper>
         <EnvMonWorkspace scope={testScope} />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      const sidebar = screen.queryByLabelText('Environmental monitoring actions')
+      expect(sidebar).toBeNull()
+    })
+  })
+
+  it('renders the actions sidebar on legacy mock-backed views', async () => {
+    render(
+      <Wrapper>
+        <EnvMonWorkspace scope={testScope} viewId="alerts" />
       </Wrapper>
     )
 

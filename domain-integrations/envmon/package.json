@@ -14,7 +14,8 @@
     "@connectio/workspace-runtime": "*",
     "@connectio/telemetry": "*",
     "@tanstack/react-query": "^5.0.0",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",

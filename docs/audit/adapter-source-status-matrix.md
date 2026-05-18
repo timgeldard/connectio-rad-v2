@@ -177,8 +177,8 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getEnvMonContext` | ✓ | — | — | — | none | After BV confirmed |
-| `getEnvMonSiteSummary` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, plant_id=C061, all 12 schema keys present; UC GRANT on connected_plant_uat.gold active |
-| `getEnvMonSwabResults` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, plant_id=C061; frontend wiring deferred (EnvMonSwabResultSchema requires `zoneId`/`zoneName` unavailable from SAP QM) |
+| `getEnvMonSiteSummary` | ✓ | — | — | **✓ BV** | green | Browser-verified 2026-05-18; also consumed by read-only monitoring screen at `?workspace=envmon-monitoring` (UI BV pending next deploy) |
+| `getEnvMonSwabResults` | ✓ | — | — | **✓ BV** | green | Browser-verified 2026-05-18; read-only monitoring screen consumes native SAP QM result shape because `zoneId`/`zoneName` are unavailable from SAP QM |
 | `getEnvMonTrends` | ✓ | — | — | — | none | Planned — Rank 3, after site summary BV |
 | `getEnvMonZones` | ✓ | — | — | — | none | Planned — depends on em_location_zones in UAT |
 | `getEnvMonAlerts` | ✓ | — | — | — | none | Deferred — alert derivation rules undefined |
@@ -192,8 +192,8 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 | `GET /api/envmon/location-coordinates` (proposed route) | — | — | — | — | none | Planned — depends on em_location_coordinates in UAT |
 | `GET /api/envmon/heatmap` (proposed route) | — | — | — | — | none | Planned — depends on em_* tables + all SAP QM views |
 
-**Summary:** 9 adapter methods — **2 browser-verified databricks-api** (`getEnvMonSiteSummary` + `getEnvMonSwabResults` 2026-05-18), 7 mock only. 6 additional candidate routes planned (not yet in adapter or contracts). No legacy-api adapter.
-**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired and tested. Browser verification pending. Frontend wiring deferred (see swab-results row for stop conditions).
+**Summary:** 9 legacy adapter methods — **2 browser-verified databricks-api routes** (`getEnvMonSiteSummary` + `getEnvMonSwabResults` 2026-05-18), 7 mock-only legacy methods. 6 additional candidate routes planned (not yet in adapter or contracts). No legacy-api adapter.
+**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired, tested, and API browser-verified. The primary EnvMon workspace now has a read-only native monitoring screen; UI browser verification is pending next deploy.
 
 **p.txt docs (2026-05-17):** `apps/api/routes/envmon.py` (swab-results route added) · `apps/api/adapters/envmon/envmon_databricks_adapter.py` (SwabResultsRequest + QuerySpec + mapper added) · 56 new tests · all matrix and deployment docs updated  
 **o.txt docs (2026-05-17):** DDD model updated to 4-BC structure; Estate Monitoring BC added; plant geo elevated; candidate routes added to matrices  

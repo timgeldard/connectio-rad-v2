@@ -11,8 +11,10 @@ import { AlertsView } from './views/alerts-view.js'
 import { SwabVectorsView } from './views/swab-vectors-view.js'
 import { TrendsView } from './views/trends-view.js'
 import { CorrectiveActionsView } from './views/corrective-actions-view.js'
+import { NativeMonitoringView } from './views/native-monitoring-view.js'
 
 export type EnvMonViewId =
+  | 'native-monitoring'
   | 'scope-overview'
   | 'plant-monitoring'
   | 'heatmap'
@@ -30,30 +32,35 @@ export interface EnvMonWorkspaceProps {
 export function EnvMonWorkspace({
   scope,
   regionId,
-  viewId = 'scope-overview',
+  viewId = 'native-monitoring',
 }: EnvMonWorkspaceProps) {
+  const activeViewId = isValidViewId(viewId) ? viewId : 'native-monitoring'
   const request: EnvMonAdapterRequest = {
     regionId: regionId ?? scope.regionId,
     plantId: scope.plantId,
   }
 
-  const { data: contextResult } = useEnvMonContext(request)
+  const { data: contextResult } = useEnvMonContext(request, {
+    enabled: activeViewId !== 'native-monitoring',
+  })
   const context = contextResult?.ok ? contextResult.data : null
 
   return (
     <StandardWorkspaceTemplate
       registration={envmonRegistration}
       scope={scope}
-      defaultViewId={isValidViewId(viewId) ? viewId : 'scope-overview'}
-      actionSidebar={<EnvMonActionsPanel context={context} />}
+      defaultViewId={activeViewId}
+      actionSidebar={activeViewId === 'native-monitoring' ? undefined : <EnvMonActionsPanel context={context} />}
     >
-      {resolveView(viewId, request)}
+      {resolveView(activeViewId, request)}
     </StandardWorkspaceTemplate>
   )
 }
 
 function resolveView(viewId: string, request: EnvMonAdapterRequest): React.ReactNode {
   switch (viewId as EnvMonViewId) {
+    case 'native-monitoring':
+      return <NativeMonitoringView />
     case 'scope-overview':
       return <ScopeOverviewView request={request} />
     case 'plant-monitoring':
@@ -75,6 +82,7 @@ function resolveView(viewId: string, request: EnvMonAdapterRequest): React.React
 
 function isValidViewId(viewId: string): viewId is EnvMonViewId {
   const valid: EnvMonViewId[] = [
+    'native-monitoring',
     'scope-overview',
     'plant-monitoring',
     'heatmap',

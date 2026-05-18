@@ -18,7 +18,11 @@
 > `GET /api/envmon/swab-results` implemented in `apps/api/routes/envmon.py`; same Group A SAP QM views as site-summary;
 > 56 new adapter + route tests; frontend wiring deferred (EnvMonSwabResultSchema requires `zoneId`/`zoneName`
 > unavailable from SAP QM alone; adapter is mock-only with no fetch infrastructure).
-> Next: deploy to UAT and browser-verify both site-summary and swab-results.
+> Next at that time: deploy to UAT and browser-verify both site-summary and swab-results.
+
+> **Status update (2026-05-18):** API browser verification has passed for both `site-summary` and `swab-results`.
+> A read-only EnvMon monitoring UI is implemented at `?workspace=envmon-monitoring`; UI browser verification
+> is pending next UAT deploy. The UI uses the native SAP QM result shape and keeps CAPA/spatial workflows deferred.
 
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
@@ -52,8 +56,8 @@ Join keys are three-column composite for result data: `INSPECTION_LOT_ID + OPERA
 
 ### V2 Current Status
 
-- `getEnvMonSiteSummary`: **Route wired (n.txt, 2026-05-17)** — DDL confirmed; 99 tests; BV pending.
-- `getEnvMonSwabResults`: **Route wired (p.txt, 2026-05-17)** — same Group A DDL; 56 new tests; BV pending; frontend wiring deferred (zoneId unavailable).
+- `getEnvMonSiteSummary`: **API BV 2026-05-18** — consumed by the read-only monitoring UI.
+- `getEnvMonSwabResults`: **API BV 2026-05-18** — read-only UI consumes native SAP QM shape because zoneId is unavailable.
 - `getEnvMonTrends`: QuerySpec not yet written. Deferred.
 - `getEnvMonAlerts`: No V1 "alert" concept — alerts would be derived from failing valuations. Alert rules (severity classification, `alertType` enum) are undefined. Deferred.
 - `getEnvMonCorrectiveActions`: Out of scope — CAPA is not a V2 EnvMon parity requirement; intentionally not migrated.
@@ -84,10 +88,11 @@ Steps 1–7 are COMPLETE (n.txt + p.txt, 2026-05-17):
 3. ~~Confirm `INSPECTION_RESULT_VALUATION` values~~ — done (confirmed-v1 valuation mapping)
 4. ~~Update column verification checklist to `confirmed-ddl`~~ — DONE (n.txt)
 5. ~~Wire `GET /api/envmon/site-summary`~~ — DONE (n.txt)
-6. Browser-verify `GET /api/envmon/site-summary` in UAT — **PENDING**
+6. ~~Browser-verify `GET /api/envmon/site-summary` in UAT~~ — DONE 2026-05-18
 7. ~~Wire `GET /api/envmon/swab-results`~~ — DONE (p.txt)
-8. Browser-verify `GET /api/envmon/swab-results` in UAT — **PENDING**
-9. Write QuerySpec for `getEnvMonTrends` and wire route (after BV)
+8. ~~Browser-verify `GET /api/envmon/swab-results` in UAT~~ — DONE 2026-05-18
+9. Browser-verify read-only monitoring UI at `?workspace=envmon-monitoring` — **PENDING**
+10. Write QuerySpec for `getEnvMonTrends` and wire route (after UI BV)
 
 ### Stop Conditions
 
