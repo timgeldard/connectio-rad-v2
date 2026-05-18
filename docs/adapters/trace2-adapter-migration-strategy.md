@@ -23,7 +23,7 @@ mock
 | Method | V2 tier | V1 endpoint | Proxy route | Browser verified | Databricks QuerySpec |
 |---|---|---|---|---|---|
 | `getBatchHeaderSummary` | legacy-api | `POST /api/trace2/batch-header` | Yes | **Yes** (2024-03-08) | **Yes** — `get_batch_header_summary_spec` |
-| `getTraceGraph` | databricks-api (✓ E) | — | **Yes** — `POST /api/trace2/trace-graph` (q.txt, 2026-05-18) | No | **Yes** — `get_trace_graph_anchor_spec` + `get_trace_graph_hop_spec` (iterative multi-hop, gold_batch_lineage confirmed-ddl) |
+| `getTraceGraph` | databricks-api (✓ BV) | — | **Yes** — `POST /api/trace2/trace-graph` (q.txt, 2026-05-18) | **Yes** (2026-05-18) | **Yes** — `get_trace_graph_anchor_spec` + `get_trace_graph_hop_spec` (iterative multi-hop, gold_batch_lineage confirmed-ddl) |
 | `getMassBalanceSummary` | mock | `GET /api/trace2/mass-balance` | No | No | **Yes** — `get_mass_balance_spec` |
 | `getCustomerExposureSummary` | mock | — | No | No | **Deferred** — severity/recall business rules missing |
 | `getSupplierExposureSummary` | mock | — | No | No | Not started |

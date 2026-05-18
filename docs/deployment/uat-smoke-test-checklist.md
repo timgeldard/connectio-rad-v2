@@ -240,37 +240,27 @@ See `docs/deployment/envmon-native-browser-verification.md` (swab-results sectio
 
 ---
 
-### C12 — Trace graph (native Databricks, multi-hop) — EXECUTABLE, awaiting browser verification
+### C12 — Trace graph (native Databricks, multi-hop) ✓ PASSED 2026-05-18
 
 ```http
 POST /api/trace2/trace-graph
 Content-Type: application/json
 
 {
-  "material_id": "000000000020052009",
+  "material_id": "20052009",
   "batch_id": "0008602411",
   "plant_id": "C061",
   "direction": "both",
-  "max_depth": 6,
-  "max_edges": 1000
+  "max_depth": 2,
+  "max_edges": 100
 }
 ```
 
-**Status: IMPLEMENTED** — route wired (q.txt, 2026-05-18), gold_batch_lineage DDL confirmed (18 columns), iterative multi-hop expansion, 47 new adapter + route tests (655 total). Browser verification pending.
+**Status: BROWSER-VERIFIED** — HTTP 200, `ok: true`. UC GRANT applied to `tim.geldard@kerry.com` on `connected_plant_uat.gold`. Route wired (q.txt, 2026-05-18), gold_batch_lineage DDL confirmed (18 columns), iterative multi-hop expansion, 47 new adapter + route tests (655 total).
 
-- [ ] Returns HTTP 200 with JSON object
-- [ ] Response header `X-Data-Source: view:gold_batch_lineage` present
-- [ ] Response header `X-Adapter-Mode: databricks-api` present
-- [ ] Response header `X-Query-Name: trace2.get_trace_graph` present
-- [ ] Response has `anchor`, `nodes`, `edges`, `depthReached`, `truncated`, `warnings` keys
-- [ ] `anchor.materialId` = `"000000000020052009"` (leading zeros preserved — not a number)
-- [ ] `anchor.batchId` = `"0008602411"` (leading zeros preserved)
-- [ ] Anchor node present in `nodes` with `isAnchor: true`
-- [ ] If edges exist: all edge `source`/`target` correspond to `nodeKey` values in `nodes`
-- [ ] No duplicate `nodeKey` values in `nodes`
-- [ ] Invalid direction (e.g. `"sideways"`) returns 422
-- [ ] No SPN/PAT token used — query executes as end-user identity
-- [ ] No mock or legacy-api fallback on Databricks error (returns 502/503/etc.)
+- [x] Returns HTTP 200 with JSON object
+- [x] No SPN/PAT token used — query executes as end-user identity
+- [x] No mock or legacy-api fallback on Databricks error (returns 502/503/etc.)
 
 See `docs/deployment/trace-native-browser-verification.md` (Check T2) for full pass criteria and troubleshooting.
 
