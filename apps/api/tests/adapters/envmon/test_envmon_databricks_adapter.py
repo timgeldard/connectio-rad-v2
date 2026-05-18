@@ -729,23 +729,15 @@ class TestMapSwabResultRows:
         assert len(result) == 3
         assert [r["status"] for r in result] == ["fail", "pass", "pending"]
 
-    def test_tolerance_fields_preserved(self) -> None:
+    def test_field_mapping_preserves_source_backed_fields(self) -> None:
         result = map_swab_result_rows([self._fail_row()])
-        assert result[0]["targetValue"] == pytest.approx(100.0, rel=1e-4)
-        assert result[0]["upperTolerance"] == pytest.approx(200.0, rel=1e-4)
-        assert result[0]["lowerTolerance"] is None
-
-    def test_functional_location_preserved(self) -> None:
-        result = map_swab_result_rows([self._fail_row()])
-        assert result[0]["functionalLocation"] == "LOC-001"
-
-    def test_mic_fields_preserved(self) -> None:
-        result = map_swab_result_rows([self._fail_row()])
-        assert result[0]["micId"] == "MIC001"
-        assert result[0]["micName"] == "TVC"
-        assert result[0]["micCode"] == "MIC001"
-
-    def test_inspector_and_method_preserved(self) -> None:
-        result = map_swab_result_rows([self._fail_row()])
-        assert result[0]["inspector"] == "USER001"
-        assert result[0]["inspectionMethod"] == "METHOD-001"
+        row = result[0]
+        assert row["targetValue"] == pytest.approx(100.0, rel=1e-4)
+        assert row["upperTolerance"] == pytest.approx(200.0, rel=1e-4)
+        assert row["lowerTolerance"] is None
+        assert row["functionalLocation"] == "LOC-001"
+        assert row["micId"] == "MIC001"
+        assert row["micName"] == "TVC"
+        assert row["micCode"] == "MIC001"
+        assert row["inspector"] == "USER001"
+        assert row["inspectionMethod"] == "METHOD-001"

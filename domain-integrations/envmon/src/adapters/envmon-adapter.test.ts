@@ -223,6 +223,55 @@ describe('EnvMonAdapter', () => {
     expect(result.data[0].status).toBe('fail')
   })
 
+  it('getNativeSwabResults rejects responses that do not match the native swab contract', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([{
+        inspectionLotId: '00001234',
+        inspectionPointId: 'IP-001',
+        sampleId: 'S-001',
+        operationId: '0010',
+        functionalLocation: 'FL-001',
+        sampleSummary: 'Line swab',
+        sampleHour: 8,
+        plantId: 'C061',
+        inspectionType: '14',
+        createdDate: '2026-01-15',
+        inspectionEndDate: '2026-01-16',
+        micId: 'MIC-001',
+        micName: 'TVC',
+        micCode: 'TVC',
+        result: 'REJECT',
+        quantitativeResult: '450',
+        qualitativeResult: null,
+        targetValue: 100,
+        upperTolerance: 200,
+        lowerTolerance: null,
+        unitOfMeasure: 'CFU',
+        valuation: 'R',
+        status: 'fail',
+        inspector: 'USER001',
+        inspectionMethod: 'METHOD-001',
+        materialId: '000000000020052009',
+        batchId: '0008602411',
+        processOrderId: '7006965038',
+      }]),
+    }))
+    const nativeAdapter = new EnvMonAdapter({ now: fixedNow, baseUrl: '' })
+
+    const result = await nativeAdapter.getNativeSwabResults({
+      plantId: 'C061',
+      periodStart: '2026-01-01',
+      periodEnd: '2026-05-18',
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.error.code).toBe('invalid-data')
+    expect(result.error.message).toContain('expected contract')
+  })
+
   it('getNativeSwabResults returns a databricks-api error without mock fallback', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,

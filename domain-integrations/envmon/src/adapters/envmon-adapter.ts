@@ -11,6 +11,7 @@ import type {
 } from '@connectio/data-contracts'
 import { EnvMonSiteSummarySchema as SiteSummarySchema } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
+import { z } from 'zod'
 import {
   mockEnvMonContext,
   mockEnvMonSiteSummary,
@@ -33,36 +34,38 @@ export interface EnvMonAdapterRequest {
 
 export type EnvMonNativeSwabStatus = 'fail' | 'warning' | 'pending' | 'pass'
 
-export interface EnvMonNativeSwabResult {
-  readonly inspectionLotId: string | null
-  readonly inspectionPointId: string | null
-  readonly sampleId: string | null
-  readonly operationId: string | null
-  readonly functionalLocation: string | null
-  readonly sampleSummary: string | null
-  readonly sampleHour: string | number | null
-  readonly plantId: string | null
-  readonly inspectionType: string | null
-  readonly createdDate: string | null
-  readonly inspectionEndDate: string | null
-  readonly micId: string | null
-  readonly micName: string | null
-  readonly micCode: string | null
-  readonly result: string | number | null
-  readonly quantitativeResult: number | null
-  readonly qualitativeResult: string | null
-  readonly targetValue: number | null
-  readonly upperTolerance: number | null
-  readonly lowerTolerance: number | null
-  readonly unitOfMeasure: string | null
-  readonly valuation: string | null
-  readonly status: EnvMonNativeSwabStatus
-  readonly inspector: string | null
-  readonly inspectionMethod: string | null
-  readonly materialId: string | null
-  readonly batchId: string | null
-  readonly processOrderId: string | null
-}
+export const EnvMonNativeSwabResultSchema = z.object({
+  inspectionLotId: z.string().nullable(),
+  inspectionPointId: z.string().nullable(),
+  sampleId: z.string().nullable(),
+  operationId: z.string().nullable(),
+  functionalLocation: z.string().nullable(),
+  sampleSummary: z.string().nullable(),
+  sampleHour: z.union([z.string(), z.number()]).nullable(),
+  plantId: z.string().nullable(),
+  inspectionType: z.string().nullable(),
+  createdDate: z.string().nullable(),
+  inspectionEndDate: z.string().nullable(),
+  micId: z.string().nullable(),
+  micName: z.string().nullable(),
+  micCode: z.string().nullable(),
+  result: z.union([z.string(), z.number()]).nullable(),
+  quantitativeResult: z.number().nullable(),
+  qualitativeResult: z.string().nullable(),
+  targetValue: z.number().nullable(),
+  upperTolerance: z.number().nullable(),
+  lowerTolerance: z.number().nullable(),
+  unitOfMeasure: z.string().nullable(),
+  valuation: z.string().nullable(),
+  status: z.enum(['fail', 'warning', 'pending', 'pass']),
+  inspector: z.string().nullable(),
+  inspectionMethod: z.string().nullable(),
+  materialId: z.string().nullable(),
+  batchId: z.string().nullable(),
+  processOrderId: z.string().nullable(),
+})
+
+export type EnvMonNativeSwabResult = z.infer<typeof EnvMonNativeSwabResultSchema>
 
 export type NowFn = () => string
 
@@ -172,11 +175,11 @@ export class EnvMonAdapter {
           isRetryableStatus(response.status),
         )
       }
-      const rows = await response.json()
-      if (!Array.isArray(rows) || !rows.every(isNativeSwabResult)) {
+      const parsed = z.array(EnvMonNativeSwabResultSchema).safeParse(await response.json())
+      if (!parsed.success) {
         return databricksErr<EnvMonNativeSwabResult[]>('invalid-data', 'EnvMon swab results response did not match the expected contract')
       }
-      return databricksOk(rows, this.now)
+      return databricksOk(parsed.data, this.now)
     } catch (e) {
       return databricksErr<EnvMonNativeSwabResult[]>('network', e instanceof Error ? e.message : 'Unable to fetch EnvMon swab results', true)
     }
@@ -255,27 +258,4 @@ async function responseToMessage(response: Response): Promise<string> {
     // Fall through to status text.
   }
   return response.statusText || `Request failed with HTTP ${response.status}`
-}
-
-function isNativeSwabResult(value: unknown): value is EnvMonNativeSwabResult {
-  if (!value || typeof value !== 'object') return false
-  const row = value as Record<string, unknown>
-  return (
-    hasKey(row, 'inspectionLotId') &&
-    hasKey(row, 'inspectionPointId') &&
-    hasKey(row, 'sampleId') &&
-    hasKey(row, 'operationId') &&
-    hasKey(row, 'functionalLocation') &&
-    hasKey(row, 'plantId') &&
-    hasKey(row, 'inspectionType') &&
-    hasKey(row, 'micId') &&
-    hasKey(row, 'micName') &&
-    hasKey(row, 'valuation') &&
-    typeof row.status === 'string' &&
-    ['fail', 'warning', 'pending', 'pass'].includes(row.status)
-  )
-}
-
-function hasKey(row: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(row, key)
 }
