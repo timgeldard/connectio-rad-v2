@@ -10,6 +10,8 @@ variables:
     description: Unity Catalog catalog name for Process Order History domain
   cq_catalog:
     description: Unity Catalog catalog name for Connected Quality Lab domain
+  wh360_catalog:
+    description: Unity Catalog catalog name for Warehouse360 domain
 
 workspace:
   host: https://adb-604667594731808.8.azuredatabricks.net
@@ -24,6 +26,7 @@ targets:
       sql_warehouse_id: e76480b94bea6ed5
       poh_catalog: connected_plant_uat
       cq_catalog: connected_plant_uat
+      wh360_catalog: connected_plant_uat
 
 resources:
   apps:
