@@ -249,7 +249,7 @@ describe('EnvMonAdapter', () => {
         lowerTolerance: null,
         unitOfMeasure: 'CFU',
         valuation: 'R',
-        status: 'fail',
+        status: 'invalid-status-value',
         inspector: 'USER001',
         inspectionMethod: 'METHOD-001',
         materialId: '000000000020052009',

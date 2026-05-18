@@ -256,6 +256,14 @@ Content-Type: application/json
 | `GET /api/cq/lab/plants` | GET | CQ Lab | 2026-05-17 | `X-Data-Source: databricks-api`; real plant list returned |
 | `POST /api/por/order-header` | POST | POH | 2026-05-17 | PO 7006965038; real data; some fields empty by design |
 | `GET /api/por/order-operations` | GET | POH | 2026-05-17 | 11 operations for PO 7006965038 |
+| `GET /api/por/order-confirmations` | GET | POH | 2026-05-18 | PO 7006967130; 2 confirmations; `confirmationId=100001669`, `confirmedYield=646.88 KG` |
+| `GET /api/por/order-goods-movements` | GET | POH | 2026-05-18 | PO 7006965479; 901 movements; `direction=input` for MOVEMENT_TYPE=261 |
+| `GET /api/envmon/site-summary` | GET | EnvMon | 2026-05-18 | C061; all 12 schema keys; `highestSeverity:"low"`, `riskStatus:"unknown"` |
+| `GET /api/envmon/swab-results` | GET | EnvMon | 2026-05-18 | C061, limit=100; HTTP 200; numeric schema widened (f.txt) |
+| `POST /api/trace2/trace-graph` | POST | Trace | 2026-05-18 | `material_id=20052009`, `batch_id=0008602411`; iterative multi-hop; real graph returned |
+| `?workspace=trace-graph-verify` (UI) | GET | Trace | 2026-05-18 | C14 — TraceGraphPanel + source badge + link-type legend; green `databricks-api` badge |
+| `?workspace=traceability-workspace` (UI) | GET | Trace | 2026-05-18 | C15 — TraceQueryForm embedded; same data as C14; default view `trace-tree` |
+| `?workspace=envmon-monitoring` (UI) | GET | EnvMon | 2026-05-18 | C11a — NativeMonitoringView; site summary + swab results table from Databricks; routing fix (f.txt) |
 
 ---
 

@@ -77,7 +77,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
       <div className="connectio-page" data-testid="workspace-view-envmon-monitoring">
         <EnvMonWorkspace
           scope={activeScope}
-          viewId={viewId ?? 'scope-overview'}
+          viewId={viewId ?? 'native-monitoring'}
         />
       </div>
     )
