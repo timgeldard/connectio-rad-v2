@@ -1,7 +1,7 @@
 # Trace Native — Browser Verification Checklist
 
 **Date:** 2026-05-18 — q.txt: `POST /api/trace2/trace-graph` route wired (iterative multi-hop, gold_batch_lineage, 655 tests)  
-**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
+**Status:** T2 **BROWSER-VERIFIED 2026-05-18** (HTTP 200, UC GRANT applied). T2-UI (C13) **BROWSER-VERIFIED 2026-05-18** (green `source: databricks-api` badge). T1 (batch-header) and T3 (mass-balance) still blocked on DDL verification.  
 **App URL:** `https://connectio-v2-604667594731808.8.azure.databricksapps.com`  
 **Reference:**  
 - `docs/audit/trace-native-column-verification-checklist.md` — DDL verification (must complete first)
@@ -210,6 +210,7 @@ X-Query-Name: trace2.get_trace_graph
 | 503 (mode) | `BACKEND_ADAPTER_MODE` ≠ `databricks-api` | Check `app.yaml` |
 | 503 (catalog) | `TRACE_CATALOG` not set | Add to `app.yaml` |
 | 401 | OAuth token missing or `sql` scope absent | Re-deploy bundle; check `user_api_scopes: [sql]` |
+| 403 | Stale OAuth token (session expired) | Hard-refresh browser or log out and back in to get a fresh token |
 | 403 | No SELECT on `gold_batch_lineage` | `GRANT SELECT ON TABLE connected_plant_uat.gold.gold_batch_lineage TO <user>` |
 | 422 | Invalid `direction` value | Use `upstream`, `downstream`, or `both` |
 | 502 | SQL execution error | Check `databricks apps logs connectio-v2` |
@@ -220,6 +221,7 @@ X-Query-Name: trace2.get_trace_graph
 | Status | Date | Notes |
 |---|---|---|
 | [x] **PASSED** | 2026-05-18 | HTTP 200 — `ok: true`. UC GRANT applied to `tim.geldard@kerry.com` on `connected_plant_uat.gold`. Test anchor: `material_id=20052009`, `batch_id=0008602411`, `plant_id=C061`, `direction=both`, `max_depth=2`. |
+| [x] **PASSED (WITH RECURSIVE)** | 2026-05-18 | Refactored to single WITH RECURSIVE query (504 fix). `material_id=20052009, batch_id=0008602411, direction=both, max_depth=4` → HTTP 200, 3.2s, 7 nodes, 7 edges, nodeKey=2-tuple. Dense anchor `20732244/0008545768, depth=3` → HTTP 200, 3.7s, 299 nodes, 307 edges. No timeout. Note: gold_batch_lineage stores material_id WITHOUT leading zeros. |
 
 ---
 
@@ -281,7 +283,7 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 
 | Status | Date | Notes |
 |---|---|---|
-| [ ] not yet tested | — | Awaiting UAT deploy after a.txt changes |
+| [x] **PASSED** | 2026-05-18 | Green `source: databricks-api` badge confirmed. ReactFlow canvas rendered with nodes and edges. |
 
 ---
 
