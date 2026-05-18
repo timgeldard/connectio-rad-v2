@@ -216,7 +216,7 @@ def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
         module="wh360",
         endpoint="/api/warehouse360/inbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "inbound", "receipts"],
     )
@@ -290,7 +290,7 @@ def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
         module="wh360",
         endpoint="/api/warehouse360/outbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "outbound", "deliveries"],
     )
@@ -354,7 +354,7 @@ def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
         module="wh360",
         endpoint="/api/warehouse360/staging",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "production", "staging"],
     )
@@ -419,7 +419,7 @@ def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySp
         module="wh360",
         endpoint="/api/warehouse360/exceptions",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id},
+        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "reconciliation", "exceptions"],
     )

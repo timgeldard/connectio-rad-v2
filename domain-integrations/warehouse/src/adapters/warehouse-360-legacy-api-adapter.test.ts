@@ -353,12 +353,99 @@ describe('Warehouse360LegacyApiAdapter native endpoints', () => {
 
   it('handles 401 unauthorized errors correctly in native mode', async () => {
     vi.stubGlobal('fetch', mockFetch(401, {}, false))
-    const result = await adapter.getWarehouseOverview(fullRequest)
-    expect(result.ok).toBe(false)
-    if (result.ok) return
-    expect(result.error.code).toBe('unauthorized')
-    expect(result.displayState).toBe('unauthorized')
-    expect(result.source).toBe('databricks-api')
+    const methods = [
+      () => adapter.getWarehouseOverview(fullRequest),
+      () => adapter.getWarehouseInbound(fullRequest),
+      () => adapter.getWarehouseOutbound(fullRequest),
+      () => adapter.getWarehouseStaging(fullRequest),
+      () => adapter.getWarehouseExceptionItems(fullRequest),
+    ]
+
+    for (const fn of methods) {
+      const result = await fn()
+      expect(result.ok).toBe(false)
+      if (result.ok) continue
+      expect(result.error.code).toBe('unauthorized')
+      expect(result.displayState).toBe('unauthorized')
+      expect(result.source).toBe('databricks-api')
+    }
+  })
+
+  it('handles 404 not-found errors correctly in native mode', async () => {
+    vi.stubGlobal('fetch', mockFetch(404, {}, false))
+    const methods = [
+      () => adapter.getWarehouseOverview(fullRequest),
+      () => adapter.getWarehouseInbound(fullRequest),
+      () => adapter.getWarehouseOutbound(fullRequest),
+      () => adapter.getWarehouseStaging(fullRequest),
+      () => adapter.getWarehouseExceptionItems(fullRequest),
+    ]
+
+    for (const fn of methods) {
+      const result = await fn()
+      expect(result.ok).toBe(false)
+      if (result.ok) continue
+      expect(result.error.code).toBe('network')
+      expect(result.displayState).toBe('error')
+      expect(result.source).toBe('databricks-api')
+    }
+  })
+
+  it('handles 500 server errors correctly and asserts retryable=true', async () => {
+    vi.stubGlobal('fetch', mockFetch(500, {}, false))
+    const methods = [
+      () => adapter.getWarehouseOverview(fullRequest),
+      () => adapter.getWarehouseInbound(fullRequest),
+      () => adapter.getWarehouseOutbound(fullRequest),
+      () => adapter.getWarehouseStaging(fullRequest),
+      () => adapter.getWarehouseExceptionItems(fullRequest),
+    ]
+
+    for (const fn of methods) {
+      const result = await fn()
+      expect(result.ok).toBe(false)
+      if (result.ok) continue
+      expect(result.error.retryable).toBe(true)
+      expect(result.displayState).toBe('error')
+      expect(result.source).toBe('databricks-api')
+    }
+  })
+
+  it('handles network failure correctly and asserts retryable=true', async () => {
+    vi.stubGlobal('fetch', mockFetchError('Connection failed'))
+    const methods = [
+      () => adapter.getWarehouseOverview(fullRequest),
+      () => adapter.getWarehouseInbound(fullRequest),
+      () => adapter.getWarehouseOutbound(fullRequest),
+      () => adapter.getWarehouseStaging(fullRequest),
+      () => adapter.getWarehouseExceptionItems(fullRequest),
+    ]
+
+    for (const fn of methods) {
+      const result = await fn()
+      expect(result.ok).toBe(false)
+      if (result.ok) continue
+      expect(result.error.code).toBe('unknown')
+      expect(result.error.retryable).toBe(true)
+      expect(result.source).toBe('databricks-api')
+    }
+  })
+
+  it('falls back to mock implementation when warehouseId is missing or falsy', async () => {
+    const methods = [
+      () => adapter.getWarehouseOverview(emptyRequest),
+      () => adapter.getWarehouseInbound(emptyRequest),
+      () => adapter.getWarehouseOutbound(emptyRequest),
+      () => adapter.getWarehouseStaging(emptyRequest),
+      () => adapter.getWarehouseExceptionItems(emptyRequest),
+    ]
+
+    for (const fn of methods) {
+      const result = await fn()
+      expect(result.ok).toBe(true)
+      if (!result.ok) continue
+      expect(result.source).toBeUndefined() // Mock adapter doesn't set source
+    }
   })
 })
 
