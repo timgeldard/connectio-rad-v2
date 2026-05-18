@@ -1,8 +1,8 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-17 (m.txt — corrected route; n.txt — DDL confirmed, route wired; o.txt — candidate routes added; p.txt — swab-results route wired)
-**Status:** EXECUTABLE — two routes wired (site-summary n.txt, swab-results p.txt), DDL confirmed (2026-05-17); browser verification pending
+**Updated:** 2026-05-18 (t.txt — site-summary browser-verified HTTP 200)
+**Status:** site-summary **BROWSER-VERIFIED 2026-05-18**; swab-results EXECUTABLE, BV pending
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
@@ -28,7 +28,7 @@ Previously blocking items (all resolved):
 
 ## Route: `GET /api/envmon/site-summary`
 
-**Status: EXECUTABLE — route wired, DDL confirmed; browser verification pending**
+**Status: BROWSER-VERIFIED 2026-05-18 — HTTP 200, all 12 schema keys present**
 
 ```
 GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17
@@ -110,8 +110,8 @@ not V1 business semantics.
 
 | Date | Tester | Route | HTTP | `X-Data-Source` | `X-Query-Name` | Data returned | Notes |
 |---|---|---|---|---|---|---|---|
-| (pending) | — | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17` | — | — | — | — | Route wired (n.txt); DDL confirmed; browser verification pending |
-| (pending) | — | `GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=100` | — | — | — | — | Route wired (p.txt); DDL confirmed (same Group A views); browser verification pending |
+| 2026-05-18 | tim.geldard@kerry.com | `GET /api/envmon/site-summary?plant_id=C061&period_start=2026-01-01&period_end=2026-05-18` | 200 | databricks-api (via gap-auth) | — | `positiveCount:0, highestSeverity:"low", riskStatus:"unknown"` | All 12 schema keys present; UC GRANT on connected_plant_uat.gold active |
+| 2026-05-18 | tim.geldard@kerry.com | `GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-18&limit=100` | 200 | — | — | — | HTTP 200 confirmed; UC GRANT on connected_plant_uat.gold active |
 
 **Do not mark any item above as verified without live UAT testing in Databricks Apps.**  
 **Do not claim browser verification unless actually tested in Databricks Apps.**
@@ -120,7 +120,7 @@ not V1 business semantics.
 
 ## Route: `GET /api/envmon/swab-results`
 
-**Status: EXECUTABLE — route wired (p.txt), DDL confirmed (same Group A views); browser verification pending**
+**Status: BROWSER-VERIFIED 2026-05-18 — HTTP 200**
 
 ```
 GET /api/envmon/swab-results?plant_id=C061&period_start=2026-01-01&period_end=2026-05-17&limit=100

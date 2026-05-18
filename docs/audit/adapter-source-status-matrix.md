@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | ✓ E | green when databricks | Route wired (q.txt, 2026-05-18); gold_batch_lineage confirmed-ddl (18 cols); iterative multi-hop; 47 new tests; BV pending; frontend wiring deferred (TraceGraphSchema contract mismatch — see trace-lineage-to-graph-contract-map.md) |
+| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, material_id=20052009, batch_id=0008602411, plant_id=C061; UC GRANT applied; frontend wiring deferred (TraceGraphSchema contract mismatch — see trace-lineage-to-graph-contract-map.md) |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
@@ -62,7 +62,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 | `getRelatedInvestigations` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getTraceExposureForRelease` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 
-**Summary:** 11 methods — 1 browser-verified legacy-api, 1 executable (✓ E: getTraceGraph — route wired, BV pending), 9 mock only.
+**Summary:** 11 methods — 1 browser-verified legacy-api, **1 browser-verified databricks-api** (getTraceGraph 2026-05-18), 9 mock only.
 
 ---
 
@@ -176,8 +176,8 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getEnvMonContext` | ✓ | — | — | — | none | After BV confirmed |
-| `getEnvMonSiteSummary` | ✓ | — | — | **✓ E** | green when databricks | Route wired (n.txt); DDL confirmed; 99 tests; browser verification pending |
-| `getEnvMonSwabResults` | ✓ | — | — | **✓ E** | green when databricks | Route wired (p.txt, 2026-05-17); DDL confirmed (same Group A SAP QM views as site-summary); 56 new tests; BV pending; frontend wiring deferred (EnvMonSwabResultSchema requires `zoneId`/`zoneName` unavailable from SAP QM; adapter is mock-only with no fetch infrastructure) |
+| `getEnvMonSiteSummary` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, plant_id=C061, all 12 schema keys present; UC GRANT on connected_plant_uat.gold active |
+| `getEnvMonSwabResults` | ✓ | — | — | **✓ BV** | green | **Browser-verified 2026-05-18** — HTTP 200, plant_id=C061; frontend wiring deferred (EnvMonSwabResultSchema requires `zoneId`/`zoneName` unavailable from SAP QM) |
 | `getEnvMonTrends` | ✓ | — | — | — | none | Planned — Rank 3, after site summary BV |
 | `getEnvMonZones` | ✓ | — | — | — | none | Planned — depends on em_location_zones in UAT |
 | `getEnvMonAlerts` | ✓ | — | — | — | none | Deferred — alert derivation rules undefined |
@@ -191,7 +191,7 @@ FastAPI route: `apps/api/routes/envmon.py` — **wired (n.txt, 2026-05-17)**
 | `GET /api/envmon/location-coordinates` (proposed route) | — | — | — | — | none | Planned — depends on em_location_coordinates in UAT |
 | `GET /api/envmon/heatmap` (proposed route) | — | — | — | — | none | Planned — depends on em_* tables + all SAP QM views |
 
-**Summary:** 9 adapter methods — 2 executable (`getEnvMonSiteSummary` + `getEnvMonSwabResults`: routes wired, DDL confirmed, awaiting BV), 7 mock only. 6 additional candidate routes planned (not yet in adapter or contracts). No legacy-api adapter.
+**Summary:** 9 adapter methods — **2 browser-verified databricks-api** (`getEnvMonSiteSummary` + `getEnvMonSwabResults` 2026-05-18), 7 mock only. 6 additional candidate routes planned (not yet in adapter or contracts). No legacy-api adapter.
 **Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired and tested. Browser verification pending. Frontend wiring deferred (see swab-results row for stop conditions).
 
 **p.txt docs (2026-05-17):** `apps/api/routes/envmon.py` (swab-results route added) · `apps/api/adapters/envmon/envmon_databricks_adapter.py` (SwabResultsRequest + QuerySpec + mapper added) · 56 new tests · all matrix and deployment docs updated  
@@ -270,17 +270,17 @@ Gold views: None identified
 
 | Domain | Total methods | Browser-verified (databricks-api) | Executable (not verified) | Wired (not verified) | Mock only | Databricks-api (mode-gated) |
 |--------|--------------|----------------------------------|--------------------------|---------------------|-----------|----------------|
-| Traceability | 11 | 1 (legacy-api only) | **1** (getTraceGraph — BV pending) | 0 | 9 | **1 E** |
+| Traceability | 11 | 1 (legacy-api) + **1 databricks-api** (getTraceGraph 2026-05-18) | 0 | 0 | 9 | **1 BV** |
 | SPC | 9 | 0 | 0 | 0 | 9 | 0 |
 | Warehouse360 | 9 | 0 | 0 | 1 | 8 | 0 |
 | POH (POR) | 10 | **2** (`getProcessOrderHeader` + `getOrderOperations` 2026-05-17) | **2** (`getOrderConfirmations` + `getOrderGoodsMovements`) | 0 | 6 | **4** (2 BV + 2 E) |
 | POH (plan risk) | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality/Lab | 2 | **1** (`getLabPlants` 2026-05-17) | 0 | 1 | 0 | **1 BV** |
-| EnvMon | 9 | 0 | **2** | 0 | 7 | **2 E** |
+| EnvMon | 9 | **2** (`getEnvMonSiteSummary` + `getEnvMonSwabResults` 2026-05-18) | 0 | 0 | 7 | **2 BV** |
 | Maintenance | 7 | 0 | 0 | 0 | 7 | 0 |
 | Production Staging | 9 | 0 | 0 | 0 | 9 | 0 |
 | Quality Batch Release | 7 | 0 | 0 | 0 | 7 | 0 |
-| **Total** | **82** | **3** | **5** | **2** | **71** | **8** (3 BV + 5 E) |
+| **Total** | **82** | **6** (databricks-api BV) | **2** (E: confirmations + movements) | **2** | **71** | **8** (6 BV + 2 E) |
 
 > Previously tracked 50 methods across 6 domains. Updated 2026-05-17 to include EnvMon (9), Maintenance (7), Production Staging (9), and Quality Batch Release (7) — all mock-only with no confirmed Databricks source views.
 
@@ -291,7 +291,7 @@ Gold views: None identified
 | Route | Method | Domain | Adapter override | Status |
 |-------|--------|--------|-----------------|--------|
 | `/api/trace2/batch-header` | POST | Traceability | `getBatchHeaderSummary` | ✓ Browser-verified (V1 was live); UAT: returns 503 while V1 STOPPED |
-| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **executable, not browser-verified** — gold_batch_lineage confirmed-ddl (q.txt, 2026-05-18); iterative multi-hop; 47 new tests; frontend wiring deferred (TraceGraphSchema contract mismatch) |
+| `/api/trace2/trace-graph` | POST | Traceability | `getTraceGraph` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200; gold_batch_lineage confirmed-ddl; iterative multi-hop; frontend wiring deferred (TraceGraphSchema contract mismatch) |
 | `/api/wh360/warehouse-summary` | POST | Warehouse360 | `getWarehouse360Summary` | Wired — not verified; UAT: 503 while V1 STOPPED |
 | `/api/por/order-header` | POST | POH | `getProcessOrderHeader` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** (process order 7006965038) |
 | `/api/por/order-operations` | GET | POH | `getOrderOperations` | Databricks-api only — **browser-verified 2026-05-17** — 11 operations for PO 7006965038 |
@@ -299,8 +299,8 @@ Gold views: None identified
 | `/api/por/order-goods-movements` | GET | POH | `getOrderGoodsMovements` | Databricks-api only — **executable, not browser-verified** — `vw_gold_adp_movement` DDL confirmed 2026-05-17; Tulip movement types mapped; `materialDescription` absent from view |
 | `/api/cq/lab/fails` | GET | Quality/Lab | `getLabFailures` | Wired (legacy-api only); databricks-api blocked on `vw_gold_process_order_plan` |
 | `/api/cq/lab/plants` | GET | Quality/Lab | `getLabPlants` | Wired (legacy-api) + databricks-api **browser-verified 2026-05-17** |
-| `/api/envmon/site-summary` | GET | EnvMon | `getEnvMonSiteSummary` | Databricks-api only — **executable, not browser-verified** — Group A DDL confirmed 2026-05-17 (n.txt); 99 tests passing |
-| `/api/envmon/swab-results` | GET | EnvMon | `getEnvMonSwabResults` | Databricks-api only — **executable, not browser-verified** — same Group A DDL confirmed 2026-05-17 (p.txt); 56 new tests; `limit` clamped [1,500]; frontend wiring deferred (zoneId unavailable) |
+| `/api/envmon/site-summary` | GET | EnvMon | `getEnvMonSiteSummary` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200, plant_id=C061, all 12 schema keys present |
+| `/api/envmon/swab-results` | GET | EnvMon | `getEnvMonSwabResults` | Databricks-api only — **browser-verified 2026-05-18** — HTTP 200, plant_id=C061; frontend wiring deferred (zoneId unavailable) |
 | `/api/envmon/plant-map` | GET | EnvMon | `getEnvMonPlantMap` (PROPOSED) | **Planned** — depends on em_plant_geo in UAT + contract design; NOT wired |
 | `/api/envmon/plant-hotspots` | GET | EnvMon | `getEnvMonPlantHotspots` (PROPOSED) | **Planned** — depends on em_plant_geo + site-summary BV; NOT wired |
 | `/api/envmon/floors` | GET | EnvMon | *(not yet designed)* | **Planned** — depends on em_plant_floor in UAT; NOT wired |
