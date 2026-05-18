@@ -6,10 +6,13 @@ business logic or SQL here.
 """
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Callable
 
 from fastapi import HTTPException, Response
+
+_logger = logging.getLogger("connectio.databricks_routes")
 
 from shared.query_service.databricks_client import StatementApiDatabricksClient
 from shared.query_service.errors import (
@@ -95,4 +98,12 @@ async def run_query(
     except DatabricksQueryTimeoutError as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except DatabricksQueryError as exc:
+        # Log the actual SQL error server-side so operators can diagnose UAT
+        # blockers (missing columns, missing views). The client response stays
+        # generic to avoid leaking SQL internals.
+        _logger.error(
+            "Databricks query %r failed: %s",
+            getattr(exc, "query_name", "?"),
+            getattr(exc, "detail", str(exc)),
+        )
         raise HTTPException(status_code=502, detail="Databricks query execution failed") from exc
