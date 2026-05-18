@@ -75,7 +75,14 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
                       {signal.severity}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{signal.rule}</div>
+                  <div style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>
+                    {signal.ruleCode && (
+                      <span style={{ fontWeight: 700, marginRight: 6, color: 'var(--sunset, #F24A00)' }}>
+                        [{signal.ruleCode}]
+                      </span>
+                    )}
+                    {signal.rule}
+                  </div>
                   <div style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>
                     Value: <strong style={{ color: 'var(--shell-fg)' }}>{signal.resultValue}</strong>
                     {' · '}Chart: {signal.chartType.toUpperCase()}

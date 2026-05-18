@@ -101,6 +101,27 @@ describe('SPCSignalSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts a signal with ruleCode', () => {
+    const result = SPCSignalSchema.safeParse({
+      signalId: 'SIG-001',
+      characteristicId: 'CHAR-PH-001',
+      characteristicName: 'pH',
+      materialId: 'MAT-CH-EMMENTAL',
+      batchId: 'CH-240308-0047',
+      plantId: 'IE10',
+      chartType: 'xbar-r',
+      rule: 'Rule 1',
+      ruleCode: 'WE1',
+      severity: 'high',
+      detectedAt: '2024-03-08T05:45:00.000Z',
+      samplePointId: 'SP-001',
+      resultValue: 6.92,
+      recommendedAction: 'Investigate.',
+      status: 'active',
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('rejects invalid status', () => {
     const result = SPCSignalSchema.safeParse({
       signalId: 'SIG-001',
@@ -151,6 +172,19 @@ describe('ControlChartSeriesSchema', () => {
     })
     expect(result.success).toBe(true)
   })
+
+  it('accepts series with missing control limits', () => {
+    const result = ControlChartSeriesSchema.safeParse({
+      chartId: 'CHART-001',
+      chartType: 'xbar-r',
+      characteristicId: 'CHAR-PH-001',
+      characteristicName: 'pH',
+      points: [{ pointId: 'PT-001', timestamp: '2024-03-08T06:00:00.000Z', value: 6.55, signalIds: [], status: 'in-control' }],
+      unitOfMeasure: 'pH',
+      confidence: 0.85,
+    })
+    expect(result.success).toBe(true)
+  })
 })
 
 describe('CharacteristicCapabilitySchema', () => {
@@ -196,6 +230,19 @@ describe('SPCAlarmHistoryItemSchema', () => {
       timestamp: '2024-03-08T05:45:00.000Z',
       characteristicId: 'CHAR-PH-001',
       rule: 'Rule 1',
+      severity: 'high',
+      status: 'active',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts alarm history item with ruleCode', () => {
+    const result = SPCAlarmHistoryItemSchema.safeParse({
+      alarmId: 'ALM-001',
+      timestamp: '2024-03-08T05:45:00.000Z',
+      characteristicId: 'CHAR-PH-001',
+      rule: 'Rule 1',
+      ruleCode: 'WE1',
       severity: 'high',
       status: 'active',
     })

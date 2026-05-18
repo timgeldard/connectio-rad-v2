@@ -70,7 +70,8 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 
 Adapter class: `domain-integrations/spc/src/adapters/spc-monitoring-adapter.ts`, `spc-signals-adapter.ts`  
 ADR-024 migration priority: **3**  
-Gold views: `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_material_dim_mv`, `spc_process_flow_source_mv` (all MVs exist)
+Gold views: `spc_correlation_source_mv`, `spc_material_dim_mv`, `spc_plant_material_dim_mv`, `spc_process_flow_source_mv` (all MVs exist; DDL not verified in UAT due to blockade)  
+**Blockade:** Catalog alignment of the `spc_quality_metrics` schema is pending in UAT. Consequently, all backend SPC views/materialized views are inaccessible or unaligned, blocking native Databricks adapter wiring. SPC is configured to operate in a high-fidelity simulated Sandbox mode with prominent UI branding and relaxed schema contracts until the platform team resolves the schema catalog alignment.
 
 | Method | Mock | Legacy-api | Browser-verified | Databricks-api | Source badge | Next action |
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
