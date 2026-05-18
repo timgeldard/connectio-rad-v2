@@ -143,6 +143,9 @@ async def trace_graph(
 
     next_frontier: set[tuple[str, str, str]] = set()
     for row in rows0:
+        if not (row.get("parent_material_id") and row.get("parent_batch_id") and row.get("parent_plant_id")
+                and row.get("child_material_id") and row.get("child_batch_id") and row.get("child_plant_id")):
+            continue
         if len(seen_edge_keys) >= max_edges:
             truncated = True
             break
@@ -190,6 +193,9 @@ async def trace_graph(
 
         next_frontier = set()
         for row in rows_n:
+            if not (row.get("parent_material_id") and row.get("parent_batch_id") and row.get("parent_plant_id")
+                    and row.get("child_material_id") and row.get("child_batch_id") and row.get("child_plant_id")):
+                continue
             if len(seen_edge_keys) >= max_edges:
                 truncated = True
                 break

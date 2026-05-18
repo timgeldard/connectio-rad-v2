@@ -498,12 +498,16 @@ def _node_key(material_id: str, batch_id: str, plant_id: str) -> str:
     return f"{material_id}:{batch_id}:{plant_id}"
 
 
-def _sql_str(value: str) -> str:
+def _sql_str(value: str | None) -> str:
     """Embed a server-generated string as a SQL single-quoted literal.
 
     Only call with values produced by a prior Databricks query result, never with
     raw user input. Single-quotes within the value are escaped by doubling.
+    None guard: the route filters NULL-key rows before building the frontier,
+    but if one slips through, NULL in the IN clause matches nothing rather than crashing.
     """
+    if value is None:
+        return "NULL"
     return "'" + value.replace("'", "''") + "'"
 
 
