@@ -1,8 +1,8 @@
 # EnvMon Native Databricks — Browser Verification Checklist
 
 **Date:** 2026-05-17  
-**Updated:** 2026-05-18 (t.txt — site-summary browser-verified HTTP 200)
-**Status:** site-summary **BROWSER-VERIFIED 2026-05-18**; swab-results EXECUTABLE, BV pending
+**Updated:** 2026-05-18 (EnvMon read-only monitoring screen added; UI BV pending)
+**Status:** site-summary and swab-results APIs browser-verified 2026-05-18; read-only UI screen implemented, browser verification pending next deploy
 **Reference:** `docs/migration/envmon-site-summary-native-route-plan.md`
 
 ---
@@ -10,6 +10,7 @@
 ## Current Status
 
 **Routes `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` are WIRED (n.txt + p.txt, 2026-05-17).**
+The primary EnvMon workspace now opens a read-only monitoring screen at `?workspace=envmon-monitoring`.
 
 DDL confirmed for all three Group A views via `DESCRIBE TABLE` in `connected_plant_uat` on
 2026-05-17. Both routes implemented in `apps/api/routes/envmon.py`, registered in `main.py`.
@@ -170,13 +171,44 @@ Key fields:
 | `R`, `REJ`, `REJECT` | `fail` |
 | `W`, `WARN` | `warning` |
 | `A` or any other non-null | `pass` |
-| `""` (empty string) | `pass` (non-null, not a fail/warn code) |
+| `""` (empty string) | `pending` |
 
 ### No spatial enrichment
 
 `zoneId`, `zoneName`, `hygieneZone`, `areaType` are **not present** in this response. They require
-`em_location_zones` (existence in UAT unknown). Frontend wiring is deferred until zoneId/zoneName
-can be sourced.
+`em_location_zones` (existence in UAT unknown). The read-only monitoring screen intentionally uses
+the native SAP QM result shape instead of the legacy mock `EnvMonSwabResult` shape because zoneId
+and zoneName cannot be sourced from SAP QM alone.
+
+---
+
+## UI: `?workspace=envmon-monitoring`
+
+**Status: IMPLEMENTED — browser verification pending next UAT deploy**
+
+Primary screen sections:
+
+- Site Summary from `/api/envmon/site-summary`
+- Swab Results Table from `/api/envmon/swab-results`
+- Result Detail for selected row
+- Derived Indicators from returned swab rows only
+- Source and Limitations banner
+
+Explicitly out of scope in the screen: CAPA/corrective actions, floorplan upload/edit,
+coordinate maintenance, L4/hygiene zone maintenance, spatial write APIs, heatmap editor,
+alert acknowledgement, and reswab scheduling workflows.
+
+UI verification checklist:
+
+- [ ] Open `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=envmon-monitoring`
+- [ ] Enter `plant_id=C061`, `period_start=2026-01-01`, `period_end=2026-05-18`, `limit=100`
+- [ ] Click Run / Refresh
+- [ ] Site summary renders or shows an honest empty/error state
+- [ ] Swab results table renders or shows an honest empty/error state
+- [ ] Source banner is visible
+- [ ] CAPA is shown only as out of scope
+- [ ] Spatial/floorplan/zone/heatmap is shown only as deferred
+- [ ] No mock heatmap, mock CAPA, or mock alert workflow appears on the primary path
 
 ### Expected: error cases
 

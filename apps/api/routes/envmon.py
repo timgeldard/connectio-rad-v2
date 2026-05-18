@@ -1,7 +1,8 @@
 """Routes for the Environmental Monitoring domain.
 
-Databricks mode only (``BACKEND_ADAPTER_MODE=databricks-api``): executes SQL
-directly against Unity Catalog using the authenticated user's OAuth token.
+Databricks mode only (``BACKEND_ADAPTER_MODE=databricks-api``): executes
+QuerySpec definitions against Unity Catalog using the authenticated user's
+OAuth token.
 
 No V1 EnvMon backend existed for these routes — 503 is returned in any other
 mode. Missing OAuth → 401. Missing config → 503. No silent fallback.
@@ -97,7 +98,8 @@ async def envmon_swab_results(
 
     Returns individual SAP QM inspection results per MIC characteristic per sampling
     point. Status derived from INSPECTION_RESULT_VALUATION:
-    NULL→pending, R/REJ/REJECT→fail, W/WARN→warning, other non-null→pass.
+    NULL/empty→pending, R/REJ/REJECT→fail, W/WARN/WARNING→warning,
+    other non-empty values→pass.
 
     Source views (Group A SAP QM, confirmed-ddl 2026-05-17):
       gold_inspection_lot, gold_inspection_point, gold_batch_quality_result_v

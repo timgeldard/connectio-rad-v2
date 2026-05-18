@@ -689,10 +689,20 @@ class TestMapSwabResultRows:
         result = map_swab_result_rows([self._pass_row()])
         assert result[0]["status"] == "pass"
 
-    def test_empty_string_valuation_maps_to_pass(self) -> None:
-        """Empty string is non-null — must map to pass, not pending."""
+    def test_empty_string_valuation_maps_to_pending(self) -> None:
+        """Empty valuation is incomplete SAP QM result state — map to pending."""
         result = map_swab_result_rows([self._empty_string_valuation_row()])
-        assert result[0]["status"] == "pass"
+        assert result[0]["status"] == "pending"
+
+    def test_whitespace_valuation_maps_to_pending(self) -> None:
+        row = {**self._fail_row(), "valuation": "   "}
+        result = map_swab_result_rows([row])
+        assert result[0]["status"] == "pending"
+
+    def test_warning_valuation_maps_to_warning(self) -> None:
+        row = {**self._warn_row(), "valuation": "WARNING"}
+        result = map_swab_result_rows([row])
+        assert result[0]["status"] == "warning"
 
     # --- field mapping ---
 
@@ -718,3 +728,24 @@ class TestMapSwabResultRows:
         result = map_swab_result_rows(rows)
         assert len(result) == 3
         assert [r["status"] for r in result] == ["fail", "pass", "pending"]
+
+    def test_tolerance_fields_preserved(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["targetValue"] == pytest.approx(100.0, rel=1e-4)
+        assert result[0]["upperTolerance"] == pytest.approx(200.0, rel=1e-4)
+        assert result[0]["lowerTolerance"] is None
+
+    def test_functional_location_preserved(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["functionalLocation"] == "LOC-001"
+
+    def test_mic_fields_preserved(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["micId"] == "MIC001"
+        assert result[0]["micName"] == "TVC"
+        assert result[0]["micCode"] == "MIC001"
+
+    def test_inspector_and_method_preserved(self) -> None:
+        result = map_swab_result_rows([self._fail_row()])
+        assert result[0]["inspector"] == "USER001"
+        assert result[0]["inspectionMethod"] == "METHOD-001"

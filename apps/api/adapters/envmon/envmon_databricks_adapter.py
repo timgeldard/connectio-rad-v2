@@ -62,7 +62,7 @@ _INSPECTION_TYPE_SQL = f"({', '.join(_ENVMON_INSPECTION_TYPES)})"
 # Used in map_site_summary_rows to classify loc_status.
 # ---------------------------------------------------------------------------
 _FAIL_VALUATIONS = frozenset(("R", "REJ", "REJECT"))
-_WARN_VALUATIONS = frozenset(("W", "WARN"))
+_WARN_VALUATIONS = frozenset(("W", "WARN", "WARNING"))
 
 
 @dataclass
@@ -350,12 +350,14 @@ def get_swab_results_spec(request: SwabResultsRequest) -> QuerySpec:
 def _map_status(valuation: str | None) -> str:
     """Map INSPECTION_RESULT_VALUATION to status category (confirmed-v1+ddl from V1 DAL).
 
-    NULL → pending; R/REJ/REJECT → fail; W/WARN → warning; other non-null → pass.
-    Empty string is non-null and maps to pass.
+    NULL/empty → pending; R/REJ/REJECT → fail; W/WARN/WARNING → warning;
+    other non-empty values → pass.
     """
     if valuation is None:
         return "pending"
-    v = valuation.upper()
+    v = valuation.strip().upper()
+    if not v:
+        return "pending"
     if v in _FAIL_VALUATIONS:
         return "fail"
     if v in _WARN_VALUATIONS:
@@ -367,10 +369,10 @@ def map_swab_result_rows(rows: list[dict]) -> list[dict]:
     """Map raw Databricks rows to swab result dicts. Empty input returns [].
 
     Status derivation (confirmed-v1+ddl from V1 DAL):
-      INSPECTION_RESULT_VALUATION NULL → pending
+      INSPECTION_RESULT_VALUATION NULL/empty → pending
       R / REJ / REJECT             → fail
-      W / WARN                     → warning
-      other non-null (incl. '')    → pass
+      W / WARN / WARNING           → warning
+      other non-empty value        → pass
 
     Leading zeros and numeric field values are preserved as returned by Databricks.
     """

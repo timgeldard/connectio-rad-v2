@@ -231,6 +231,29 @@ See `docs/deployment/envmon-native-browser-verification.md` (swab-results sectio
 
 ---
 
+### C11a — EnvMon read-only monitoring UI (native Databricks) PENDING
+
+**Status: PENDING BROWSER VERIFICATION** — implementation added, awaiting next UAT deploy.
+
+Primary URL:
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=envmon-monitoring
+```
+
+Test values: `plant_id=C061`, `period_start=2026-01-01`, `period_end=2026-05-18`, `limit=100`.
+
+- [ ] Inputs visible: plant ID, period start, period end, limit, Run / Refresh, Reset
+- [ ] Site Summary renders from `/api/envmon/site-summary` or shows honest empty/error
+- [ ] Swab Results Table renders from `/api/envmon/swab-results` or shows honest empty/error
+- [ ] Result Detail renders after selecting a row
+- [ ] Derived Indicators render from returned swab rows only
+- [ ] Source and Limitations banner visible
+- [ ] CAPA is stated as out of scope, not implemented
+- [ ] Spatial/floorplan/zoning/heatmap is stated as deferred, not implemented
+- [ ] No mock heatmap, mock CAPA, or mock alert workflow appears on the primary path
+
+---
+
 ### C12 — Trace graph (native Databricks, multi-hop) ✓ PASSED 2026-05-18
 
 ```http

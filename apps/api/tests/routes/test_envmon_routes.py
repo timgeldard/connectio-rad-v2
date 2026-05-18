@@ -276,9 +276,7 @@ class TestEnvMonSiteSummaryDatabricksMode:
                     _SITE_SUMMARY_URL, headers=_HEADERS_WITH_TOKEN
                 )
 
-        query_name = response.headers.get("x-query-name", "")
-        assert "envmon" in query_name
-        assert "site_summary" in query_name
+        assert response.headers.get("x-query-name") == "envmon.get_site_summary"
 
     async def test_response_keys_match_contract_shape(self, monkeypatch) -> None:
         """Response keys must exactly match EnvMonSiteSummarySchema — catches future field drift."""
@@ -571,9 +569,31 @@ class TestEnvMonSwabResultsDatabricksMode:
                     _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
                 )
 
-        query_name = response.headers.get("x-query-name", "")
-        assert "envmon" in query_name
-        assert "swab_results" in query_name
+        assert response.headers.get("x-query-name") == "envmon.get_swab_results"
+
+    async def test_response_preserves_swab_source_fields(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        row = response.json()[0]
+        assert row["inspectionLotId"] == "LOT001"
+        assert row["inspectionPointId"] == "PT001"
+        assert row["sampleId"] == "S001"
+        assert row["operationId"] == "0010"
+        assert row["functionalLocation"] == "LOC-001"
+        assert row["micId"] == "MIC001"
+        assert row["micName"] == "TVC"
+        assert row["upperTolerance"] == 200.0
+        assert row["status"] == "pass"
 
     async def test_permission_error_returns_403(self, monkeypatch) -> None:
         from shared.query_service.errors import DatabricksPermissionError

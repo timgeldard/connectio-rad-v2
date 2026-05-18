@@ -1,8 +1,8 @@
 # EnvMon Domain-Driven Design Model
 
-**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-17 (p.txt — swab-results route wired, EnvMonSwabResults ✓ E)
+**Date:** 2026-05-17 (m.txt) | **Updated:** 2026-05-18 (read-only monitoring UI added; UI BV pending)
 **Tranche:** m.txt (DDD framing + QuerySpec) → n.txt (site-summary route wired) → o.txt (4-BC structure) → p.txt (swab-results route wired)
-**Status:** Observations BC — 2 routes wired (site-summary + swab-results), DDL confirmed, 608 tests; Spatial Configuration, Estate Monitoring, and Spatial Analysis deferred; CAPA/corrective actions out of scope for EnvMon V2 parity
+**Status:** Observations BC — 2 native routes wired and API browser-verified (site-summary + swab-results); read-only monitoring UI implemented at `?workspace=envmon-monitoring`, UI BV pending; Spatial Configuration, Estate Monitoring, and Spatial Analysis deferred; CAPA/corrective actions out of scope for EnvMon V2 parity
 **References:**
 - `docs/migration/envmon-v1-deep-dive.md`
 - `docs/audit/envmon-spatial-configuration-model.md`
@@ -87,8 +87,8 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 
 | Read model | Source query | Status |
 |---|---|---|
-| `EnvMonSiteSummary` | Aggregate KPI: total/fail/warn locations per plant per period | **✓ E** — route wired (`apps/api/routes/envmon.py`); DDL confirmed; 99 tests passing; BV pending |
-| `EnvMonSwabResults` | Detail list: per-MIC result per sample point with valuation + derived status | **✓ E** — route wired (`apps/api/routes/envmon.py`, p.txt); DDL confirmed (same Group A views); 56 new tests; BV pending; frontend wiring deferred (zoneId unavailable) |
+| `EnvMonSiteSummary` | Aggregate KPI: total/fail/warn locations per plant per period | **✓ BV** — API browser-verified 2026-05-18; consumed by read-only monitoring UI |
+| `EnvMonSwabResults` | Detail list: per-MIC result per sample point with valuation + derived status | **✓ BV** — API browser-verified 2026-05-18; read-only UI consumes native SAP QM shape because zoneId is unavailable |
 | `EnvMonTrends` | Time-series: positive rate per period | Deferred — requires period-over-period query |
 | `EnvMonAlerts` | Derived: lots breaching thresholds | Deferred — alert rules undefined |
 
@@ -97,8 +97,8 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 - **Domain filter:** `INSPECTION_TYPE IN ('14', 'Z14')`
 - **Valuation mapping:**
   - `R` / `REJ` / `REJECT` → fail (positive result — organism detected)
-  - `W` / `WARN` → warning (borderline)
-  - `NULL` → pending (no usage decision yet)
+  - `W` / `WARN` / `WARNING` → warning (borderline)
+  - `NULL` / empty → pending (no usage decision yet)
   - `A` or other non-null → pass (negative)
 - **Join keys:**
   - `gold_inspection_lot` → `gold_inspection_point`: `INSPECTION_LOT_ID`
@@ -114,11 +114,11 @@ swabs). Other inspection types are SAP QM scope but not EnvMon scope.
 - 99 tests passing for site-summary (80 adapter + 19 route) [n.txt]
 - Route `GET /api/envmon/swab-results` **wired** in `apps/api/routes/envmon.py` [p.txt]
 - 56 new tests for swab-results (adapter QuerySpec + mapper + route tests) [p.txt]
-- 608 total tests passing [p.txt]
+- Read-only monitoring UI added at `?workspace=envmon-monitoring` with site summary, swab table, result detail, derived indicators, and limitations banner [2026-05-18]
 
 ### Deferred in Observations BC
 
-- `getEnvMonSwabResults` frontend wiring — deferred until BV passes AND zoneId/zoneName sourced
+- Legacy `EnvMonSwabResult` contract cleanup — zoneId/zoneName are not sourced from SAP QM
 - `getEnvMonTrends` — Rank 3
 - `getEnvMonAlerts` — Alert rules undefined
 

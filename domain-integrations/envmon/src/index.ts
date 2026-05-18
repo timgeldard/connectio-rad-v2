@@ -20,6 +20,8 @@ export {
 export type {
   EnvMonAdapterRequest,
   EnvMonAdapterOptions,
+  EnvMonNativeSwabResult,
+  EnvMonNativeSwabStatus,
 } from './adapters/envmon-adapter.js'
 
 // Query hooks
@@ -68,6 +70,7 @@ export { AlertsView } from './views/alerts-view.js'
 export { SwabVectorsView } from './views/swab-vectors-view.js'
 export { TrendsView } from './views/trends-view.js'
 export { CorrectiveActionsView } from './views/corrective-actions-view.js'
+export { NativeMonitoringView } from './views/native-monitoring-view.js'
 
 // Actions
 export { EnvMonActionsPanel } from './actions/envmon-actions-panel.js'

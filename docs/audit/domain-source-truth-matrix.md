@@ -174,10 +174,10 @@
 | Method | Source | Status |
 |---|---|---|
 | `getEnvMonContext` | — | Mock |
-| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ E** — route wired (n.txt); DDL confirmed 2026-05-17; 99 tests; BV pending |
+| `getEnvMonSiteSummary` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ BV** — API browser-verified 2026-05-18; read-only UI consumption added, UI BV pending next deploy |
 | `getEnvMonZones` | `em_location_zones` (confirmed-v1 DDL) | Mock — Blocked (em_* existence in UAT unknown) |
 | `getEnvMonAlerts` | lot + point + result_v (derivable) | Mock — Deferred (alert rules undefined) |
-| `getEnvMonSwabResults` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ E** — route wired (p.txt); DDL confirmed (same Group A views); 56 new tests; BV pending; frontend wiring deferred (`zoneId` unavailable from SAP QM) |
+| `getEnvMonSwabResults` | `gold_inspection_lot` + `gold_inspection_point` + `gold_batch_quality_result_v` | **✓ BV** — API browser-verified 2026-05-18; read-only UI consumes native SAP QM shape because `zoneId` is unavailable from SAP QM |
 | `getEnvMonTrends` | lot + point + result_v | Mock — Rank 3; after site summary BV |
 | `getEnvMonHeatmap` | lot + point + result_v + `em_location_coordinates` + `em_plant_floor` | Mock — Blocked (em_* existence unknown) |
 | `getEnvMonCorrectiveActions` | None — **NOT IN V1** | Mock — Out of scope (CAPA not a V2 EnvMon parity requirement; belongs to separate Quality Actions / Deviation / CAPA bounded context) |
@@ -185,8 +185,8 @@
 | `getEnvMonPlantMap` **(PROPOSED)** | `em_plant_geo` | Not in adapter/contracts — Planned: depends on em_plant_geo in UAT + contract design + site-summary BV |
 | `getEnvMonPlantHotspots` **(PROPOSED)** | `em_plant_geo` + site-summary observation aggregate | Not in adapter/contracts — Planned: depends on getEnvMonPlantMap + site-summary BV |
 
-**Total: 9 adapter methods — 2 executable (✓ E), 7 mock. 2 additional proposed methods not yet in contracts.**  
-**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired and tested (n.txt + p.txt). Browser verification pending. Estate Monitoring BC added (o.txt). Spatial config (em_*) deferred — UAT existence unknown.
+**Total: 9 legacy adapter methods — 2 API browser-verified native routes, 7 mock. 2 additional proposed methods not yet in contracts.**
+**Status:** V1 functional — hybrid domain. `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` wired, tested, and API browser-verified. Primary read-only monitoring UI added at `?workspace=envmon-monitoring`; UI browser verification pending next deploy. Estate Monitoring BC added (o.txt). Spatial config (em_*) deferred — UAT existence unknown.
 
 **p.txt docs (2026-05-17):** `apps/api/routes/envmon.py` (swab-results) · `apps/api/adapters/envmon/envmon_databricks_adapter.py` · 56 new tests · all matrices updated  
 **o.txt docs (2026-05-17):** `docs/architecture/envmon-ddd-model.md` (4-BC) · `docs/audit/envmon-spatial-configuration-model.md` · `docs/audit/envmon-v1-functional-capability-map.md` · `docs/audit/envmon-v1-to-v2-parity-gap.md` · `docs/migration/envmon-advisor-recommendation.md` · candidate routes in matrices  
