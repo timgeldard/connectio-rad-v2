@@ -438,7 +438,7 @@ const LINK_TYPE_COLORS: Record<string, string> = {
 }
 
 function LinkTypeLegend({ edges }: { edges: TraceEdge[] }) {
-  const types = [...new Set(edges.map(e => e.relationshipType).filter((v): v is string => v != null))]
+  const types = [...new Set(edges.flatMap(e => e.relationshipType != null ? [e.relationshipType] : []))]
   if (types.length === 0) return null
   return (
     <div
