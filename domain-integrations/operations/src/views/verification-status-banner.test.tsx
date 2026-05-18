@@ -59,8 +59,9 @@ describe('VerificationStatusBanner', () => {
     ]
 
     for (const item of statuses) {
-      render(<VerificationStatusBanner {...defaultProps} status={item.status} />)
+      const { unmount } = render(<VerificationStatusBanner {...defaultProps} status={item.status} />)
       expect(screen.getByText(item.label)).toBeInTheDocument()
+      unmount()
     }
   })
 })

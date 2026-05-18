@@ -150,6 +150,8 @@ export function VerificationStatusBanner({
           {!compact && (routes.length > 0 || sourceObjects.length > 0 || limitations.length > 0) && (
             <button
               onClick={() => setIsOpen(!isOpen)}
+              aria-expanded={isOpen}
+              aria-controls="specs-drawer"
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -172,6 +174,7 @@ export function VerificationStatusBanner({
 
       {isOpen && !compact && (
         <div
+          id="specs-drawer"
           style={{
             marginTop: 14,
             paddingTop: 14,
