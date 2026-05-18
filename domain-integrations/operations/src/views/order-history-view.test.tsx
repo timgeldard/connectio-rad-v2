@@ -44,19 +44,19 @@ describe('OrderHistoryView', () => {
     vi.mocked(useProcessOrderHeader).mockReturnValue({
       data: undefined,
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
     vi.mocked(useOrderOperations).mockReturnValue({
       data: undefined,
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderOperations>)
     vi.mocked(useOrderConfirmations).mockReturnValue({
       data: undefined,
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderConfirmations>)
     vi.mocked(useOrderGoodsMovements).mockReturnValue({
       data: undefined,
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
   })
 
   it('renders search form and guides correctly in empty initial state', () => {
@@ -129,7 +129,7 @@ describe('OrderHistoryView', () => {
     vi.mocked(useProcessOrderHeader).mockReturnValue({
       data: undefined,
       isLoading: true,
-    } as any)
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
 
     render(
       <Wrapper>
@@ -161,7 +161,7 @@ describe('OrderHistoryView', () => {
         source: 'databricks-api',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
 
     vi.mocked(useOrderOperations).mockReturnValue({
       data: {
@@ -183,7 +183,7 @@ describe('OrderHistoryView', () => {
         source: 'databricks-api',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderOperations>)
 
     vi.mocked(useOrderConfirmations).mockReturnValue({
       data: {
@@ -203,7 +203,7 @@ describe('OrderHistoryView', () => {
         source: 'databricks-api',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderConfirmations>)
 
     vi.mocked(useOrderGoodsMovements).mockReturnValue({
       data: {
@@ -237,7 +237,7 @@ describe('OrderHistoryView', () => {
         source: 'databricks-api',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
     render(
       <Wrapper>

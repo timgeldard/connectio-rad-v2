@@ -58,21 +58,29 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   const headerQuery = useProcessOrderHeader({
     processOrderId: queryParams?.processOrderId,
     plantId: queryParams?.plantId,
+    materialId: queryParams?.materialId,
+    batchId: queryParams?.batchId,
   })
 
   const operationsQuery = useOrderOperations({
     processOrderId: queryParams?.processOrderId,
     plantId: queryParams?.plantId,
+    materialId: queryParams?.materialId,
+    batchId: queryParams?.batchId,
   })
 
   const confirmationsQuery = useOrderConfirmations({
     processOrderId: queryParams?.processOrderId,
     plantId: queryParams?.plantId,
+    materialId: queryParams?.materialId,
+    batchId: queryParams?.batchId,
   })
 
   const goodsMovementsQuery = useOrderGoodsMovements({
     processOrderId: queryParams?.processOrderId,
     plantId: queryParams?.plantId,
+    materialId: queryParams?.materialId,
+    batchId: queryParams?.batchId,
   })
 
   // Loading & error flags across all parallel requests
@@ -83,10 +91,10 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     goodsMovementsQuery.isLoading
 
   const hasAnyData =
-    headerQuery.data?.ok ||
-    operationsQuery.data?.ok ||
-    confirmationsQuery.data?.ok ||
-    goodsMovementsQuery.data?.ok
+    (headerQuery.data?.ok && headerQuery.data.data && Object.keys(headerQuery.data.data).length > 0) ||
+    (operationsQuery.data?.ok && operationsQuery.data.data && operationsQuery.data.data.length > 0) ||
+    (confirmationsQuery.data?.ok && confirmationsQuery.data.data && confirmationsQuery.data.data.length > 0) ||
+    (goodsMovementsQuery.data?.ok && goodsMovementsQuery.data.data && goodsMovementsQuery.data.data.length > 0)
 
   // Form Handling
   const handleInputChange = (field: keyof QueryFormState, val: string) => {

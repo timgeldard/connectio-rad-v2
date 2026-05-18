@@ -62,7 +62,7 @@ export function useRelatedBatchContext(request: ProcessOrderReviewAdapterRequest
 
 export function useOrderOperations(request: ProcessOrderReviewAdapterRequest) {
   return useQuery({
-    queryKey: ['por-operations', request.processOrderId ?? null, request.plantId ?? null],
+    queryKey: ['por-operations', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderOperations(request),
     staleTime: STALE,
   })
@@ -70,7 +70,7 @@ export function useOrderOperations(request: ProcessOrderReviewAdapterRequest) {
 
 export function useOrderConfirmations(request: ProcessOrderReviewAdapterRequest) {
   return useQuery({
-    queryKey: ['por-confirmations', request.processOrderId ?? null, request.plantId ?? null],
+    queryKey: ['por-confirmations', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderConfirmations(request),
     staleTime: STALE,
   })
@@ -78,7 +78,7 @@ export function useOrderConfirmations(request: ProcessOrderReviewAdapterRequest)
 
 export function useOrderGoodsMovements(request: ProcessOrderReviewAdapterRequest) {
   return useQuery({
-    queryKey: ['por-goods-movements', request.processOrderId ?? null, request.plantId ?? null],
+    queryKey: ['por-goods-movements', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderGoodsMovements(request),
     staleTime: STALE,
   })

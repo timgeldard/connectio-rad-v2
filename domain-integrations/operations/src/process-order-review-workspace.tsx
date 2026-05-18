@@ -35,6 +35,7 @@ export function ProcessOrderReviewWorkspace({
     plantId: scope.plantId,
     lineId: scope.lineId,
     batchId: scope.batchId,
+    materialId: scope.materialId,
   }
 
   const { data: contextResult } = useProcessOrderReviewContext(request)
