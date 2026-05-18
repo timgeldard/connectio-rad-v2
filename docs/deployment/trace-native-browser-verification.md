@@ -28,9 +28,9 @@ Before running any check:
 Route: `POST /api/trace2/trace-graph`  
 Purpose: verifies backend route, OAuth, Databricks config, UC grants, query execution, and response shape.
 
-### B — Dedicated UI verification (primary surface)
+### B — Dedicated UI verification (primary surface) — Traceability Investigation Screen
 URL: `https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify`  
-Purpose: verifies browser UI, frontend adapter, graph mapper, ReactFlow panel rendering, no mock fallback, warnings/truncation display, and source badge.  
+Purpose: Complete Traceability investigation screen (c.txt, 2026-05-18). Verifies: direction/depth/edges controls, investigation header, edge detail (all gold_batch_lineage fields), node detail, timeline, exposure indicators, source banner, no mock fallback.  
 Test values: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100`
 
 > **Material ID format note:** `gold_batch_lineage` stores material IDs **without** SAP ALPHA leading zeros — `20052009`, not `000000000020052009`. The verify page default was corrected to `20052009` (b.txt, 2026-05-18). Do not assume SAP ALPHA padding behaviour until input normalization is implemented.
@@ -271,19 +271,25 @@ https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace
 3. Click **Run Trace**
 4. Verify the graph panel renders with data from the backend
 
-**Pass criteria:**
+**Pass criteria — complete Traceability investigation screen (c.txt, 2026-05-18):**
 - [ ] Page loads at `?workspace=trace-graph-verify` without crash
-- [ ] Material ID, Batch ID, Plant ID inputs are visible with pre-filled default values
+- [ ] Material ID, Batch ID, Plant ID inputs pre-filled; Direction/Max depth/Max edges dropdowns visible
 - [ ] Click **Run Trace** — graph panel appears
-- [ ] ReactFlow canvas is visible with at least the anchor node
+- [ ] ReactFlow canvas visible with at least the anchor node
 - [ ] `source: databricks-api` badge visible (green) — NOT `source: mock`
-- [ ] Node count and edge count match what T2 API returns
-- [ ] Click any node → detail panel shows materialId, batchId, plantId
-- [ ] Click any edge → detail panel shows relationship type, quantity, movement type
-- [ ] Direction toggle (Both / Upstream / Downstream) filters the graph
+- [ ] Investigation header visible: materialId, batchId, plantId, node count, edge count, depth reached, truncated, source
+- [ ] Node count and edge count match T2 API response
+- [ ] Click any node → detail panel shows materialId, batchId, plantId, depth, isAnchor, inbound/outbound edge counts
+- [ ] Click any edge → detail panel shows link type, movement type, posting date, quantity, source batch, target batch, plus any available: processOrderId, materialDocumentNumber, purchaseOrderId, deliveryId, salesOrderId, supplierId, customerId
+- [ ] Direction dropdown (both/upstream/downstream) wired to backend — re-submit with "upstream" returns only upstream nodes
+- [ ] Max depth dropdown (1/2/3/4) wired to backend
+- [ ] Max edges dropdown (100/500/1000) wired to backend
+- [ ] Timeline section visible: "Timeline from lineage edges" label, dated events sorted by posting date, or "No dated events available" if none
+- [ ] Exposure indicators section visible: distinct customer/supplier/delivery/PO/process-order counts
+- [ ] Source banner visible: gold_batch_lineage, trace2.get_trace_graph, depth, truncated
 - [ ] Warnings banner appears when backend returns `truncated: true` or `max_depth_reached`
-- [ ] Empty state message (`No lineage edges found for this material/batch/plant.`) appears when backend returns no edges
-- [ ] No mock data shown when native call fails — error state in panel instead
+- [ ] Empty state message (`No lineage edges found for this material/batch/plant.`) when no edges
+- [ ] No mock data shown on failure — error state only
 
 **Also verify (Option A — shell fix):**
 - [ ] `?workspace=traceability-workspace&tab=trace` no longer shows "implementation pending (Phase 3+)"

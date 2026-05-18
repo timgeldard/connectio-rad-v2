@@ -2,7 +2,7 @@
 
 **Domain:** traceability  
 **Workspace:** trace-investigation  
-**Lifecycle:** active — V1 proxy wired for batch-header; `POST /api/trace2/trace-graph` native Databricks route wired (q.txt, 2026-05-18, iterative multi-hop over gold_batch_lineage)
+**Lifecycle:** active — V1 proxy wired for batch-header; `POST /api/trace2/trace-graph` native Databricks route wired (q.txt, 2026-05-18); c.txt 2026-05-18: complete Traceability investigation screen implemented at `?workspace=trace-graph-verify`
 
 ---
 
@@ -62,15 +62,25 @@ Given a `batchId` and `investigationId`, the workspace surfaces:
 
 Interactive batch lineage graph powered by `@xyflow/react`.
 
-**Direction controls** — toggle between Upstream ↑ / Both / Downstream ↓. Client-side filter via `filterGraphByDirection()` in `trace-graph-utils.ts`. No adapter re-fetch required.
+**Investigation header** — anchor context bar above graph: materialId, batchId, plantId, node count, edge count, depth reached, truncated, warnings count, source.
 
-**Node selection** — click a node to see: type, risk level, material ID, batch ID, plant, quantity, status, and connected relationship list.
+**Direction controls** — toggle between Upstream ↑ / Both / Downstream ↓. Client-side filter via `filterGraphByDirection()` in `trace-graph-utils.ts`. Backend direction passed via `Trace2AdapterRequest.direction`.
 
-**Edge selection** — click an edge to see: relationship type, quantity/UOM, source material, target material, movement type, document reference.
+**Trace controls** — `direction` / `maxDepth` / `maxEdges` passed from form at page level; adapter uses these instead of hardcoded values. Default: `both`, depth=2, edges=100 (verify page), 3/1000 (adapter fallback).
+
+**Node selection** — click a node to see: material ID, batch ID, plant ID, node depth, isAnchor, direction membership, inbound edge count, outbound edge count, quantity.
+
+**Edge selection** — click an edge to see all `gold_batch_lineage` fields: link type, movement type, posting date, quantity/UOM, source batch, target batch, process order ID, material document number, purchase order ID, delivery ID, sales order ID, supplier ID, customer ID. Uses "Available evidence" layout — only non-null fields rendered.
+
+**Timeline from lineage edges** — sorted by `postingDate`; undated events grouped with count. No invented event types. Label: "Timeline from lineage edges".
+
+**Exposure indicators** — derived from graph edges only: distinct customer/supplier/delivery/PO/process-order counts; edge count by link type; mixed UoM warning. Label: "Lineage exposure indicators". Disclaimer present: does not replace full recall analysis.
+
+**Source/limitation banner** — Source: `gold_batch_lineage`, Execution, Query name, depth, truncated, material ID format caveat.
 
 **Layout** — BFS from root batch; upstream nodes at negative Y levels, downstream at positive. Disconnected nodes placed at `min_level - 2` row.
 
-**Empty state** — "No batch lineage found." rendered when the filtered graph contains no nodes.
+**Empty state** — "No lineage edges found for this material/batch/plant." when filtered graph has no nodes.
 
 ### MassBalancePanel (`views/mass-balance-view.tsx`)
 
@@ -92,7 +102,7 @@ Key types:
 |------|---------|
 | `TraceGraph` | Root type: nodes, edges, direction, depth, rootBatch, counts |
 | `TraceNode` | Graph node: type, material, batch, plant, qty, status, riskLevel |
-| `TraceEdge` | Graph edge: source, target, relationshipType, qty, movementType, documentRef |
+| `TraceEdge` | Graph edge: source, target, relationshipType, qty, uom, movementType, documentRef, postingDate, processOrderId, materialDocumentNumber, purchaseOrderId, supplierId, customerId, deliveryId, salesOrderId |
 | `MassBalanceSummary` | Totals + optional `movements: MassBalanceMovement[]` |
 | `MassBalanceMovement` | Per-day: date, category, delta, runningBalance, uom, reference |
 | `CustomerExposureSummary` | Affected customers, deliveries, countries, shipped qty |
@@ -117,10 +127,26 @@ See `docs/migration/trace2-functional-parity-matrix.md` for the full 40-capabili
 | A4 — Graph robustness | Disconnected node handling + empty graph state added to `bfsLayout` and panel |
 | A5 — Richer node detail | Connected relationships list shown in `SelectedNodeDetail` |
 
+**Implemented in c.txt (2026-05-18):**
+
+| Item | Status |
+|------|--------|
+| Investigation header | Done — materialId, batchId, plantId, counts, source, truncated |
+| Full edge detail | Done — all gold_batch_lineage fields in `SelectedEdgeDetail` |
+| Full node detail | Done — depth, isAnchor, directions, inbound/outbound counts |
+| Timeline from edges | Done — sorted by postingDate, undated grouped |
+| Exposure indicators | Done — distinct customer/supplier/delivery/PO/process-order counts |
+| Source/limitation banner | Done — gold_batch_lineage, query name, depth, truncated, material ID caveat |
+| Direction/depth/edges controls | Done — in form at page level, passed to adapter |
+| TraceEdge schema extended | Done — 8 new optional gold_batch_lineage fields |
+| TraceNode schema extended | Done — depth, directions, isAnchor |
+| Trace2AdapterRequest extended | Done — direction, maxDepth, maxEdges optional |
+| Adapter params wired | Done — getTraceGraph uses request.direction/maxDepth/maxEdges |
+| Tests | Done — 134 di-traceability tests, 136 web tests |
+
 **Still missing (Phase 2+):**
 
-- Direction-aware adapter calls (currently client-side filter only)
-- Depth control slider
+- `?workspace=traceability-workspace&tab=trace` shell integration (pending UAT test)
 - Customer delivery detail table
 - Supplier detail table
 - Quality inspection lot and MIC result tables

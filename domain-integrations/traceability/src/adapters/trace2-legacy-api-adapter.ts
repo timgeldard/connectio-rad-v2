@@ -174,9 +174,9 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
           material_id: request.materialId,
           batch_id: request.batchId,
           plant_id: request.plantId,
-          direction: 'both',
-          max_depth: 3,
-          max_edges: 1000,
+          direction: request.direction ?? 'both',
+          max_depth: request.maxDepth ?? 3,
+          max_edges: request.maxEdges ?? 1000,
         }),
       })
 

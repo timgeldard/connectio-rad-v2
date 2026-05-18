@@ -77,6 +77,10 @@ export const TraceNodeSchema = z.object({
   uom: z.string().optional(),
   status: z.enum(['resolved', 'unresolved', 'blocked', 'partial']).optional(),
   riskLevel: z.enum(['none', 'low', 'medium', 'high', 'critical']).optional(),
+  // Fields from gold_batch_lineage graph response
+  depth: z.number().int().optional(),
+  directions: z.array(z.string()).optional(),
+  isAnchor: z.boolean().optional(),
 })
 
 export type TraceNode = z.infer<typeof TraceNodeSchema>
@@ -101,6 +105,15 @@ export const TraceEdgeSchema = z.object({
   uom: z.string().optional(),
   movementType: z.string().optional(),
   documentReference: z.string().optional(),
+  // Full evidence fields from gold_batch_lineage
+  postingDate: z.string().optional(),
+  processOrderId: z.string().optional(),
+  materialDocumentNumber: z.string().optional(),
+  purchaseOrderId: z.string().optional(),
+  supplierId: z.string().optional(),
+  customerId: z.string().optional(),
+  deliveryId: z.string().optional(),
+  salesOrderId: z.string().optional(),
 })
 
 export type TraceEdge = z.infer<typeof TraceEdgeSchema>

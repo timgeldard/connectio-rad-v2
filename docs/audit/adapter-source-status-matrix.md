@@ -52,7 +52,7 @@ Gold views: `gold_batch_material`, `gold_process_order`, `gold_adp_movement` (al
 |--------|------|-----------|-----------------|----------------|-------------|-------------|
 | `getBatchHeaderSummary` | ✓ | ✓ BV | ✓ 2024-03-08 | — | amber when live | **First candidate for databricks-api** — lowest risk; verified leg-api exists for parallel validation |
 | `getInvestigationContext` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
-| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009` (stored key — no SAP ALPHA leading zeros in gold_batch_lineage). Full workspace shell integration pending. |
+| `getTraceGraph` | ✓ | — | — | **✓ BV** | green | **API BV 2026-05-18** — HTTP 200, WITH RECURSIVE single query, gold_batch_lineage. **UI BV 2026-05-18** — `?workspace=trace-graph-verify`, green badge, nodes+edges visible; `materialId=20052009`. **c.txt 2026-05-18** — complete investigation screen: investigation header, full edge detail (all gold_batch_lineage fields), node detail (depth/isAnchor/edge counts), timeline, exposure indicators, source banner, direction/maxDepth/maxEdges controls wired to backend. 134 di-traceability tests passing. Full workspace shell (`?workspace=traceability-workspace`) pending C14 BV. |
 | `getMassBalanceSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getCustomerExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |
 | `getSupplierExposureSummary` | ✓ | — | — | — | none | Add to Trace databricks-api slice |

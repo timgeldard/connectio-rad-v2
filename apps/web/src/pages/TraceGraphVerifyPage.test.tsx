@@ -23,17 +23,20 @@ describe('TraceGraphVerifyPage', () => {
     mockPanel.mockClear()
   })
 
-  it('renders material, batch, and plant text inputs with default test values', () => {
+  it('renders material, batch, plant inputs and direction/depth/edges controls with defaults', () => {
     render(<TraceGraphVerifyPage />)
     const materialInput = screen.getByTestId('input-material-id') as HTMLInputElement
     const batchInput = screen.getByTestId('input-batch-id') as HTMLInputElement
     const plantInput = screen.getByTestId('input-plant-id') as HTMLInputElement
-    expect(materialInput).not.toBeNull()
-    expect(batchInput).not.toBeNull()
-    expect(plantInput).not.toBeNull()
+    const directionSelect = screen.getByTestId('select-direction') as HTMLSelectElement
+    const maxDepthSelect = screen.getByTestId('select-max-depth') as HTMLSelectElement
+    const maxEdgesSelect = screen.getByTestId('select-max-edges') as HTMLSelectElement
     expect(materialInput.value).toBe('20052009')
     expect(batchInput.value).toBe('0008602411')
     expect(plantInput.value).toBe('C061')
+    expect(directionSelect.value).toBe('both')
+    expect(maxDepthSelect.value).toBe('2')
+    expect(maxEdgesSelect.value).toBe('100')
     expect(screen.getByTestId('btn-run-trace')).not.toBeNull()
   })
 
@@ -43,7 +46,7 @@ describe('TraceGraphVerifyPage', () => {
     expect(mockPanel).not.toHaveBeenCalled()
   })
 
-  it('submitting the form triggers getTraceGraph with the entered values', () => {
+  it('submitting the form triggers getTraceGraph with the entered values and controls', () => {
     render(<TraceGraphVerifyPage />)
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     expect(mockPanel).toHaveBeenCalledWith({
@@ -51,6 +54,9 @@ describe('TraceGraphVerifyPage', () => {
       materialId: '20052009',
       batchId: '0008602411',
       plantId: 'C061',
+      direction: 'both',
+      maxDepth: 2,
+      maxEdges: 100,
     })
   })
 
@@ -68,8 +74,6 @@ describe('TraceGraphVerifyPage', () => {
     const page = screen.getByTestId('trace-graph-verify-page')
     const panelCount = page.querySelectorAll('[data-testid="trace-graph-panel"]').length
     expect(panelCount).toBe(1)
-    // No second result container besides the panel
-    expect(page.querySelectorAll('[data-testid]').length).toBeLessThanOrEqual(5)
   })
 
   it('empty path: delegates no-results rendering to TraceGraphPanel', () => {
@@ -81,17 +85,23 @@ describe('TraceGraphVerifyPage', () => {
     expect(panel.getAttribute('data-material-id')).toBe('20052009')
   })
 
-  it('passes updated input values to the panel on re-submit', () => {
+  it('passes updated input values and control values to the panel on re-submit', () => {
     render(<TraceGraphVerifyPage />)
     fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: '000000000099999999' } })
     fireEvent.change(screen.getByTestId('input-batch-id'), { target: { value: 'TEST-BATCH' } })
     fireEvent.change(screen.getByTestId('input-plant-id'), { target: { value: 'C999' } })
+    fireEvent.change(screen.getByTestId('select-direction'), { target: { value: 'upstream' } })
+    fireEvent.change(screen.getByTestId('select-max-depth'), { target: { value: '4' } })
+    fireEvent.change(screen.getByTestId('select-max-edges'), { target: { value: '500' } })
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     expect(mockPanel).toHaveBeenCalledWith({
       investigationId: '',
       materialId: '000000000099999999',
       batchId: 'TEST-BATCH',
       plantId: 'C999',
+      direction: 'upstream',
+      maxDepth: 4,
+      maxEdges: 500,
     })
   })
 })

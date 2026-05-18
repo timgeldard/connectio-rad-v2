@@ -100,6 +100,9 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
     materialDescription: '',
     batchId: n.batchId || undefined,
     plantId: n.plantId || undefined,
+    depth: n.depth,
+    directions: n.directions,
+    isAnchor: n.isAnchor,
   }))
 
   const edges = raw.edges.map(e => {
@@ -116,6 +119,14 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
       ...(e.baseUnitOfMeasure ? { uom: e.baseUnitOfMeasure } : {}),
       ...(e.movementType ? { movementType: e.movementType } : {}),
       ...(documentReference ? { documentReference } : {}),
+      ...(e.postingDate ? { postingDate: e.postingDate } : {}),
+      ...(e.processOrderId ? { processOrderId: e.processOrderId } : {}),
+      ...(e.materialDocumentNumber ? { materialDocumentNumber: e.materialDocumentNumber } : {}),
+      ...(e.purchaseOrderId ? { purchaseOrderId: e.purchaseOrderId } : {}),
+      ...(e.supplierId ? { supplierId: e.supplierId } : {}),
+      ...(e.customerId ? { customerId: e.customerId } : {}),
+      ...(e.deliveryId ? { deliveryId: e.deliveryId } : {}),
+      ...(e.salesOrderId ? { salesOrderId: e.salesOrderId } : {}),
     }
   })
 

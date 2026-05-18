@@ -247,6 +247,9 @@ const traceRequest: Trace2AdapterRequest = {
   batchId: '0008602411',
   materialId: '20052009',
   plantId: 'C061',
+  direction: 'both',
+  maxDepth: 6,
+  maxEdges: 1000,
 }
 
 describe('Trace2LegacyApiAdapter.getTraceGraph', () => {
@@ -366,6 +369,42 @@ describe('Trace2LegacyApiAdapter.getTraceGraph', () => {
     expect(result.data.truncated).toBe(true)
     expect(result.data.warnings).toContain('max_edges_reached')
     expect(result.data.warnings).toContain('max_depth_reached')
+    vi.unstubAllGlobals()
+  })
+
+  it('passes direction from request when provided', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, BACKEND_GRAPH_OK))
+    await adapter.getTraceGraph({ ...traceRequest, direction: 'upstream' })
+    const [, opts] = vi.mocked(global.fetch).mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.direction).toBe('upstream')
+    vi.unstubAllGlobals()
+  })
+
+  it('defaults direction to both when not in request', async () => {
+    const minimalRequest: Trace2AdapterRequest = {
+      investigationId: 'INV-001',
+      batchId: '0008602411',
+      materialId: '20052009',
+      plantId: 'C061',
+    }
+    vi.stubGlobal('fetch', mockFetch(200, BACKEND_GRAPH_OK))
+    await adapter.getTraceGraph(minimalRequest)
+    const [, opts] = vi.mocked(global.fetch).mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.direction).toBe('both')
+    expect(body.max_depth).toBe(3)
+    expect(body.max_edges).toBe(1000)
+    vi.unstubAllGlobals()
+  })
+
+  it('passes maxDepth and maxEdges from request when provided', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, BACKEND_GRAPH_OK))
+    await adapter.getTraceGraph({ ...traceRequest, maxDepth: 4, maxEdges: 500 })
+    const [, opts] = vi.mocked(global.fetch).mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.max_depth).toBe(4)
+    expect(body.max_edges).toBe(500)
     vi.unstubAllGlobals()
   })
 })

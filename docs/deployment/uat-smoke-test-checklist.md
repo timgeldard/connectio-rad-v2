@@ -283,6 +283,35 @@ See `docs/deployment/trace-native-browser-verification.md` (Check T2-UI) for ful
 
 ---
 
+### C14 — Complete Traceability Investigation Screen (c.txt, 2026-05-18)
+
+**Status: PENDING BROWSER VERIFICATION** — implementation deployed, awaiting next UAT deploy.
+
+**Primary URL:**
+```
+https://connectio-v2-604667594731808.8.azure.databricksapps.com/?workspace=trace-graph-verify
+```
+
+Test anchor: `materialId=20052009`, `batchId=0008602411`, `plantId=C061`, `direction=both`, `maxDepth=2`, `maxEdges=100`
+
+- [ ] Direction dropdown (both/upstream/downstream) visible and wired to backend
+- [ ] Max depth dropdown (1/2/3/4) visible and wired to backend  
+- [ ] Max edges dropdown (100/500/1000) visible and wired to backend
+- [ ] Investigation header shows materialId, batchId, plantId, node/edge count, depth, truncated, source
+- [ ] Node click: shows materialId, batchId, plantId, depth, isAnchor, inbound/outbound edge counts
+- [ ] Edge click: shows all gold_batch_lineage fields (link type, posting date, processOrderId, materialDocumentNumber, etc.)
+- [ ] Timeline section visible: "Timeline from lineage edges"
+- [ ] Exposure indicators section visible: customer/supplier/delivery/PO counts
+- [ ] Source banner: gold_batch_lineage, trace2.get_trace_graph
+- [ ] Re-submit with `direction=upstream` → only upstream nodes in graph
+- [ ] Re-submit with `maxDepth=1` → shallower result
+
+**Known remaining gaps:**
+- `?workspace=traceability-workspace&tab=trace` shell integration not tested
+- Anchor batch `materialId=20052009` must be entered without SAP ALPHA leading zeros
+
+---
+
 ## Notes
 
 - CQ Lab failures (`/api/cq/lab/fails`) is blocked pending `vw_gold_process_order_plan` availability — do not test until that view is confirmed in `connected_plant_uat`.
