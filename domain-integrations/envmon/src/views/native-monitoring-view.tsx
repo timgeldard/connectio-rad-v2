@@ -53,8 +53,12 @@ const secondaryButtonStyle: CSSProperties = {
   color: 'var(--shell-fg)',
 }
 
-export function NativeMonitoringView() {
-  const [plantId, setPlantId] = useState(DEFAULT_PLANT)
+export interface NativeMonitoringViewProps {
+  readonly initialPlantId?: string
+}
+
+export function NativeMonitoringView({ initialPlantId }: NativeMonitoringViewProps = {}) {
+  const [plantId, setPlantId] = useState(initialPlantId ?? DEFAULT_PLANT)
   const [periodStart, setPeriodStart] = useState(DEFAULT_PERIOD_START)
   const [periodEnd, setPeriodEnd] = useState(DEFAULT_PERIOD_END)
   const [limit, setLimit] = useState(DEFAULT_LIMIT)

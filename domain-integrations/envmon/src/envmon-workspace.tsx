@@ -60,7 +60,7 @@ export function EnvMonWorkspace({
 function resolveView(viewId: string, request: EnvMonAdapterRequest): React.ReactNode {
   switch (viewId as EnvMonViewId) {
     case 'native-monitoring':
-      return <NativeMonitoringView />
+      return <NativeMonitoringView initialPlantId={request.plantId} />
     case 'scope-overview':
       return <ScopeOverviewView request={request} />
     case 'plant-monitoring':
