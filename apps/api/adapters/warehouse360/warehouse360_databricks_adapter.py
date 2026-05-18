@@ -213,14 +213,14 @@ def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
     WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT :max_rows
+    LIMIT 1000
     """
     return QuerySpec(
         name="warehouse360.get_inbound",
         module="wh360",
         endpoint="/api/warehouse360/inbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
+        params={"warehouse_id": request.warehouse_id},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "inbound", "receipts"],
     )
@@ -287,14 +287,14 @@ def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
     WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT :max_rows
+    LIMIT 1000
     """
     return QuerySpec(
         name="warehouse360.get_outbound",
         module="wh360",
         endpoint="/api/warehouse360/outbound",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
+        params={"warehouse_id": request.warehouse_id},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "outbound", "deliveries"],
     )
@@ -351,14 +351,14 @@ def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
         EXCEPTION_REASON          AS exception_reason
     FROM {view}
     WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT :max_rows
+    LIMIT 1000
     """
     return QuerySpec(
         name="warehouse360.get_staging",
         module="wh360",
         endpoint="/api/warehouse360/staging",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
+        params={"warehouse_id": request.warehouse_id},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "production", "staging"],
     )
@@ -416,14 +416,14 @@ def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySp
         RECOMMENDED_REVIEW_ACTION  AS recommended_review_action
     FROM {view}
     WHERE WAREHOUSE_NUMBER = :warehouse_id
-    LIMIT :max_rows
+    LIMIT 1000
     """
     return QuerySpec(
         name="warehouse360.get_exceptions",
         module="wh360",
         endpoint="/api/warehouse360/exceptions",
         sql=sql,
-        params={"warehouse_id": request.warehouse_id, "max_rows": 1000},
+        params={"warehouse_id": request.warehouse_id},
         cache_policy=CacheTier.PER_USER_60S,
         tags=["wh360", "reconciliation", "exceptions"],
     )
