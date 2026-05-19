@@ -16,7 +16,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 1.2 | MB56-style behaviour compared to reference engine | 🔶 | Gap analysis complete (`mb56-parity-review.md`). Live parity not verified. |
 | 1.3 | Null/unavailable data states do not imply false containment | ✅ | Fixed PR #24 (null customerExposure → UNKNOWN severity). |
 | 1.4 | Severity tiering reflects exposure depth, not only binary shipped flag | ❌ | TRACE-P0-003 open. |
-| 1.5 | Link types on trace graph edges discriminate vendor receipts from internal moves | ❌ | TRACE-P0-002 open. |
+| 1.5 | Link types on trace graph edges discriminate vendor receipts from internal moves | 🔶 | Code fixed PR #26 (linkType passthrough, expanded relationshipType enum). Live Databricks LINK_TYPE value validation still required before UAT sign-off. |
 | 1.6 | Graph truncation signalled when depth limit is reached | ❌ | TRACE-P1-001 open. |
 
 ---
@@ -40,7 +40,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 3.2 | UAT acceptance script executed against deployed app | ❌ | No browser/UAT access at time of writing. |
 | 3.3 | Golden test batches defined | 🔶 | `golden-test-batches.md` exists; only mock fixture validated; reference candidate requires live validation. |
 | 3.4 | UAT validation ledger entries complete for ≥ 1 live batch | ❌ | `uat-validation-ledger.md` created; no live runs recorded. |
-| 3.5 | All P0 defects resolved or risk-accepted before UAT sign-off | ❌ | TRACE-P0-002 and TRACE-P0-003 open. |
+| 3.5 | All P0 defects resolved or risk-accepted before UAT sign-off | ❌ | TRACE-P0-002 code fixed (PR #26), live validation pending. TRACE-P0-003 open. |
 
 ---
 
@@ -60,9 +60,23 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 5.1 | Databricks reads use authenticated end-user OAuth identity | ⬜ | Not applicable until live Databricks mode activated. |
-| 5.2 | No service-principal fallback for user-facing reads | ⬜ | Not applicable until live Databricks mode activated. |
+| 5.1 | Databricks reads use authenticated end-user OAuth identity | ❌ | Not verified — go-live prerequisite. OAuth header passthrough (`x-forwarded-access-token`) is implemented in `identity.py` but has not been validated against a live Databricks Apps deployment. See Unity Catalog prerequisite doc. |
+| 5.2 | No service-principal fallback for user-facing reads | ❌ | Not verified — go-live prerequisite. Code prohibits SP fallback by design (CLAUDE.md constraint); must be confirmed in deployed environment before any production use. |
 | 5.3 | No hardcoded warehouse IDs, tokens, or workspace URLs in source | ✅ | No instances found in `domain-integrations/traceability/src/`. |
+
+---
+
+## 5a. Unity Catalog Authorization Prerequisites
+
+These gates must be satisfied before the databricks-api adapter is activated for any user-facing data access. Unity Catalog is the intended data-authorization enforcement layer; no app-side plant entitlement lists will be implemented.
+
+| # | Gate | Status | Notes |
+|---|------|--------|-------|
+| UC-1 | Gold views registered in Unity Catalog with row/column security policies | ❌ | Prerequisite for any live Databricks read. Must be completed by data platform team before app activation. |
+| UC-2 | End-user AAD identities federated into Databricks workspace | ❌ | Required so OAuth token from `x-forwarded-access-token` resolves to a UC principal with correct grants. |
+| UC-3 | UC grants scoped to minimum required views (principle of least privilege) | ❌ | Grant model must be defined and reviewed before go-live. |
+| UC-4 | OAuth header forwarding validated in live Databricks Apps deployment | ❌ | `identity.py` implementation is assumed-correct; must be verified end-to-end in deployed environment. |
+| UC-5 | Data access audit log confirmed active for gold view reads | ❌ | Required for food-safety and recall audit trail. Confirm Unity Catalog audit logging enabled before production use. |
 
 ---
 
@@ -80,7 +94,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 7.1 | Domain README exists | ❌ | TRACE-P1-002 open. |
+| 7.1 | Domain README exists | ✅ | Fixed PR #25 — README.md added to `domain-integrations/traceability/`. |
 | 7.2 | API / adapter contract documented | 🔶 | Adapter types are self-documenting via TypeScript; no prose API doc. |
 | 7.3 | i18n coverage complete for all user-facing strings | ❌ | All strings are hardcoded English inline styles. i18n not implemented. |
 | 7.4 | Defect backlog current | ✅ | `traceability-defect-backlog.md` — 10 items classified. |

@@ -41,7 +41,7 @@ function mapStockStatus(r: V1BatchHeaderResponse): BatchHeaderSummary['stockStat
   if (r.blocked > 0) return 'blocked'
   if (r.qi > 0) return 'quality-inspection'
   if (r.transit > 0) return 'transit'
-  if (r.restricted > 0) return 'returns'
+  if (r.restricted > 0) return 'restricted'
   return 'unrestricted'
 }
 

@@ -498,7 +498,7 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
         "varianceQuantity": variance_qty,
         "variancePercent": variance_pct,
         "uom": uom,
-        "confidence": 1.0,
+        "confidence": max(0.0, 1.0 - unresolved / max(1, len(rows))),
         "unresolvedMovements": unresolved,
         "movements": movements,
     }
@@ -646,7 +646,7 @@ def _derive_stock_status(row: dict) -> str:
     if qty("quality_inspection") > 0:
         return "quality-inspection"
     if qty("restricted") > 0:
-        return "returns"
+        return "restricted"
     if qty("transit") > 0:
         return "transit"
     return "unrestricted"

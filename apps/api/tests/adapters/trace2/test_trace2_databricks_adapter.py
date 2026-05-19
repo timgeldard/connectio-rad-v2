@@ -198,12 +198,12 @@ class TestMapBatchHeaderRows:
         assert result is not None
         assert result["stockStatus"] == "quality-inspection"
 
-    def test_stock_status_returns_over_transit(self) -> None:
+    def test_stock_status_restricted_over_transit(self) -> None:
         row = {**_FULL_BATCH_HEADER_ROW, "blocked": 0.0, "quality_inspection": 0.0,
                "restricted": 3.0, "transit": 2.0}
         result = map_batch_header_rows([row])
         assert result is not None
-        assert result["stockStatus"] == "returns"
+        assert result["stockStatus"] == "restricted"
 
     def test_stock_status_transit_when_only_transit_nonzero(self) -> None:
         row = {**_FULL_BATCH_HEADER_ROW, "blocked": 0.0, "quality_inspection": 0.0,
@@ -756,3 +756,32 @@ class TestMapMassBalanceRows:
         rows = [self._production_row(), self._shipment_row(), self._production_row()]
         result = map_mass_balance_rows(rows)
         assert len(result["movements"]) == 3
+
+    def test_confidence_empty_rows_is_one(self) -> None:
+        # Vacuous case — no movements to assess, so confidence is 1.0.
+        assert map_mass_balance_rows([])["confidence"] == 1.0
+
+    def test_confidence_no_unresolved_is_one(self) -> None:
+        rows = [self._production_row(), self._shipment_row()]
+        assert map_mass_balance_rows(rows)["confidence"] == 1.0
+
+    def test_confidence_partial_unresolved(self) -> None:
+        # 1 of 4 rows has null balance_qty → confidence = 1 - 1/4 = 0.75
+        rows = [
+            {**self._production_row(), "balance_qty": None},
+            self._production_row(),
+            self._shipment_row(),
+            self._production_row(),
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["confidence"] == pytest.approx(0.75)
+        assert result["unresolvedMovements"] == 1
+
+    def test_confidence_all_unresolved_is_zero(self) -> None:
+        rows = [
+            {**self._production_row(), "balance_qty": None},
+            {**self._shipment_row(), "balance_qty": None},
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["confidence"] == 0.0
+        assert result["unresolvedMovements"] == 2
