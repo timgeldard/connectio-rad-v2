@@ -1,6 +1,6 @@
 # Traceability — First Live Validation SQL Pack
 
-**Status: AWAITING EXECUTION — no live validation performed as of 2026-05-19**  
+**Status: COLUMN VERIFICATION COMPLETE — 2026-05-19; full app-level UAT pending**  
 **Candidate batch:** `material_id = '000000000020052009'`, `batch_id = '0008602411'`, `plant_id = 'C061'`  
 **Complements:** `docs/migration/databricks-column-verification-queries.md` (gold_batch_summary_v detail)
 
@@ -360,27 +360,27 @@ After running the sections above, record results here and in
 
 | Field | Value |
 |---|---|
-| **Tester identity** | _(alias, initials, or ticket reference — no full name or email)_ |
-| **Date / time (UTC)** | _(ISO timestamp)_ |
-| **Databricks workspace URL** | _(e.g. `https://<workspace>.azuredatabricks.net`)_ |
-| **Catalog** | _(value used for `<catalog>`)_ |
-| **Schema** | _(value used for `<schema>`, typically `gold`)_ |
-| **App version / commit** | _(git SHA of the deployed app under test)_ |
-| **Current user confirmed** | _(OAuth identity, not service principal — yes / no)_ |
-| **gold_batch_summary_v confirmed** | _(yes / no / partial — link to full evidence in databricks-column-verification-queries.md)_ |
-| **gold_batch_stock_v confirmed** | _(yes / no — columns verified)_ |
-| **restricted column exists** | _(yes / no / different name: `<actual>`)_ |
-| **transit column exists** | _(yes / no / different name: `<actual>`)_ |
-| **Join fan-out check** | _(row count after join: expected 1)_ |
-| **material language_id for EN** | _(confirmed `'EN'` / different: `<actual>`)_ |
-| **gold_batch_lineage anchor exists** | _(yes / no)_ |
-| **LINK_TYPE values observed** | _(list all distinct values found)_ |
-| **Upstream edge count** | _(integer)_ |
-| **Downstream edge count** | _(integer)_ |
-| **gold_batch_mass_balance_v row count** | _(integer)_ |
-| **gold_batch_delivery_v exists** | _(yes / no)_ |
-| **gold_batch_delivery_v columns** | _(list if found, or "not found")_ |
-| **gold_qm_usage_decision_v exists** | _(yes / no)_ |
-| **gold_qm views found** | _(list names if found)_ |
-| **Unresolved issues** | _(any columns still uncertain, join failures, etc.)_ |
-| **Next action** | _(e.g. "Update adapter TODOs", "Raise column name issue")_ |
+| **Tester identity** | TG / internal UAT tester (identity evidence retained outside repo) |
+| **Date / time (UTC)** | 2026-05-19 |
+| **Databricks workspace URL** | `https://adb-604667594731808.8.azuredatabricks.net` |
+| **Catalog** | `connected_plant_uat` |
+| **Schema** | `gold` |
+| **App version / commit** | ffe581c (feature/traceability-first-live-validation-pack) |
+| **Current user confirmed** | Yes — named user OAuth principal observed, not service principal; identity evidence retained outside repo |
+| **gold_batch_summary_v confirmed** | Partial — MANUFACTURE_DATE and SHELF_LIFE_EXPIRATION_DATE confirmed. PLANT_ID, BATCH_STATUS, UOM, PROCESS_ORDER_ID not present. See `databricks-column-verification-queries.md`. |
+| **gold_batch_stock_v confirmed** | Yes — PLANT_ID, unrestricted, blocked, quality_inspection, total_stock confirmed from candidate batch 20035129/8000049668 |
+| **restricted column exists** | Not confirmed (candidate batch returned rows but restricted/transit values not specifically checked) |
+| **transit column exists** | Not confirmed |
+| **Join fan-out check** | stock_v returns one row per plant; single-plant batch 20035129/8000049668/C061 returns 1 row — join safe for this batch |
+| **material language_id for EN** | `'E'` (not `'EN'`) — confirmed from gold_material LANGUAGE_ID column |
+| **gold_batch_lineage anchor exists** | Not validated — reference candidate (000000000020052009/0008602411) not in UAT; lineage query not run against alternate batch |
+| **LINK_TYPE values observed** | From V1 source inspection: PRODUCTION, VENDOR_RECEIPT, DELIVERY, ADJUSTMENT_OUT, STO_TRANSFER, ADJUSTMENT_IN (live run against UAT pending) |
+| **Upstream edge count** | Not validated |
+| **Downstream edge count** | Not validated |
+| **gold_batch_mass_balance_v row count** | Not validated — query not run against UAT batch |
+| **gold_batch_delivery_v exists** | Not validated |
+| **gold_batch_delivery_v columns** | DELIVERY (not DELIVERY_ID) — inferred from V1 inspection; live UAT confirmation pending |
+| **gold_qm_usage_decision_v exists** | Not validated |
+| **gold_qm views found** | Not validated |
+| **Unresolved issues** | batch_status and process_order_id sources unknown; restricted/transit column names unconfirmed; lineage queries not run against UAT-confirmed batch; delivery and QM views not checked in UAT. |
+| **Next action** | Run full UAT session using batch 20035129/8000049668/C061 once app deployed. Run Section 6 (lineage) and Section 7 (mass balance) against this batch. |

@@ -1,6 +1,6 @@
 # Databricks Column Verification Queries — gold_batch_summary_v
 
-**Status: BLOCKED — requires live Databricks UAT environment**
+**Status: VERIFIED — live validation performed 2026-05-19 against connected_plant_uat**
 
 This document provides the exact SQL queries that must be run during UAT to verify
 column names in `gold_batch_summary_v`. All column names in that view are currently
@@ -195,27 +195,27 @@ into the UAT validation ledger (`domain-integrations/traceability/docs/uat-valid
 
 | Field | Value |
 |-------|-------|
-| **Tester identity** | _(alias, initials, or ticket reference — no full name or email)_ |
-| **Date / time (UTC)** | _(ISO timestamp)_ |
-| **Databricks workspace URL** | _(e.g. `https://<workspace>.azuredatabricks.net`)_ |
-| **Catalog** | _(value of TRACE_CATALOG env var)_ |
-| **Schema** | _(value of TRACE_SCHEMA env var, typically `gold`)_ |
-| **App version / commit** | _(git SHA from deployed app)_ |
-| **Query notebook / file** | _(link or path to notebook where queries were run)_ |
-| **`gold_batch_summary_v` confirmed columns** | _(list: actual column names as returned by SHOW COLUMNS)_ |
-| **`plant_id` column — confirmed name** | _(confirmed / different: `<actual_name>`)_ |
-| **`manufacture_date` column — confirmed name** | _(confirmed / different)_ |
-| **`expiry_date` column — confirmed name** | _(confirmed / different)_ |
-| **`batch_status` column — confirmed name** | _(confirmed / different)_ |
-| **`batch_status` live enum values** | _(list all distinct values found)_ |
-| **`uom` column — confirmed name** | _(confirmed / different)_ |
-| **`process_order_id` column — confirmed name** | _(confirmed / different)_ |
-| **Join key (material_id + batch_id) — confirmed** | _(yes / no / different)_ |
-| **Row count for reference batch** | _(integer — expected: 1)_ |
-| **language_id for EN descriptions** | _(confirmed `'EN'` / different: `<value>`)_ |
-| **Null rates acceptable** | _(yes / no — see query 5 results)_ |
-| **Unresolved fields** | _(list any column names still uncertain after this run)_ |
-| **Next action** | _(e.g. "Update TODOs in adapter", "Raise issue for <field>")_ |
+| **Tester identity** | TG / internal UAT tester (identity evidence retained outside repo) |
+| **Date / time (UTC)** | 2026-05-19 |
+| **Databricks workspace URL** | `https://adb-604667594731808.8.azuredatabricks.net` |
+| **Catalog** | `connected_plant_uat` |
+| **Schema** | `gold` |
+| **App version / commit** | ffe581c (feature/traceability-first-live-validation-pack) |
+| **Query notebook / file** | REST API via Databricks SQL Statement Execution (warehouse: `connected_plant_uat`, ID: `e76480b94bea6ed5`) |
+| **`gold_batch_summary_v` confirmed columns** | MATERIAL_ID, BATCH_ID, MANUFACTURE_DATE, SHELF_LIFE_EXPIRATION_DATE confirmed present. PLANT_ID, BATCH_STATUS, UOM, PROCESS_ORDER_ID **not found** in this view. |
+| **`plant_id` column — confirmed name** | NOT IN gold_batch_summary_v — sourced from gold_batch_stock_v.PLANT_ID |
+| **`manufacture_date` column — confirmed name** | MANUFACTURE_DATE (uppercase) |
+| **`expiry_date` column — confirmed name** | SHELF_LIFE_EXPIRATION_DATE (confirmed from batch: 2027-05-31) |
+| **`batch_status` column — confirmed name** | NOT IN gold_batch_summary_v — source unknown; adapter returns batchStatus='unknown' |
+| **`batch_status` live enum values** | Not available from this view |
+| **`uom` column — confirmed name** | NOT IN gold_batch_summary_v — sourced from gold_material.BASE_UNIT_OF_MEASURE |
+| **`process_order_id` column — confirmed name** | NOT IN gold_batch_summary_v — omitted from adapter; returns null |
+| **Join key (material_id + batch_id) — confirmed** | Yes — query returned data using material_id + batch_id join |
+| **Row count for reference batch** | Reference candidate (000000000020052009/0008602411) returned 0 rows. Alternate UAT batch (20035129/8000049668/C061 — Silicon Dioxide Powder) confirmed to exist. |
+| **language_id for EN descriptions** | `'E'` (not `'EN'`) — confirmed from gold_material |
+| **Null rates acceptable** | Not measured — reference batch returned 0 rows |
+| **Unresolved fields** | batch_status source unknown; process_order_id source unknown. Both omitted from adapter query with conservative defaults. |
+| **Next action** | Adapter updated (commit on feature/traceability-first-live-validation-pack). Run UAT session against batch 20035129/8000049668/C061 to complete live parity validation. |
 
 ---
 
@@ -242,18 +242,25 @@ Once the column names are confirmed:
 
 ---
 
-## Current unverified assumptions
+## Verification results — 2026-05-19 connected_plant_uat
 
-| Column (assumed)  | View                  | Status          |
-|-------------------|-----------------------|-----------------|
-| `plant_id`        | gold_batch_summary_v  | UNVERIFIED      |
-| `manufacture_date`| gold_batch_summary_v  | UNVERIFIED      |
-| `expiry_date`     | gold_batch_summary_v  | UNVERIFIED      |
-| `batch_status`    | gold_batch_summary_v  | UNVERIFIED      |
-| `uom`             | gold_batch_summary_v  | UNVERIFIED      |
-| `process_order_id`| gold_batch_summary_v  | UNVERIFIED      |
-| join key          | gold_batch_summary_v  | UNVERIFIED      |
-| `language_id='EN'`| gold_material         | UNVERIFIED      |
+| Column (assumed)   | View                  | Actual column name              | Status   |
+|--------------------|-----------------------|---------------------------------|----------|
+| `plant_id`         | gold_batch_summary_v  | **NOT IN VIEW** — use `gold_batch_stock_v.PLANT_ID` | RESOLVED |
+| `manufacture_date` | gold_batch_summary_v  | `MANUFACTURE_DATE`              | VERIFIED |
+| `expiry_date`      | gold_batch_summary_v  | `SHELF_LIFE_EXPIRATION_DATE`    | RESOLVED |
+| `batch_status`     | gold_batch_summary_v  | **NOT IN VIEW** — source unknown | RESOLVED (omitted; batchStatus returns 'unknown') |
+| `uom`              | gold_batch_summary_v  | **NOT IN VIEW** — use `gold_material.BASE_UNIT_OF_MEASURE` | RESOLVED |
+| `process_order_id` | gold_batch_summary_v  | **NOT IN VIEW** — source unknown | RESOLVED (omitted) |
+| join key           | gold_batch_summary_v  | `material_id + batch_id`        | VERIFIED |
+| `language_id='EN'` | gold_material         | `LANGUAGE_ID = 'E'`             | RESOLVED |
 
-All other columns used in `get_batch_header_summary_spec` are confirmed from V1
-source inspection (`docs/migration/trace2-functional-parity-audit.md §3`).
+All `gold_batch_summary_v` batch-header query assumptions resolved. Adapter updated in
+`apps/api/adapters/trace2/trace2_databricks_adapter.py` (verified 2026-05-19, connected_plant_uat).
+See commit for full diff.
+
+**Remaining open validation items (not addressed by this run):**
+- `gold_batch_mass_balance_v` WHERE filter column names unverified (TODO still present in adapter).
+- Live lineage query (Section 6) not run against confirmed UAT batch — reference candidate returned 0 rows.
+- `gold_batch_delivery_v` and QM views not checked in UAT environment.
+- `batch_status` and `process_order_id` sources in connected_plant_uat unknown.

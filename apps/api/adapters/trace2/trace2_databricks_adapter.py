@@ -9,9 +9,16 @@ Deferred slices:
   - getCustomerExposureSummary — requires severity/recall business rules not derivable
     from gold_batch_delivery_v; see docs/migration/databricks-vertical-slices-trace-plan.md §4
 
-IMPORTANT: All gold_batch_summary_v column names are unverified (marked TODO).
-Column names for gold_batch_stock_v, gold_batch_lineage, gold_material, gold_plant,
-gold_batch_mass_balance_v are confirmed from V1 source inspection (trace2-functional-parity-audit.md §3).
+Column name verification status (live validation 2026-05-19, connected_plant_uat):
+  - gold_batch_summary_v: MANUFACTURE_DATE and SHELF_LIFE_EXPIRATION_DATE verified. PLANT_ID,
+    BATCH_STATUS, UOM, PROCESS_ORDER_ID are NOT present in this view. plant_id sourced from
+    gold_batch_stock_v; uom from gold_material.BASE_UNIT_OF_MEASURE.
+  - gold_batch_stock_v: column names confirmed from V1 inspection (see trace2-functional-parity-audit.md §3).
+    PLANT_ID also confirmed live.
+  - gold_material: LANGUAGE_ID = 'E' (not 'EN'), MATERIAL_NAME, BASE_UNIT_OF_MEASURE verified live.
+  - gold_plant: PLANT_ID, PLANT_NAME confirmed from V1 inspection.
+  - gold_batch_lineage: all 18 columns confirmed — see trace2-functional-parity-audit.md §3.
+  - gold_batch_mass_balance_v: SELECT columns confirmed; WHERE filter column names unverified (TODO).
 
 Trace graph uses a single WITH RECURSIVE SQL query (server-side traversal) — replaces the
 former iterative multi-hop Python loop that caused 504 Gateway Timeouts on dense lineage graphs
@@ -66,6 +73,12 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     Cache: PER_USER_60S — batch release/block status can change during a shift.
     Parallel validation: possible against browser-verified POST /api/trace2/batch-header.
 
+    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When a
+    material/batch exists in multiple plants the query returns rows for all of them, ordered
+    by PLANT_ID, and the mapper takes the first. Future hardening: if Trace2BatchHeaderRequest
+    carries plant_id, add AND s.PLANT_ID = :plant_id to the WHERE clause to avoid
+    cross-plant ambiguity.
+
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
     tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
@@ -75,31 +88,30 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
 
     sql = f"""
     SELECT
-        s.material_id,                         -- confirmed column name (gold_batch_stock_v)
-        s.batch_id,                            -- confirmed column name
-        s.unrestricted,                        -- confirmed column name
-        s.blocked,                             -- confirmed column name
-        s.quality_inspection,                  -- confirmed column name
-        s.restricted,                          -- confirmed column name
-        s.transit,                             -- confirmed column name
-        s.total_stock,                         -- confirmed column name
-        m.material_name,                       -- confirmed column name (gold_material)
-        p.plant_name,                          -- confirmed column name (gold_plant)
-        b.plant_id         AS plant_id,        -- TODO: verify column name in gold_batch_summary_v
-        b.manufacture_date AS manufacture_date, -- TODO: verify column name in gold_batch_summary_v
-        b.expiry_date      AS expiry_date,     -- TODO: verify column name in gold_batch_summary_v
-        b.batch_status     AS batch_status,    -- TODO: verify column name in gold_batch_summary_v
-        b.uom              AS uom,             -- TODO: verify column name in gold_batch_summary_v
-        b.process_order_id AS process_order_id -- TODO: verify column name in gold_batch_summary_v
+        s.MATERIAL_ID                AS material_id,             -- confirmed: gold_batch_stock_v
+        s.BATCH_ID                   AS batch_id,                -- confirmed: gold_batch_stock_v
+        s.unrestricted,                                          -- confirmed: gold_batch_stock_v (V1 inspection)
+        s.blocked,                                              -- confirmed: gold_batch_stock_v
+        s.quality_inspection,                                   -- confirmed: gold_batch_stock_v
+        s.restricted,                                           -- confirmed: gold_batch_stock_v
+        s.transit,                                              -- confirmed: gold_batch_stock_v
+        s.total_stock,                                          -- confirmed: gold_batch_stock_v
+        s.PLANT_ID                   AS plant_id,               -- verified: 2026-05-19 connected_plant_uat (not in gold_batch_summary_v)
+        m.MATERIAL_NAME              AS material_name,          -- verified: 2026-05-19 connected_plant_uat
+        m.BASE_UNIT_OF_MEASURE       AS uom,                    -- verified: 2026-05-19 connected_plant_uat (not in gold_batch_summary_v)
+        p.PLANT_NAME                 AS plant_name,             -- confirmed: gold_plant (V1 inspection)
+        b.MANUFACTURE_DATE           AS manufacture_date,       -- verified: 2026-05-19 connected_plant_uat
+        b.SHELF_LIFE_EXPIRATION_DATE AS expiry_date             -- verified: 2026-05-19 connected_plant_uat
     FROM {tbl_stock} s
-    JOIN {tbl_summary} b                       -- TODO: verify join key columns
-        ON s.material_id = b.material_id AND s.batch_id = b.batch_id
-    JOIN {tbl_material} m                      -- confirmed join key
-        ON s.material_id = m.material_id AND m.language_id = 'EN'  -- TODO: verify language_id filter
-    JOIN {tbl_plant} p                         -- confirmed join key
-        ON b.plant_id = p.plant_id             -- TODO: verify plant_id column in gold_batch_summary_v
-    WHERE s.material_id = :material_id
-      AND s.batch_id = :batch_id
+    JOIN {tbl_summary} b                                        -- verified join key: MATERIAL_ID + BATCH_ID
+        ON s.MATERIAL_ID = b.MATERIAL_ID AND s.BATCH_ID = b.BATCH_ID
+    JOIN {tbl_material} m                                       -- confirmed join key
+        ON s.MATERIAL_ID = m.MATERIAL_ID AND m.LANGUAGE_ID = 'E'  -- verified: 2026-05-19 connected_plant_uat
+    JOIN {tbl_plant} p                                          -- confirmed join key
+        ON s.PLANT_ID = p.PLANT_ID                              -- verified: 2026-05-19 connected_plant_uat
+    WHERE s.MATERIAL_ID = :material_id
+      AND s.BATCH_ID = :batch_id
+    ORDER BY s.PLANT_ID
     LIMIT :max_rows
     """
 
@@ -633,8 +645,8 @@ def _map_movement_category(raw: Optional[str]) -> str:
 
 def _map_batch_status(raw: Optional[str]) -> str:
     if raw is None:
-        return "active"
-    return _BATCH_STATUS_MAP.get(str(raw).upper().strip(), "active")
+        return "unknown"
+    return _BATCH_STATUS_MAP.get(str(raw).upper().strip(), "unknown")
 
 
 def _derive_stock_status(row: dict) -> str:

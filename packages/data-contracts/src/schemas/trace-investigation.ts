@@ -42,7 +42,7 @@ export const BatchHeaderSummarySchema = z.object({
   batchId: z.string(),
   plantId: z.string(),
   plantName: z.string(),
-  batchStatus: z.enum(['active', 'archived', 'blocked', 'deleted']),
+  batchStatus: z.enum(['active', 'archived', 'blocked', 'deleted', 'unknown']),
   quantity: z.number().optional(),
   uom: z.string().optional(),
   manufactureDate: z.string().datetime().optional(),

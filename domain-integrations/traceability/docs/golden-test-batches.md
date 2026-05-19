@@ -81,7 +81,33 @@ Passing a unit test or showing data in mock mode does not count as validation.
 
 ---
 
-### Entry 3 — Next validated batch (template)
+### Entry 3 — Confirmed UAT candidate (Silicon Dioxide Powder, C061)
+
+| Field | Value |
+|---|---|
+| **material_id** | `20035129` |
+| **batch_id** | `8000049668` |
+| **plant_id** | `C061` |
+| **why_useful** | Confirmed to exist in connected_plant_uat gold views. Used for column verification live validation on 2026-05-19. Has unrestricted stock at C061 (135 KG), manufacture date 2025-05-31, shelf life expiration 2027-05-31. Reference candidate (000000000020052009/0008602411) returned 0 rows in UAT — this is the confirmed working replacement for first live session. |
+| **expected_lineage_direction** | Unknown — requires full UAT session to confirm |
+| **expected_downstream_exposure** | Unknown — requires UAT session |
+| **expected_customer_evidence** | Unknown — requires UAT session |
+| **expected_stock_evidence** | Confirmed from live gold_batch_stock_v: unrestricted=135, blocked=0, quality_inspection=0, total_stock=135, PLANT_ID=C061, uom=KG (BASE_UNIT_OF_MEASURE from gold_material). |
+| **expected_quality_evidence** | qualityStatus expected 'unknown' (no QI stock, no QM decision source wired). |
+| **expected_coa_evidence** | Unknown — CoA panel is mock-only. |
+| **expected_mass_balance_evidence** | Unknown — requires UAT session against gold_batch_mass_balance_v. |
+| **validation_date** | Partial — column verification only (2026-05-19). Full app-level UAT not yet performed. |
+| **validation_status** | Partial — stock + summary + material data confirmed from direct Databricks queries. Full UAT session pending (app not yet deployed). |
+| **source_of_evidence** | Direct Databricks SQL queries via Statement Execution API, 2026-05-19, connected_plant_uat, warehouse `connected_plant_uat` (e76480b94bea6ed5). |
+
+**Additional notes:**
+- Material name: Silicon Dioxide Powder (gold_material, LANGUAGE_ID='E').
+- This batch supersedes Entry 2 (000000000020052009/0008602411) as the primary UAT candidate — Entry 2 exists in prior V1 work but returns 0 rows in the connected_plant_uat environment.
+- Use this batch when running the first full UAT session against the deployed V2 app.
+
+---
+
+### Entry 4 — Next validated batch (template)
 
 | Field | Value |
 |---|---|
