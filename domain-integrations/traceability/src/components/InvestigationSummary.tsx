@@ -48,10 +48,14 @@ export function InvestigationSummary({
   }
 
   // Determine Severity and alert messaging
-  const hasShippedExposure = (customerExposure?.shippedQuantity || 0) > 0 || (customerExposure?.affectedCustomers || 0) > 0
+  // customerExposure === null means delivery data is unavailable (not the same as no shipments)
+  const customerDataUnavailable = customerExposure === null
+  const hasShippedExposure =
+    !customerDataUnavailable &&
+    ((customerExposure.shippedQuantity || 0) > 0 || (customerExposure.affectedCustomers || 0) > 0)
   const hasUnrestrictedStock = batchHeader?.stockStatus === 'unrestricted'
 
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW'
+  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'LOW'
   let alertMessage = 'Unrestricted stock remains fully contained. Low immediate downstream exposure risk.'
   let actionGuidance = 'Review batch details & inventory balance.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
@@ -63,6 +67,12 @@ export function InvestigationSummary({
     actionGuidance = 'Execute recall training checklist and assess mock containment speed.'
     bannerBg = 'rgba(199, 51, 21, 0.08)'
     bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
+  } else if (customerDataUnavailable) {
+    severity = 'UNKNOWN'
+    alertMessage = 'Customer delivery data is unavailable. Downstream exposure cannot be assessed — do not assume containment.'
+    actionGuidance = 'Verify delivery data source connectivity before concluding on containment status.'
+    bannerBg = 'rgba(199, 130, 28, 0.08)'
+    bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   } else if (hasShippedExposure) {
     severity = 'CRITICAL'
     alertMessage = 'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
@@ -88,6 +98,7 @@ export function InvestigationSummary({
     HIGH: 'Near Expiry',
     MEDIUM: 'Medium Risk',
     LOW: 'Low Risk',
+    UNKNOWN: 'Exposure Unknown',
   }
 
   return (
@@ -183,7 +194,7 @@ export function InvestigationSummary({
             letterSpacing: '0.12em',
             fontWeight: 700,
             textTransform: 'uppercase',
-            color: severity === 'LOW' ? 'var(--shell-good, #1F8B4C)' : 'var(--shell-bad, #C73315)',
+            color: severity === 'LOW' ? 'var(--shell-good, #1F8B4C)' : severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
             background: 'rgba(255, 255, 255, 0.5)',
             padding: '2px 6px',
             borderRadius: 3,
@@ -230,14 +241,14 @@ export function InvestigationSummary({
           <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
             Total Shipped
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
-            {customerExposure?.shippedQuantity !== undefined ? customerExposure.shippedQuantity.toLocaleString() : '—'}
+          <div style={{ fontSize: 15, fontWeight: 700, color: customerDataUnavailable ? 'var(--shell-warn, #C7821C)' : hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
+            {customerDataUnavailable ? '?' : customerExposure.shippedQuantity !== undefined ? customerExposure.shippedQuantity.toLocaleString() : '—'}
             <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
               {batchHeader?.uom || ''}
             </span>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            {customerExposure?.affectedDeliveries !== undefined ? `${customerExposure.affectedDeliveries} deliveries` : '—'}
+            {customerDataUnavailable ? 'data unavailable' : customerExposure.affectedDeliveries !== undefined ? `${customerExposure.affectedDeliveries} deliveries` : '—'}
           </div>
         </div>
 
@@ -245,14 +256,14 @@ export function InvestigationSummary({
           <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
             Downstream Exposure
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
-            {customerExposure?.affectedCustomers !== undefined ? customerExposure.affectedCustomers : '—'}
+          <div style={{ fontSize: 15, fontWeight: 700, color: customerDataUnavailable ? 'var(--shell-warn, #C7821C)' : hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
+            {customerDataUnavailable ? '?' : customerExposure.affectedCustomers !== undefined ? customerExposure.affectedCustomers : '—'}
             <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
               customers
             </span>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            across {customerExposure?.countries?.length || 0} countries
+            {customerDataUnavailable ? 'data unavailable' : `across ${customerExposure.countries?.length || 0} countries`}
           </div>
         </div>
 
