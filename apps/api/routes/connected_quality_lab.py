@@ -67,7 +67,7 @@ async def lab_fails(
     plant_id: str | None = None,
     lot_type: str | None = None,
     x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
+):
     """Proxy to V1 CQ lab fails endpoint. Always legacy-api — databricks path blocked."""
     params: dict[str, str] = {}
     if plant_id:
@@ -83,7 +83,7 @@ async def lab_plants(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+):
     """Lab plants list — supports legacy-api and databricks-api modes.
 
     ``BACKEND_ADAPTER_MODE=databricks-api`` queries gold_plant directly.
