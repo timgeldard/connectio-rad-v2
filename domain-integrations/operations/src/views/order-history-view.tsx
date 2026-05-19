@@ -15,10 +15,10 @@ import type {
 import { VerificationStatusBanner } from '@connectio/design-system'
 
 interface QueryLike {
-  data?: { ok: boolean; source?: any; error?: { code: string; message: string } };
+  data?: { ok: boolean; source?: string; error?: { code: string; message: string } };
   isLoading: boolean;
   isError: boolean;
-  error?: any;
+  error?: Error | null;
 }
 
 function getSourceStatus(
@@ -126,9 +126,6 @@ interface QueryFormState {
   plantId: string
   materialId: string
   batchId: string
-  dateFrom: string
-  dateTo: string
-  limit: string
 }
 
 export function OrderHistoryView({ request }: OrderHistoryViewProps) {
@@ -138,20 +135,16 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     plantId: request?.plantId ?? '',
     materialId: request?.materialId ?? '',
     batchId: request?.batchId ?? '',
-    dateFrom: '',
-    dateTo: '',
-    limit: '100',
   })
   const [isMockFixtureSelected, setIsMockFixtureSelected] = useState(false)
 
   // State to trigger the actual parallel React queries
-  const [queryParams, setQueryParams] = useState<ProcessOrderReviewAdapterRequest & { limit?: number; dateFrom?: string; dateTo?: string } | null>(
+  const [queryParams, setQueryParams] = useState<ProcessOrderReviewAdapterRequest | null>(
     request?.processOrderId ? {
       processOrderId: request.processOrderId,
       plantId: request.plantId,
       materialId: request.materialId,
       batchId: request.batchId,
-      limit: 100,
     } : null
   )
 
@@ -220,12 +213,20 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       plantId: 'IE10',
       materialId: 'MAT-CH-EMMENTAL-BLOCK',
       batchId: 'CH-240308-0047',
-      dateFrom: '2024-03-08T00:00:00Z',
-      dateTo: '2024-03-08T23:59:00Z',
-      limit: '100',
     })
     setValidationError(null)
     setIsMockFixtureSelected(true)
+  }
+
+  const handleUatCandidateClick = () => {
+    setForm({
+      processOrderId: '7006965038',
+      plantId: 'C113',
+      materialId: '',
+      batchId: '',
+    })
+    setValidationError(null)
+    setIsMockFixtureSelected(false)
   }
 
   const handleReset = () => {
@@ -234,9 +235,6 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       plantId: '',
       materialId: '',
       batchId: '',
-      dateFrom: '',
-      dateTo: '',
-      limit: '100',
     })
     setQueryParams(null)
     setValidationError(null)
@@ -251,43 +249,25 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       return
     }
 
-    const limitNum = Number(form.limit)
-    if (isNaN(limitNum) || limitNum < 1 || limitNum > 500) {
-      setValidationError('Limit must be a valid number between 1 and 500.')
-      return
-    }
-
-    if (form.dateFrom && form.dateTo) {
-      const fromTime = new Date(form.dateFrom).getTime()
-      const toTime = new Date(form.dateTo).getTime()
-      if (isNaN(fromTime) || isNaN(toTime)) {
-        setValidationError('Please enter valid dates.')
-        return
-      }
-      if (fromTime > toTime) {
-        setValidationError('Start Date must be before or equal to End Date.')
-        return
-      }
-    }
-
     setValidationError(null)
     setQueryParams({
       processOrderId: form.processOrderId,
       plantId: form.plantId || undefined,
       materialId: form.materialId || undefined,
       batchId: form.batchId || undefined,
-      limit: limitNum,
-      dateFrom: form.dateFrom || undefined,
-      dateTo: form.dateTo || undefined,
     })
   }
 
   const handleCopyRequestDetails = () => {
     const urls = [
-      `POST /api/por/order-header {"process_order_id": "${form.processOrderId}", "plant_id": "${form.plantId || ''}"}`,
-      `GET /api/por/order-operations?process_order_id=${form.processOrderId}`,
-      `GET /api/por/order-confirmations?process_order_id=${form.processOrderId}`,
-      `GET /api/por/order-goods-movements?process_order_id=${form.processOrderId}`,
+      `POH UAT Evidence Capture - ${new Date().toISOString()}`,
+      `Process Order: ${form.processOrderId}`,
+      `Plant: ${form.plantId || 'N/A'}`,
+      '-----------------------------------',
+      `Header: POST /api/por/order-header {"process_order_id": "${form.processOrderId}", "plant_id": "${form.plantId || ''}"}`,
+      `Operations: GET /api/por/order-operations?process_order_id=${form.processOrderId}`,
+      `Confirmations: GET /api/por/order-confirmations?process_order_id=${form.processOrderId}`,
+      `Goods Movements: GET /api/por/order-goods-movements?process_order_id=${form.processOrderId}`,
     ].join('\n')
 
     navigator.clipboard.writeText(urls)
@@ -297,9 +277,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
   // 3. Derived operational metrics & summary stats
   const headerData = headerQuery.data?.ok ? headerQuery.data.data : null
-  const operations: ProcessOrderOperation[] = operationsQuery.data?.ok ? operationsQuery.data.data : []
-  const confirmations: ProcessOrderConfirmation[] = confirmationsQuery.data?.ok ? confirmationsQuery.data.data : []
-  const goodsMovements: ProcessOrderGoodsMovement[] = goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : []
+  const operations = useMemo(() => operationsQuery.data?.ok ? operationsQuery.data.data : [], [operationsQuery.data])
+  const confirmations = useMemo(() => confirmationsQuery.data?.ok ? confirmationsQuery.data.data : [], [confirmationsQuery.data])
+  const goodsMovements = useMemo(() => goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : [], [goodsMovementsQuery.data])
 
   const headerErr = getQueryError(headerQuery)
   const operationsErr = getQueryError(operationsQuery)
@@ -553,14 +533,65 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           'vw_gold_adp_movement'
         ]}
         limitations={[
-          'UAT verification pending Claude',
+          'UAT verification pending browser sweep',
           'no write-back',
           'no SAP transaction execution',
           'mock fixture is UI-only',
           'date/limit filters captured but not applied by current native routes'
         ]}
-        lastVerified="Pending Claude UAT Sweep"
+        lastVerified="Pending UAT Sweep"
       />
+
+      {/* C. Evidence Completeness Summary */}
+      <div style={{ ...cardStyle, background: 'linear-gradient(to bottom, #1f2937, #111827)', border: '1px solid #374151', padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#F9FAFB' }}>
+              Evidence Completeness Summary
+            </h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#9CA3AF' }}>
+              Section-level source availability and record counts for PO {queryParams?.processOrderId || '(none)'}
+            </p>
+          </div>
+          {queryParams && (
+             <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ fontSize: 10, background: '#374151', padding: '4px 8px', borderRadius: 4, color: '#9CA3AF' }}>
+                   Mode: {isMockFixtureSelected ? 'MOCK' : 'API'}
+                </div>
+             </div>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+          {[
+            { label: 'Order Header', query: headerQuery, status: headerStatus, count: headerData ? 1 : 0 },
+            { label: 'Operations', query: operationsQuery, status: operationsStatus, count: operations.length },
+            { label: 'Confirmations', query: confirmationsQuery, status: confirmationsStatus, count: confirmations.length },
+            { label: 'Goods Movements', query: goodsMovementsQuery, status: goodsMovementsStatus, count: goodsMovements.length },
+          ].map((sec, i) => (
+            <div key={i} style={{ background: '#111827', padding: 12, borderRadius: 6, border: '1px solid #1f2937' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#D1D5DB' }}>{sec.label}</span>
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  textTransform: 'uppercase',
+                  background: sec.status.bg,
+                  color: sec.status.color
+                }}>
+                  {sec.status.label}
+                </span>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#F3F4F6' }}>
+                {sec.query.isLoading ? '...' : sec.count}
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#6B7280', marginLeft: 6 }}>records</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* B. Query Form */}
       <div style={cardStyle} data-testid="poh-query-form">
@@ -667,97 +698,6 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           </div>
 
-          <div style={{
-            marginTop: 12,
-            marginBottom: 16,
-            padding: '12px 14px',
-            background: 'rgba(199, 130, 28, 0.03)',
-            border: '1px dashed var(--shell-warn, rgba(199, 130, 28, 0.2))',
-            borderRadius: 6,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-warn, #C7821C)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>⚠️</span>
-              <span>Diagnostic / planned filters — not applied by current native routes</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                  Posting Date From <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  aria-label="Posting Date From"
-                  value={form.dateFrom}
-                  onChange={e => handleInputChange('dateFrom', e.target.value)}
-                  disabled={true}
-                  style={{
-                    width: '100%',
-                    background: '#111827',
-                    border: '1px solid #374151',
-                    borderRadius: 4,
-                    padding: '7px 10px',
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}
-                />
-                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                  Posting Date To <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  aria-label="Posting Date To"
-                  value={form.dateTo}
-                  onChange={e => handleInputChange('dateTo', e.target.value)}
-                  disabled={true}
-                  style={{
-                    width: '100%',
-                    background: '#111827',
-                    border: '1px solid #374151',
-                    borderRadius: 4,
-                    padding: '7px 10px',
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}
-                />
-                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>
-                  <span>Max Rows Limit <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span></span>
-                  <span style={{ fontWeight: 'bold', color: '#64748b' }}>{form.limit}</span>
-                </div>
-                <input
-                  type="range"
-                  aria-label="Max Rows Limit"
-                  min="1"
-                  max="500"
-                  value={form.limit}
-                  onChange={e => handleInputChange('limit', e.target.value)}
-                  disabled={true}
-                  style={{
-                    width: '100%',
-                    accentColor: '#64748b',
-                    background: '#111827',
-                    height: 6,
-                    borderRadius: 3,
-                    outline: 'none',
-                    cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}
-                />
-                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned limit — not applied to database queries</div>
-              </div>
-            </div>
-          </div>
 
           {validationError && (
             <div style={{ color: '#FCA5A5', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginBottom: 12 }}>
@@ -802,23 +742,38 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 }}
                 disabled={isAnyLoading}
               >
-                {isAnyLoading ? 'Loading UC Query...' : 'Run / Refresh'}
+                Run Order Investigation
               </button>
               <button
                 type="button"
-                onClick={handleReset}
+                onClick={handleUatCandidateClick}
                 style={{
-                  background: 'transparent',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  borderRadius: 4,
+                  padding: '8px 16px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Load UAT Candidate (7006965038)
+              </button>
+              <button
+                type="button"
+                onClick={handlePresetClick}
+                style={{
+                  background: 'rgba(249, 250, 251, 0.05)',
                   color: '#D1D5DB',
                   border: '1px solid #4B5563',
                   borderRadius: 4,
                   padding: '8px 16px',
                   fontSize: 12,
-                  fontWeight: 500,
                   cursor: 'pointer',
                 }}
               >
-                Reset
+                Load Demo Fixture
               </button>
             </div>
             

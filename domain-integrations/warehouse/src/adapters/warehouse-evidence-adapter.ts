@@ -1,19 +1,9 @@
-import type { WarehouseHoldStatus } from '@connectio/data-contracts'
+import type {
+  WarehouseHoldStatus,
+  WarehouseEvidenceAdapterRequest,
+} from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import { mockWarehouseHoldStatus } from './warehouse-evidence-mock-data.js'
-
-/**
- * Request context for the warehouse evidence adapter.
- *
- * @remarks
- * Phase 1 uses mock data. Phase 2 will query the Warehouse360 backend
- * using `batchId` and `plantId`.
- */
-export interface WarehouseEvidenceAdapterRequest {
-  readonly batchId?: string
-  readonly plantId?: string
-  readonly releaseCaseId?: string
-}
 
 /** Resolves to an ISO 8601 timestamp representing "now". */
 export type NowFn = () => string

@@ -1,15 +1,18 @@
 import type {
   TraceInvestigationContext,
   BatchHeaderSummary,
+  TraceNode,
+  TraceEdge,
   TraceGraph,
   MassBalanceSummary,
+  MassBalanceMovement,
   CustomerExposureSummary,
   SupplierExposureSummary,
   TraceEvent,
   CoAReleaseStatus,
   TraceRiskSignal,
   RelatedInvestigation,
-  TraceExposureForRelease,
+  Trace2AdapterRequest,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -27,21 +30,6 @@ import {
 } from './trace2-mock-data.js'
 
 /**
- * Request context passed to all Trace2 adapter methods.
- *
- * @remarks
- * In Phase 1 all methods use the mock data file; `investigationId` and
- * `batchId` are accepted for type-safety and future API wiring.
- */
-export interface Trace2AdapterRequest {
-  readonly investigationId: string
-  readonly batchId?: string
-  readonly plantId?: string
-  readonly materialId?: string
-  readonly direction?: 'both' | 'upstream' | 'downstream'
-  readonly maxDepth?: number
-  readonly maxEdges?: number
-}
 
 /**
  * Resolves to an ISO 8601 timestamp representing "now".

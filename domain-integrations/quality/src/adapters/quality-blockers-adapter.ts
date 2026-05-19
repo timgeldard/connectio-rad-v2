@@ -1,12 +1,10 @@
-import type { QualityBlocker, ReleaseHoldImpact } from '@connectio/data-contracts'
+import type {
+  QualityBlocker,
+  ReleaseHoldImpact,
+  QualityBlockersAdapterRequest,
+} from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import { mockQualityBlockers, mockReleaseHoldImpacts } from './quality-blockers-mock-data.js'
-
-export interface QualityBlockersAdapterRequest {
-  readonly plantId?: string
-  readonly planDate?: string
-  readonly processOrderIds?: readonly string[]
-}
 
 export type NowFn = () => string
 
