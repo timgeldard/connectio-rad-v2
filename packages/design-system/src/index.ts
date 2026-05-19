@@ -64,3 +64,15 @@ export type { CommandPaletteProps, CommandPaletteItem } from './components/manuf
 
 export { VerificationStatusBanner } from './components/manufacturing/verification-status-banner'
 export type { VerificationStatusBannerProps, VerificationStatus } from './components/manufacturing/verification-status-banner'
+
+export { SourceModeBadge } from './components/manufacturing/source-mode-badge'
+export type { SourceModeBadgeProps, ExtendedSourceMode } from './components/manufacturing/source-mode-badge'
+
+export { EvidenceStatusBadge } from './components/manufacturing/evidence-status-badge'
+export type { EvidenceStatusBadgeProps, EvidenceStatus } from './components/manufacturing/evidence-status-badge'
+
+export { SourceConfidenceStrip } from './components/manufacturing/source-confidence-strip'
+export type { SourceConfidenceStripProps } from './components/manufacturing/source-confidence-strip'
+
+export { PartialDataNotice } from './components/manufacturing/partial-data-notice'
+export type { PartialDataNoticeProps } from './components/manufacturing/partial-data-notice'

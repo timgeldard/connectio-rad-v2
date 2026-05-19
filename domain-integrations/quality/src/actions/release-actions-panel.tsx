@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { BatchReleaseContext } from '@connectio/data-contracts'
+import type { BatchReleaseContext, UATEvidencePayload } from '@connectio/data-contracts'
 import { ReleaseBatchAction } from './release-batch-action.js'
 import { PlaceOnHoldAction } from './place-on-hold-action.js'
 import { RequestRetestAction } from './request-retest-action.js'
@@ -302,7 +302,7 @@ export function ActionButton({ label, onClick, disabled, variant }: ActionButton
 // ---------------------------------------------------------------------------
 
 /** Which action sheet (if any) is currently open. */
-type ActiveAction = 'release' | 'hold' | 'retest' | 'escalate-deviation' | 'open-trace' | null
+type ActiveAction = 'release' | 'hold' | 'retest' | 'escalate-deviation' | 'open-trace' | 'copy-success' | null
 
 /** Props for ReleaseActionsPanel. */
 export interface ReleaseActionsPanelProps {
@@ -388,6 +388,55 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
         disabled={disabled}
         variant="secondary"
       />
+
+      <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
+        <ActionButton 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : 'Copy Quality UAT Evidence'} 
+          onClick={() => {
+            const payload: UATEvidencePayload = {
+              domain: 'quality',
+              workspace: 'Quality Batch Release',
+              capturedAt: new Date().toISOString(),
+              adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
+              inputs: {
+                batchId: context?.batchId
+              },
+              sourceSummary: {
+                overall: 'mock',
+                sections: {
+                  summary: 'mock',
+                  results: 'mock',
+                  coa: 'mock',
+                  deviations: 'mock'
+                }
+              },
+              evidenceCompleteness: {
+                status: 'loaded',
+                sections: {
+                  summary: 'loaded',
+                  results: 'loaded',
+                  coa: 'loaded',
+                  deviations: 'loaded'
+                }
+              },
+              warnings: [
+                'Quality sandbox mode — simulated data for validation only.',
+                'Usage decisions do not write back to SAP QM.'
+              ],
+              uatNotes: [
+                'No live validation claimed.',
+                'Unavailable evidence must not be interpreted as zero exposure or no risk.'
+              ]
+            }
+            navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+            setActiveAction('copy-success')
+            setTimeout(() => setActiveAction(null), 2000)
+          }} 
+          disabled={disabled} 
+          variant="secondary" 
+        />
+      </div>
 
       {/* Action sheets — only one open at a time */}
       {activeAction === 'release' && (

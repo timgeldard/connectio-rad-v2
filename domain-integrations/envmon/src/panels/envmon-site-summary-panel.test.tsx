@@ -1,4 +1,10 @@
-import { describe, it, expect } from 'vitest'
+// @vitest-environment jsdom
+import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
+expect.extend(matchers)
+import '@testing-library/jest-dom/vitest'
+
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { EnvMonSiteSummaryPanel } from './envmon-site-summary-panel.js'

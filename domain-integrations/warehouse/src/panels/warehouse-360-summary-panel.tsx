@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
+import { SourceConfidenceStrip, type ExtendedSourceMode, TrustStrip } from '@connectio/design-system'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { Warehouse360Summary } from '@connectio/data-contracts'
 import { useWarehouse360Summary } from '../adapters/warehouse-360-queries.js'
@@ -58,6 +59,12 @@ export function Warehouse360SummaryPanel({ request }: Warehouse360SummaryPanelPr
     >
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <SourceConfidenceStrip
+            mode={(result?.source as ExtendedSourceMode) || 'unknown'}
+            status="loaded"
+            fetchedAt={result?.fetchedAt}
+            style={{ border: 'none', background: 'transparent', padding: '0 0 8px 0', marginBottom: '0' }}
+          />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Tile label="Stock Lines" value={data.totalStockLines} />
             <Tile label="On Hold" value={data.holdLines} color={data.holdLines > 0 ? '#D97706' : undefined} />

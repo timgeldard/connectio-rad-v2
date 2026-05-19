@@ -164,6 +164,8 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
           confidence={confidence}
           sim={sim}
           onSim={setSim}
+          adapterMode={import.meta.env.VITE_ADAPTER_MODE ?? 'mock'}
+          fetchedAt={batchHeaderResult?.fetchedAt}
         />
       </div>
 

@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom'
 import { describe, it, expect } from 'vitest'
 import { ProcessOrderReviewAdapter, toProcessOrderReviewAdapterError } from './process-order-review-adapter.js'
 

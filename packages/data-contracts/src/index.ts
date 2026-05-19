@@ -302,3 +302,6 @@ export type {
   WarehouseEvidenceAdapterRequest,
   ProcessOrderReviewAdapterRequest,
 } from './schemas/adapter-requests.js'
+
+export type { UATEvidencePayload } from './schemas/uat.js'
+export { UATEvidencePayloadSchema } from './schemas/uat.js'

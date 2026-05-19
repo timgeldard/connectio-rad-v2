@@ -142,4 +142,5 @@ See `docs/deployment/databricks-apps.md` for Databricks Apps deployment.
 | Databricks Apps deployment | `docs/deployment/databricks-apps.md` |
 | Workspace + panel registry | `docs/governance/workspace-and-panel-registry.md` |
 | Cross-domain readiness index | `docs/readiness/domain-readiness-index.md` |
+| UX truthfulness checklist | `docs/readiness/ux-truthfulness-checklist.md` |
 | ADRs | `docs/adr/` |

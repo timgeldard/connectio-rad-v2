@@ -12,7 +12,15 @@ import type {
   ProcessOrderConfirmation,
   ProcessOrderGoodsMovement,
 } from '@connectio/data-contracts'
-import { VerificationStatusBanner } from '@connectio/design-system'
+import {
+  VerificationStatusBanner,
+  SourceConfidenceStrip,
+  SourceModeBadge,
+  EvidenceStatusBadge,
+  type ExtendedSourceMode,
+  type EvidenceStatus,
+} from '@connectio/design-system'
+import type { UATEvidencePayload } from '@connectio/data-contracts'
 
 interface QueryLike {
   data?: { ok: boolean; source?: string; error?: { code: string; message: string } };
@@ -21,40 +29,23 @@ interface QueryLike {
   error?: Error | null;
 }
 
-function getSourceStatus(
+function getEvidenceStatus(
   query: QueryLike,
-  isMockSelected: boolean,
   isEmpty?: boolean
-) {
-  if (query.isLoading) {
-    return { label: 'Loading...', bg: '#1E293B', color: '#94A3B8' }
-  }
+): EvidenceStatus {
+  if (query.isLoading) return 'pending-validation'
   if (query.isError || (query.data && !query.data.ok)) {
-    return { label: 'error', bg: '#7F1D1D', color: '#FCA5A5' }
+    if (query.data?.error?.code === '403') return 'permission-denied'
+    if (query.data?.error?.code === '504') return 'timed-out'
+    return 'error'
   }
-  if (!query.data) {
-    return { label: 'not loaded', bg: '#334155', color: '#94A3B8' }
-  }
-  if (isEmpty) {
-    return { label: 'empty', bg: '#374151', color: '#9CA3AF' }
-  }
+  if (!query.data) return 'unavailable'
+  if (isEmpty) return 'no-records'
   
-  if (isMockSelected) {
-    return { label: 'mock fixture — not live', bg: '#451A03', color: '#FDBA74' }
-  }
-
   const source = query.data.source
-  if (source === 'databricks-api') {
-    return { label: 'databricks-api', bg: '#065F46', color: '#34D399' }
-  }
-  if (source === 'legacy-api') {
-    return { label: 'legacy-api', bg: '#1E3A8A', color: '#93C5FD' }
-  }
-  if (source === 'mock') {
-    return { label: 'mock fixture — not live', bg: '#451A03', color: '#FDBA74' }
-  }
+  if (source === 'mock') return 'mock-only'
   
-  return { label: 'source unavailable', bg: '#374151', color: '#9CA3AF' }
+  return 'loaded'
 }
 
 function getQueryError(query: QueryLike) {
@@ -259,18 +250,49 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   }
 
   const handleCopyRequestDetails = () => {
-    const urls = [
-      `POH UAT Evidence Capture - ${new Date().toISOString()}`,
-      `Process Order: ${form.processOrderId}`,
-      `Plant: ${form.plantId || 'N/A'}`,
-      '-----------------------------------',
-      `Header: POST /api/por/order-header {"process_order_id": "${form.processOrderId}", "plant_id": "${form.plantId || ''}"}`,
-      `Operations: GET /api/por/order-operations?process_order_id=${form.processOrderId}`,
-      `Confirmations: GET /api/por/order-confirmations?process_order_id=${form.processOrderId}`,
-      `Goods Movements: GET /api/por/order-goods-movements?process_order_id=${form.processOrderId}`,
-    ].join('\n')
+    const overallSource: ExtendedSourceMode = (headerQuery.data?.source as ExtendedSourceMode) || 'unknown'
+    const overallStatus: EvidenceStatus = headerQuery.data?.ok ? 'loaded' : 'partial'
 
-    navigator.clipboard.writeText(urls)
+    const payload: UATEvidencePayload = {
+      domain: 'operations',
+      workspace: 'Process Order History',
+      capturedAt: new Date().toISOString(),
+      adapterMode: import.meta.env.VITE_ADAPTER_MODE ?? 'mock',
+      inputs: {
+        processOrderId: form.processOrderId,
+        plantId: form.plantId,
+      },
+      sourceSummary: {
+        overall: overallSource,
+        sections: {
+          header: headerQuery.data?.source || 'unknown',
+          operations: operationsQuery.data?.source || 'unknown',
+          confirmations: confirmationsQuery.data?.source || 'unknown',
+          movements: goodsMovementsQuery.data?.source || 'unknown',
+        },
+      },
+      evidenceCompleteness: {
+        status: overallStatus,
+        sections: {
+          header: headerStatus,
+          operations: operationsStatus,
+          confirmations: confirmationsStatus,
+          movements: goodsMovementsStatus,
+        },
+      },
+      counts: {
+        operations: operations.length,
+        confirmations: confirmations.length,
+        movements: goodsMovements.length,
+      },
+      warnings: exceptions,
+      uatNotes: [
+        'No live validation claimed.',
+        'Unavailable evidence must not be interpreted as zero exposure or no risk.',
+      ],
+    }
+
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
     setIsCopied(true)
     setTimeout(() => setIsCopied(false), 2000)
   }
@@ -286,10 +308,10 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   const confirmationsErr = getQueryError(confirmationsQuery)
   const goodsMovementsErr = getQueryError(goodsMovementsQuery)
 
-  const headerStatus = getSourceStatus(headerQuery, isMockFixtureSelected, !headerData)
-  const operationsStatus = getSourceStatus(operationsQuery, isMockFixtureSelected, operations.length === 0)
-  const confirmationsStatus = getSourceStatus(confirmationsQuery, isMockFixtureSelected, confirmations.length === 0)
-  const goodsMovementsStatus = getSourceStatus(goodsMovementsQuery, isMockFixtureSelected, goodsMovements.length === 0)
+  const headerStatus = getEvidenceStatus(headerQuery, !headerData)
+  const operationsStatus = getEvidenceStatus(operationsQuery, operations.length === 0)
+  const confirmationsStatus = getEvidenceStatus(confirmationsQuery, confirmations.length === 0)
+  const goodsMovementsStatus = getEvidenceStatus(goodsMovementsQuery, goodsMovements.length === 0)
 
   const metrics = useMemo(() => {
     const inputs = goodsMovements.filter(m => m.direction === 'input')
@@ -409,13 +431,13 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
     if (queryParams) {
       if (operations.length === 0 && operationsQuery.data?.ok) {
-        list.push('No operation phases returned for this process order.')
+        list.push('No operation phase records returned from current source.')
       }
       if (confirmations.length === 0 && confirmationsQuery.data?.ok) {
-        list.push('Zero confirmations recorded in Unity Catalog for this order.')
+        list.push('Zero confirmation records returned from current source.')
       }
       if (goodsMovements.length === 0 && goodsMovementsQuery.data?.ok) {
-        list.push('Zero goods issue (GI) or goods receipt (GR) movements present.')
+        list.push('Zero goods movement records (GI/GR) returned from current source.')
       }
       if (metrics.hasMixedUoms) {
         list.push('Mixed units of measure detected. Bulk summation totals disabled to avoid scaling calculation errors.')
@@ -543,6 +565,16 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         lastVerified="Pending UAT Sweep"
       />
 
+      {queryParams && (
+        <SourceConfidenceStrip
+          mode={(headerQuery.data?.source as ExtendedSourceMode) || (isMockFixtureSelected ? 'mock' : 'unknown')}
+          status={headerQuery.data?.ok ? 'loaded' : 'partial'}
+          fetchedAt={headerQuery.data?.fetchedAt}
+          dataAsOf={headerData?.dataAsOf}
+          style={{ marginBottom: '16px' }}
+        />
+      )}
+
       {/* C. Evidence Completeness Summary */}
       <div style={{ ...cardStyle, background: 'linear-gradient(to bottom, #1f2937, #111827)', border: '1px solid #374151', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -574,17 +606,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: '#D1D5DB' }}>{sec.label}</span>
-                  <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    textTransform: 'uppercase',
-                    background: sec.status.bg,
-                    color: sec.status.color
-                  }}>
-                    {sec.status.label}
-                  </span>
+                  <EvidenceStatusBadge status={sec.status} />
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#F3F4F6' }}>
                   {sec.query.isLoading ? '...' : sec.count}
@@ -900,16 +922,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </h3>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <span style={{ fontSize: 10, color: '#9CA3AF' }}>Source:</span>
-                  <span style={{
-                    fontSize: 10,
-                    fontWeight: 'bold',
-                    padding: '2px 6px',
-                    borderRadius: 3,
-                    background: headerStatus.bg,
-                    color: headerStatus.color
-                  }}>
-                    {headerStatus.label.toUpperCase()}
-                  </span>
+                  <SourceModeBadge mode={(headerQuery.data?.source as ExtendedSourceMode) || 'unknown'} />
                 </div>
               </div>
 
@@ -967,9 +980,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Operations & Process Phases
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: operationsStatus.bg, color: operationsStatus.color }}>
-                  {operationsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={operationsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
                 ℹ️ No process operations or phases recorded for this order.
@@ -983,9 +994,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Operations & Process Phases
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: operationsStatus.bg, color: operationsStatus.color }}>
-                  {operationsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={operationsStatus} />
               </div>
               <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
                 💡 <strong>Operations & process phases</strong> represent scheduled or completed steps (e.g., pasteurisation, standardization). Planned durations are derived from SAP recipe specifications, whereas actual timestamps are captured from execution events on the plant floor.
@@ -1051,9 +1060,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Posted Yield Confirmations
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: confirmationsStatus.bg, color: confirmationsStatus.color }}>
-                  {confirmationsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={confirmationsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
                 ℹ️ No posted yield confirmations recorded for this order.
@@ -1067,9 +1074,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Posted Yield Confirmations
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: confirmationsStatus.bg, color: confirmationsStatus.color }}>
-                  {confirmationsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={confirmationsStatus} />
               </div>
               <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
                 💡 <strong>Yield confirmations</strong> record actual production output, scrap, and durations confirmed by operators at each phase. Final confirmations indicate phase completion, while partial confirmations show intermediate progress updates.
@@ -1126,9 +1131,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Goods Movements (Material Documents)
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: goodsMovementsStatus.bg, color: goodsMovementsStatus.color }}>
-                  {goodsMovementsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={goodsMovementsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
                 ℹ️ No goods movements recorded for this order.
@@ -1142,9 +1145,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                   Goods Movements (Material Documents)
                 </h3>
-                <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: goodsMovementsStatus.bg, color: goodsMovementsStatus.color }}>
-                  {goodsMovementsStatus.label.toUpperCase()}
-                </span>
+                <EvidenceStatusBadge status={goodsMovementsStatus} />
               </div>
               <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
                 💡 <strong>Goods movements</strong> represent physical stock transactions: Goods Issues (INPUT/261) represent raw materials consumed into the process order, while Goods Receipts (OUTPUT/101) represent finished or co-product stock produced.

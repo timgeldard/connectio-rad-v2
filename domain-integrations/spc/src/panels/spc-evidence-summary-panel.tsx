@@ -1,9 +1,10 @@
+import { EvidenceStatusBadge, type EvidenceStatus } from '@connectio/design-system'
 import type { AdapterSource } from '@connectio/source-adapters'
 
 interface EvidenceSection {
   readonly id: string
   readonly name: string
-  readonly status: 'loading' | 'ready' | 'loaded' | 'mock-only' | 'error' | 'pending-uat' | 'unavailable'
+  readonly status: EvidenceStatus
   readonly source?: AdapterSource
   readonly count?: number
   readonly message?: string
@@ -76,7 +77,14 @@ export function SPCEvidenceSummaryPanel({ sections }: SPCEvidenceSummaryPanelPro
               </div>
             )}
 
-            <StatusBadge status={section.status} source={section.source} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               {section.source && (
+                 <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--shell-fg-3)', textTransform: 'uppercase', opacity: 0.7 }}>
+                   {section.source}
+                 </span>
+               )}
+               <EvidenceStatusBadge status={section.status} />
+            </div>
           </div>
         ))}
       </div>
@@ -92,51 +100,6 @@ export function SPCEvidenceSummaryPanel({ sections }: SPCEvidenceSummaryPanelPro
         lineHeight: 1.5
       }}>
         <strong style={{ color: 'var(--shell-accent, #388BFD)' }}>Read-Only UAT Notice:</strong> This summary tracks the availability of evidence panels within the current scope. 'Mock' status indicates high-fidelity simulation for workflow validation.
-      </div>
-    </div>
-  )
-}
-
-function StatusBadge({ status, source }: { status: EvidenceSection['status']; source?: AdapterSource }) {
-  const styles: Record<EvidenceSection['status'], { bg: string; color: string; border: string }> = {
-    loading: { bg: 'var(--shell-surface-2)', color: 'var(--shell-fg-3)', border: 'var(--shell-line)' },
-    ready: { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
-    loaded: { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
-    'mock-only': { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
-    error: { bg: 'rgba(199, 51, 21, 0.1)', color: 'var(--shell-bad, #C73315)', border: 'rgba(199, 51, 21, 0.2)' },
-    'pending-uat': { bg: 'rgba(199, 130, 28, 0.1)', color: 'var(--shell-warn, #C7821C)', border: 'rgba(199, 130, 28, 0.2)' },
-    unavailable: { bg: 'var(--shell-surface-2)', color: 'var(--shell-fg-3)', border: 'var(--shell-line)' },
-  }
-
-  const style = styles[status]
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      {source && (
-        <span style={{ 
-          fontSize: '9px', 
-          fontWeight: 700, 
-          textTransform: 'uppercase',
-          color: 'var(--shell-fg-3)',
-          opacity: 0.7
-        }}>
-          {source}
-        </span>
-      )}
-      <div
-        style={{
-          padding: '2px 8px',
-          borderRadius: '12px',
-          background: style.bg,
-          color: style.color,
-          border: `1px solid ${style.border}`,
-          fontSize: '10px',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.02em',
-        }}
-      >
-        {status.replace(/-/g, ' ')}
       </div>
     </div>
   )

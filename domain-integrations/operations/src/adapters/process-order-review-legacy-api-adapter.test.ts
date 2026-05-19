@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ProcessOrderReviewLegacyApiAdapter } from './process-order-review-legacy-api-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'

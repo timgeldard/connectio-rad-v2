@@ -10,6 +10,7 @@ import { HoldsManagementView } from './views/holds-management-view.js'
 import { GoodsMovementsView } from './views/goods-movements-view.js'
 import { ReplenishmentView } from './views/replenishment-view.js'
 import { WarehouseCockpitView } from './views/warehouse-cockpit-view.js'
+import { WarehouseInitialState } from './components/WarehouseInitialState.js'
 
 export type Warehouse360ViewId =
   | 'warehouse-cockpit'
@@ -38,6 +39,24 @@ export function Warehouse360Workspace({
 
   const { data: contextResult } = useWarehouse360Context(request)
   const context = contextResult?.ok ? contextResult.data : null
+
+  if (!scope.warehouseId) {
+    return (
+      <StandardWorkspaceTemplate
+        registration={warehouse360Registration}
+        scope={scope}
+        defaultViewId="warehouse-cockpit"
+      >
+        <WarehouseInitialState 
+          adapterMode={import.meta.env.VITE_ADAPTER_MODE || 'mock'} 
+          onLoadCandidate={() => {
+            // In a real shell this would update the scope
+            console.info('UAT Candidate Load Requested: WH-LISTOWEL-01 / IE10 / 1001')
+          }} 
+        />
+      </StandardWorkspaceTemplate>
+    )
+  }
 
   return (
     <StandardWorkspaceTemplate

@@ -17,6 +17,7 @@ import { DecisionHistoryView } from './views/decision-history-view.js'
 import { LabBoardView } from './views/lab-board-view.js'
 import { useReleaseContext } from './adapters/quality-release-queries.js'
 import type { QualityReleaseAdapterRequest } from './adapters/quality-release-adapter.js'
+import { BatchReleaseInitialState } from './components/BatchReleaseInitialState.js'
 
 /** Valid view identifiers for the Quality Batch Release workspace. */
 export type BatchReleaseViewId =
@@ -68,18 +69,37 @@ export interface BatchReleaseWorkspaceProps {
  */
 export function BatchReleaseWorkspace({
   scope,
-  releaseCaseId = 'RC-2024-001847',
+  releaseCaseId,
   viewId = 'release-queue',
   onSelectCase,
 }: BatchReleaseWorkspaceProps) {
+  const adapterMode = import.meta.env.VITE_ADAPTER_MODE || 'mock'
+  
+  if (!releaseCaseId && !scope.batchId) {
+    return (
+      <StandardWorkspaceTemplate
+        registration={batchReleaseRegistration}
+        scope={scope}
+        defaultViewId="release-queue"
+      >
+        <BatchReleaseInitialState 
+          adapterMode={adapterMode} 
+          onLoadCandidate={() => onSelectCase?.('RC-2024-001847')} 
+        />
+      </StandardWorkspaceTemplate>
+    )
+  }
+
+  const effectiveCaseId = releaseCaseId || 'RC-2024-001847'
+
   const qualityRequest: QualityReleaseAdapterRequest = {
-    releaseCaseId,
+    releaseCaseId: effectiveCaseId,
     batchId: scope.batchId,
     plantId: scope.plantId,
   }
 
   const traceRequest: Trace2AdapterRequest = {
-    investigationId: `trace-for-${releaseCaseId}`,
+    investigationId: `trace-for-${effectiveCaseId}`,
     batchId: scope.batchId,
     plantId: scope.plantId,
   }
@@ -87,13 +107,13 @@ export function BatchReleaseWorkspace({
   const operationsRequest: OperationsEvidenceAdapterRequest = {
     processOrderId: scope.processOrderId,
     batchId: scope.batchId,
-    releaseCaseId,
+    releaseCaseId: effectiveCaseId,
   }
 
   const warehouseRequest: WarehouseEvidenceAdapterRequest = {
     batchId: scope.batchId,
     plantId: scope.plantId,
-    releaseCaseId,
+    releaseCaseId: effectiveCaseId,
   }
 
   const { data: contextResult } = useReleaseContext(qualityRequest)
@@ -105,7 +125,7 @@ export function BatchReleaseWorkspace({
     operationsRequest,
     warehouseRequest,
     onSelectCase,
-    activeCaseId: releaseCaseId,
+    activeCaseId: effectiveCaseId,
   })
 
   return (

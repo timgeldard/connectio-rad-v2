@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
+import { SourceConfidenceStrip, type ExtendedSourceMode } from '@connectio/design-system'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { BatchReleaseSummary } from '@connectio/data-contracts'
 import { useReleaseSummary } from '../adapters/quality-release-queries.js'
@@ -64,6 +65,12 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
+          <SourceConfidenceStrip
+            mode={(result?.source as ExtendedSourceMode) || 'mock'}
+            status="loaded"
+            fetchedAt={result?.fetchedAt}
+            style={{ marginBottom: '4px', background: 'var(--shell-surface)', border: 'none', padding: '0 0 8px 0' }}
+          />
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <ReadinessBadge readiness={data.overallReadiness} />
             <RecommendedActionChip action={data.recommendedAction} />
@@ -132,12 +139,12 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
             {showAdvisories && (
               <div style={{ display: 'grid', gap: 6 }}>
                 <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
-                  <strong>Mock Mode:</strong>
-                  <span>This panel uses simulated data for validation. Release actions do not write back to SAP QM.</span>
+                  <strong>UAT Sandbox:</strong>
+                  <span>This panel uses simulated data for validation. Usage decisions do not write back to SAP QM.</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <strong>Note:</strong>
-                  <span>Quality Inspection (QI) stock is physically restricted in storage locations. The usage decision must be finalized in SAP QM to release this batch.</span>
+                  <strong>Trust Notice:</strong>
+                  <span>Unavailable evidence panels must not be interpreted as zero exposure. No risk signals returned from current source.</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <strong>Advisory:</strong>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Warehouse360OverviewContext } from '@connectio/data-contracts'
+import type { Warehouse360OverviewContext, UATEvidencePayload } from '@connectio/data-contracts'
 
 function ActionSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -176,7 +176,7 @@ function RequestReplenishmentAction({ context, onClose }: { context: Warehouse36
   )
 }
 
-type ActiveAction = 'raise-hold-inquiry' | 'request-replenishment' | 'open-batch-release' | 'open-staging' | 'open-trace' | null
+type ActiveAction = 'raise-hold-inquiry' | 'request-replenishment' | 'open-batch-release' | 'open-staging' | 'open-trace' | 'copy-success' | null
 
 export interface Warehouse360ActionsPanelProps {
   readonly context: Warehouse360OverviewContext | null
@@ -195,6 +195,55 @@ export function Warehouse360ActionsPanel({ context }: Warehouse360ActionsPanelPr
       <ActionButton label="Open Batch Release" onClick={() => setActiveAction('open-batch-release')} disabled={disabled} variant="secondary" />
       <ActionButton label="Open Production Staging" onClick={() => setActiveAction('open-staging')} disabled={disabled} variant="secondary" />
       <ActionButton label="Open Trace Investigation" onClick={() => setActiveAction('open-trace')} disabled={disabled} variant="secondary" />
+
+      <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
+        <ActionButton 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : 'Copy Warehouse UAT Evidence'} 
+          onClick={() => {
+            const payload: UATEvidencePayload = {
+              domain: 'warehouse',
+              workspace: 'Warehouse 360',
+              capturedAt: new Date().toISOString(),
+              adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
+              inputs: {
+                warehouseId: context?.warehouseId
+              },
+              sourceSummary: {
+                overall: 'mock',
+                sections: {
+                  summary: 'mock',
+                  stock: 'mock',
+                  holds: 'mock',
+                  exceptions: 'mock'
+                }
+              },
+              evidenceCompleteness: {
+                status: 'loaded',
+                sections: {
+                  summary: 'loaded',
+                  stock: 'loaded',
+                  holds: 'loaded',
+                  exceptions: 'loaded'
+                }
+              },
+              warnings: [
+                'Warehouse sandbox mode — simulated data for validation only.',
+                'Movements and holds do not write back to WMS/SAP.'
+              ],
+              uatNotes: [
+                'No live validation claimed.',
+                'Unavailable evidence must not be interpreted as zero exposure or no risk.'
+              ]
+            }
+            navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+            setActiveAction('copy-success')
+            setTimeout(() => setActiveAction(null), 2000)
+          }} 
+          disabled={disabled} 
+          variant="secondary" 
+        />
+      </div>
 
       {activeAction === 'raise-hold-inquiry' && <RaiseHoldInquiryAction context={context} onClose={() => setActiveAction(null)} />}
       {activeAction === 'request-replenishment' && <RequestReplenishmentAction context={context} onClose={() => setActiveAction(null)} />}

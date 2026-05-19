@@ -3,7 +3,7 @@ import type {
   CustomerExposureSummary,
   SupplierExposureSummary,
 } from '@connectio/data-contracts'
-import { StatusBadge, Button } from '@connectio/design-system'
+import { StatusBadge, Button, SourceConfidenceStrip, type EvidenceStatus, type ExtendedSourceMode } from '@connectio/design-system'
 import { EvidenceConfidenceBadge, type ConfidenceResult } from './EvidenceConfidence.js'
 
 export interface InvestigationSummaryProps {
@@ -13,6 +13,8 @@ export interface InvestigationSummaryProps {
   readonly confidence: ConfidenceResult
   readonly sim: boolean
   readonly onSim: (sim: boolean) => void
+  readonly adapterMode: ExtendedSourceMode
+  readonly fetchedAt?: string | null
 }
 
 export function InvestigationSummary({
@@ -22,6 +24,8 @@ export function InvestigationSummary({
   confidence,
   sim,
   onSim,
+  adapterMode,
+  fetchedAt,
 }: InvestigationSummaryProps) {
   // Navigation helper to update view without router library dependency
   const handleNavigate = (viewId: string) => {
@@ -60,7 +64,7 @@ export function InvestigationSummary({
 
   let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'LOW'
   let severityLabel = ''
-  let alertMessage = 'Unrestricted stock remains fully contained. Low immediate downstream exposure risk.'
+  let alertMessage = 'Unrestricted stock remains fully contained. No risk signals returned from current source.'
   let actionGuidance = 'Review batch details & inventory balance.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
   let bannerBorder = '1px solid rgba(31, 139, 76, 0.25)'
@@ -149,22 +153,34 @@ export function InvestigationSummary({
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono, monospace)',
-                fontSize: 10,
-                color: 'var(--shell-fg-3, #7A8A75)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-              }}
-            >
-              Batch Investigation Cockpit
-            </span>
-            <span style={{ width: 4, height: 4, borderRadius: 2, background: 'var(--shell-line, #DAD9C9)' }} />
-            <EvidenceConfidenceBadge result={confidence} />
-          </div>
+            <SourceConfidenceStrip
+              mode={adapterMode}
+              status={
+                confidence.grade === 'COMPLETE' ? 'loaded' : 
+                confidence.grade === 'PARTIAL' ? 'partial' : 
+                confidence.grade === 'MISSING' ? 'unavailable' : 'unknown' as EvidenceStatus
+              }
+              fetchedAt={fetchedAt}
+              dataAsOf={batchHeader?.dataAsOf}
+              className=""
+              style={{ marginBottom: '12px' }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 10,
+                  color: 'var(--shell-fg-3, #7A8A75)',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  fontWeight: 600,
+                }}
+              >
+                Batch Investigation Cockpit
+              </span>
+              <span style={{ width: 4, height: 4, borderRadius: 2, background: 'var(--shell-line, #DAD9C9)' }} />
+              <EvidenceConfidenceBadge result={confidence} />
+            </div>
 
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--shell-fg, #0E1F0A)' }}>
             {batchHeader?.materialDescription || 'Loading material...'}
