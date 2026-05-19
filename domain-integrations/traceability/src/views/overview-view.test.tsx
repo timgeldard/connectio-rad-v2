@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { OverviewView } from './overview-view.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
@@ -23,20 +23,46 @@ vi.mock('../panels/event-timeline-panel.js', () => ({
   EventTimelinePanel: () => <div data-testid="mock-event-timeline-panel" />,
 }))
 
-// Mock queries
+// Hoisted vi.fn() mocks. Cast return values to unknown so individual tests can supply any
+// valid AdapterResult shape via mockReturnValueOnce without triggering inference errors.
+const {
+  mockUseBatchHeaderSummary,
+  mockUseCustomerExposureSummary,
+  mockUseMassBalanceSummary,
+  mockUseCoAReleaseStatus,
+  mockUseSupplierExposureSummary,
+  mockUseTraceGraph,
+} = vi.hoisted(() => ({
+  mockUseBatchHeaderSummary: vi.fn(() => ({ data: { ok: true, data: {} } as unknown })),
+  mockUseCustomerExposureSummary: vi.fn(() => ({ data: { ok: true, data: { countries: [] } } as unknown })),
+  mockUseMassBalanceSummary: vi.fn(() => ({ data: { ok: true, data: {} } as unknown })),
+  mockUseCoAReleaseStatus: vi.fn(() => ({ data: { ok: true, data: {} } as unknown })),
+  mockUseSupplierExposureSummary: vi.fn(() => ({ data: { ok: true, data: {} } as unknown })),
+  mockUseTraceGraph: vi.fn(() => ({ data: { ok: true, data: {} } as unknown })),
+}))
+
 vi.mock('../adapters/trace2-queries.js', () => ({
-  useBatchHeaderSummary: () => ({ data: { ok: true, data: {} } }),
-  useCustomerExposureSummary: () => ({ data: { ok: true, data: { countries: [] } } }),
-  useMassBalanceSummary: () => ({ data: { ok: true, data: {} } }),
-  useCoAReleaseStatus: () => ({ data: { ok: true, data: {} } }),
-  useSupplierExposureSummary: () => ({ data: { ok: true, data: {} } }),
-  useTraceGraph: () => ({ data: { ok: true, data: {} } }),
+  useBatchHeaderSummary: () => mockUseBatchHeaderSummary(),
+  useCustomerExposureSummary: () => mockUseCustomerExposureSummary(),
+  useMassBalanceSummary: () => mockUseMassBalanceSummary(),
+  useCoAReleaseStatus: () => mockUseCoAReleaseStatus(),
+  useSupplierExposureSummary: () => mockUseSupplierExposureSummary(),
+  useTraceGraph: () => mockUseTraceGraph(),
 }))
 
 const mockRequest: Trace2AdapterRequest = {
   investigationId: 'test-inv',
   batchId: 'test-batch',
 }
+
+beforeEach(() => {
+  mockUseBatchHeaderSummary.mockReturnValue({ data: { ok: true, data: {} } as unknown })
+  mockUseCustomerExposureSummary.mockReturnValue({ data: { ok: true, data: { countries: [] } } as unknown })
+  mockUseMassBalanceSummary.mockReturnValue({ data: { ok: true, data: {} } as unknown })
+  mockUseCoAReleaseStatus.mockReturnValue({ data: { ok: true, data: {} } as unknown })
+  mockUseSupplierExposureSummary.mockReturnValue({ data: { ok: true, data: {} } as unknown })
+  mockUseTraceGraph.mockReturnValue({ data: { ok: true, data: {} } as unknown })
+})
 
 describe('OverviewView', () => {
   it('renders all six modular panels correctly', () => {
@@ -55,5 +81,117 @@ describe('OverviewView', () => {
 
     expect(screen.getByText('Batch Investigation Cockpit')).not.toBeNull()
     expect(screen.getByText('Evidence Pack Readiness')).not.toBeNull()
+  })
+
+  it('does NOT show a batch header error banner when data loads successfully', () => {
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.queryByRole('alert', { name: 'Batch header error' })).toBeNull()
+  })
+
+  it('does NOT show a batch header error banner while loading (result still undefined)', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({ data: undefined })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.queryByRole('alert', { name: 'Batch header error' })).toBeNull()
+  })
+})
+
+describe('OverviewView — batch header error states (TRACE-P1-003)', () => {
+  it('shows "Batch not found" banner when adapter returns not-found', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'not-found', message: 'No batch header row for the given identifiers.', retryable: false },
+        displayState: 'empty',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByRole('alert', { name: 'Batch header error' })).not.toBeNull()
+    expect(screen.getByText('Batch not found')).not.toBeNull()
+    expect(screen.getByText('No batch header row for the given identifiers.')).not.toBeNull()
+  })
+
+  it('shows "Not authorized or data not accessible" banner when adapter returns unauthorized', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'unauthorized', message: 'Insufficient permissions to access this batch.', retryable: false },
+        displayState: 'error',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByText('Not authorized or data not accessible')).not.toBeNull()
+    expect(screen.getByText('Insufficient permissions to access this batch.')).not.toBeNull()
+  })
+
+  it('shows "Batch header unavailable" banner for generic adapter error', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'unknown', message: 'Unexpected error from data source.', retryable: true },
+        displayState: 'error',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByText('Batch header unavailable')).not.toBeNull()
+    expect(screen.getByText('Unexpected error from data source.')).not.toBeNull()
+  })
+
+  it('shows "Data source timeout" banner when adapter returns timeout', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'timeout', message: 'Query exceeded the allowed duration.', retryable: true },
+        displayState: 'error',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByText('Data source timeout')).not.toBeNull()
+  })
+
+  it('still renders all six evidence panels even when batch header errors', () => {
+    mockUseBatchHeaderSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'not-found', message: 'Not found.', retryable: false },
+        displayState: 'empty',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByTestId('mock-batch-header-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-risk-signals-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-trace-graph-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-customer-impact-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-coa-release-status-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-event-timeline-panel')).not.toBeNull()
+  })
+})
+
+describe('OverviewView — customer exposure error state (TRACE-P0-001)', () => {
+  it('shows "Exposure Unknown" (not "Low Risk") when customer exposure adapter fails', () => {
+    mockUseCustomerExposureSummary.mockReturnValueOnce({
+      data: {
+        ok: false,
+        error: { code: 'unknown', message: 'Customer exposure data unavailable.', retryable: true },
+        displayState: 'error',
+      },
+    })
+
+    render(<OverviewView request={mockRequest} />)
+
+    expect(screen.getByText('Exposure Unknown')).not.toBeNull()
+    expect(screen.queryByText('Low Risk')).toBeNull()
   })
 })

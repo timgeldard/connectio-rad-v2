@@ -86,6 +86,9 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
               <BatchHeaderField label="Expiry" value={new Date(data.expiryDate).toLocaleDateString()} />
             )}
           </div>
+          <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 4 }}>
+            Data freshness not available — values were retrieved at query time, but the underlying Databricks refresh time is not yet shown.
+          </div>
         </div>
       )}
     </EvidencePanel>

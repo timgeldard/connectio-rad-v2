@@ -74,7 +74,7 @@ Fill these in during the session. Record only observed values — do not infer o
 | Session date | YYYY-MM-DD | — |
 | App version commit | `git rev-parse --short HEAD` on the deployed build | — |
 | App URL / environment name | Full URL or environment label | — |
-| Tester identity | Name or email (no tokens, no credentials) | — |
+| Tester identity | Alias, initials, or ticket reference — no full name or email address | — |
 | Adapter mode confirmed | Source badge text shown on batch header panel | — |
 | **Batch header** | | |
 | Batch header — returned? | Yes / No / Error | — |
@@ -144,7 +144,7 @@ If `qualityStatus` returns `"pending"`: QI stock > 0 was detected. An open quali
 | `date` | Date of the session in YYYY-MM-DD format. |
 | `environment` | Name of the target environment (e.g. `databricks-apps-dev`, `databricks-apps-uat`). |
 | `app_version_commit` | The short git commit SHA (`git rev-parse --short HEAD`) of the build under test. |
-| `tester` | Name or email of the person who ran the session. |
+| `tester` | Alias, initials, or ticket reference — no full name or email address. |
 | `batch_tested` | The material ID, batch ID, and plant ID entered in the query form (format: `materialId / batchId / plantId`). |
 | `scenario_ref` | Scenario number(s) from `uat-acceptance-script.md` exercised in this run (e.g. `S1, S2, S3`). |
 | `result` | `pass` — all pass criteria met; `fail` — one or more fail criteria triggered; `blocked` — scenario could not be executed (state the blocker in notes). |
@@ -214,6 +214,28 @@ In `InvestigationSummary.tsx`, the severity label "HIGH" (labelled "Near Expiry"
 **Blocker:** The `maxExposureDepth` field requires the customer-exposure Databricks slice to be implemented and validated against live lineage data. The field is intentionally absent from the mock fixture.
 
 **UAT verification:** Requires a batch with known second-hop downstream exposure. Compare displayed severity to reference engine output for that batch.
+
+---
+
+### DEF-TRACE-004 — Batch header not-found / error state was invisible in the cockpit header
+
+**Identified:** Code review — TRACE-P1-003  
+**Fixed in:** Current tranche — `overview-view.tsx` `BatchHeaderErrorBanner`  
+**Status:** Code-fixed — live validation pending
+
+**Description:**  
+When the batch-header adapter returned `{ ok: false }` (not-found, unauthorized, timeout, or other error), `overview-view.tsx` silently converted the error to `batchHeader = null`. The `InvestigationSummary` received null `batchHeader` and showed a generic "Loading material..." state with no error detail, regardless of whether the cause was loading, a bad batch ID, or an access-control failure.
+
+**Behaviour after fix (expected):**  
+`overview-view.tsx` now checks `batchHeaderResult !== undefined && !batchHeaderResult.ok`. When true, a `BatchHeaderErrorBanner` is rendered above the cockpit with the appropriate heading:
+- "Batch not found" for `code: 'not-found'`
+- "Not authorized or data not accessible" for `code: 'unauthorized'`
+- "Data source timeout" for `code: 'timeout'`
+- "Batch header unavailable" for other error codes
+
+The loading state (result still `undefined`) does not trigger the banner, so normal load-in behaviour is unchanged.
+
+**UAT verification:** Submit a batch ID that is known not to exist in the live system and confirm "Batch not found" renders in the cockpit header. Test with a user whose OAuth identity does not have `trace.read` grant to confirm "Not authorized" banner.
 
 ---
 
