@@ -2037,16 +2037,9 @@
           "type": "object",
           "properties": {
             "lastRefreshedAt": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
             "isStale": {
               "type": "boolean"
             },
@@ -2160,16 +2153,9 @@
       "type": "object",
       "properties": {
         "lastRefreshedAt": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "date-time"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "isStale": {
           "type": "boolean"
         },
@@ -3627,9 +3613,9 @@
           "type": "string"
         },
         "confirmedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "confirmedBy": {
           "type": "string"
         },
@@ -3693,9 +3679,9 @@
           "type": "string"
         },
         "postedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "postedBy": {
           "type": "string"
         },
@@ -3762,21 +3748,21 @@
           "type": "string"
         },
         "plannedStart": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "plannedFinish": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "actualStart": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "actualFinish": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "orderStatus": {
           "type": "string",
           "enum": [
@@ -3822,21 +3808,21 @@
           "type": "string"
         },
         "plannedStart": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "plannedFinish": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "actualStart": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "actualFinish": {
-          "type": "string",
-          "format": "date-time"
-        },
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
         "status": {
           "type": "string",
           "enum": [

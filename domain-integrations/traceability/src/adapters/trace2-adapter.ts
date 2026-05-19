@@ -1,11 +1,8 @@
 import type {
   TraceInvestigationContext,
   BatchHeaderSummary,
-  TraceNode,
-  TraceEdge,
   TraceGraph,
   MassBalanceSummary,
-  MassBalanceMovement,
   CustomerExposureSummary,
   SupplierExposureSummary,
   TraceEvent,
@@ -13,6 +10,7 @@ import type {
   TraceRiskSignal,
   RelatedInvestigation,
   Trace2AdapterRequest,
+  TraceExposureForRelease,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {

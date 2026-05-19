@@ -8,6 +8,8 @@
 
 /** Request context for Manufacturing Operations evidence. */
 export interface OperationsEvidenceAdapterRequest {
+  readonly plantId?: string
+  readonly planDate?: string
   readonly processOrderId?: string
   readonly batchId?: string
   readonly releaseCaseId?: string
@@ -29,8 +31,9 @@ export interface Trace2AdapterRequest {
 
 /** Request context for Warehouse 360 evidence. */
 export interface WarehouseEvidenceAdapterRequest {
-  readonly batchId?: string
   readonly plantId?: string
+  readonly planDate?: string
+  readonly batchId?: string
   readonly releaseCaseId?: string
 }
 

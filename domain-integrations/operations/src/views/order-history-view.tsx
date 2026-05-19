@@ -277,9 +277,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
   // 3. Derived operational metrics & summary stats
   const headerData = headerQuery.data?.ok ? headerQuery.data.data : null
-  const operations = useMemo(() => operationsQuery.data?.ok ? operationsQuery.data.data : [], [operationsQuery.data])
-  const confirmations = useMemo(() => confirmationsQuery.data?.ok ? confirmationsQuery.data.data : [], [confirmationsQuery.data])
-  const goodsMovements = useMemo(() => goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : [], [goodsMovementsQuery.data])
+  const operations = useMemo(() => (operationsQuery.data?.ok ? operationsQuery.data.data : []) ?? [], [operationsQuery.data])
+  const confirmations = useMemo(() => (confirmationsQuery.data?.ok ? confirmationsQuery.data.data : []) ?? [], [confirmationsQuery.data])
+  const goodsMovements = useMemo(() => (goodsMovementsQuery.data?.ok ? goodsMovementsQuery.data.data : []) ?? [], [goodsMovementsQuery.data])
 
   const headerErr = getQueryError(headerQuery)
   const operationsErr = getQueryError(operationsQuery)

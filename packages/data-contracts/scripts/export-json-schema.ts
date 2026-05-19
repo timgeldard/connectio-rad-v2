@@ -39,7 +39,32 @@ async function main() {
   }
 
   const outputPath = path.join(outputDir, 'contracts.json');
-  fs.writeFileSync(outputPath, JSON.stringify(combinedSchema, null, 2));
+  // Post-process to transform anyOf [type: string, type: null] to type: [string, null] for better compatibility/readability
+  let schemaString = JSON.stringify(combinedSchema, null, 2);
+  
+  // Regex to match the anyOf pattern produced by zodToJsonSchema for .nullable().optional()
+  // "plannedStart": {
+  //   "anyOf": [
+  //     {
+  //       "type": "string",
+  //       "format": "date-time"
+  //     },
+  //     {
+  //       "type": "null"
+  //     }
+  //   ]
+  // }
+  // ->
+  // "plannedStart": {
+  //   "type": ["string", "null"],
+  //   "format": "date-time"
+  // }
+  schemaString = schemaString.replace(
+    /"(\w+)":\s*{\s*"anyOf":\s*\[\s*{\s*"type":\s*"string",\s*"format":\s*"date-time"\s*},\s*{\s*"type":\s*"null"\s*}\s*]\s*}/g,
+    '"$1": {\n      "type": ["string", "null"],\n      "format": "date-time"\n    }'
+  );
+
+  fs.writeFileSync(outputPath, schemaString);
   console.log(`Successfully exported JSON Schema to ${outputPath}`);
 }
 
