@@ -236,6 +236,32 @@ class TestMapBatchHeaderRows:
         assert result is not None
         assert result["qualityStatus"] == "unknown"
 
+    def test_quality_status_unknown_when_qi_is_null(self) -> None:
+        """Null quality_inspection (missing column) → 'unknown', not 'not-applicable'.
+
+        The adapter must not interpret a missing QI field as confirmed quality acceptance.
+        """
+        row = {**_FULL_BATCH_HEADER_ROW, "quality_inspection": None}
+        result = map_batch_header_rows([row])
+        assert result is not None
+        assert result["qualityStatus"] == "unknown"
+
+    def test_quality_status_never_returns_accepted_or_rejected(self) -> None:
+        """Prove accepted/rejected/conditional cannot be reached without QM decision evidence.
+
+        _derive_quality_status is conservative by design: it reads QI stock quantity only,
+        not a QM usage decision field. Until gold_qm_usage_decision_v (or equivalent) is
+        verified in UAT and wired into the query, these values must not appear.
+        """
+        from adapters.trace2.trace2_databricks_adapter import _derive_quality_status
+        blocked_values = {"accepted", "rejected", "conditional"}
+        for qi_value in [0.0, None, 0, ""]:
+            result = _derive_quality_status({**_FULL_BATCH_HEADER_ROW, "quality_inspection": qi_value})
+            assert result not in blocked_values, (
+                f"_derive_quality_status returned '{result}' for quality_inspection={qi_value!r} "
+                "without a verified QM usage decision field — conservative mapping violated"
+            )
+
     def test_batch_status_maps_released_to_active(self) -> None:
         row = {**_FULL_BATCH_HEADER_ROW, "batch_status": "RELEASED"}
         result = map_batch_header_rows([row])

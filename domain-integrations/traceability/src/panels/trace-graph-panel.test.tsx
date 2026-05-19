@@ -346,7 +346,7 @@ describe('TraceGraphPanel — warnings banner', () => {
     expect(screen.getByText(/Graph truncated/i)).toBeDefined()
   })
 
-  it('shows max-depth warning when max_depth_reached in warnings', () => {
+  it('shows truncation warning when max_depth_reached in warnings', () => {
     const depthWarningGraph: TraceGraph = {
       ...mockGraph,
       warnings: ['max_depth_reached'],
@@ -356,7 +356,21 @@ describe('TraceGraphPanel — warnings banner', () => {
       isLoading: false,
     } as ReturnType<typeof useTraceGraph>)
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/Maximum trace depth reached/i)).toBeDefined()
+    expect(screen.getByText(/Trace graph truncated/i)).toBeDefined()
+  })
+
+  it('shows truncation warning when max_edges_reached in warnings', () => {
+    const edgeLimitGraph: TraceGraph = {
+      ...mockGraph,
+      truncated: false,
+      warnings: ['max_edges_reached'],
+    }
+    vi.mocked(useTraceGraph).mockReturnValue({
+      data: { ok: true, data: edgeLimitGraph, fetchedAt: '2024-03-08T15:00:00.000Z', source: 'databricks-api' },
+      isLoading: false,
+    } as ReturnType<typeof useTraceGraph>)
+    render(<TraceGraphPanel request={request} />)
+    expect(screen.getByText(/Trace graph truncated/i)).toBeDefined()
   })
 })
 

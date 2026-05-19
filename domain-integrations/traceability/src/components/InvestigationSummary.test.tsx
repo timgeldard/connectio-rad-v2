@@ -189,3 +189,122 @@ describe('InvestigationSummary', () => {
     expect(screen.getByText('across 0 countries')).not.toBeNull()
   })
 })
+
+describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
+  const mockConfidence: ConfidenceResult = {
+    grade: 'COMPLETE',
+    score: 100,
+    gaps: [],
+    details: {
+      lineage: 'complete',
+      customers: 'complete',
+      massBalance: 'complete',
+      quality: 'complete',
+      coa: 'complete',
+      suppliers: 'complete',
+    },
+  }
+
+  const mockBatchHeader: BatchHeaderSummary = {
+    materialId: 'M1001',
+    materialDescription: 'Kerry Cheddar Cheese Powder',
+    batchId: 'B2002',
+    plantId: 'P3003',
+    plantName: 'Kerry Listowel',
+    batchStatus: 'active',
+    stockStatus: 'blocked',
+    qualityStatus: 'unknown',
+    releaseStatus: 'blocked',
+  }
+
+  const baseExposure: CustomerExposureSummary = {
+    shippedQuantity: 0,
+    affectedDeliveries: 0,
+    countries: [],
+    affectedCustomers: 0,
+    highestSeverity: 'none',
+    blockedDeliveries: 0,
+    recallRecommended: false,
+  }
+
+  it('shows CRITICAL when maxExposureDepth=1 and stock has shipped', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={{ ...baseExposure, shippedQuantity: 500, affectedCustomers: 1, maxExposureDepth: 1 }}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('Critical Exposure')).not.toBeNull()
+    expect(screen.getByText(/Shipped stock has reached customer sites\. Immediate action/)).not.toBeNull()
+  })
+
+  it('shows "High Indirect Exposure" (not "Near Expiry") when maxExposureDepth=2 and stock has shipped', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={{ ...baseExposure, shippedQuantity: 500, affectedCustomers: 1, maxExposureDepth: 2 }}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('High Indirect Exposure')).not.toBeNull()
+    expect(screen.queryByText('Near Expiry')).toBeNull()
+    expect(screen.getByText(/indirect.*lineage/i)).not.toBeNull()
+  })
+
+  it('shows MEDIUM when maxExposureDepth=2 and no shipments', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={{ ...baseExposure, maxExposureDepth: 2 }}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('Medium Risk')).not.toBeNull()
+    expect(screen.getByText(/Indirect lineage exposure/)).not.toBeNull()
+  })
+
+  it('shows "Near Expiry" (not "High Indirect Exposure") for shelf-life driven HIGH', () => {
+    const nearExpiryHeader: BatchHeaderSummary = {
+      ...mockBatchHeader,
+      // 10 days to expiry — triggers isNearExpiry
+      expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10).toISOString(),
+    }
+    render(
+      <InvestigationSummary
+        batchHeader={nearExpiryHeader}
+        customerExposure={baseExposure}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('Near Expiry')).not.toBeNull()
+    expect(screen.queryByText('High Indirect Exposure')).toBeNull()
+  })
+
+  it('shows CRITICAL (conservative fallback) when maxExposureDepth is undefined and stock has shipped', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={{ ...baseExposure, shippedQuantity: 500, affectedCustomers: 1 }}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('Critical Exposure')).not.toBeNull()
+    expect(screen.getByText(/Shipped stock has reached customer sites\. Immediate action/)).not.toBeNull()
+  })
+})

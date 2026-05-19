@@ -598,7 +598,9 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
           </div>
 
           {/* Warnings / truncation banner */}
-          {(graph.truncated || graph.warnings?.includes('max_depth_reached')) && (
+          {(graph.truncated ||
+            graph.warnings?.includes('max_depth_reached') ||
+            graph.warnings?.includes('max_edges_reached')) && (
             <div
               role="status"
               style={{
@@ -611,8 +613,11 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
                 marginBottom: 10,
               }}
             >
-              {graph.truncated && <span>Graph truncated — edge limit reached. Not all lineage is shown. </span>}
-              {graph.warnings?.includes('max_depth_reached') && <span>Maximum trace depth reached.</span>}
+              <span>
+                Trace graph truncated — the displayed lineage may be incomplete because the max depth or
+                row limit was reached. Review with a deeper trace or Databricks validation before
+                concluding exposure is complete.
+              </span>
             </div>
           )}
 
