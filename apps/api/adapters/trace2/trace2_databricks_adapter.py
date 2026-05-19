@@ -261,22 +261,33 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     DELIVERY_ID AS delivery_id, SALES_ORDER_ID AS sales_order_id, QUANTITY AS quantity,
     BASE_UNIT_OF_MEASURE AS base_unit_of_measure, POSTING_DATE AS posting_date, MOVEMENT_TYPE AS movement_type"""
 
+    # P0-4: Apply SQL-level row cap before Python-side mapping.
+    # LIMIT :max_rows is a hard cap on rows returned from Databricks before any
+    # Python deduplication. The Python loop in the route applies a second
+    # max_edges check on distinct edge keys; both limits work together.
+    # For UNION ALL (direction="both"), the LIMIT must wrap the entire union in
+    # a subquery — a bare LIMIT after UNION ALL only limits the second SELECT.
     if request.direction == "downstream":
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{ds_cte}\n"
-            f"SELECT DISTINCT\n{select_cols}\nFROM ds"
+            f"SELECT DISTINCT\n{select_cols}\nFROM ds\n"
+            f"LIMIT :max_rows"
         )
     elif request.direction == "upstream":
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{us_cte}\n"
-            f"SELECT DISTINCT\n{select_cols}\nFROM us"
+            f"SELECT DISTINCT\n{select_cols}\nFROM us\n"
+            f"LIMIT :max_rows"
         )
     else:  # both — two independent recursive CTEs in one WITH RECURSIVE block
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{ds_cte},\n{us_cte}\n"
+            f"SELECT * FROM (\n"
             f"SELECT DISTINCT\n{select_cols}\nFROM ds\n"
             f"UNION ALL\n"
-            f"SELECT DISTINCT\n{select_cols}\nFROM us"
+            f"SELECT DISTINCT\n{select_cols}\nFROM us\n"
+            f") AS _combined\n"
+            f"LIMIT :max_rows"
         )
 
     return QuerySpec(
@@ -288,6 +299,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
             "material_id": request.material_id,
             "batch_id": request.batch_id,
             "max_depth": request.max_depth,
+            "max_rows": request.max_edges,
         },
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_lineage",
@@ -553,12 +565,19 @@ def _make_graph_edge(
     }
 
 
+# NOTE: _LINK_TYPE_MAP is documentation-only. The live linkType string is passed
+# raw in _make_graph_edge and the frontend mapper (trace2-graph-mapper.ts) owns
+# the linkType → relationshipType translation. This dict is kept here as a
+# reference for what LINK_TYPE values gold_batch_lineage may emit, and to keep
+# the Python and TypeScript mapping tables in sync.
+# P0-3: VENDOR_RECEIPT and CONSUMPTION are distinct traceability events and must
+# NOT be conflated — see trace2-graph-mapper.ts LINK_TYPE_MAP for the canonical mapping.
 _LINK_TYPE_MAP: dict[str, str] = {
     "PRODUCTION": "produced-from",
     "BATCH_TRANSFER": "transferred-to",
     "STO_TRANSFER": "transferred-to",
-    "VENDOR_RECEIPT": "component-of",
-    "CONSUMPTION": "component-of",
+    "VENDOR_RECEIPT": "vendor-receipt",   # inbound goods receipt from external supplier
+    "CONSUMPTION": "consumed-by",          # component consumed into a production order
     "DELIVERY": "delivered-to",
     "SPLIT": "split-from",
     "MERGE": "merged-into",
@@ -603,6 +622,8 @@ _RELEASE_STATUS_MAP: dict[str, str] = {
 
 
 def _map_link_type(raw: Optional[str]) -> str:
+    # Not called by _make_graph_edge (raw linkType is passed through to the frontend).
+    # Retained for test/validation use only.
     return _LINK_TYPE_MAP.get((raw or "").upper().strip(), "component-of")
 
 
@@ -632,9 +653,32 @@ def _derive_stock_status(row: dict) -> str:
 
 
 def _derive_quality_status(row: dict) -> str:
+    """Derive quality status from available batch stock data.
+
+    IMPORTANT: quality_inspection is a stock disposition quantity (QI stock),
+    not a QM usage decision. QI stock > 0 means stock is held under quality
+    inspection, which justifies 'pending' (open inspection). However, it does
+    NOT mean the batch was accepted or rejected — those require an actual QM
+    inspection-lot usage decision field that is not present in the current query.
+
+    Returns:
+        'pending'  — QI stock is non-zero (open quality inspection in progress).
+        'unknown'  — No QI stock and no QM decision field available from this
+                     source. Do NOT interpret 'unknown' as 'accepted'. Use
+                     'not-applicable' only when quality inspection is structurally
+                     not applicable to this batch type (e.g., re-packed or
+                     non-regulated materials) — that distinction requires a
+                     verified QM inspection type / usage decision field.
+
+    Blocked validation: to return 'accepted', 'rejected', or 'conditional', a
+    verified QM usage decision / inspection lot decision field is required.
+    The query must be extended to join or select from a QM decisions view (e.g.,
+    gold_qm_usage_decision_v or equivalent). Until that field is verified in UAT,
+    this function returns 'unknown' rather than guessing.
+    """
     if float(row.get("quality_inspection") or 0) > 0:
         return "pending"
-    return "not-applicable"
+    return "unknown"
 
 
 def _derive_release_status(raw: Optional[str]) -> str:
