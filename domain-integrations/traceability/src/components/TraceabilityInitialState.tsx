@@ -1,4 +1,5 @@
 import React from 'react'
+import { UAT_CANDIDATE } from '../constants.js'
 
 type EvidenceReadinessStatus =
   | 'verified-partial'
@@ -132,13 +133,13 @@ export function TraceabilityInitialState({ onLoadCandidate, adapterMode, childre
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 12px 0' }}>UAT Candidate</h2>
             <p style={{ fontSize: '13px', color: 'var(--shell-fg-2)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              Load known <strong>C061</strong> UAT candidate for validation. Expected results must be 
+              Load known <strong>{UAT_CANDIDATE.plantId}</strong> UAT candidate for validation. Expected results must be 
               verified against golden-test-batches.md and the UAT validation ledger before claiming a pass.
             </p>
             <div style={{ fontSize: '12px', fontFamily: 'monospace', background: 'var(--shell-surface-2)', padding: '10px', borderRadius: '4px', color: 'var(--shell-fg-2)', marginBottom: 20 }}>
-              Material: 20035129<br />
-              Batch: 8000049668<br />
-              Plant: C061
+              Material: {UAT_CANDIDATE.materialId}<br />
+              Batch: {UAT_CANDIDATE.batchId}<br />
+              Plant: {UAT_CANDIDATE.plantId}
             </div>
           </div>
           <button 

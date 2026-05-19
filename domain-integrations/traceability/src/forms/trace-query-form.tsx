@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react'
+import { UAT_CANDIDATE } from '../constants.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
-
-const UAT_CANDIDATE = {
-  materialId: '20035129',
-  batchId: '8000049668',
-  plantId: 'C061'
-}
 
 const DEFAULT_MATERIAL = '100023847'
 const DEFAULT_BATCH = 'CH-240308-0047'
@@ -60,9 +55,9 @@ export function TraceQueryForm({
 
   // Sync state with props if they change (e.g. from Load UAT Candidate in parent)
   useEffect(() => {
-    if (initialMaterialId) setMaterialId(initialMaterialId)
-    if (initialBatchId) setBatchId(initialBatchId)
-    if (initialPlantId) setPlantId(initialPlantId)
+    if (initialMaterialId !== undefined) setMaterialId(initialMaterialId)
+    if (initialBatchId !== undefined) setBatchId(initialBatchId)
+    if (initialPlantId !== undefined) setPlantId(initialPlantId)
   }, [initialMaterialId, initialBatchId, initialPlantId])
 
   const suggestion = buildSuggestion(materialId)
@@ -161,19 +156,25 @@ export function TraceQueryForm({
               style={inputStyle}
             />
             {suggestion && (
-              <div
+              <button
+                type="button"
                 data-testid="material-id-suggestion"
                 onClick={() => setMaterialId(suggestion)}
                 style={{
-                  fontSize: 11,
+                  fontSize: '11px',
                   color: 'var(--shell-accent)',
                   cursor: 'pointer',
-                  marginTop: 4,
-                  textDecoration: 'underline'
+                  marginTop: '4px',
+                  textDecoration: 'underline',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  textAlign: 'left',
+                  display: 'block'
                 }}
               >
                 Use normalized ID: {suggestion}
-              </div>
+              </button>
             )}
             <span style={helperStyle}>SAP material number or normalized identifier</span>
           </label>

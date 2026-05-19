@@ -23,6 +23,8 @@ import { TraceQueryForm } from '../forms/trace-query-form.js'
 import type { AdapterError } from '@connectio/source-adapters'
 
 /** Props for OverviewView. */
+import { UAT_CANDIDATE } from '../constants.js'
+
 export interface OverviewViewProps {
   /** Adapter request context forwarded to all panels. */
   readonly request: Trace2AdapterRequest
@@ -118,9 +120,7 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
         onLoadCandidate={() => {
            setRequest(prev => ({
              ...prev,
-             materialId: '20035129',
-             batchId: '8000049668',
-             plantId: 'C061'
+             ...UAT_CANDIDATE
            }))
         }}
       >
