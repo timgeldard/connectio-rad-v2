@@ -195,7 +195,7 @@ into the UAT validation ledger (`domain-integrations/traceability/docs/uat-valid
 
 | Field | Value |
 |-------|-------|
-| **Tester identity** | _(name and email)_ |
+| **Tester identity** | _(alias, initials, or ticket reference — no full name or email)_ |
 | **Date / time (UTC)** | _(ISO timestamp)_ |
 | **Databricks workspace URL** | _(e.g. `https://<workspace>.azuredatabricks.net`)_ |
 | **Catalog** | _(value of TRACE_CATALOG env var)_ |

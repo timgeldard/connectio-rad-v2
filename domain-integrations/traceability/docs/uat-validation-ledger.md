@@ -41,6 +41,46 @@ First UAT is expected to occur once:
 
 ---
 
+## First Run Checklist
+
+A short operational checklist for the person running the first live session.
+Full SQL verification queries: `docs/migration/traceability-first-live-validation-sql.md`  
+Full API smoke-test guide: `docs/migration/traceability-first-live-api-smoke-test.md`
+
+### Before starting
+
+- [ ] Confirm deployed app commit SHA (`git rev-parse --short HEAD` on the deployed build).
+- [ ] Confirm adapter mode is `databricks-api` — check the source badge on the Batch Header panel.
+- [ ] Confirm tester identity (alias, initials, or ticket reference — no full name or email).
+- [ ] Confirm Unity Catalog access is expected for your OAuth identity (see `docs/security/unity-catalog-authorization-prerequisite.md`).
+- [ ] Confirm candidate batch identifiers: `000000000020052009 / 0008602411 / C061`.
+- [ ] Confirm no service-principal fallback (the app must use your forwarded OAuth token).
+- [ ] Confirm screenshots or screen recording is allowed in your environment.
+- [ ] Run SQL Sections 1–3 in `traceability-first-live-validation-sql.md` to confirm the batch exists and column names are valid before opening the app.
+
+### During the run — what to capture
+
+- [ ] Source badge text on each panel (should read `databricks-api` or `legacy-api`, not `mock`).
+- [ ] Batch header — all field values (material, batch, plant, status, dates).
+- [ ] Trace graph — node count, edge count, `truncated` flag, truncation banner visible/absent.
+- [ ] Raw `LINK_TYPE` examples from edge detail or network response.
+- [ ] Mass balance — confidence value, row count, unresolved movement count.
+- [ ] Quality status — value shown (`pending` / `unknown` / other).
+- [ ] Customer exposure — severity banner text, shipped quantity, country count.
+- [ ] Any error banners — exact text.
+- [ ] Databricks query ID from response header (for trace-graph route).
+- [ ] Screenshots of each panel state.
+
+### After the run
+
+- [ ] Update the [Run table](#run-table) with all captured evidence.
+- [ ] Update `docs/migration/databricks-column-verification-queries.md` with confirmed column names.
+- [ ] Update `docs/migration/traceability-first-live-validation-sql.md` evidence capture table.
+- [ ] Update `production-readiness-checklist.md` rows 1.1, 1.2, 1.5, 1.7, 3.2, 3.4 to reflect the result.
+- [ ] Raise defects in `traceability-defect-backlog.md` for any mismatches.
+
+---
+
 ## First Live Validation Run — Preparation
 
 This section pre-defines exactly what to capture when a tester runs the first live Databricks-connected session. No values are filled in; the section acts as a template. Copy it into a new run entry in the [Run table](#run-table) when the session is complete.
