@@ -217,6 +217,28 @@ In `InvestigationSummary.tsx`, the severity label "HIGH" (labelled "Near Expiry"
 
 ---
 
+### DEF-TRACE-004 — Batch header not-found / error state was invisible in the cockpit header
+
+**Identified:** Code review — TRACE-P1-003  
+**Fixed in:** Current tranche — `overview-view.tsx` `BatchHeaderErrorBanner`  
+**Status:** Code-fixed — live validation pending
+
+**Description:**  
+When the batch-header adapter returned `{ ok: false }` (not-found, unauthorized, timeout, or other error), `overview-view.tsx` silently converted the error to `batchHeader = null`. The `InvestigationSummary` received null `batchHeader` and showed a generic "Loading material..." state with no error detail, regardless of whether the cause was loading, a bad batch ID, or an access-control failure.
+
+**Behaviour after fix (expected):**  
+`overview-view.tsx` now checks `batchHeaderResult !== undefined && !batchHeaderResult.ok`. When true, a `BatchHeaderErrorBanner` is rendered above the cockpit with the appropriate heading:
+- "Batch not found" for `code: 'not-found'`
+- "Not authorized or data not accessible" for `code: 'unauthorized'`
+- "Data source timeout" for `code: 'timeout'`
+- "Batch header unavailable" for other error codes
+
+The loading state (result still `undefined`) does not trigger the banner, so normal load-in behaviour is unchanged.
+
+**UAT verification:** Submit a batch ID that is known not to exist in the live system and confirm "Batch not found" renders in the cockpit header. Test with a user whose OAuth identity does not have `trace.read` grant to confirm "Not authorized" banner.
+
+---
+
 ## How to add a defect
 
 If a UAT session reveals a new defect, add an entry to the pre-validation (or post-validation) defects section above with:

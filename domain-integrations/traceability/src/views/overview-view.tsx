@@ -18,10 +18,50 @@ import { calculateConfidence } from '../components/EvidenceConfidence.js'
 import { InvestigationSummary } from '../components/InvestigationSummary.js'
 import { EvidencePackReadiness } from '../components/EvidencePackReadiness.js'
 
+import type { AdapterError } from '@connectio/source-adapters'
+
 /** Props for OverviewView. */
 export interface OverviewViewProps {
   /** Adapter request context forwarded to all panels. */
   readonly request: Trace2AdapterRequest
+}
+
+/** Maps adapter error codes to user-facing headings. */
+function batchHeaderErrorHeading(code: AdapterError['code']): string {
+  switch (code) {
+    case 'not-found':
+      return 'Batch not found'
+    case 'unauthorized':
+      return 'Not authorized or data not accessible'
+    case 'timeout':
+      return 'Data source timeout'
+    default:
+      return 'Batch header unavailable'
+  }
+}
+
+/** Inline error banner shown in the cockpit header when the batch header adapter fails. */
+function BatchHeaderErrorBanner({ code, message }: Pick<AdapterError, 'code' | 'message'>) {
+  return (
+    <div
+      role="alert"
+      aria-label="Batch header error"
+      style={{
+        padding: '10px 14px',
+        borderRadius: 6,
+        border: '1px solid var(--sunset, #F24A00)',
+        background: 'color-mix(in srgb, var(--sunset, #F24A00) 8%, transparent)',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+      }}
+    >
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sunset, #F24A00)', flexShrink: 0 }}>
+        {batchHeaderErrorHeading(code)}
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--shell-fg-2)' }}>{message}</span>
+    </div>
+  )
 }
 
 /**
@@ -42,6 +82,12 @@ export function OverviewView({ request }: OverviewViewProps) {
   const { data: coaReleaseResult } = useCoAReleaseStatus(request)
   const { data: supplierExposureResult } = useSupplierExposureSummary(request)
   const { data: traceGraphResult } = useTraceGraph(request)
+
+  // Distinguish loading (undefined) from error (ok === false) for the cockpit header.
+  // When loading, batchHeaderError is null and InvestigationSummary shows a loading state.
+  // When the adapter returns an error, we surface a visible banner above the cockpit.
+  const batchHeaderError =
+    batchHeaderResult !== undefined && !batchHeaderResult.ok ? batchHeaderResult.error : null
 
   const batchHeader = batchHeaderResult?.ok ? batchHeaderResult.data : null
   const customerExposure = customerExposureResult?.ok ? customerExposureResult.data : null
@@ -69,6 +115,11 @@ export function OverviewView({ request }: OverviewViewProps) {
         padding: 16,
       }}
     >
+      {/* Batch header error banner — visible when adapter returns ok:false (not during loading) */}
+      {batchHeaderError && (
+        <BatchHeaderErrorBanner code={batchHeaderError.code} message={batchHeaderError.message} />
+      )}
+
       {/* Case Header / Investigation cockpit summary */}
       <InvestigationSummary
         batchHeader={batchHeader}

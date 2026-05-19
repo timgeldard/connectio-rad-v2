@@ -53,13 +53,13 @@
 **Requires UAT:** No
 
 ### TRACE-P1-003 — Invalid batch input has no documented graceful error state
-**Status:** Open (not verified)
-**Affected:** All views — handling of `{ ok: false }` adapter results
-**Evidence:** The adapter returns `{ ok: false, error, displayState }` for failed queries. Whether every panel surfaces a user-readable error state (vs. blank panel) has not been systematically verified.
-**Risk:** An investigator querying a non-existent batch may see partial/blank panels with no guidance.
-**Proposed fix:** Audit all panels for `displayState` handling; add a cross-panel "batch not found" guard in `overview-view.tsx` if header lookup fails.
+**Status:** Code-fixed — live validation pending
+**Affected:** `overview-view.tsx` cockpit header; individual panel error states are handled by EvidencePanel runtime
+**Evidence:** The adapter returns `{ ok: false, error, displayState }` for failed queries. Without a cockpit-level guard, a not-found or unauthorized batch header response produced a silent null `batchHeader` and the InvestigationSummary showed "Loading material..." indefinitely.
+**Risk:** An investigator querying a non-existent or inaccessible batch may see no error guidance.
+**Fix applied:** `BatchHeaderErrorBanner` added to `overview-view.tsx`. Distinguishes `batchHeaderResult === undefined` (loading) from `batchHeaderResult.ok === false` (adapter error). Shows user-facing headings: "Batch not found" (not-found), "Not authorized or data not accessible" (unauthorized), "Data source timeout" (timeout), "Batch header unavailable" (other). All six evidence panels continue to render; only the cockpit header shows the banner. Five unit tests added to `overview-view.test.tsx` covering each error code.
 **Owner:** Claude
-**Requires UAT:** Partially — can partially verify via mock; requires live API for full error path testing
+**Requires UAT:** Yes — confirm banner renders correctly in live deployed app for a non-existent batch and for an unauthorized access scenario.
 
 ---
 

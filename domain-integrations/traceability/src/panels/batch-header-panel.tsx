@@ -86,6 +86,10 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
               <BatchHeaderField label="Expiry" value={new Date(data.expiryDate).toLocaleDateString()} />
             )}
           </div>
+          <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 4 }}>
+            Data freshness not available — displayed values reflect query time only. See{' '}
+            <em>data-freshness-plan.md</em> for the implementation roadmap.
+          </div>
         </div>
       )}
     </EvidencePanel>
