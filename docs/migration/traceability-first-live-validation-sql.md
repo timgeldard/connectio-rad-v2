@@ -249,7 +249,9 @@ SELECT
               AND child_batch_id    = '0008602411' THEN 1 ELSE 0 END) AS upstream_edges,
     SUM(CASE WHEN parent_material_id = '000000000020052009'
               AND parent_batch_id    = '0008602411' THEN 1 ELSE 0 END) AS downstream_edges
-FROM `<catalog>`.`<schema>`.gold_batch_lineage;
+FROM `<catalog>`.`<schema>`.gold_batch_lineage
+WHERE (parent_material_id = '000000000020052009' AND parent_batch_id = '0008602411')
+   OR (child_material_id  = '000000000020052009' AND child_batch_id  = '0008602411');
 ```
 
 **What to record:**
