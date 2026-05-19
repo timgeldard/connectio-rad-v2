@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SPCSignalsAdapter } from './spc-signals-adapter.js'
+import { SPCSignalsAdapter, toAdapterError } from './spc-signals-adapter.js'
 import { SPCSignalSummarySchema } from '@connectio/data-contracts'
 
 const fixedNow = () => '2024-03-08T15:00:00.000Z'
@@ -13,6 +13,7 @@ describe('SPCSignalsAdapter', () => {
     if (!result.ok) return
 
     expect(result.fetchedAt).toBe(fixedNow())
+    expect(result.source).toBe('mock')
     const parsed = SPCSignalSummarySchema.safeParse(result.data)
     expect(parsed.success).toBe(true)
   })
@@ -33,5 +34,15 @@ describe('SPCSignalsAdapter', () => {
     for (const alarm of result.data.alarms) {
       expect(['active', 'acknowledged', 'resolved', 'overridden']).toContain(alarm.status)
     }
+  })
+
+  describe('toAdapterError', () => {
+    it('returns error result with source mock', () => {
+      const errorResult = toAdapterError(new Error('Test error'))
+      expect(errorResult.ok).toBe(false)
+      if (errorResult.ok) throw new Error('Expected error result')
+      expect(errorResult.source).toBe('mock')
+      expect(errorResult.error.message).toBe('Test error')
+    })
   })
 })

@@ -24,10 +24,10 @@ export interface ActiveSPCSignalsPanelProps {
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: '#D32F2F',
+  critical: 'var(--shell-bad, #C73315)',
   high: 'var(--sunset, #F24A00)',
-  medium: '#D97706',
-  low: '#388E3C',
+  medium: 'var(--shell-warn, #C7821C)',
+  low: 'var(--shell-good, #1F8B4C)',
 }
 
 export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
@@ -52,6 +52,7 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {result?.ok && (
         <div style={{ padding: '12px 16px' }}>
@@ -61,13 +62,13 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
             <div style={{ display: 'grid', gap: 8 }}>
               {signals.map(signal => (
                 <div
-                  key={signal.signalId}
-                  style={{
-                    padding: '8px 10px',
-                    background: 'var(--shell-surface-2)',
-                    borderRadius: 4,
-                    borderLeft: `3px solid ${SEVERITY_COLOR[signal.severity] ?? 'var(--shell-line)'}`,
-                  }}
+                   key={signal.signalId}
+                   style={{
+                     padding: '8px 10px',
+                     background: 'var(--shell-surface-2)',
+                     borderRadius: 4,
+                     borderLeft: `3px solid ${SEVERITY_COLOR[signal.severity] ?? 'var(--shell-line)'}`,
+                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--shell-fg)' }}>{signal.characteristicName}</span>
@@ -99,6 +100,9 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
               ))}
             </div>
           )}
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--shell-line)', paddingTop: 8, fontSize: 10, color: 'var(--shell-fg-3)', fontStyle: 'italic', lineHeight: 1.4 }}>
+            Note: Alarms shown here are simulated sandbox rule results for workflow validation. They are not approved production SPC signals.
+          </div>
         </div>
       )}
     </EvidencePanel>
