@@ -59,6 +59,7 @@ export function InvestigationSummary({
   const maxExposureDepth = customerExposure?.maxExposureDepth
 
   let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'LOW'
+  let severityLabel = ''
   let alertMessage = 'Unrestricted stock remains fully contained. Low immediate downstream exposure risk.'
   let actionGuidance = 'Review batch details & inventory balance.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
@@ -81,6 +82,7 @@ export function InvestigationSummary({
     // Falls back to CRITICAL when depth is unavailable (conservative).
     if (maxExposureDepth !== undefined && maxExposureDepth >= 2) {
       severity = 'HIGH'
+      severityLabel = 'High Indirect Exposure'
       alertMessage = 'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
       actionGuidance = 'Assess scope of indirect exposure and initiate recall review.'
       bannerBg = 'rgba(199, 130, 28, 0.08)'
@@ -120,6 +122,8 @@ export function InvestigationSummary({
     LOW: 'Low Risk',
     UNKNOWN: 'Exposure Unknown',
   }
+  // Use reason-specific label if set (e.g. depth-based HIGH), otherwise fall back to severity map.
+  if (!severityLabel) severityLabel = severityLabels[severity]
 
   return (
     <div
@@ -221,7 +225,7 @@ export function InvestigationSummary({
             border: '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          {severityLabels[severity]}
+          {severityLabel}
         </span>
         <div style={{ flex: 1 }}>
           <strong>Action Recommended:</strong> {alertMessage} <br />

@@ -242,7 +242,7 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
     expect(screen.getByText(/Shipped stock has reached customer sites\. Immediate action/)).not.toBeNull()
   })
 
-  it('shows HIGH (not CRITICAL) when maxExposureDepth=2 and stock has shipped', () => {
+  it('shows "High Indirect Exposure" (not "Near Expiry") when maxExposureDepth=2 and stock has shipped', () => {
     render(
       <InvestigationSummary
         batchHeader={mockBatchHeader}
@@ -253,7 +253,8 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
         onSim={() => {}}
       />
     )
-    expect(screen.getByText('Near Expiry')).not.toBeNull()
+    expect(screen.getByText('High Indirect Exposure')).not.toBeNull()
+    expect(screen.queryByText('Near Expiry')).toBeNull()
     expect(screen.getByText(/indirect.*lineage/i)).not.toBeNull()
   })
 
@@ -270,6 +271,26 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
     )
     expect(screen.getByText('Medium Risk')).not.toBeNull()
     expect(screen.getByText(/Indirect lineage exposure/)).not.toBeNull()
+  })
+
+  it('shows "Near Expiry" (not "High Indirect Exposure") for shelf-life driven HIGH', () => {
+    const nearExpiryHeader: BatchHeaderSummary = {
+      ...mockBatchHeader,
+      // 10 days to expiry — triggers isNearExpiry
+      expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10).toISOString(),
+    }
+    render(
+      <InvestigationSummary
+        batchHeader={nearExpiryHeader}
+        customerExposure={baseExposure}
+        supplierExposure={null}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+    expect(screen.getByText('Near Expiry')).not.toBeNull()
+    expect(screen.queryByText('High Indirect Exposure')).toBeNull()
   })
 
   it('shows CRITICAL (conservative fallback) when maxExposureDepth is undefined and stock has shipped', () => {
