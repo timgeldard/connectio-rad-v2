@@ -39,9 +39,9 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
 | 3.1 | UAT acceptance script written | ✅ | `uat-acceptance-script.md` — 10 scenarios. |
-| 3.2 | UAT acceptance script executed against deployed app | ❌ | No browser/UAT access at time of writing. |
+| 3.2 | UAT acceptance script executed against deployed app | ❌ | No browser/UAT access at time of writing. First-run checklist in `uat-validation-ledger.md`. |
 | 3.3 | Golden test batches defined | 🔶 | `golden-test-batches.md` exists; only mock fixture validated; reference candidate requires live validation. |
-| 3.4 | UAT validation ledger entries complete for ≥ 1 live batch | ❌ | `uat-validation-ledger.md` created; no live runs recorded. |
+| 3.4 | UAT validation ledger entries complete for ≥ 1 live batch | ❌ | `uat-validation-ledger.md` created; no live runs recorded. SQL validation pack: `docs/migration/traceability-first-live-validation-sql.md`. API smoke test: `docs/migration/traceability-first-live-api-smoke-test.md`. |
 | 3.5 | All P0 defects resolved or risk-accepted before UAT sign-off | ❌ | TRACE-P0-002 code fixed (PR #26), live validation pending. TRACE-P0-003 open. |
 
 ---
