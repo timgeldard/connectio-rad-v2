@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { QualityResultsSummary } from '@connectio/data-contracts'
@@ -34,6 +34,7 @@ export interface QualityResultsPanelProps {
  */
 export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
   const { data: result, isLoading } = useQualityResults(request)
+  const [showFailures, setShowFailures] = useState(true)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,
@@ -96,25 +97,44 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
 
           {data.micFailures.length > 0 && (
             <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D32F2F', marginBottom: 6 }}>
-                MIC Failures ({data.micFailures.length})
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D32F2F' }}>
+                  MIC Failures ({data.micFailures.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowFailures(!showFailures)}
+                  style={{
+                    fontSize: 10,
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#D32F2F',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: '2px 4px',
+                  }}
+                >
+                  {showFailures ? 'Hide' : 'Show'}
+                </button>
               </div>
-              <div style={{ display: 'grid', gap: 6 }}>
-                {data.micFailures.map((failure, i) => (
-                  <div key={i} style={{ fontSize: 12, padding: '6px 8px', background: 'rgba(211,47,47,0.06)', borderRadius: 4, borderLeft: '3px solid #D32F2F' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--shell-fg)' }}>{failure.organism}</div>
-                    <div style={{ color: 'var(--shell-fg-2)', marginTop: 2 }}>
-                      Result: <strong style={{ color: '#D32F2F' }}>{failure.result} {failure.unit}</strong>
-                      {' / Limit: '}{failure.limit} {failure.unit}
-                      {' / Exceeded by: '}<strong>{failure.exceededBy} {failure.unit}</strong>
+              {showFailures && (
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {data.micFailures.map((failure, i) => (
+                    <div key={i} style={{ fontSize: 12, padding: '6px 8px', background: 'rgba(211,47,47,0.06)', borderRadius: 4, borderLeft: '3px solid #D32F2F' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--shell-fg)' }}>{failure.organism}</div>
+                      <div style={{ color: 'var(--shell-fg-2)', marginTop: 2 }}>
+                        Result: <strong style={{ color: '#D32F2F' }}>{failure.result} {failure.unit}</strong>
+                        {' / Limit: '}{failure.limit} {failure.unit}
+                        {' / Exceeded by: '}<strong>{failure.exceededBy} {failure.unit}</strong>
+                      </div>
+                      <div style={{ color: 'var(--shell-fg-3)', fontSize: 11, marginTop: 2 }}>
+                        {failure.testMethod} · {new Date(failure.testedAt).toLocaleDateString()}
+                        {failure.testedBy && ` · ${failure.testedBy}`}
+                      </div>
                     </div>
-                    <div style={{ color: 'var(--shell-fg-3)', fontSize: 11, marginTop: 2 }}>
-                      {failure.testMethod} · {new Date(failure.testedAt).toLocaleDateString()}
-                      {failure.testedBy && ` · ${failure.testedBy}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

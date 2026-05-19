@@ -5,6 +5,14 @@ This directory houses the Quality and Batch Release domain-integration component
 ## Current Readiness & Source Status
 
 - **Current Source Mode**: Hybrid / Simulated Mock Data (`source: 'mock'`) for release-decision components, and Legacy API (`source: 'legacy-api'`) for the Connected Quality Lab Board.
+  - **Release Queue**: mock only
+  - **Release Summary**: mock only
+  - **Deviations**: mock only
+  - **CoA Readiness**: mock only
+  - **Quality Results**: mock only
+  - **Release Actions / right rail**: simulation only, no SAP write-back
+  - **Connected Quality Lab Board**: legacy API path, live browser verification pending
+  - **Databricks integration**: no Databricks quality adapter exists yet
 - **Data Veracity**: Batch release decision queue, deviation lists, CoA readiness, and overall release recommendations are simulated mock representations. The Connected Quality Lab Board displays active failures fetched via the FastAPI proxy.
 - **Regulatory Status**: Do **not** use the simulated release queue, decision recommendations, or mock CoA statuses for regulatory decisions, shipping approval, or operational release signatures. Physical release blocks must be verified and resolved directly within the SAP QM system of record before any shipping occurs.
 

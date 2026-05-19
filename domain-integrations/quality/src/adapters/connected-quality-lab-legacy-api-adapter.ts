@@ -22,6 +22,10 @@ export class ConnectedQualityLabLegacyApiAdapter extends ConnectedQualityLabAdap
   override async getLabFailures(
     request: ConnectedQualityLabAdapterRequest,
   ): Promise<AdapterResult<ConnectedQualityLabFailuresResponse>> {
+    if (!request.plantId) {
+      return super.getLabFailures(request)
+    }
+
     const params = new URLSearchParams()
     if (request.plantId) params.set('plant_id', request.plantId)
     if (request.lotType) params.set('lot_type', request.lotType)

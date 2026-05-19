@@ -25,7 +25,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |---|------|--------|-------|
 | 2.1 | Data source attribution (mock vs. legacy API) returned by all adapters | ✅ | All quality adapters explicitly return `source: 'mock'` on mock paths and `source: 'legacy-api'` on legacy paths. |
 | 2.2 | Data source attribution visible in UI | ✅ | All 9 panels forward the `source` prop from the query hook results to `<EvidencePanel>` to render dynamic source badges. |
-| 2.3 | Freshness policies declared and respected | ✅ | `freshnessPolicy` declared on all panel registrations. |
+| 2.3 | Freshness policies declared and respected | 🔶 | Freshness policy declared in panel registrations; underlying SAP QM / CoA / usage-decision data freshness is not validated for mock release panels and live freshness is not surfaced. |
 
 ---
 
@@ -64,7 +64,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
 | 6.1 | Rollback plan established | ❌ | To be defined by deployment engineering. |
-| 6.2 | Mock mode disabled in production builds | ✅ | Checked during factory build by reading `VITE_ADAPTER_MODE`. |
+| 6.2 | Mock mode disabled in production builds | 🔶 | Deployment convention documented; production enforcement not yet proven. Production deployment must explicitly disallow mock mode or fail readiness checks before operational use. |
 
 ---
 

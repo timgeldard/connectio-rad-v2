@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { BatchReleaseSummary } from '@connectio/data-contracts'
@@ -36,6 +36,7 @@ export interface ReleaseSummaryPanelProps {
  */
 export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
   const { data: result, isLoading } = useReleaseSummary(request)
+  const [showAdvisories, setShowAdvisories] = useState(true)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,
@@ -110,18 +111,40 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
           )}
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', display: 'grid', gap: 6 }}>
-            <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
-              <strong>Mock Mode:</strong>
-              <span>This panel uses simulated data for validation. Release actions do not write back to SAP QM.</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600 }}>Notes & Advisories</span>
+              <button
+                type="button"
+                onClick={() => setShowAdvisories(!showAdvisories)}
+                style={{
+                  fontSize: 10,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--shell-fg-3)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  padding: '2px 4px',
+                }}
+              >
+                {showAdvisories ? 'Hide' : 'Show'}
+              </button>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <strong>Note:</strong>
-              <span>Quality Inspection (QI) stock is physically restricted in storage locations. The usage decision must be finalized in SAP QM to release this batch.</span>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <strong>Advisory:</strong>
-              <span>Recommended actions are system-generated based on available evidence. Always cross-reference lot details and deviation status before finalizing the release decision.</span>
-            </div>
+            {showAdvisories && (
+              <div style={{ display: 'grid', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
+                  <strong>Mock Mode:</strong>
+                  <span>This panel uses simulated data for validation. Release actions do not write back to SAP QM.</span>
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <strong>Note:</strong>
+                  <span>Quality Inspection (QI) stock is physically restricted in storage locations. The usage decision must be finalized in SAP QM to release this batch.</span>
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <strong>Advisory:</strong>
+                  <span>Recommended actions are system-generated based on available evidence. Always cross-reference lot details and deviation status before finalizing the release decision.</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

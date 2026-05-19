@@ -1,34 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { QualityResultsPanel } from './quality-results-panel.js'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
 import { useQualityResults } from '../adapters/quality-release-queries.js'
 
-// Mock the query hook to control the returned data state
-vi.mock('../adapters/quality-release-queries.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../adapters/quality-release-queries.js')>()
-  return {
-    ...actual,
-    useQualityResults: vi.fn(),
-  }
-})
+// Mock runtime dependencies
+vi.mock('@connectio/evidence-panel-runtime', () => ({
+  EvidencePanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="evidence-panel">{children}</div>,
+  useEvidencePanel: () => ({ displayState: 'ready', markReady: vi.fn(), markError: vi.fn() }),
+}))
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: 0 },
-    },
-  })
-}
+vi.mock('@xyflow/react', () => ({}))
 
-function Wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={makeQueryClient()}>
-      {children}
-    </QueryClientProvider>
-  )
-}
+vi.mock('../adapters/quality-release-queries.js', () => ({
+  useQualityResults: vi.fn(),
+}))
 
 const request: QualityReleaseAdapterRequest = {
   releaseCaseId: 'RC-2024-001847',
@@ -41,7 +27,7 @@ describe('QualityResultsPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('renders "Inspection lot not found" when inspectionLotId is missing', async () => {
+  it('renders "Inspection lot not found" when inspectionLotId is missing', () => {
     vi.mocked(useQualityResults).mockReturnValue({
       data: {
         ok: true,
@@ -62,18 +48,12 @@ describe('QualityResultsPanel', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useQualityResults>)
 
-    render(
-      <Wrapper>
-        <QualityResultsPanel request={request} />
-      </Wrapper>
-    )
+    render(<QualityResultsPanel request={request} />)
 
-    await waitFor(() => {
-      expect(screen.getByText('Inspection lot not found. No quality results available in SAP QM.')).toBeInTheDocument()
-    })
+    expect(screen.getByText('Inspection lot not found. No quality results available in SAP QM.')).toBeDefined()
   })
 
-  it('renders "MIC Status is FAIL but no failure details were returned" on inconsistent state', async () => {
+  it('renders "MIC Status is FAIL but no failure details were returned" on inconsistent state', () => {
     vi.mocked(useQualityResults).mockReturnValue({
       data: {
         ok: true,
@@ -94,18 +74,12 @@ describe('QualityResultsPanel', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useQualityResults>)
 
-    render(
-      <Wrapper>
-        <QualityResultsPanel request={request} />
-      </Wrapper>
-    )
+    render(<QualityResultsPanel request={request} />)
 
-    await waitFor(() => {
-      expect(screen.getByText('MIC Status is FAIL but no failure details were returned. Verify lot records in SAP QM.')).toBeInTheDocument()
-    })
+    expect(screen.getByText('MIC Status is FAIL but no failure details were returned. Verify lot records in SAP QM.')).toBeDefined()
   })
 
-  it('renders results lists and simulated mock disclaimer footnote', async () => {
+  it('renders results lists and simulated mock disclaimer footnote', () => {
     vi.mocked(useQualityResults).mockReturnValue({
       data: {
         ok: true,
@@ -126,16 +100,50 @@ describe('QualityResultsPanel', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useQualityResults>)
 
-    render(
-      <Wrapper>
-        <QualityResultsPanel request={request} />
-      </Wrapper>
-    )
+    render(<QualityResultsPanel request={request} />)
 
-    await waitFor(() => {
-      expect(screen.getByText('Inspection Lot:')).toBeInTheDocument()
-      expect(screen.getByText('LOT-12345')).toBeInTheDocument()
-      expect(screen.getByText(/This panel uses simulated mock data/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText('Inspection Lot:')).toBeDefined()
+    expect(screen.getByText('LOT-12345')).toBeDefined()
+    expect(screen.getByText(/This panel uses simulated mock data/i)).toBeDefined()
+  })
+
+  it('toggles MIC failures list visibility when Hide/Show button is clicked', () => {
+    vi.mocked(useQualityResults).mockReturnValue({
+      data: {
+        ok: true,
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+        data: {
+          overallStatus: 'fail',
+          inspectionLotId: 'LOT-12345',
+          inspectionCompletedAt: '2026-05-19T08:00:00Z',
+          inspectionCompletedBy: 'Lab Analyst',
+          micStatus: 'fail',
+          chemicalStatus: 'pass',
+          physicalStatus: 'pass',
+          sensoryStatus: 'pass',
+          micFailures: [
+            { organism: 'Coliforms', result: '15', unit: 'CFU/g', limit: '10', exceededBy: '5', testMethod: 'ISO-4832', testedAt: '2026-05-19T09:00:00Z', testedBy: 'Lab Tech' }
+          ],
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useQualityResults>)
+
+    render(<QualityResultsPanel request={request} />)
+
+    // Initially Coliforms is visible
+    expect(screen.queryByText('Coliforms')).not.toBeNull()
+    const toggleBtn = screen.getByRole('button', { name: 'Hide' })
+
+    // Click Hide to collapse failures list
+    fireEvent.click(toggleBtn)
+    expect(screen.queryByText('Coliforms')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show' })).toBeDefined()
+
+    // Click Show to expand failures list
+    fireEvent.click(screen.getByRole('button', { name: 'Show' }))
+    expect(screen.queryByText('Coliforms')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Hide' })).toBeDefined()
   })
 })

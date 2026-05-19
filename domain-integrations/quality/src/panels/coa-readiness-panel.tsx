@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { CoAReadiness } from '@connectio/data-contracts'
@@ -38,6 +38,7 @@ export interface CoAReadinessPanelProps {
  */
 export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
   const { data: result, isLoading } = useCoAReadiness(request)
+  const [showCustomerCoAs, setShowCustomerCoAs] = useState(true)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,
@@ -104,17 +105,36 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
 
           {data.customerSpecificCoas.length > 0 && (
             <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 4 }}>
-                Customer CoAs
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
+                  Customer CoAs
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerCoAs(!showCustomerCoAs)}
+                  style={{
+                    fontSize: 10,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--shell-accent, #4F46E5)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: '2px 4px',
+                  }}
+                >
+                  {showCustomerCoAs ? 'Hide' : 'Show'}
+                </button>
               </div>
-              <div style={{ display: 'grid', gap: 4 }}>
-                {data.customerSpecificCoas.map((c) => (
-                  <div key={c.customerId} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--shell-fg)' }}>{c.customerName}</span>
-                    <CustomerCoAStatus status={c.status} />
-                  </div>
-                ))}
-              </div>
+              {showCustomerCoAs && (
+                <div style={{ display: 'grid', gap: 4 }}>
+                  {data.customerSpecificCoas.map((c) => (
+                    <div key={c.customerId} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--shell-fg)' }}>{c.customerName}</span>
+                      <CustomerCoAStatus status={c.status} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

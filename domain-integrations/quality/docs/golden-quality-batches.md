@@ -26,7 +26,7 @@ This document catalogs known quality release cases and inspection lots for use i
 * **Source Views Used**:
   * `MockQualityReleaseAdapter` (Simulated in-memory state)
 * **Browser E2E Status**: Pending
-* **Who/What Validated It**: AI agent / Engineering team via frontend component tests.
+* **Who/What Validated It**: automated component tests; engineering review pending.
 
 ---
 
@@ -40,7 +40,7 @@ This document catalogs known quality release cases and inspection lots for use i
   * **Summary**: Returns overall readiness `incomplete` with recommended action `escalate`.
   * **Blockers**: 2 active blockers (`critical` open deviation `DEV-2024-00921` blocking release, and 1 open lab re-test).
   * **Warnings**: 0 warnings.
-  * **CoA Readiness**: Complete and signed off by quality manager `J. Smith`.
+  * **CoA Readiness**: Complete and signed off by quality manager `J. Smith` — fictional fixture value, not a real approver or audit record.
   * **Quality Results**: MIC status is `fail` with active MIC failure (Coliform limit exceeded).
   * **Decision History**: Contains 1 previous `conditional-release` attempt rejected during final sweep.
 * **Validation Status**: Mock-only (simulated in-memory)
@@ -50,7 +50,7 @@ This document catalogs known quality release cases and inspection lots for use i
 * **Source Views Used**:
   * `MockQualityReleaseAdapter` (Simulated in-memory state)
 * **Browser E2E Status**: Pending
-* **Who/What Validated It**: AI agent / Engineering team via frontend component tests.
+* **Who/What Validated It**: automated component tests; engineering review pending.
 
 ---
 

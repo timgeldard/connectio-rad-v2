@@ -1,8 +1,9 @@
-/* eslint-disable @nx/enforce-module-boundaries */
 import { QualityResultsPanel } from '../panels/quality-results-panel.js'
 import { CoAReadinessPanel } from '../panels/coa-readiness-panel.js'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { CoAReleaseStatusPanel, RiskSignalsPanel } from '@connectio/di-traceability'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
 
 /** Props for QualityEvidenceView. */

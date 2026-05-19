@@ -6,36 +6,40 @@ import { ConnectedQualityLabLegacyApiAdapter } from './connected-quality-lab-leg
 describe('ConnectedQualityLabLegacyApiAdapter', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('uses relative same-origin URL when baseUrl is empty', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ fails: [], data_available: true }), { status: 200 }),
     )
+    vi.stubGlobal('fetch', fetchMock)
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
-    await adapter.getLabFailures({})
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    const url = fetchSpy.mock.calls[0][0] as string
+    await adapter.getLabFailures({ plantId: 'IE10' })
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const url = fetchMock.mock.calls[0][0] as string
     expect(url).toMatch(/^\/api\/cq\/lab\/fails/)
   })
 
   it('prepends baseUrl when provided', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ fails: [], data_available: true }), { status: 200 }),
     )
+    vi.stubGlobal('fetch', fetchMock)
     const adapter = new ConnectedQualityLabLegacyApiAdapter('https://example.com')
-    await adapter.getLabFailures({})
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    const url = fetchSpy.mock.calls[0][0] as string
+    await adapter.getLabFailures({ plantId: 'IE10' })
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const url = fetchMock.mock.calls[0][0] as string
     expect(url).toMatch(/^https:\/\/example\.com\/api\/cq\/lab\/fails/)
   })
 
   it('handles error responses status >= 400', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Internal Server Error', { status: 500 }),
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('Internal Server Error', { status: 500 })),
     )
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
-    const result = await adapter.getLabFailures({})
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.source).toBe('legacy-api')
@@ -43,12 +47,43 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
     }
   })
 
-  it('returns ok: true with empty data when legacy fails array is missing', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ data_available: true }), { status: 200 }),
+  it('handles 401 unauthorized status error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: 'Unauthorized access' }), { status: 401 })),
     )
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
-    const result = await adapter.getLabFailures({})
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.code).toBe('unauthorized')
+      expect(result.error.message).toContain('Proxy returned 401')
+    }
+  })
+
+  it('handles 404 not found status error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: 'Not Found' }), { status: 404 })),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.code).toBe('not-found')
+      expect(result.error.message).toContain('Proxy returned 404')
+    }
+  })
+
+  it('returns ok: true with empty data when legacy fails array is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ data_available: true }), { status: 200 })),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.data.fails).toEqual([])
@@ -56,17 +91,18 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
   })
 
   it('returns source legacy-api on successful getLabFailures', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ fails: [], data_available: true }), { status: 200 }),
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ fails: [], data_available: true }), { status: 200 })),
     )
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
-    const result = await adapter.getLabFailures({})
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.source).toBe('legacy-api')
   })
 
   it('falls back to mock on network error for getLabPlants', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network failure'))
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network failure')))
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
     const result = await adapter.getLabPlants()
     expect(result.ok).toBe(true)
@@ -77,9 +113,9 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
   })
 
   it('returns error result on network error for getLabFailures', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'))
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('connection refused')))
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
-    const result = await adapter.getLabFailures({})
+    const result = await adapter.getLabFailures({ plantId: 'IE10' })
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.source).toBe('legacy-api')
@@ -87,13 +123,24 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
     }
   })
 
+  it('falls back to mock implementation when required context is missing', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabFailures({})
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result.ok).toBe(true)
+    expect(result.source).toBe('mock')
+  })
+
   it('strips trailing slash from baseUrl', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ fails: [], data_available: true }), { status: 200 }),
     )
+    vi.stubGlobal('fetch', fetchMock)
     const adapter = new ConnectedQualityLabLegacyApiAdapter('https://example.com/')
-    await adapter.getLabFailures({})
-    const url = fetchSpy.mock.calls[0][0] as string
+    await adapter.getLabFailures({ plantId: 'IE10' })
+    const url = fetchMock.mock.calls[0][0] as string
     expect(url).not.toContain('//api')
   })
 })

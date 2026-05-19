@@ -1,10 +1,15 @@
-/* eslint-disable @nx/enforce-module-boundaries */
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { WarehouseHoldStatusPanel } from '@connectio/di-warehouse'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { TraceExposureForReleasePanel, RelatedInvestigationsPanel } from '@connectio/di-traceability'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { SPCSignalsForReleasePanel } from '@connectio/di-spc'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { WarehouseEvidenceAdapterRequest } from '@connectio/di-warehouse'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { SPCSignalsAdapterRequest } from '@connectio/di-spc'
 
 /** Props for WarehouseTraceEvidenceView. */
