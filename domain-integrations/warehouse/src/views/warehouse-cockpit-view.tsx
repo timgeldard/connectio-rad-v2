@@ -349,11 +349,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           'wh360_imwm_exceptions_v'
         ]}
         limitations={[
-          'UAT verification pending Claude',
+          'UAT verification pending',
           'No write-back or transactional executions allowed',
           'Read-only direct query mode against Unity Catalog views'
         ]}
-        lastVerified="Pending Claude UAT Sweep"
+        lastVerified="Pending"
       />
 
       {/* Safety Notice Warning */}
@@ -1148,16 +1148,16 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                     fontSize: 12,
                     color: '#78350f'
                   }}>
-                    <strong>💡 Exception Diagnostic & Recommended Action:</strong>
+                    <strong>💡 Exception Diagnostic & Review Guidance:</strong>
                     <div style={{ marginTop: 4, lineHeight: 1.4 }}>
-                      {String(selectedRow.data.exceptionType || '').toLowerCase().includes('shortage') || String(selectedRow.data.description || '').toLowerCase().includes('mismatch') || String(selectedRow.data.reason || '').toLowerCase().includes('mismatch') ? (
-                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Recommended Action:</strong> Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.</>
+                       {String(selectedRow.data.exceptionType || '').toLowerCase().includes('shortage') || String(selectedRow.data.description || '').toLowerCase().includes('mismatch') || String(selectedRow.data.reason || '').toLowerCase().includes('mismatch') ? (
+                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Review Guidance:</strong> Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.</>
                       ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('expiry') || String(selectedRow.data.reason || '').toLowerCase().includes('expiry') || Number(selectedRow.data.daysToExpiry) <= 30 ? (
-                        <>Batch is close to or past expiration date. <strong>Recommended Action:</strong> Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.</>
+                        <>Batch is close to or past expiration date. <strong>Review Guidance:</strong> Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.</>
                       ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('hold') || String(selectedRow.data.reason || '').toLowerCase().includes('hold') ? (
-                        <>This batch is currently under an active quality or warehouse hold. <strong>Recommended Action:</strong> Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.</>
+                        <>This batch is currently under an active quality or warehouse hold. <strong>Review Guidance:</strong> Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.</>
                       ) : (
-                        <>General warehouse exception detected. <strong>Recommended Action:</strong> Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.</>
+                        <>General warehouse exception detected. <strong>Review Guidance:</strong> Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.</>
                       )}
                     </div>
                   </div>

@@ -166,7 +166,8 @@ The detailed view tabs (Inbound, Outbound, Staging, and Exceptions) retrieve dat
 - `limit` (Optional): Sets a maximum number of records to retrieve (clamped between 1 and 500).
 
 ### Diagnostic Exception Actions
-When inspecting items on the **Exceptions & Alerts** tab, the cockpit provides built-in action guidance:
-- **Quantity Mismatch**: Indicates IM/WM discrepancies. *Recommended action:* Run a reconciliation transaction (e.g., LT22/LS24 in SAP) to verify bin placements and execute a posting change.
-- **Expiry Warnings**: Batch is near or past expiration. *Recommended action:* Block batch immediately in QM and coordinate with laboratory for retest or disposal.
-- **Hold Status**: Batch is under an active quality or warehouse hold. *Recommended action:* Verify the block reason code in the Quality Batch Release workspace prior to release.
+When inspecting items on the **Exceptions & Alerts** tab, the cockpit provides advisory guidance only. Warehouse360 is a read-only visibility cockpit — no actions are instructed without review and authority confirmation.
+- **Quantity Mismatch**: Indicates IM/WM discrepancies. *Review guidance:* Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.
+- **Expiry Warnings**: Batch is near or past expiration. *Review guidance:* Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.
+- **Hold Status**: Batch is under an active quality or warehouse hold. *Review guidance:* Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.
+- **General Exception**: General warehouse exception detected. *Review guidance:* Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.
