@@ -88,9 +88,9 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
 
     sql = f"""
     SELECT
-        s.material_id,                                          -- confirmed: gold_batch_stock_v (V1 inspection)
-        s.batch_id,                                             -- confirmed: gold_batch_stock_v
-        s.unrestricted,                                         -- confirmed: gold_batch_stock_v
+        s.MATERIAL_ID                AS material_id,             -- confirmed: gold_batch_stock_v
+        s.BATCH_ID                   AS batch_id,                -- confirmed: gold_batch_stock_v
+        s.unrestricted,                                          -- confirmed: gold_batch_stock_v (V1 inspection)
         s.blocked,                                              -- confirmed: gold_batch_stock_v
         s.quality_inspection,                                   -- confirmed: gold_batch_stock_v
         s.restricted,                                           -- confirmed: gold_batch_stock_v
@@ -103,14 +103,14 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         b.MANUFACTURE_DATE           AS manufacture_date,       -- verified: 2026-05-19 connected_plant_uat
         b.SHELF_LIFE_EXPIRATION_DATE AS expiry_date             -- verified: 2026-05-19 connected_plant_uat
     FROM {tbl_stock} s
-    JOIN {tbl_summary} b                                        -- verified join key: material_id + batch_id
-        ON s.material_id = b.material_id AND s.batch_id = b.batch_id
+    JOIN {tbl_summary} b                                        -- verified join key: MATERIAL_ID + BATCH_ID
+        ON s.MATERIAL_ID = b.MATERIAL_ID AND s.BATCH_ID = b.BATCH_ID
     JOIN {tbl_material} m                                       -- confirmed join key
-        ON s.material_id = m.material_id AND m.LANGUAGE_ID = 'E'  -- verified: 2026-05-19 connected_plant_uat
+        ON s.MATERIAL_ID = m.MATERIAL_ID AND m.LANGUAGE_ID = 'E'  -- verified: 2026-05-19 connected_plant_uat
     JOIN {tbl_plant} p                                          -- confirmed join key
         ON s.PLANT_ID = p.PLANT_ID                              -- verified: 2026-05-19 connected_plant_uat
-    WHERE s.material_id = :material_id
-      AND s.batch_id = :batch_id
+    WHERE s.MATERIAL_ID = :material_id
+      AND s.BATCH_ID = :batch_id
     ORDER BY s.PLANT_ID
     LIMIT :max_rows
     """
