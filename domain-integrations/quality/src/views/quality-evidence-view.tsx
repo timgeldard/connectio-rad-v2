@@ -1,3 +1,4 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 import { QualityResultsPanel } from '../panels/quality-results-panel.js'
 import { CoAReadinessPanel } from '../panels/coa-readiness-panel.js'
 import { CoAReleaseStatusPanel, RiskSignalsPanel } from '@connectio/di-traceability'

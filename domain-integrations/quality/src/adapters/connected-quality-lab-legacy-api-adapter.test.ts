@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { ConnectedQualityLabLegacyApiAdapter } from './connected-quality-lab-legacy-api-adapter.js'
@@ -28,6 +28,31 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
     expect(fetchSpy).toHaveBeenCalledOnce()
     const url = fetchSpy.mock.calls[0][0] as string
     expect(url).toMatch(/^https:\/\/example\.com\/api\/cq\/lab\/fails/)
+  })
+
+  it('handles error responses status >= 400', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Internal Server Error', { status: 500 }),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabFailures({})
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.message).toContain('Proxy returned 500')
+    }
+  })
+
+  it('returns ok: true with empty data when legacy fails array is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data_available: true }), { status: 200 }),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabFailures({})
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.fails).toEqual([])
+    }
   })
 
   it('returns source legacy-api on successful getLabFailures', async () => {
@@ -75,7 +100,10 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
 
 describe('prepare-databricks-app.mjs CQ env var', () => {
   it('documents VITE_CQ_API_BASE_URL in the prepare script', () => {
-    const scriptPath = join(process.cwd(), 'scripts/prepare-databricks-app.mjs')
+    let scriptPath = join(process.cwd(), 'scripts/prepare-databricks-app.mjs')
+    if (!existsSync(scriptPath)) {
+      scriptPath = join(process.cwd(), '../../scripts/prepare-databricks-app.mjs')
+    }
     const content = readFileSync(scriptPath, 'utf-8')
     expect(content).toContain('VITE_CQ_API_BASE_URL')
   })

@@ -74,6 +74,8 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |---|------|--------|-------|
 | 7.1 | Domain integration README exists | ✅ | Documented under `domain-integrations/quality/README.md`. |
 | 7.2 | UAT Candidate ledger created | ✅ | Documented under `domain-integrations/quality/docs/golden-quality-batches.md`. |
+| 7.3 | Known limitations document created | ✅ | Documented under `domain-integrations/quality/docs/quality-known-limitations.md`. |
+| 7.4 | UAT Acceptance script created | ✅ | Documented under `domain-integrations/quality/docs/quality-uat-acceptance-script.md`. |
 
 ---
 

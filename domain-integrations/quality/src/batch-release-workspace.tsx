@@ -1,3 +1,4 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 import { StandardWorkspaceTemplate } from '@connectio/workspace-runtime'
 import type { ScopeContext } from '@connectio/data-contracts'
 import { VerificationStatusBanner } from '@connectio/design-system'

@@ -67,8 +67,17 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
         <div style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <ReadinessStatusBadge status={data.readinessStatus} />
-            {data.coaDocumentId && (
+            {data.coaDocumentId ? (
               <CoAField label="Document" value={data.coaDocumentId} />
+            ) : (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D32F2F', marginBottom: 2 }}>
+                  Document
+                </div>
+                <div style={{ fontSize: 12, color: '#D32F2F', fontWeight: 600 }}>
+                  CoA document unavailable
+                </div>
+              </div>
             )}
             {data.signedOffBy && (
               <CoAField label="Signed Off By" value={data.signedOffBy} />
@@ -110,7 +119,7 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
           )}
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
-            CoA readiness checks document completeness and draft signature status. Live customer sign-off must be verified before final physical shipment.
+            This panel uses simulated mock data. CoA readiness checks document completeness and draft signature status. Live customer sign-off must be verified before final physical shipment.
           </div>
         </div>
       )}
@@ -123,6 +132,7 @@ const READINESS_STYLE: Record<string, { fg: string }> = {
   incomplete: { fg: '#D32F2F' },
   'pending-sign-off': { fg: '#FF9800' },
   'not-applicable': { fg: '#9E9E9E' },
+  unknown: { fg: '#9E9E9E' },
 }
 
 function ReadinessStatusBadge({ status }: { status: string }) {

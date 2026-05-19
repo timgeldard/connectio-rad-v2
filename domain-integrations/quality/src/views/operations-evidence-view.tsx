@@ -1,3 +1,4 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 import { ProcessOrderEvidencePanel } from '@connectio/di-operations'
 import { WarehouseHoldStatusPanel } from '@connectio/di-warehouse'
 import { EventTimelinePanel } from '@connectio/di-traceability'

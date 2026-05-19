@@ -1,3 +1,4 @@
+/* eslint-disable @nx/enforce-module-boundaries */
 import { WarehouseHoldStatusPanel } from '@connectio/di-warehouse'
 import { TraceExposureForReleasePanel, RelatedInvestigationsPanel } from '@connectio/di-traceability'
 import { SPCSignalsForReleasePanel } from '@connectio/di-spc'

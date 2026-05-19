@@ -101,7 +101,7 @@ export function DeviationsPanel({ request }: DeviationsPanelProps) {
           )}
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
-            Deviation blocking status is derived from quality records. Review closed or waived deviations to ensure all critical conditions are verified.
+            This panel uses simulated mock data. Deviation blocking status is derived from quality records. Review closed or waived deviations to ensure all critical conditions are verified.
           </div>
         </div>
       )}

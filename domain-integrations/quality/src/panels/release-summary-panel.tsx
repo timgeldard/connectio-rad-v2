@@ -110,6 +110,10 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
           )}
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', display: 'grid', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
+              <strong>Mock Mode:</strong>
+              <span>This panel uses simulated data for validation. Release actions do not write back to SAP QM.</span>
+            </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <strong>Note:</strong>
               <span>Quality Inspection (QI) stock is physically restricted in storage locations. The usage decision must be finalized in SAP QM to release this batch.</span>
@@ -130,6 +134,7 @@ const READINESS_STYLE: Record<string, { bg: string; fg: string }> = {
   conditional: { bg: 'rgba(255,152,0,0.1)', fg: '#FF9800' },
   blocked: { bg: 'rgba(211,47,47,0.1)', fg: '#D32F2F' },
   incomplete: { bg: 'rgba(158,158,158,0.1)', fg: '#9E9E9E' },
+  unknown: { bg: 'rgba(158,158,158,0.1)', fg: '#9E9E9E' },
 }
 
 function ReadinessBadge({ readiness }: { readiness: string }) {

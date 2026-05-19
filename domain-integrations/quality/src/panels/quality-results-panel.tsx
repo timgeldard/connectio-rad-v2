@@ -74,7 +74,7 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
             )}
           </div>
 
-          {data.inspectionLotId && (
+          {data.inspectionLotId ? (
             <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, fontSize: 12, color: 'var(--shell-fg-3)' }}>
               Inspection Lot: <span style={{ color: 'var(--shell-fg)', fontWeight: 500 }}>{data.inspectionLotId}</span>
               {data.inspectionCompletedAt && (
@@ -87,6 +87,10 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
                   By: <span style={{ color: 'var(--shell-fg)' }}>{data.inspectionCompletedBy}</span>
                 </span>
               )}
+            </div>
+          ) : (
+            <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, fontSize: 12, color: '#D32F2F', fontWeight: 600 }}>
+              Inspection lot not found. No quality results available in SAP QM.
             </div>
           )}
 
@@ -114,8 +118,14 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
             </div>
           )}
 
+          {data.micStatus === 'fail' && data.micFailures.length === 0 && (
+            <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, fontSize: 12, color: '#D32F2F', fontWeight: 600 }}>
+              MIC Status is FAIL but no failure details were returned. Verify lot records in SAP QM.
+            </div>
+          )}
+
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
-            Inspection lot status shows the active test counts. Live results might be pending lab sign-off.
+            This panel uses simulated mock data. Inspection lot status shows the active test counts. Live results might be pending lab sign-off.
           </div>
         </div>
       )}
@@ -130,6 +140,7 @@ const STATUS_COLOUR: Record<string, string> = {
   conditional: '#FF9800',
   'not-required': '#9E9E9E',
   'not-applicable': '#9E9E9E',
+  unknown: '#9E9E9E',
 }
 
 function TestResult({ label, status }: { label: string; status: string }) {
