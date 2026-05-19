@@ -118,10 +118,10 @@ export function SPCSandboxBanner() {
       </div>
       <div>
         <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#D97706' }}>
-          Demo Data — Not Linked to Production
+          SPC Sandbox Mode — Simulated Data
         </h4>
         <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--shell-fg-2)', lineHeight: 1.4 }}>
-          Source: <code style={{ background: 'var(--shell-surface-2)', padding: '1px 4px', borderRadius: '3px' }}>mock</code> (In-memory Simulation). Native Databricks integration is pending catalog alignment of the <code style={{ background: 'var(--shell-surface-2)', padding: '1px 4px', borderRadius: '3px' }}>spc_quality_metrics</code> schema in UAT.
+          SPC sandbox mode — values are for workflow validation and are not production control evidence. Control limits and signals shown here must be validated against approved SPC rules before operational use. Native Databricks integration is pending catalog alignment of the <code style={{ background: 'var(--shell-surface-2)', padding: '1px 4px', borderRadius: '3px' }}>spc_quality_metrics</code> schema in UAT.
         </p>
       </div>
     </div>

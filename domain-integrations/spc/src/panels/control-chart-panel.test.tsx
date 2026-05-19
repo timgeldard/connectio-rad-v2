@@ -51,7 +51,7 @@ describe('ControlChartPanel', () => {
     vi.mocked(queries.useControlChartSeries).mockReturnValue({
       data: { ok: true, data: defaultMockSeries, fetchedAt: '2026-05-18T12:00:00.000Z' },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof queries.useControlChartSeries>)
   })
 
   it('renders without crashing', () => {
@@ -127,7 +127,7 @@ describe('ControlChartPanel', () => {
         fetchedAt: '2026-05-18T12:00:00.000Z',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof queries.useControlChartSeries>)
 
     render(<Wrapper><ControlChartPanel request={request} /></Wrapper>)
     await waitFor(() => {
@@ -148,7 +148,7 @@ describe('ControlChartPanel', () => {
         fetchedAt: '2026-05-18T12:00:00.000Z',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof queries.useControlChartSeries>)
 
     render(<Wrapper><ControlChartPanel request={request} /></Wrapper>)
     await waitFor(() => {
@@ -169,7 +169,7 @@ describe('ControlChartPanel', () => {
         fetchedAt: '2026-05-18T12:00:00.000Z',
       },
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof queries.useControlChartSeries>)
 
     render(<Wrapper><ControlChartPanel request={request} /></Wrapper>)
     await waitFor(() => {

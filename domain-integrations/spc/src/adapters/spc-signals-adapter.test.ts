@@ -13,6 +13,7 @@ describe('SPCSignalsAdapter', () => {
     if (!result.ok) return
 
     expect(result.fetchedAt).toBe(fixedNow())
+    expect(result.source).toBe('mock')
     const parsed = SPCSignalSummarySchema.safeParse(result.data)
     expect(parsed.success).toBe(true)
   })

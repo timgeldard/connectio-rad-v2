@@ -51,6 +51,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {series && (
         <div style={{ padding: '12px 16px' }}>
@@ -85,7 +86,16 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 )}
               </div>
 
-              {validPoints.length < 3 && (
+              {series.upperControlLimit == null && series.lowerControlLimit == null && series.centerLine == null && (
+                <div
+                  style={{ padding: '6px 10px', marginBottom: 8, background: 'rgba(217, 119, 6, 0.05)', border: '1px solid rgba(217, 119, 6, 0.2)', borderRadius: 4, fontSize: 11, color: '#D97706', lineHeight: 1.4 }}
+                  role="status"
+                >
+                  Control limits not calculated (minimum samples/configuration required) — cannot evaluate process control state.
+                </div>
+              )}
+
+              {validPoints.length > 0 && validPoints.length < 3 && (series.upperControlLimit != null || series.lowerControlLimit != null || series.centerLine != null) && (
                 <div
                   style={{ padding: '4px 8px', marginBottom: 8, background: '#FFFBEB', border: '1px solid #D97706', borderRadius: 4, fontSize: 11, color: '#92400E' }}
                   role="status"

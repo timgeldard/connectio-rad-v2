@@ -45,6 +45,7 @@ export function SPCProcessContextPanel({ request }: SPCProcessContextPanelProps)
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {ctx && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 8 }}>

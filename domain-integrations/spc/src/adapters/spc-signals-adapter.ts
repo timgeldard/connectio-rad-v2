@@ -21,7 +21,7 @@ export type NowFn = () => string
 const defaultNow: NowFn = () => new Date().toISOString()
 
 function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
-  return { ok: true, data, fetchedAt: now() }
+  return { ok: true, data, fetchedAt: now(), source: 'mock' }
 }
 
 function err<T>(

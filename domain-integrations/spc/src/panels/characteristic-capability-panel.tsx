@@ -46,12 +46,14 @@ export function CharacteristicCapabilityPanel({ request }: CharacteristicCapabil
   }, [isLoading, result, markReady, markError])
 
   const data: CharacteristicCapability | null = result?.ok ? result.data : null
+  const isInsufficient = data?.interpretation === 'insufficient-data'
 
   return (
     <EvidencePanel
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
@@ -67,17 +69,34 @@ export function CharacteristicCapabilityPanel({ request }: CharacteristicCapabil
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <CapabilityIndex label="Cp" value={data.cp} threshold={1.33} />
-            <CapabilityIndex label="Cpk" value={data.cpk} threshold={1.33} />
-            <CapabilityIndex label="Pp" value={data.pp} threshold={1.33} />
-            <CapabilityIndex label="Ppk" value={data.ppk} threshold={1.33} />
+            <CapabilityIndex label="Cp" value={data.cp} threshold={1.33} isInsufficient={isInsufficient} />
+            <CapabilityIndex label="Cpk" value={data.cpk} threshold={1.33} isInsufficient={isInsufficient} />
+            <CapabilityIndex label="Pp" value={data.pp} threshold={1.33} isInsufficient={isInsufficient} />
+            <CapabilityIndex label="Ppk" value={data.ppk} threshold={1.33} isInsufficient={isInsufficient} />
           </div>
 
+          {isInsufficient && (
+            <div
+              style={{
+                padding: '6px 10px',
+                background: 'rgba(217, 119, 6, 0.05)',
+                border: '1px solid rgba(217, 119, 6, 0.2)',
+                borderRadius: 4,
+                fontSize: 11,
+                color: '#D97706',
+                lineHeight: 1.4,
+              }}
+              role="status"
+            >
+              Insufficient sample size to calculate reliable capability indices. A minimum of 30 samples is recommended for production control validation.
+            </div>
+          )}
+
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <StatRow label="Mean" value={data.mean.toFixed(3)} />
-            <StatRow label="Std Dev" value={data.standardDeviation.toFixed(4)} />
-            <StatRow label="n" value={String(data.sampleCount)} />
-            <StatRow label="Confidence" value={`${Math.round(data.confidence * 100)}%`} />
+            <StatRow label="Mean" value={typeof data.mean === 'number' && !isNaN(data.mean) ? data.mean.toFixed(3) : '—'} />
+            <StatRow label="Std Dev" value={typeof data.standardDeviation === 'number' && !isNaN(data.standardDeviation) ? data.standardDeviation.toFixed(4) : '—'} />
+            <StatRow label="n" value={typeof data.sampleCount === 'number' ? String(data.sampleCount) : '—'} />
+            <StatRow label="Confidence" value={typeof data.confidence === 'number' && !isNaN(data.confidence) ? `${Math.round(data.confidence * 100)}%` : '—'} />
           </div>
         </div>
       )}
@@ -85,12 +104,29 @@ export function CharacteristicCapabilityPanel({ request }: CharacteristicCapabil
   )
 }
 
-function CapabilityIndex({ label, value, threshold }: { label: string; value: number; threshold: number }) {
-  const color = value >= threshold ? '#388E3C' : value >= 1.0 ? '#D97706' : '#D32F2F'
+function CapabilityIndex({
+  label,
+  value,
+  threshold,
+  isInsufficient = false,
+}: {
+  label: string
+  value: number | null | undefined
+  threshold: number
+  isInsufficient?: boolean
+}) {
+  const hasValue = value != null && !isNaN(value) && !isInsufficient
+  const color = !hasValue
+    ? 'var(--shell-fg-3)'
+    : value >= threshold
+    ? '#388E3C'
+    : value >= 1.0
+    ? '#D97706'
+    : '#D32F2F'
   return (
     <div style={{ background: 'var(--shell-surface-2)', borderRadius: 4, padding: '6px 10px' }}>
       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color }}>{value.toFixed(2)}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color }}>{hasValue ? value.toFixed(2) : '—'}</div>
     </div>
   )
 }

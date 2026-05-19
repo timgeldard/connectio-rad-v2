@@ -60,6 +60,7 @@ export function SPCAlarmHistoryPanel({ request }: SPCAlarmHistoryPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {result?.ok && (
         <div style={{ padding: '12px 16px' }}>

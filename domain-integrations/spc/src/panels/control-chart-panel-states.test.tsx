@@ -133,3 +133,43 @@ describe('ControlChartPanel — normal state (3+ samples)', () => {
     })
   })
 })
+
+describe('ControlChartPanel — missing control limits state', () => {
+  beforeEach(() => {
+    const missingLimitsSeries: ControlChartSeries = {
+      ...baseSeries,
+      upperControlLimit: undefined,
+      lowerControlLimit: undefined,
+      centerLine: undefined,
+      points: [
+        { pointId: 'P1', timestamp: '2026-05-13T06:00:00.000Z', value: 5.1, batchId: 'B1', sampleId: 'S1', signalIds: [], status: 'in-control' },
+        { pointId: 'P2', timestamp: '2026-05-13T09:00:00.000Z', value: 4.9, batchId: 'B1', sampleId: 'S2', signalIds: [], status: 'in-control' },
+        { pointId: 'P3', timestamp: '2026-05-13T12:00:00.000Z', value: 5.0, batchId: 'B1', sampleId: 'S3', signalIds: [], status: 'in-control' },
+      ],
+    }
+    vi.mocked(useControlChartSeries).mockReturnValue(makeResult(missingLimitsSeries) as ReturnType<typeof useControlChartSeries>)
+  })
+
+  it('shows missing control limits notice', async () => {
+    render(<ControlChartPanel request={request} />)
+    await waitFor(() => {
+      expect(screen.getByText(/Control limits not calculated/i)).toBeInTheDocument()
+    })
+  })
+
+  it('does not show insufficient data notice even if 3+ samples and limits missing', async () => {
+    render(<ControlChartPanel request={request} />)
+    await waitFor(() => {
+      expect(screen.queryByText(/Fewer than 3 samples/i)).toBeNull()
+    })
+  })
+
+  it('does not render UCL/CL/LCL stats when limits are null', async () => {
+    render(<ControlChartPanel request={request} />)
+    await waitFor(() => {
+      expect(screen.queryByText('UCL')).toBeNull()
+      expect(screen.queryByText('CL')).toBeNull()
+      expect(screen.queryByText('LCL')).toBeNull()
+    })
+  })
+})

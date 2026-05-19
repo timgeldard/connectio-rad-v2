@@ -146,8 +146,8 @@ describe('SPCMonitoringAdapter', () => {
 
     it('returns source mock', async () => {
       const result = await adapter.getMonitoredCharacteristics(request)
-      expect(result.ok && (result as { source?: string }).source).toBeUndefined()
-      // source field is not on AdapterResult<T> directly but fetchedAt confirms real call
+      expect(result.ok && (result as { source?: string }).source).toBe('mock')
+      // source field is verified to be 'mock'
       expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
     })
   })
