@@ -59,6 +59,7 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
@@ -107,6 +108,17 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
               </div>
             </div>
           )}
+
+          <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', display: 'grid', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <strong>Note:</strong>
+              <span>Quality Inspection (QI) stock is physically restricted in storage locations. The usage decision must be finalized in SAP QM to release this batch.</span>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <strong>Advisory:</strong>
+              <span>Recommended actions are system-generated based on available evidence. Always cross-reference lot details and deviation status before finalizing the release decision.</span>
+            </div>
+          </div>
         </div>
       )}
     </EvidencePanel>

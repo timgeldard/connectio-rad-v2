@@ -1,5 +1,6 @@
 import { StandardWorkspaceTemplate } from '@connectio/workspace-runtime'
 import type { ScopeContext } from '@connectio/data-contracts'
+import { VerificationStatusBanner } from '@connectio/design-system'
 import { batchReleaseRegistration } from './batch-release-registration.js'
 import { ReleaseActionsPanel } from './actions/release-actions-panel.js'
 import { ReleaseQueueView } from './views/release-queue-view.js'
@@ -112,6 +113,28 @@ export function BatchReleaseWorkspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'release-queue'}
       actionSidebar={<ReleaseActionsPanel context={context} />}
     >
+      <div style={{ padding: '16px 16px 0 16px' }}>
+        <VerificationStatusBanner
+          title="Quality Batch Release Integration Specifications"
+          status="partial-native"
+          sourceLabel="Hybrid/Mixed Quality Data Source"
+          routes={[
+            'GET /api/cq/lab/fails',
+            'GET /api/cq/lab/plants'
+          ]}
+          sourceObjects={[
+            'vw_cq_lab_failures',
+            'vw_cq_lab_plants'
+          ]}
+          limitations={[
+            'UAT verification pending',
+            'Connected Quality Lab Board uses V1 legacy API (/api/cq/lab/fails)',
+            'Batch release summaries, deviations, and CoA readiness are simulated in-memory (mock mode)',
+            'Read-only cockpit — release actions are simulated and will not execute in SAP'
+          ]}
+          lastVerified="Pending UAT Sweep"
+        />
+      </div>
       {activeView}
     </StandardWorkspaceTemplate>
   )

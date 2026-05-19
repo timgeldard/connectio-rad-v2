@@ -61,6 +61,7 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
@@ -107,6 +108,10 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
               </div>
             </div>
           )}
+
+          <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
+            CoA readiness checks document completeness and draft signature status. Live customer sign-off must be verified before final physical shipment.
+          </div>
         </div>
       )}
     </EvidencePanel>

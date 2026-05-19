@@ -86,4 +86,30 @@ describe('ReleaseSummaryPanel', () => {
       expect(action).not.toBeNull()
     })
   })
+
+  it('renders advisory and note footnotes explaining QI stock restrictions and system recommendations', async () => {
+    render(
+      <Wrapper>
+        <ReleaseSummaryPanel request={request} />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Quality Inspection \(QI\) stock is physically restricted/i)).toBeInTheDocument()
+      expect(screen.getByText(/Recommended actions are system-generated/i)).toBeInTheDocument()
+    })
+  })
+
+  it('does not render live source badges when source is mock', async () => {
+    render(
+      <Wrapper>
+        <ReleaseSummaryPanel request={request} />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Legacy API')).toBeNull()
+      expect(screen.queryByText('Databricks')).toBeNull()
+    })
+  })
 })

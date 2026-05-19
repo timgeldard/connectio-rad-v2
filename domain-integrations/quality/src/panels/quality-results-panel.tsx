@@ -57,6 +57,7 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
@@ -112,6 +113,10 @@ export function QualityResultsPanel({ request }: QualityResultsPanelProps) {
               </div>
             </div>
           )}
+
+          <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
+            Inspection lot status shows the active test counts. Live results might be pending lab sign-off.
+          </div>
         </div>
       )}
     </EvidencePanel>

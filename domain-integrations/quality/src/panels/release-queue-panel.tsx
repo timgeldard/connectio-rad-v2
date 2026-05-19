@@ -62,6 +62,7 @@ export function ReleaseQueuePanel({ request, onSelectCase, activeCaseId }: Relea
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {items && (
         <div style={{ padding: '8px 0' }}>
