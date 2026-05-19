@@ -88,7 +88,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
 
               {series.upperControlLimit == null && series.lowerControlLimit == null && series.centerLine == null && (
                 <div
-                  style={{ padding: '6px 10px', marginBottom: 8, background: 'rgba(217, 119, 6, 0.05)', border: '1px solid rgba(217, 119, 6, 0.2)', borderRadius: 4, fontSize: 11, color: '#D97706', lineHeight: 1.4 }}
+                  style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                   role="status"
                 >
                   Control limits not calculated (minimum samples/configuration required) — cannot evaluate process control state.
@@ -97,7 +97,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
 
               {validPoints.length > 0 && validPoints.length < 3 && (series.upperControlLimit != null || series.lowerControlLimit != null || series.centerLine != null) && (
                 <div
-                  style={{ padding: '4px 8px', marginBottom: 8, background: '#FFFBEB', border: '1px solid #D97706', borderRadius: 4, fontSize: 11, color: '#92400E' }}
+                  style={{ padding: '4px 8px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn, #C7821C)', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)' }}
                   role="status"
                 >
                   Fewer than 3 samples — control limits are indicative only.
@@ -120,9 +120,9 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  'out-of-control': '#D32F2F',
-  'warning': '#D97706',
-  'in-control': '#388E3C',
+  'out-of-control': 'var(--shell-bad, #C73315)',
+  'warning': 'var(--shell-warn, #C7821C)',
+  'in-control': 'var(--shell-good, #1F8B4C)',
 }
 
 function ChartStat({ label, value, color }: { label: string; value: string; color: string }) {

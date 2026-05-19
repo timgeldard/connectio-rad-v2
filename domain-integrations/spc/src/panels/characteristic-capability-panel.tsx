@@ -24,9 +24,9 @@ export interface CharacteristicCapabilityPanelProps {
 }
 
 const INTERPRETATION_COLOR: Record<string, string> = {
-  capable: '#388E3C',
-  marginal: '#D97706',
-  'not-capable': '#D32F2F',
+  capable: 'var(--shell-good, #1F8B4C)',
+  marginal: 'var(--shell-warn, #C7821C)',
+  'not-capable': 'var(--shell-bad, #C73315)',
   'insufficient-data': 'var(--shell-fg-3)',
 }
 
@@ -79,11 +79,11 @@ export function CharacteristicCapabilityPanel({ request }: CharacteristicCapabil
             <div
               style={{
                 padding: '6px 10px',
-                background: 'rgba(217, 119, 6, 0.05)',
-                border: '1px solid rgba(217, 119, 6, 0.2)',
+                background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))',
+                border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))',
                 borderRadius: 4,
                 fontSize: 11,
-                color: '#D97706',
+                color: 'var(--shell-warn, #C7821C)',
                 lineHeight: 1.4,
               }}
               role="status"
@@ -119,10 +119,10 @@ function CapabilityIndex({
   const color = !hasValue
     ? 'var(--shell-fg-3)'
     : value >= threshold
-    ? '#388E3C'
+    ? 'var(--shell-good, #1F8B4C)'
     : value >= 1.0
-    ? '#D97706'
-    : '#D32F2F'
+    ? 'var(--shell-warn, #C7821C)'
+    : 'var(--shell-bad, #C73315)'
   return (
     <div style={{ background: 'var(--shell-surface-2)', borderRadius: 4, padding: '6px 10px' }}>
       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 2 }}>{label}</div>

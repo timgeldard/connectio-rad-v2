@@ -24,10 +24,10 @@ export interface ActiveSPCSignalsPanelProps {
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: '#D32F2F',
+  critical: 'var(--shell-bad, #C73315)',
   high: 'var(--sunset, #F24A00)',
-  medium: '#D97706',
-  low: '#388E3C',
+  medium: 'var(--shell-warn, #C7821C)',
+  low: 'var(--shell-good, #1F8B4C)',
 }
 
 export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {

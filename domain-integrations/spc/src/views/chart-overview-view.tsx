@@ -88,8 +88,8 @@ export function SPCSandboxBanner() {
     <div
       style={{
         padding: '12px 16px',
-        background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)',
-        border: '1px solid rgba(217, 119, 6, 0.3)',
+        background: 'linear-gradient(135deg, rgba(199, 130, 28, 0.1) 0%, rgba(199, 130, 28, 0.05) 100%)',
+        border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.3))',
         borderRadius: '6px',
         display: 'flex',
         alignItems: 'center',
@@ -104,11 +104,11 @@ export function SPCSandboxBanner() {
           width: '24px',
           height: '24px',
           borderRadius: '50%',
-          background: 'rgba(217, 119, 6, 0.2)',
+          background: 'rgba(199, 130, 28, 0.2)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#D97706',
+          color: 'var(--shell-warn, #C7821C)',
           fontSize: '14px',
           fontWeight: 700,
           flexShrink: 0,
@@ -117,7 +117,7 @@ export function SPCSandboxBanner() {
         !
       </div>
       <div>
-        <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#D97706' }}>
+        <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--shell-warn, #C7821C)' }}>
           SPC Sandbox Mode — Simulated Data
         </h4>
         <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--shell-fg-2)', lineHeight: 1.4 }}>

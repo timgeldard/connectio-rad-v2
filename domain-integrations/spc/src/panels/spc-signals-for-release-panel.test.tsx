@@ -82,4 +82,22 @@ describe('SPCSignalsForReleasePanel', () => {
       expect(screen.getByText(/Trend/i)).toBeInTheDocument()
     })
   })
+
+  it('renders error state and propagates source successfully', async () => {
+    vi.mocked(useSPCSignals).mockReturnValue({
+      data: {
+        ok: false,
+        error: { code: 'network', message: 'Failed to fetch SPC signals', retryable: true },
+        displayState: 'error',
+        source: 'mock',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useSPCSignals>)
+
+    render(<SPCSignalsForReleasePanel request={request} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to fetch SPC signals/i)).toBeInTheDocument()
+    })
+  })
 })

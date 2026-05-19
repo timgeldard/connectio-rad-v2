@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SPCMonitoringAdapter } from './spc-monitoring-adapter.js'
+import { SPCMonitoringAdapter, toSPCMonitoringAdapterError } from './spc-monitoring-adapter.js'
 
 const FIXED_NOW = '2024-03-08T10:00:00.000Z'
 const adapter = new SPCMonitoringAdapter({ now: () => FIXED_NOW })
@@ -203,6 +203,16 @@ describe('SPCMonitoringAdapter', () => {
       for (const batch of result.data) {
         expect(['blocking', 'risk', 'none']).toContain(batch.releaseImpact)
       }
+    })
+  })
+
+  describe('toSPCMonitoringAdapterError', () => {
+    it('returns error result with source mock', () => {
+      const errorResult = toSPCMonitoringAdapterError(new Error('Test error'))
+      expect(errorResult.ok).toBe(false)
+      if (errorResult.ok) throw new Error('Expected error result')
+      expect(errorResult.source).toBe('mock')
+      expect(errorResult.error.message).toBe('Test error')
     })
   })
 })
