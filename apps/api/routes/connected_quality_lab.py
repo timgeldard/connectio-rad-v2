@@ -15,6 +15,10 @@ import os
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
+from contracts.generated import (
+    ConnectedQualityLabFailuresResponse,
+    ConnectedQualityLabPlantsResponse,
+)
 
 from adapters.cq.cq_databricks_adapter import get_lab_plants_spec, map_lab_plants_rows
 from routes._databricks import require_databricks_config, set_databricks_response_headers
@@ -62,12 +66,12 @@ async def _forward_get(v1_path: str, params: dict, token: str | None) -> dict:
     return response.json()
 
 
-@router.get("/cq/lab/fails")
+@router.get("/cq/lab/fails", response_model=ConnectedQualityLabFailuresResponse)
 async def lab_fails(
     plant_id: str | None = None,
     lot_type: str | None = None,
     x_forwarded_access_token: str | None = Header(default=None),
-) -> dict:
+):
     """Proxy to V1 CQ lab fails endpoint. Always legacy-api — databricks path blocked."""
     params: dict[str, str] = {}
     if plant_id:
@@ -77,13 +81,13 @@ async def lab_fails(
     return await _forward_get("/api/cq/lab/fails", params, x_forwarded_access_token)
 
 
-@router.get("/cq/lab/plants")
+@router.get("/cq/lab/plants", response_model=ConnectedQualityLabPlantsResponse)
 async def lab_plants(
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+):
     """Lab plants list — supports legacy-api and databricks-api modes.
 
     ``BACKEND_ADAPTER_MODE=databricks-api`` queries gold_plant directly.

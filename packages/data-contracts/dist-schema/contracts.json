@@ -1,0 +1,8034 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConnectIO Data Contracts",
+  "type": "object",
+  "definitions": {
+    "ApiErrorEnvelope": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {}
+            },
+            {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          ]
+        },
+        "status_code": {
+          "type": "number"
+        },
+        "error_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "BatchHeaderSummary": {
+      "type": "object",
+      "properties": {
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "batchStatus": {
+          "type": "string",
+          "enum": [
+            "active",
+            "archived",
+            "blocked",
+            "deleted",
+            "unknown"
+          ]
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "manufactureDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "stockStatus": {
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "quality-inspection",
+            "blocked",
+            "restricted",
+            "returns",
+            "transit"
+          ]
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "rejected",
+            "pending",
+            "conditional",
+            "not-applicable",
+            "unknown"
+          ]
+        },
+        "releaseStatus": {
+          "type": "string",
+          "enum": [
+            "released",
+            "blocked",
+            "restricted",
+            "not-released",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "materialId",
+        "materialDescription",
+        "batchId",
+        "plantId",
+        "plantName",
+        "batchStatus",
+        "stockStatus",
+        "qualityStatus",
+        "releaseStatus"
+      ],
+      "additionalProperties": false
+    },
+    "BatchReleaseContext": {
+      "type": "object",
+      "properties": {
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "awaiting-review",
+            "under-review",
+            "conditionally-released",
+            "released",
+            "rejected",
+            "on-hold",
+            "escalated"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "routine",
+            "expedited",
+            "critical"
+          ]
+        },
+        "assignedTo": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "type": "string"
+        },
+        "requestedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dueBy": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "releaseType": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "conditional",
+            "emergency",
+            "retrospective"
+          ]
+        }
+      },
+      "required": [
+        "releaseCaseId",
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "plantName",
+        "status",
+        "priority",
+        "requestedBy",
+        "requestedAt",
+        "lastUpdatedAt",
+        "releaseType"
+      ],
+      "additionalProperties": false
+    },
+    "BatchReleaseQueueItem": {
+      "type": "object",
+      "properties": {
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "awaiting-review",
+            "under-review",
+            "conditionally-released",
+            "released",
+            "rejected",
+            "on-hold",
+            "escalated"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "routine",
+            "expedited",
+            "critical"
+          ]
+        },
+        "dueBy": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "openDeviationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "spcAlarmCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hasOpenHold": {
+          "type": "boolean"
+        },
+        "assignedTo": {
+          "type": "string"
+        },
+        "requestedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "releaseCaseId",
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "status",
+        "priority",
+        "blockers",
+        "openDeviationCount",
+        "spcAlarmCount",
+        "hasOpenHold",
+        "requestedAt"
+      ],
+      "additionalProperties": false
+    },
+    "BatchReleaseSummary": {
+      "type": "object",
+      "properties": {
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "overallReadiness": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "conditional",
+            "blocked",
+            "incomplete"
+          ]
+        },
+        "qualityPassed": {
+          "type": "boolean"
+        },
+        "spcClean": {
+          "type": "boolean"
+        },
+        "coaComplete": {
+          "type": "boolean"
+        },
+        "noOpenHolds": {
+          "type": "boolean"
+        },
+        "deviationsResolved": {
+          "type": "boolean"
+        },
+        "traceClean": {
+          "type": "boolean"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommendedAction": {
+          "type": "string",
+          "enum": [
+            "release",
+            "conditional-release",
+            "reject",
+            "escalate",
+            "retest"
+          ]
+        },
+        "lastEvaluatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "releaseCaseId",
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "overallReadiness",
+        "qualityPassed",
+        "spcClean",
+        "coaComplete",
+        "noOpenHolds",
+        "deviationsResolved",
+        "traceClean",
+        "blockers",
+        "warnings",
+        "recommendedAction",
+        "lastEvaluatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "BatchSummary": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "productionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "releaseStatus": {
+          "type": "string",
+          "enum": [
+            "released",
+            "blocked",
+            "restricted",
+            "unrestricted",
+            "unknown"
+          ]
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "releaseStatus"
+      ],
+      "additionalProperties": false
+    },
+    "CharacteristicCapability": {
+      "type": "object",
+      "properties": {
+        "characteristicId": {
+          "type": "string"
+        },
+        "characteristicName": {
+          "type": "string"
+        },
+        "cp": {
+          "type": "number"
+        },
+        "cpk": {
+          "type": "number"
+        },
+        "pp": {
+          "type": "number"
+        },
+        "ppk": {
+          "type": "number"
+        },
+        "sampleCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mean": {
+          "type": "number"
+        },
+        "standardDeviation": {
+          "type": "number",
+          "minimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "interpretation": {
+          "type": "string",
+          "enum": [
+            "capable",
+            "marginal",
+            "not-capable",
+            "insufficient-data"
+          ]
+        }
+      },
+      "required": [
+        "characteristicId",
+        "characteristicName",
+        "cp",
+        "cpk",
+        "pp",
+        "ppk",
+        "sampleCount",
+        "mean",
+        "standardDeviation",
+        "confidence",
+        "interpretation"
+      ],
+      "additionalProperties": false
+    },
+    "CoAReadiness": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "coaDocumentId": {
+          "type": "string"
+        },
+        "readinessStatus": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "incomplete",
+            "pending-sign-off",
+            "not-applicable"
+          ]
+        },
+        "missingFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "signedOffBy": {
+          "type": "string"
+        },
+        "signedOffAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "customerSpecificCoas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "customerId": {
+                "type": "string"
+              },
+              "customerName": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "incomplete",
+                  "not-required"
+                ]
+              }
+            },
+            "required": [
+              "customerId",
+              "customerName",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "readinessStatus",
+        "missingFields",
+        "customerSpecificCoas",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "CoAReleaseStatus": {
+      "type": "object",
+      "properties": {
+        "coaAvailable": {
+          "type": "boolean"
+        },
+        "releaseStatus": {
+          "type": "string",
+          "enum": [
+            "released",
+            "not-released",
+            "conditional",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "usageDecision": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "reject",
+            "pending",
+            "conditional",
+            "not-set"
+          ]
+        },
+        "openQualityLots": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failedCharacteristics": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingResults": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastDecisionAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "coaAvailable",
+        "releaseStatus",
+        "usageDecision",
+        "openQualityLots",
+        "failedCharacteristics",
+        "pendingResults"
+      ],
+      "additionalProperties": false
+    },
+    "ConfidenceMetadata": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectedQualityLabFailure": {
+      "type": "object",
+      "properties": {
+        "mat": {
+          "type": "string"
+        },
+        "matNo": {
+          "type": "string"
+        },
+        "lot": {
+          "type": "string"
+        },
+        "batch": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "char": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "res": {
+          "type": "number"
+        },
+        "lo": {
+          "type": "number"
+        },
+        "hi": {
+          "type": "number"
+        },
+        "units": {
+          "type": "string"
+        },
+        "sev": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "warn"
+          ]
+        },
+        "ts": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lotType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mat",
+        "matNo",
+        "lot",
+        "batch",
+        "line",
+        "char",
+        "text",
+        "res",
+        "lo",
+        "hi",
+        "units",
+        "sev",
+        "ts",
+        "lotType"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectedQualityLabFailuresResponse": {
+      "type": "object",
+      "properties": {
+        "fails": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mat": {
+                "type": "string"
+              },
+              "matNo": {
+                "type": "string"
+              },
+              "lot": {
+                "type": "string"
+              },
+              "batch": {
+                "type": "string"
+              },
+              "line": {
+                "type": "string"
+              },
+              "char": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "res": {
+                "type": "number"
+              },
+              "lo": {
+                "type": "number"
+              },
+              "hi": {
+                "type": "number"
+              },
+              "units": {
+                "type": "string"
+              },
+              "sev": {
+                "type": "string",
+                "enum": [
+                  "fail",
+                  "warn"
+                ]
+              },
+              "ts": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lotType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mat",
+              "matNo",
+              "lot",
+              "batch",
+              "line",
+              "char",
+              "text",
+              "res",
+              "lo",
+              "hi",
+              "units",
+              "sev",
+              "ts",
+              "lotType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dataAvailable": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "lotType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fails",
+        "dataAvailable"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectedQualityLabPlant": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "plantId",
+        "plantName"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectedQualityLabPlantsResponse": {
+      "type": "object",
+      "properties": {
+        "plants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "plantId": {
+                "type": "string"
+              },
+              "plantName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "plantId",
+              "plantName"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "plants"
+      ],
+      "additionalProperties": false
+    },
+    "ControlChartPoint": {
+      "type": "object",
+      "properties": {
+        "pointId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "number"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "sampleId": {
+          "type": "string"
+        },
+        "signalIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "in-control",
+            "warning",
+            "out-of-control"
+          ]
+        }
+      },
+      "required": [
+        "pointId",
+        "timestamp",
+        "value",
+        "signalIds",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ControlChartSeries": {
+      "type": "object",
+      "properties": {
+        "chartId": {
+          "type": "string"
+        },
+        "chartType": {
+          "type": "string",
+          "enum": [
+            "xbar-r",
+            "xbar-s",
+            "individuals",
+            "p-chart",
+            "np-chart",
+            "c-chart",
+            "u-chart"
+          ]
+        },
+        "characteristicId": {
+          "type": "string"
+        },
+        "characteristicName": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pointId": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "value": {
+                "type": "number"
+              },
+              "batchId": {
+                "type": "string"
+              },
+              "sampleId": {
+                "type": "string"
+              },
+              "signalIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "in-control",
+                  "warning",
+                  "out-of-control"
+                ]
+              }
+            },
+            "required": [
+              "pointId",
+              "timestamp",
+              "value",
+              "signalIds",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "centerLine": {
+          "type": "number"
+        },
+        "upperControlLimit": {
+          "type": "number"
+        },
+        "lowerControlLimit": {
+          "type": "number"
+        },
+        "upperSpecLimit": {
+          "type": "number"
+        },
+        "lowerSpecLimit": {
+          "type": "number"
+        },
+        "unitOfMeasure": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "chartId",
+        "chartType",
+        "characteristicId",
+        "characteristicName",
+        "points",
+        "unitOfMeasure",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "CustomerExposureSummary": {
+      "type": "object",
+      "properties": {
+        "affectedCustomers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "affectedDeliveries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "shippedQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "countries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "blockedDeliveries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recallRecommended": {
+          "type": "boolean"
+        },
+        "maxExposureDepth": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "affectedCustomers",
+        "affectedDeliveries",
+        "shippedQuantity",
+        "countries",
+        "highestSeverity",
+        "blockedDeliveries",
+        "recallRecommended"
+      ],
+      "additionalProperties": false
+    },
+    "DeviationSummary": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "totalDeviationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openDeviationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "criticalDeviationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deviations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "deviationId": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "process",
+                  "quality",
+                  "environmental",
+                  "supplier",
+                  "equipment",
+                  "other"
+                ]
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "minor",
+                  "major",
+                  "critical"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "under-investigation",
+                  "pending-approval",
+                  "closed",
+                  "waived"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "raisedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "raisedBy": {
+                "type": "string"
+              },
+              "resolvedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "impactsRelease": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "deviationId",
+              "type",
+              "severity",
+              "status",
+              "description",
+              "raisedAt",
+              "raisedBy",
+              "impactsRelease"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "blockingReleaseCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "batchId",
+        "totalDeviationCount",
+        "openDeviationCount",
+        "criticalDeviationCount",
+        "deviations",
+        "blockingReleaseCount",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "DrillThroughMetadata": {
+      "type": "object",
+      "properties": {
+        "targetWorkspaceId": {
+          "type": "string"
+        },
+        "targetViewId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "contextPayload": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "targetWorkspaceId",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "EntityRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonAlert": {
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "testType": {
+          "type": "string",
+          "enum": [
+            "swab",
+            "air-sample",
+            "surface-contact",
+            "rinse-water",
+            "other"
+          ]
+        },
+        "organism": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "investigating",
+            "corrective-action",
+            "resolved",
+            "escalated"
+          ]
+        },
+        "correctiveActionId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "alertId",
+        "zoneId",
+        "zoneName",
+        "plantId",
+        "testType",
+        "organism",
+        "severity",
+        "detectedAt",
+        "status",
+        "description",
+        "owner"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonContext": {
+      "type": "object",
+      "properties": {
+        "regionId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "monitoringPeriodStart": {
+          "type": "string",
+          "format": "date"
+        },
+        "monitoringPeriodEnd": {
+          "type": "string",
+          "format": "date"
+        },
+        "totalZones": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeAlerts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openCorrectiveActions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overallRiskStatus": {
+          "type": "string",
+          "enum": [
+            "compliant",
+            "elevated",
+            "non-compliant",
+            "unknown"
+          ]
+        },
+        "lastSampleDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "regionId",
+        "plantId",
+        "plantName",
+        "monitoringPeriodStart",
+        "monitoringPeriodEnd",
+        "totalZones",
+        "activeAlerts",
+        "openCorrectiveActions",
+        "overallRiskStatus",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonCorrectiveAction": {
+      "type": "object",
+      "properties": {
+        "actionId": {
+          "type": "string"
+        },
+        "alertId": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "actionType": {
+          "type": "string",
+          "enum": [
+            "deep-clean",
+            "retest",
+            "equipment-check",
+            "process-review",
+            "personnel-training",
+            "other"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "pending-verification",
+            "closed",
+            "overdue"
+          ]
+        },
+        "assignee": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "closedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verifiedBy": {
+          "type": "string"
+        },
+        "recurrence": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "actionId",
+        "alertId",
+        "zoneId",
+        "zoneName",
+        "plantId",
+        "title",
+        "description",
+        "actionType",
+        "severity",
+        "status",
+        "assignee",
+        "dueDate",
+        "recurrence"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonHeatmapCell": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "areaType": {
+          "type": "string"
+        },
+        "hygieneZone": {
+          "type": "string",
+          "enum": [
+            "zone-1",
+            "zone-2",
+            "zone-3",
+            "zone-4"
+          ]
+        },
+        "riskScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "positiveCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sampleCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastTestDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "compliant",
+            "alert",
+            "overdue",
+            "corrective-action",
+            "suspended"
+          ]
+        }
+      },
+      "required": [
+        "zoneId",
+        "zoneName",
+        "areaType",
+        "hygieneZone",
+        "riskScore",
+        "positiveCount",
+        "sampleCount",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonKpiSummary": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date"
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date"
+        },
+        "zonesMonitored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "samplesCollected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "alertsOpen": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alertsResolved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "correctiveActionsOpen": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "correctiveActionsOverdue": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complianceRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "trendDirection": {
+          "type": "string",
+          "enum": [
+            "improving",
+            "stable",
+            "deteriorating",
+            "unknown"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "plantId",
+        "periodStart",
+        "periodEnd",
+        "zonesMonitored",
+        "samplesCollected",
+        "positiveRate",
+        "alertsOpen",
+        "alertsResolved",
+        "correctiveActionsOpen",
+        "correctiveActionsOverdue",
+        "complianceRate",
+        "trendDirection",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonSiteSummary": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "zonesMonitored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zonesWithAlerts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "openCorrectiveActions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overdueActions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complianceRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "riskStatus": {
+          "type": "string",
+          "enum": [
+            "compliant",
+            "elevated",
+            "non-compliant",
+            "unknown"
+          ]
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "plantId",
+        "plantName",
+        "zonesMonitored",
+        "zonesWithAlerts",
+        "positiveCount",
+        "positiveRate",
+        "openCorrectiveActions",
+        "overdueActions",
+        "complianceRate",
+        "riskStatus",
+        "highestSeverity",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonSwabResult": {
+      "type": "object",
+      "properties": {
+        "sampleId": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "vectorId": {
+          "type": "string"
+        },
+        "testType": {
+          "type": "string",
+          "enum": [
+            "swab",
+            "air-sample",
+            "surface-contact",
+            "rinse-water",
+            "other"
+          ]
+        },
+        "organism": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "negative",
+            "positive",
+            "borderline",
+            "pending"
+          ]
+        },
+        "cfu": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cfuLimit": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sampleDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "analysedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "analyst": {
+          "type": "string"
+        },
+        "lotId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sampleId",
+        "zoneId",
+        "zoneName",
+        "plantId",
+        "testType",
+        "organism",
+        "result",
+        "sampleDate"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonSwabVector": {
+      "type": "object",
+      "properties": {
+        "vectorId": {
+          "type": "string"
+        },
+        "vectorName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "zoneIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frequency": {
+          "type": "string",
+          "enum": [
+            "daily",
+            "weekly",
+            "bi-weekly",
+            "monthly",
+            "quarterly"
+          ]
+        },
+        "nextDueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "lastCompletedDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "on-schedule",
+            "overdue",
+            "in-progress",
+            "suspended"
+          ]
+        },
+        "pointCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "assignedTeam": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vectorId",
+        "vectorName",
+        "plantId",
+        "zoneIds",
+        "frequency",
+        "status",
+        "pointCount"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonTrend": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "samplesCollected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "newAlerts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolvedAlerts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openAlerts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complianceRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "date",
+        "plantId",
+        "samplesCollected",
+        "positiveCount",
+        "positiveRate",
+        "newAlerts",
+        "resolvedAlerts",
+        "openAlerts",
+        "complianceRate"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonZone": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "areaType": {
+          "type": "string",
+          "enum": [
+            "production",
+            "storage",
+            "packaging",
+            "utility",
+            "corridor",
+            "other"
+          ]
+        },
+        "hygieneZone": {
+          "type": "string",
+          "enum": [
+            "zone-1",
+            "zone-2",
+            "zone-3",
+            "zone-4"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "compliant",
+            "alert",
+            "overdue",
+            "corrective-action",
+            "suspended"
+          ]
+        },
+        "lastSampleDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "nextScheduledSample": {
+          "type": "string",
+          "format": "date"
+        },
+        "consecutivePositives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openAlerts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "zoneId",
+        "zoneName",
+        "plantId",
+        "areaType",
+        "hygieneZone",
+        "status",
+        "consecutivePositives",
+        "openAlerts"
+      ],
+      "additionalProperties": false
+    },
+    "EquipmentAvailability": {
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string"
+        },
+        "equipmentDescription": {
+          "type": "string"
+        },
+        "lineId": {
+          "type": "string"
+        },
+        "availabilityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "targetPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "plannedDowntimeMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unplannedDowntimeMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currentStatus": {
+          "type": "string",
+          "enum": [
+            "running",
+            "planned-down",
+            "unplanned-down",
+            "standby",
+            "maintenance"
+          ]
+        },
+        "openWorkOrderCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "equipmentId",
+        "equipmentDescription",
+        "availabilityPercent",
+        "targetPercent",
+        "plannedDowntimeMinutes",
+        "unplannedDowntimeMinutes",
+        "currentStatus",
+        "openWorkOrderCount"
+      ],
+      "additionalProperties": false
+    },
+    "EvidencePanelDisplayState": {
+      "type": "string",
+      "enum": [
+        "loading",
+        "ready",
+        "stale",
+        "partial",
+        "error",
+        "unauthorized",
+        "not-applicable"
+      ]
+    },
+    "EvidencePanelState": {
+      "type": "object",
+      "properties": {
+        "panelId": {
+          "type": "string"
+        },
+        "displayState": {
+          "type": "string",
+          "enum": [
+            "loading",
+            "ready",
+            "stale",
+            "partial",
+            "error",
+            "unauthorized",
+            "not-applicable"
+          ]
+        },
+        "freshness": {
+          "type": "object",
+          "properties": {
+            "lastRefreshedAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "isStale": {
+              "type": "boolean"
+            },
+            "staleAfterSeconds": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "lastRefreshedAt",
+            "isStale",
+            "staleAfterSeconds"
+          ],
+          "additionalProperties": false
+        },
+        "confidence": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "hidden": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "level"
+          ],
+          "additionalProperties": false
+        },
+        "errorMessage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "panelId",
+        "displayState"
+      ],
+      "additionalProperties": false
+    },
+    "ExecutionTimelineItem": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "eventType": {
+          "type": "string",
+          "enum": [
+            "order-released",
+            "operation-started",
+            "operation-confirmed",
+            "goods-issued",
+            "deviation-raised",
+            "quality-inspection",
+            "staging-completed",
+            "order-confirmed",
+            "order-closed",
+            "alert"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sourceSystem": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "eventId",
+        "timestamp",
+        "eventType",
+        "title",
+        "description",
+        "sourceSystem"
+      ],
+      "additionalProperties": false
+    },
+    "FreshnessMetadata": {
+      "type": "object",
+      "properties": {
+        "lastRefreshedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "isStale": {
+          "type": "boolean"
+        },
+        "staleAfterSeconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "lastRefreshedAt",
+        "isStale",
+        "staleAfterSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "GoodsMovementEvent": {
+      "type": "object",
+      "properties": {
+        "movementId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "movementType": {
+          "type": "string",
+          "enum": [
+            "goods-receipt",
+            "goods-issue",
+            "transfer-order",
+            "stock-transfer",
+            "return",
+            "adjustment"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "sourceLocation": {
+          "type": "string"
+        },
+        "destinationLocation": {
+          "type": "string"
+        },
+        "referenceDocument": {
+          "type": "string"
+        },
+        "postedBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "movementId",
+        "timestamp",
+        "movementType",
+        "materialId",
+        "materialDescription",
+        "quantity",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
+    "LateOrder": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "lineOrResource": {
+          "type": "string"
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "plannedFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "estimatedFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delayMinutes": {
+          "type": "integer"
+        },
+        "delayReason": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "batchId",
+        "lineOrResource",
+        "plannedStart",
+        "plannedFinish",
+        "delayMinutes",
+        "delayReason",
+        "severity",
+        "owner"
+      ],
+      "additionalProperties": false
+    },
+    "LineStatus": {
+      "type": "object",
+      "properties": {
+        "lineId": {
+          "type": "string"
+        },
+        "lineName": {
+          "type": "string"
+        },
+        "currentOrderId": {
+          "type": "string"
+        },
+        "currentMaterial": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "running",
+            "idle",
+            "changeover",
+            "downtime",
+            "planned-stop",
+            "unknown"
+          ]
+        },
+        "oee": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "speedLossPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "downtimeMinutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changeoverStatus": {
+          "type": "string",
+          "enum": [
+            "not-applicable",
+            "pending",
+            "in-progress",
+            "complete"
+          ]
+        },
+        "nextOrderId": {
+          "type": "string"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "lineId",
+        "lineName",
+        "status",
+        "oee",
+        "speedLossPercent",
+        "downtimeMinutes",
+        "changeoverStatus",
+        "riskLevel"
+      ],
+      "additionalProperties": false
+    },
+    "LocationCapacity": {
+      "type": "object",
+      "properties": {
+        "locationId": {
+          "type": "string"
+        },
+        "locationName": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "totalCapacityUnits": {
+          "type": "number",
+          "minimum": 0
+        },
+        "usedCapacityUnits": {
+          "type": "number",
+          "minimum": 0
+        },
+        "utilizationPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "locationType": {
+          "type": "string",
+          "enum": [
+            "bin",
+            "shelf",
+            "rack",
+            "floor",
+            "bulk-area",
+            "staging-lane"
+          ]
+        },
+        "isBlocked": {
+          "type": "boolean"
+        },
+        "blockReason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locationId",
+        "locationName",
+        "zoneId",
+        "zoneName",
+        "totalCapacityUnits",
+        "usedCapacityUnits",
+        "utilizationPercent",
+        "locationType",
+        "isBlocked"
+      ],
+      "additionalProperties": false
+    },
+    "MICFailure": {
+      "type": "object",
+      "properties": {
+        "organism": {
+          "type": "string"
+        },
+        "testMethod": {
+          "type": "string"
+        },
+        "result": {
+          "type": "number"
+        },
+        "limit": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "exceededBy": {
+          "type": "number"
+        },
+        "testedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "testedBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organism",
+        "testMethod",
+        "result",
+        "limit",
+        "unit",
+        "exceededBy",
+        "testedAt"
+      ],
+      "additionalProperties": false
+    },
+    "MaintenanceBacklogItem": {
+      "type": "object",
+      "properties": {
+        "backlogId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "equipmentDescription": {
+          "type": "string"
+        },
+        "deferredFrom": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deferredReason": {
+          "type": "string"
+        },
+        "estimatedHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "productionImpact": {
+          "type": "string",
+          "enum": [
+            "line-down",
+            "reduced-capacity",
+            "no-impact",
+            "risk-only"
+          ]
+        },
+        "targetCompletionDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "backlogId",
+        "title",
+        "equipmentId",
+        "equipmentDescription",
+        "deferredFrom",
+        "deferredReason",
+        "estimatedHours",
+        "priority",
+        "productionImpact"
+      ],
+      "additionalProperties": false
+    },
+    "MaintenanceConstraint": {
+      "type": "object",
+      "properties": {
+        "constraintId": {
+          "type": "string"
+        },
+        "assetId": {
+          "type": "string"
+        },
+        "assetName": {
+          "type": "string"
+        },
+        "lineId": {
+          "type": "string"
+        },
+        "workOrderId": {
+          "type": "string"
+        },
+        "constraintType": {
+          "type": "string",
+          "enum": [
+            "planned-pm",
+            "breakdown",
+            "inspection",
+            "calibration",
+            "permit-required",
+            "other"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "expectedResolutionAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "affectedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "scheduled",
+            "in-progress",
+            "resolved",
+            "overdue"
+          ]
+        }
+      },
+      "required": [
+        "constraintId",
+        "assetId",
+        "assetName",
+        "lineId",
+        "constraintType",
+        "severity",
+        "affectedOrders",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "MaintenanceKpiSummary": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "openWorkOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overdueWorkOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "criticalWorkOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completedThisShift": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overduePreventiveMaintenance": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "equipmentAvailabilityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "targetAvailabilityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "maintenanceBacklogHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "plantId",
+        "openWorkOrders",
+        "overdueWorkOrders",
+        "criticalWorkOrders",
+        "completedThisShift",
+        "overduePreventiveMaintenance",
+        "equipmentAvailabilityPercent",
+        "targetAvailabilityPercent",
+        "maintenanceBacklogHours",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "MaintenanceReliabilityContext": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "openWorkOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overduePreventiveMaintenance": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "equipmentAvailabilityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "maintenanceBacklogHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "plantId",
+        "plantName",
+        "openWorkOrders",
+        "overduePreventiveMaintenance",
+        "equipmentAvailabilityPercent",
+        "maintenanceBacklogHours",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "MassBalanceMovement": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "production",
+            "shipment",
+            "consumption",
+            "adjustment"
+          ]
+        },
+        "quantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "delta": {
+          "type": "number"
+        },
+        "runningBalance": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "movementType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "category",
+        "quantity",
+        "delta",
+        "runningBalance",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
+    "MassBalanceSummary": {
+      "type": "object",
+      "properties": {
+        "inputQuantity": {
+          "type": "number"
+        },
+        "outputQuantity": {
+          "type": "number"
+        },
+        "varianceQuantity": {
+          "type": "number"
+        },
+        "variancePercent": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "unresolvedMovements": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "movements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "production",
+                  "shipment",
+                  "consumption",
+                  "adjustment"
+                ]
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "delta": {
+                "type": "number"
+              },
+              "runningBalance": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string"
+              },
+              "movementType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "date",
+              "category",
+              "quantity",
+              "delta",
+              "runningBalance",
+              "uom"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "inputQuantity",
+        "outputQuantity",
+        "varianceQuantity",
+        "variancePercent",
+        "uom",
+        "confidence",
+        "unresolvedMovements"
+      ],
+      "additionalProperties": false
+    },
+    "MaterialShortage": {
+      "type": "object",
+      "properties": {
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "requiredQuantity": {
+          "type": "number"
+        },
+        "availableQuantity": {
+          "type": "number"
+        },
+        "shortageQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "requiredBy": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "affectedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stagingStatus": {
+          "type": "string",
+          "enum": [
+            "not-staged",
+            "partial",
+            "staged",
+            "not-required"
+          ]
+        },
+        "procurementStatus": {
+          "type": "string",
+          "enum": [
+            "in-stock",
+            "ordered",
+            "delayed",
+            "out-of-stock",
+            "unknown"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "requiredQuantity",
+        "availableQuantity",
+        "shortageQuantity",
+        "uom",
+        "requiredBy",
+        "affectedOrders",
+        "stagingStatus",
+        "procurementStatus",
+        "severity"
+      ],
+      "additionalProperties": false
+    },
+    "MonitoredSPCCharacteristic": {
+      "type": "object",
+      "properties": {
+        "characteristicId": {
+          "type": "string"
+        },
+        "characteristicName": {
+          "type": "string"
+        },
+        "micId": {
+          "type": "string"
+        },
+        "chartType": {
+          "type": "string",
+          "enum": [
+            "xbar-r",
+            "xbar-s",
+            "individuals",
+            "p-chart",
+            "np-chart",
+            "c-chart",
+            "u-chart"
+          ]
+        },
+        "batchCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "avgSamplesPerBatch": {
+          "type": "number"
+        },
+        "hasActiveSignal": {
+          "type": "boolean"
+        },
+        "highestSignalSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "chartTypeSource": {
+          "type": "string",
+          "enum": [
+            "heuristic",
+            "override",
+            "manual"
+          ]
+        }
+      },
+      "required": [
+        "characteristicId",
+        "characteristicName",
+        "chartType",
+        "batchCount",
+        "hasActiveSignal"
+      ],
+      "additionalProperties": false
+    },
+    "NearExpiryBatch": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "daysUntilExpiry": {
+          "type": "number"
+        },
+        "quantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "expired",
+            "critical",
+            "warning",
+            "caution"
+          ]
+        },
+        "holdStatus": {
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "quality-hold",
+            "blocked"
+          ]
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "storageLocationId",
+        "expiryDate",
+        "daysUntilExpiry",
+        "quantity",
+        "uom",
+        "urgency",
+        "holdStatus"
+      ],
+      "additionalProperties": false
+    },
+    "OpenHoldItem": {
+      "type": "object",
+      "properties": {
+        "holdId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "holdReason": {
+          "type": "string",
+          "enum": [
+            "quality-hold",
+            "customer-hold",
+            "production-hold",
+            "regulatory-hold",
+            "damaged",
+            "expired",
+            "investigation"
+          ]
+        },
+        "holdQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "raisedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "raisedBy": {
+          "type": "string"
+        },
+        "ageHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "linkedWorkspaceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "holdId",
+        "materialId",
+        "materialDescription",
+        "storageLocationId",
+        "holdReason",
+        "holdQuantity",
+        "uom",
+        "raisedAt",
+        "ageHours"
+      ],
+      "additionalProperties": false
+    },
+    "OperationsActionQueueItem": {
+      "type": "object",
+      "properties": {
+        "actionId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "ownerRole": {
+          "type": "string"
+        },
+        "dueAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "sourcePanel": {
+          "type": "string"
+        },
+        "linkedEntityType": {
+          "type": "string",
+          "enum": [
+            "process-order",
+            "line",
+            "material",
+            "batch",
+            "asset",
+            "handover",
+            "other"
+          ]
+        },
+        "linkedEntityId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "completed",
+            "dismissed"
+          ]
+        },
+        "recommendedAction": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionId",
+        "title",
+        "description",
+        "ownerRole",
+        "severity",
+        "sourcePanel",
+        "linkedEntityType",
+        "linkedEntityId",
+        "status",
+        "recommendedAction"
+      ],
+      "additionalProperties": false
+    },
+    "OperationsPlanRiskContext": {
+      "type": "object",
+      "properties": {
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "lineIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "shiftId": {
+          "type": "string"
+        },
+        "supervisor": {
+          "type": "string"
+        },
+        "riskStatus": {
+          "type": "string",
+          "enum": [
+            "on-track",
+            "at-risk",
+            "critical",
+            "unknown"
+          ]
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "openBlockers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lateOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "materialShortages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "qualityBlockers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stagingBlockers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maintenanceConstraints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activeScope": {
+          "type": "string"
+        },
+        "activeView": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "planDate",
+        "plantId",
+        "plantName",
+        "lineIds",
+        "shiftId",
+        "supervisor",
+        "riskStatus",
+        "highestSeverity",
+        "openBlockers",
+        "lateOrders",
+        "materialShortages",
+        "qualityBlockers",
+        "stagingBlockers",
+        "maintenanceConstraints",
+        "lastUpdatedAt",
+        "activeScope",
+        "activeView"
+      ],
+      "additionalProperties": false
+    },
+    "OrderProgressSummary": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "progressPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "operationsComplete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "operationsTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "confirmationsComplete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openConfirmations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currentOperation": {
+          "type": "string"
+        },
+        "delayMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "on-track",
+            "at-risk",
+            "delayed",
+            "blocked"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "processOrderId",
+        "progressPercent",
+        "operationsComplete",
+        "operationsTotal",
+        "confirmationsComplete",
+        "openConfirmations",
+        "delayMinutes",
+        "riskLevel",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "OrderQualityContext": {
+      "type": "object",
+      "properties": {
+        "inspectionLotId": {
+          "type": "string"
+        },
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": [
+            "not-inspected",
+            "in-inspection",
+            "passed",
+            "failed",
+            "conditionally-released",
+            "on-hold"
+          ]
+        },
+        "usageDecision": {
+          "type": "string"
+        },
+        "failedCharacteristics": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openDeviations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "spcSignals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "releaseBlockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "qualityStatus",
+        "failedCharacteristics",
+        "openDeviations",
+        "spcSignals",
+        "releaseBlockers"
+      ],
+      "additionalProperties": false
+    },
+    "OrderStagingContext": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "stagingStatus": {
+          "type": "string",
+          "enum": [
+            "not-started",
+            "partial",
+            "fully-staged",
+            "blocked",
+            "not-required"
+          ]
+        },
+        "componentsRequired": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "componentsStaged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missingComponents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedComponents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openTransferRequirements": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "readinessStatus": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "partial",
+            "blocked",
+            "not-started"
+          ]
+        }
+      },
+      "required": [
+        "processOrderId",
+        "stagingStatus",
+        "componentsRequired",
+        "componentsStaged",
+        "missingComponents",
+        "blockedComponents",
+        "openTransferRequirements",
+        "readinessStatus"
+      ],
+      "additionalProperties": false
+    },
+    "PlanRiskSummary": {
+      "type": "object",
+      "properties": {
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plannedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ordersOnTrack": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ordersAtRisk": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ordersLate": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "topRiskReason": {
+          "type": "string"
+        },
+        "recommendedAction": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "planDate",
+        "plantId",
+        "plannedOrders",
+        "ordersOnTrack",
+        "ordersAtRisk",
+        "ordersLate",
+        "blockedOrders",
+        "highestSeverity",
+        "topRiskReason",
+        "recommendedAction",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "PreventiveMaintenanceTask": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "equipmentDescription": {
+          "type": "string"
+        },
+        "frequency": {
+          "type": "string",
+          "enum": [
+            "daily",
+            "weekly",
+            "fortnightly",
+            "monthly",
+            "quarterly",
+            "annually"
+          ]
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "upcoming",
+            "due-today",
+            "overdue",
+            "completed",
+            "deferred"
+          ]
+        },
+        "daysOverdue": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimatedHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "assignedTechnician": {
+          "type": "string"
+        },
+        "linkedWorkOrderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "title",
+        "equipmentId",
+        "equipmentDescription",
+        "frequency",
+        "dueDate",
+        "status",
+        "daysOverdue",
+        "estimatedHours"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderConfirmation": {
+      "type": "object",
+      "properties": {
+        "confirmationId": {
+          "type": "string"
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "operationText": {
+          "type": "string"
+        },
+        "confirmedYield": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scrapQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reworkQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "confirmedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confirmedBy": {
+          "type": "string"
+        },
+        "isFinalConfirmation": {
+          "type": "boolean"
+        },
+        "setupDurationMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "machineDurationMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cleaningDurationMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "variancePercent": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "confirmationId",
+        "operationId",
+        "confirmedYield",
+        "uom",
+        "confirmedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderGoodsMovement": {
+      "type": "object",
+      "properties": {
+        "movementId": {
+          "type": "string"
+        },
+        "movementType": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "input",
+            "output",
+            "unknown"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "postedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "postedBy": {
+          "type": "string"
+        },
+        "referenceDocument": {
+          "type": "string"
+        },
+        "storageLocation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "movementId",
+        "movementType",
+        "direction",
+        "materialId",
+        "quantity",
+        "uom",
+        "postedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderHeader": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "orderType": {
+          "type": "string",
+          "enum": [
+            "process-order",
+            "production-order",
+            "maintenance-order",
+            "planned-order"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "productionLine": {
+          "type": "string"
+        },
+        "plannedQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "confirmedQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scrapQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "plannedFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "orderStatus": {
+          "type": "string",
+          "enum": [
+            "created",
+            "released",
+            "in-process",
+            "confirmed",
+            "partially-confirmed",
+            "closed",
+            "cancelled"
+          ]
+        }
+      },
+      "required": [
+        "processOrderId",
+        "orderType",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "plannedQuantity",
+        "confirmedQuantity",
+        "uom",
+        "plannedStart",
+        "plannedFinish",
+        "orderStatus"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderOperation": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "operationNumber": {
+          "type": "string"
+        },
+        "operationText": {
+          "type": "string"
+        },
+        "workCentre": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "plannedFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "in-progress",
+            "confirmed",
+            "skipped"
+          ]
+        },
+        "plannedDurationMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "actualDurationMinutes": {
+          "type": "number",
+          "minimum": 0
+        },
+        "confirmationStatus": {
+          "type": "string",
+          "enum": [
+            "unconfirmed",
+            "partially-confirmed",
+            "final-confirmed"
+          ]
+        },
+        "confirmed": {
+          "type": "boolean"
+        },
+        "hasException": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "operationId",
+        "operationNumber",
+        "operationText",
+        "workCentre",
+        "plannedStart",
+        "plannedFinish",
+        "status",
+        "plannedDurationMinutes",
+        "confirmationStatus",
+        "confirmed",
+        "hasException"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderReleaseEvidence": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "orderStatus": {
+          "type": "string",
+          "enum": [
+            "created",
+            "released",
+            "in-process",
+            "completed",
+            "closed",
+            "deleted"
+          ]
+        },
+        "plannedQuantity": {
+          "type": "number"
+        },
+        "confirmedQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "yieldPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "plannedEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "conformanceStatus": {
+          "type": "string",
+          "enum": [
+            "conformant",
+            "non-conformant",
+            "pending-review",
+            "waived"
+          ]
+        },
+        "openNCRCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "criticalDeviationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workCentreId": {
+          "type": "string"
+        },
+        "lineId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "batchId",
+        "orderStatus",
+        "plannedQuantity",
+        "confirmedQuantity",
+        "uom",
+        "yieldPercent",
+        "conformanceStatus",
+        "openNCRCount",
+        "criticalDeviationCount"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderReviewContext": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "lineOrResource": {
+          "type": "string"
+        },
+        "orderStatus": {
+          "type": "string",
+          "enum": [
+            "created",
+            "released",
+            "in-process",
+            "confirmed",
+            "partially-confirmed",
+            "closed",
+            "cancelled"
+          ]
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": [
+            "not-inspected",
+            "in-inspection",
+            "passed",
+            "failed",
+            "conditionally-released",
+            "on-hold"
+          ]
+        },
+        "stagingStatus": {
+          "type": "string",
+          "enum": [
+            "not-started",
+            "partial",
+            "fully-staged",
+            "blocked",
+            "not-required"
+          ]
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activeScope": {
+          "type": "string"
+        },
+        "activeView": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "orderStatus",
+        "qualityStatus",
+        "stagingStatus",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderSummary": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "scheduledStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduledEnd": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "targetQuantity": {
+          "type": "number"
+        },
+        "actualQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "created",
+            "released",
+            "partially-confirmed",
+            "confirmed",
+            "closed",
+            "deleted"
+          ]
+        },
+        "oeePercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ProductionStagingContext": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "warehouseName": {
+          "type": "string"
+        },
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "totalOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stagedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "partialOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openShortfalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openMoveRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overallReadinessPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "riskStatus": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "at-risk",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "plantId",
+        "warehouseId",
+        "warehouseName",
+        "planDate",
+        "totalOrders",
+        "stagedOrders",
+        "partialOrders",
+        "blockedOrders",
+        "openShortfalls",
+        "openMoveRequests",
+        "overallReadinessPercent",
+        "riskStatus",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "QualityBlocker": {
+      "type": "object",
+      "properties": {
+        "blockerId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "inspection-lot",
+            "release-hold",
+            "deviation",
+            "spc-alarm",
+            "coa-incomplete",
+            "other"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "inspectionLotId": {
+          "type": "string"
+        },
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "dueAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "drillThroughTarget": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blockerId",
+        "type",
+        "materialId",
+        "materialDescription",
+        "severity",
+        "description",
+        "owner"
+      ],
+      "additionalProperties": false
+    },
+    "QualityResultsSummary": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "inspectionLotId": {
+          "type": "string"
+        },
+        "micStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "conditional",
+            "not-required"
+          ]
+        },
+        "chemicalStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "conditional",
+            "not-required"
+          ]
+        },
+        "sensoryStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "conditional",
+            "not-required"
+          ]
+        },
+        "physicalStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "conditional",
+            "not-required"
+          ]
+        },
+        "overallStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "pending",
+            "conditional"
+          ]
+        },
+        "micFailures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "organism": {
+                "type": "string"
+              },
+              "testMethod": {
+                "type": "string"
+              },
+              "result": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "exceededBy": {
+                "type": "number"
+              },
+              "testedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "testedBy": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "organism",
+              "testMethod",
+              "result",
+              "limit",
+              "unit",
+              "exceededBy",
+              "testedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "openRetestCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inspectionCompletedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "inspectionCompletedBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "batchId",
+        "micStatus",
+        "chemicalStatus",
+        "sensoryStatus",
+        "physicalStatus",
+        "overallStatus",
+        "micFailures",
+        "openRetestCount"
+      ],
+      "additionalProperties": false
+    },
+    "RelatedBatchContext": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "relationshipType": {
+          "type": "string",
+          "enum": [
+            "output",
+            "input-component",
+            "co-product",
+            "by-product",
+            "rework"
+          ]
+        },
+        "traceRisk": {
+          "type": "string",
+          "enum": [
+            "none",
+            "potential",
+            "confirmed"
+          ]
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": [
+            "released",
+            "on-hold",
+            "rejected",
+            "under-review",
+            "awaiting-review"
+          ]
+        },
+        "stockStatus": {
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "blocked",
+            "in-transit",
+            "quality-inspection",
+            "restricted"
+          ]
+        },
+        "drillThroughTarget": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "relationshipType",
+        "traceRisk",
+        "qualityStatus",
+        "stockStatus"
+      ],
+      "additionalProperties": false
+    },
+    "RelatedInvestigation": {
+      "type": "object",
+      "properties": {
+        "investigationId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "escalated",
+            "resolved",
+            "closed"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "relatedBy": {
+          "type": "string",
+          "enum": [
+            "same-batch",
+            "same-material",
+            "same-supplier",
+            "same-customer",
+            "same-plant",
+            "linked-investigation"
+          ]
+        },
+        "openedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "investigationId",
+        "title",
+        "status",
+        "severity",
+        "relatedBy",
+        "openedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ReleaseDecisionHistoryItem": {
+      "type": "object",
+      "properties": {
+        "decisionId": {
+          "type": "string"
+        },
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "released",
+            "conditional-release",
+            "rejected",
+            "placed-on-hold",
+            "escalated",
+            "retest-requested",
+            "hold-released"
+          ]
+        },
+        "decidedBy": {
+          "type": "string"
+        },
+        "decidedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supersedes": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "attachmentId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "mimeType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "attachmentId",
+              "name",
+              "mimeType"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "decisionId",
+        "releaseCaseId",
+        "batchId",
+        "decision",
+        "decidedBy",
+        "decidedAt",
+        "rationale",
+        "conditions",
+        "attachments"
+      ],
+      "additionalProperties": false
+    },
+    "ReleaseHoldImpact": {
+      "type": "object",
+      "properties": {
+        "holdId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "blockedQuantity": {
+          "type": "number"
+        },
+        "affectedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affectedDeliveries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "holdReason": {
+          "type": "string"
+        },
+        "releaseStatus": {
+          "type": "string",
+          "enum": [
+            "active",
+            "pending-release",
+            "released",
+            "escalated"
+          ]
+        },
+        "qualityOwner": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "holdId",
+        "batchId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "blockedQuantity",
+        "affectedOrders",
+        "affectedDeliveries",
+        "holdReason",
+        "releaseStatus",
+        "qualityOwner",
+        "severity"
+      ],
+      "additionalProperties": false
+    },
+    "ReliabilityMetric": {
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string"
+        },
+        "equipmentDescription": {
+          "type": "string"
+        },
+        "mtbfHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mttrHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "failureCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "oeeImpactPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "trendDirection": {
+          "type": "string",
+          "enum": [
+            "improving",
+            "stable",
+            "degrading"
+          ]
+        },
+        "periodDays": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "equipmentId",
+        "equipmentDescription",
+        "mtbfHours",
+        "mttrHours",
+        "failureCount",
+        "oeeImpactPercent",
+        "trendDirection",
+        "periodDays"
+      ],
+      "additionalProperties": false
+    },
+    "ReplenishmentNeed": {
+      "type": "object",
+      "properties": {
+        "needId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "currentStockQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reorderPoint": {
+          "type": "number",
+          "minimum": 0
+        },
+        "targetQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "openPurchaseOrderId": {
+          "type": "string"
+        },
+        "expectedDelivery": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "needId",
+        "materialId",
+        "materialDescription",
+        "storageLocationId",
+        "currentStockQuantity",
+        "reorderPoint",
+        "targetQuantity",
+        "uom",
+        "urgency"
+      ],
+      "additionalProperties": false
+    },
+    "SPCAlarmHistoryItem": {
+      "type": "object",
+      "properties": {
+        "alarmId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "characteristicId": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "ruleCode": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "acknowledged",
+            "investigating",
+            "resolved",
+            "false-positive"
+          ]
+        },
+        "acknowledgedBy": {
+          "type": "string"
+        },
+        "acknowledgedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "linkedBatchId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "alarmId",
+        "timestamp",
+        "characteristicId",
+        "rule",
+        "severity",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "SPCMonitoringContext": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "workCentreId": {
+          "type": "string"
+        },
+        "characteristicId": {
+          "type": "string"
+        },
+        "chartType": {
+          "type": "string",
+          "enum": [
+            "xbar-r",
+            "xbar-s",
+            "individuals",
+            "p-chart",
+            "np-chart",
+            "c-chart",
+            "u-chart"
+          ]
+        },
+        "activeSignals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "activeScope": {
+          "type": "string"
+        },
+        "activeView": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "plantId",
+        "plantName",
+        "materialId",
+        "materialDescription",
+        "activeSignals",
+        "highestSeverity",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "SPCRelatedBatch": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "released",
+            "on-hold",
+            "rejected",
+            "under-review",
+            "awaiting-review"
+          ]
+        },
+        "relatedSignalCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "releaseImpact": {
+          "type": "string",
+          "enum": [
+            "blocking",
+            "risk",
+            "none"
+          ]
+        },
+        "drillThroughTarget": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "plantId",
+        "status",
+        "relatedSignalCount",
+        "releaseImpact"
+      ],
+      "additionalProperties": false
+    },
+    "SPCSignalRecord": {
+      "type": "object",
+      "properties": {
+        "chartId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "parameter": {
+          "type": "string"
+        },
+        "signalType": {
+          "type": "string",
+          "enum": [
+            "rule-1",
+            "rule-2",
+            "rule-3",
+            "rule-4",
+            "rule-5",
+            "rule-6",
+            "rule-7",
+            "rule-8"
+          ]
+        },
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "critical"
+          ]
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chartId",
+        "materialId",
+        "plantId",
+        "parameter",
+        "signalType",
+        "detectedAt",
+        "severity"
+      ],
+      "additionalProperties": false
+    },
+    "SPCSignal": {
+      "type": "object",
+      "properties": {
+        "signalId": {
+          "type": "string"
+        },
+        "characteristicId": {
+          "type": "string"
+        },
+        "characteristicName": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "chartType": {
+          "type": "string",
+          "enum": [
+            "xbar-r",
+            "xbar-s",
+            "individuals",
+            "p-chart",
+            "np-chart",
+            "c-chart",
+            "u-chart"
+          ]
+        },
+        "rule": {
+          "type": "string"
+        },
+        "ruleCode": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "samplePointId": {
+          "type": "string"
+        },
+        "resultValue": {
+          "type": "number"
+        },
+        "recommendedAction": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "acknowledged",
+            "investigating",
+            "resolved",
+            "false-positive"
+          ]
+        }
+      },
+      "required": [
+        "signalId",
+        "characteristicId",
+        "characteristicName",
+        "materialId",
+        "batchId",
+        "plantId",
+        "chartType",
+        "rule",
+        "severity",
+        "detectedAt",
+        "samplePointId",
+        "resultValue",
+        "recommendedAction",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "SPCSignalSummary": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "activeAlarmCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolvedAlarmCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "criticalAlarmCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alarms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "alarmId": {
+                "type": "string"
+              },
+              "chartType": {
+                "type": "string",
+                "enum": [
+                  "xbar-r",
+                  "xbar-s",
+                  "individuals",
+                  "p",
+                  "np",
+                  "c",
+                  "u",
+                  "cusum",
+                  "ewma"
+                ]
+              },
+              "parameter": {
+                "type": "string"
+              },
+              "ruleViolated": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "minor",
+                  "major",
+                  "critical"
+                ]
+              },
+              "firedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "resolvedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "acknowledged",
+                  "resolved",
+                  "overridden"
+                ]
+              }
+            },
+            "required": [
+              "alarmId",
+              "chartType",
+              "parameter",
+              "ruleViolated",
+              "severity",
+              "firedAt",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "lastCheckedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "batchId",
+        "activeAlarmCount",
+        "resolvedAlarmCount",
+        "criticalAlarmCount",
+        "alarms",
+        "lastCheckedAt"
+      ],
+      "additionalProperties": false
+    },
+    "SPCSummary": {
+      "type": "object",
+      "properties": {
+        "chartsMonitored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeSignals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outOfControlSignals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warningSignals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "characteristicsAtRisk": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highestSeverity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "recommendedAction": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "chartsMonitored",
+        "activeSignals",
+        "outOfControlSignals",
+        "warningSignals",
+        "characteristicsAtRisk",
+        "highestSeverity",
+        "recommendedAction",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "ScheduleAdherenceSummary": {
+      "type": "object",
+      "properties": {
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "totalOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "onTimeOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lateOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "atRiskOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "adherencePercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "averageDelayMinutes": {
+          "type": "number"
+        },
+        "worstLine": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "planDate",
+        "totalOrders",
+        "onTimeOrders",
+        "lateOrders",
+        "atRiskOrders",
+        "adherencePercent",
+        "averageDelayMinutes",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "ScopeContext": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "lineId": {
+          "type": "string"
+        },
+        "workCentreId": {
+          "type": "string"
+        },
+        "regionId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "supplierId": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShiftHandoverItem": {
+      "type": "object",
+      "properties": {
+        "handoverId": {
+          "type": "string"
+        },
+        "shiftId": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "quality",
+            "safety",
+            "maintenance",
+            "operations",
+            "material",
+            "other"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "linkedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "linkedLines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "acknowledged",
+            "in-progress",
+            "resolved"
+          ]
+        }
+      },
+      "required": [
+        "handoverId",
+        "shiftId",
+        "createdBy",
+        "createdAt",
+        "category",
+        "title",
+        "description",
+        "linkedOrders",
+        "linkedLines",
+        "severity",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "StagingAlert": {
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "alertType": {
+          "type": "string",
+          "enum": [
+            "shortfall",
+            "overdue-pick",
+            "zone-capacity",
+            "move-delay",
+            "blocked-order",
+            "other"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "zoneId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "recommendedAction": {
+          "type": "string"
+        },
+        "raisedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "acknowledged",
+            "in-progress",
+            "resolved"
+          ]
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "alertId",
+        "warehouseId",
+        "alertType",
+        "severity",
+        "description",
+        "recommendedAction",
+        "raisedAt",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "StagingMoveRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "fromLocation": {
+          "type": "string"
+        },
+        "toLocation": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "type": "string"
+        },
+        "assignedTo": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "assigned",
+            "in-transit",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requestId",
+        "warehouseId",
+        "fromLocation",
+        "toLocation",
+        "materialId",
+        "materialDescription",
+        "quantity",
+        "uom",
+        "requestedBy",
+        "status",
+        "priority",
+        "createdAt",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "StagingOrderSummary": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "lineOrResource": {
+          "type": "string"
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "requiredQuantity": {
+          "type": "number"
+        },
+        "stagedQuantity": {
+          "type": "number"
+        },
+        "shortfallQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "stagingArea": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not-staged",
+            "partial",
+            "staged",
+            "blocked",
+            "not-required"
+          ]
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "pickTaskIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockerReason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "batchId",
+        "plantId",
+        "lineOrResource",
+        "plannedStart",
+        "requiredQuantity",
+        "stagedQuantity",
+        "shortfallQuantity",
+        "uom",
+        "stagingArea",
+        "status",
+        "urgency",
+        "pickTaskIds"
+      ],
+      "additionalProperties": false
+    },
+    "StagingPickTask": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "storageLocation": {
+          "type": "string"
+        },
+        "destinationLocation": {
+          "type": "string"
+        },
+        "requiredQuantity": {
+          "type": "number"
+        },
+        "pickedQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "assignee": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "picked",
+            "staged",
+            "cancelled"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "batchId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "warehouseId",
+        "storageLocation",
+        "destinationLocation",
+        "requiredQuantity",
+        "pickedQuantity",
+        "uom",
+        "status",
+        "priority",
+        "createdAt"
+      ],
+      "additionalProperties": false
+    },
+    "StagingPickingWave": {
+      "type": "object",
+      "properties": {
+        "waveId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "waveLabel": {
+          "type": "string"
+        },
+        "includedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalTasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completedTasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "in-progress",
+            "completed",
+            "partial",
+            "cancelled"
+          ]
+        },
+        "scheduledStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "estimatedCompletion": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualCompletion": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "assignedTeam": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "waveId",
+        "warehouseId",
+        "planDate",
+        "waveLabel",
+        "includedOrders",
+        "totalTasks",
+        "completedTasks",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "StagingReadinessSummary": {
+      "type": "object",
+      "properties": {
+        "planDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "totalOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fullyStaged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "partiallyStaged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notStaged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "percentReady": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "openShortfalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingPickTasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openMoveRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "riskStatus": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "at-risk",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "planDate",
+        "warehouseId",
+        "totalOrders",
+        "fullyStaged",
+        "partiallyStaged",
+        "notStaged",
+        "blocked",
+        "percentReady",
+        "openShortfalls",
+        "pendingPickTasks",
+        "openMoveRequests",
+        "riskStatus",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "StagingShortfall": {
+      "type": "object",
+      "properties": {
+        "shortfallId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "requiredQuantity": {
+          "type": "number"
+        },
+        "availableQuantity": {
+          "type": "number"
+        },
+        "shortfallQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "affectedOrders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "procurementStatus": {
+          "type": "string",
+          "enum": [
+            "in-stock",
+            "in-transit",
+            "ordered",
+            "delayed",
+            "out-of-stock",
+            "unknown"
+          ]
+        },
+        "expectedArrival": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "canBeSubstituted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "shortfallId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "warehouseId",
+        "requiredQuantity",
+        "availableQuantity",
+        "shortfallQuantity",
+        "uom",
+        "affectedOrders",
+        "urgency",
+        "procurementStatus",
+        "canBeSubstituted"
+      ],
+      "additionalProperties": false
+    },
+    "StagingZoneCapacity": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "capacityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "pendingOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stagedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "high-utilisation",
+            "full",
+            "blocked"
+          ]
+        },
+        "overflowRisk": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "zoneId",
+        "zoneName",
+        "warehouseId",
+        "capacityPercent",
+        "pendingOrders",
+        "stagedOrders",
+        "blockedOrders",
+        "status",
+        "overflowRisk"
+      ],
+      "additionalProperties": false
+    },
+    "StockOverview": {
+      "type": "object",
+      "properties": {
+        "warehouseId": {
+          "type": "string"
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "zoneId": {
+                "type": "string"
+              },
+              "zoneName": {
+                "type": "string"
+              },
+              "zoneType": {
+                "type": "string",
+                "enum": [
+                  "ambient",
+                  "chilled",
+                  "frozen",
+                  "hazardous",
+                  "bulk",
+                  "staging"
+                ]
+              },
+              "stockLines": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "capacityPercent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "holdPercent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "zoneId",
+              "zoneName",
+              "zoneType",
+              "stockLines",
+              "capacityPercent",
+              "holdPercent"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "totalStorageLocations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "occupiedLocations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedLocations": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "warehouseId",
+        "zones",
+        "totalStorageLocations",
+        "occupiedLocations",
+        "blockedLocations"
+      ],
+      "additionalProperties": false
+    },
+    "StockZone": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string"
+        },
+        "zoneName": {
+          "type": "string"
+        },
+        "zoneType": {
+          "type": "string",
+          "enum": [
+            "ambient",
+            "chilled",
+            "frozen",
+            "hazardous",
+            "bulk",
+            "staging"
+          ]
+        },
+        "stockLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capacityPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "holdPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "zoneId",
+        "zoneName",
+        "zoneType",
+        "stockLines",
+        "capacityPercent",
+        "holdPercent"
+      ],
+      "additionalProperties": false
+    },
+    "SupplierExposureSummary": {
+      "type": "object",
+      "properties": {
+        "supplierCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "supplierLots": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highestRiskSupplier": {
+          "type": "string"
+        },
+        "upstreamMaterials": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openSupplierActions": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "supplierCount",
+        "supplierLots",
+        "upstreamMaterials",
+        "openSupplierActions"
+      ],
+      "additionalProperties": false
+    },
+    "TraceEdge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "relationshipType": {
+          "type": "string",
+          "enum": [
+            "component-of",
+            "produced-from",
+            "split-from",
+            "merged-into",
+            "transferred-to",
+            "delivered-to",
+            "vendor-receipt",
+            "consumed-by"
+          ]
+        },
+        "linkType": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "movementType": {
+          "type": "string"
+        },
+        "documentReference": {
+          "type": "string"
+        },
+        "postingDate": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialDocumentNumber": {
+          "type": "string"
+        },
+        "purchaseOrderId": {
+          "type": "string"
+        },
+        "supplierId": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "deliveryId": {
+          "type": "string"
+        },
+        "salesOrderId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    "TraceEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "batch-created",
+            "batch-moved",
+            "batch-released",
+            "batch-blocked",
+            "investigation-opened",
+            "investigation-updated",
+            "investigation-escalated",
+            "investigation-resolved",
+            "evidence-added",
+            "quality-decision",
+            "system-alert",
+            "user-action"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sourceSystem": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "eventId",
+        "timestamp",
+        "type",
+        "title",
+        "sourceSystem"
+      ],
+      "additionalProperties": false
+    },
+    "TraceExposureForRelease": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "releaseCaseId": {
+          "type": "string"
+        },
+        "upstreamRiskLevel": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "downstreamRiskLevel": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "affectedCustomerCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "affectedSupplierLotCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openTraceInvestigations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "investigationId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "investigationId",
+              "status",
+              "severity",
+              "summary"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "recallRiskFlag": {
+          "type": "boolean"
+        },
+        "traceReadiness": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "flagged",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "lastEvaluatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "batchId",
+        "releaseCaseId",
+        "upstreamRiskLevel",
+        "downstreamRiskLevel",
+        "affectedCustomerCount",
+        "affectedSupplierLotCount",
+        "openTraceInvestigations",
+        "recallRiskFlag",
+        "traceReadiness",
+        "lastEvaluatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "TraceExposureSummary": {
+      "type": "object",
+      "properties": {
+        "traceId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "forward",
+            "reverse",
+            "both"
+          ]
+        },
+        "affectedBatches": {
+          "type": "number"
+        },
+        "affectedCustomers": {
+          "type": "number"
+        },
+        "affectedSuppliers": {
+          "type": "number"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "traceId",
+        "batchId",
+        "materialId",
+        "direction",
+        "affectedBatches",
+        "riskLevel",
+        "generatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "TraceGraph": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "raw-material",
+                  "intermediate",
+                  "finished-good",
+                  "customer-delivery",
+                  "supplier-lot",
+                  "process-order"
+                ]
+              },
+              "materialId": {
+                "type": "string"
+              },
+              "materialDescription": {
+                "type": "string"
+              },
+              "batchId": {
+                "type": "string"
+              },
+              "plantId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "resolved",
+                  "unresolved",
+                  "blocked",
+                  "partial"
+                ]
+              },
+              "riskLevel": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "depth": {
+                "type": "integer"
+              },
+              "directions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "isAnchor": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "materialId",
+              "materialDescription"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "relationshipType": {
+                "type": "string",
+                "enum": [
+                  "component-of",
+                  "produced-from",
+                  "split-from",
+                  "merged-into",
+                  "transferred-to",
+                  "delivered-to",
+                  "vendor-receipt",
+                  "consumed-by"
+                ]
+              },
+              "linkType": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "movementType": {
+                "type": "string"
+              },
+              "documentReference": {
+                "type": "string"
+              },
+              "postingDate": {
+                "type": "string"
+              },
+              "processOrderId": {
+                "type": "string"
+              },
+              "materialDocumentNumber": {
+                "type": "string"
+              },
+              "purchaseOrderId": {
+                "type": "string"
+              },
+              "supplierId": {
+                "type": "string"
+              },
+              "customerId": {
+                "type": "string"
+              },
+              "deliveryId": {
+                "type": "string"
+              },
+              "salesOrderId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "source",
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "forward",
+            "reverse",
+            "both"
+          ]
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rootBatch": {
+          "type": "string"
+        },
+        "upstreamCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "downstreamCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolvedNodeCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "nodes",
+        "edges",
+        "direction",
+        "depth",
+        "rootBatch",
+        "upstreamCount",
+        "downstreamCount",
+        "unresolvedNodeCount"
+      ],
+      "additionalProperties": false
+    },
+    "TraceInvestigationContext": {
+      "type": "object",
+      "properties": {
+        "investigationId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "escalated",
+            "resolved",
+            "closed"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "initiatedBy": {
+          "type": "string"
+        },
+        "initiatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "plantId": {
+              "type": "string"
+            },
+            "lineId": {
+              "type": "string"
+            },
+            "regionId": {
+              "type": "string"
+            },
+            "materialId": {
+              "type": "string"
+            },
+            "batchId": {
+              "type": "string"
+            },
+            "processOrderId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "activeView": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "investigationId",
+        "status",
+        "severity",
+        "materialId",
+        "materialDescription",
+        "batchId",
+        "plantId",
+        "plantName",
+        "initiatedBy",
+        "initiatedAt",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "TraceNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "raw-material",
+            "intermediate",
+            "finished-good",
+            "customer-delivery",
+            "supplier-lot",
+            "process-order"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "unresolved",
+            "blocked",
+            "partial"
+          ]
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "directions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isAnchor": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "materialId",
+        "materialDescription"
+      ],
+      "additionalProperties": false
+    },
+    "TraceRiskSignal": {
+      "type": "object",
+      "properties": {
+        "signalId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "recommendedAction": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "signalId",
+        "title",
+        "description",
+        "severity",
+        "source",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360ExceptionItem": {
+      "type": "object",
+      "properties": {
+        "exceptionType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "storageLocation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitOfMeasure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expiryDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daysToExpiry": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "documentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "processOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recommendedReviewAction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "materialId"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360InboundItem": {
+      "type": "object",
+      "properties": {
+        "documentType": {
+          "type": "string",
+          "enum": [
+            "PO",
+            "STO",
+            "unknown"
+          ]
+        },
+        "purchaseOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stockTransportOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "itemId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vendorId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "supplyingPlantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "storageLocation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receivedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitOfMeasure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exceptionReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "documentType",
+        "materialId"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360OutboundItem": {
+      "type": "object",
+      "properties": {
+        "deliveryId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliveryItemId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "customerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "salesOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "storageLocation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plannedGoodsIssueDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actualGoodsIssueDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitOfMeasure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exceptionReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "materialId"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360OverviewContext": {
+      "type": "object",
+      "properties": {
+        "warehouseId": {
+          "type": "string"
+        },
+        "warehouseName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "totalStockLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "holdPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "openTransfers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capacityUtilizationPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "warehouseId",
+        "warehouseName",
+        "plantId",
+        "totalStockLines",
+        "holdPercent",
+        "openTransfers",
+        "capacityUtilizationPercent",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360Overview": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "warehouseId": {
+          "type": "string"
+        },
+        "inboundDueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inboundOverdueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outboundDueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outboundOverdueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stagingOpenCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stagingOverdueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nearExpiryCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reconciliationExceptionCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockedStockCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "plantId",
+        "warehouseId",
+        "inboundDueCount",
+        "inboundOverdueCount",
+        "outboundDueCount",
+        "outboundOverdueCount",
+        "stagingOpenCount",
+        "stagingOverdueCount",
+        "nearExpiryCount",
+        "reconciliationExceptionCount",
+        "blockedStockCount"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360StagingItem": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reservationId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reservationItemId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "storageLocation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warehouseNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requirementDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requiredQuantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "stagedQuantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "openQuantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unitOfMeasure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stagingStatus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exceptionReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "materialId"
+      ],
+      "additionalProperties": false
+    },
+    "Warehouse360Summary": {
+      "type": "object",
+      "properties": {
+        "warehouseId": {
+          "type": "string"
+        },
+        "totalStockLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unrestrictedLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "holdLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "qualityInspectionLines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openGoodsReceipts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openGoodsIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openTransfers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capacityUtilizationPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "activeReplenishmentNeeds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "warehouseId",
+        "totalStockLines",
+        "unrestrictedLines",
+        "holdLines",
+        "qualityInspectionLines",
+        "openGoodsReceipts",
+        "openGoodsIssues",
+        "openTransfers",
+        "capacityUtilizationPercent",
+        "activeReplenishmentNeeds",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "WarehouseHoldRecord": {
+      "type": "object",
+      "properties": {
+        "materialId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "holdType": {
+          "type": "string"
+        },
+        "holdReason": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "placedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "releasedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "materialId",
+        "plantId",
+        "holdType",
+        "quantity",
+        "uom",
+        "placedAt"
+      ],
+      "additionalProperties": false
+    },
+    "WarehouseHoldStatus": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "stockType": {
+          "type": "string",
+          "enum": [
+            "unrestricted",
+            "quality-inspection",
+            "blocked",
+            "returns",
+            "transit"
+          ]
+        },
+        "totalQuantity": {
+          "type": "number"
+        },
+        "blockedQuantity": {
+          "type": "number"
+        },
+        "restrictedQuantity": {
+          "type": "number"
+        },
+        "unrestrictedQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "activeHolds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "holdId": {
+                "type": "string"
+              },
+              "holdType": {
+                "type": "string",
+                "enum": [
+                  "quality",
+                  "regulatory",
+                  "customer",
+                  "internal",
+                  "trace"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "placedBy": {
+                "type": "string"
+              },
+              "placedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "pending-release",
+                  "released",
+                  "escalated"
+                ]
+              }
+            },
+            "required": [
+              "holdId",
+              "holdType",
+              "reason",
+              "placedBy",
+              "placedAt",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "hasBlockingHold": {
+          "type": "boolean"
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "plantId",
+        "stockType",
+        "totalQuantity",
+        "blockedQuantity",
+        "restrictedQuantity",
+        "unrestrictedQuantity",
+        "uom",
+        "activeHolds",
+        "hasBlockingHold",
+        "lastUpdatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "WarehouseReconciliationException": {
+      "type": "object",
+      "properties": {
+        "exceptionId": {
+          "type": "string"
+        },
+        "exceptionType": {
+          "type": "string",
+          "enum": [
+            "quantity-mismatch",
+            "location-mismatch",
+            "status-mismatch",
+            "missing-in-wms",
+            "missing-in-im",
+            "duplicate-posting"
+          ]
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "storageLocationId": {
+          "type": "string"
+        },
+        "imQuantity": {
+          "type": "number"
+        },
+        "wmsQuantity": {
+          "type": "number"
+        },
+        "discrepancyQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ageHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "resolved",
+            "escalated"
+          ]
+        }
+      },
+      "required": [
+        "exceptionId",
+        "exceptionType",
+        "materialId",
+        "materialDescription",
+        "storageLocationId",
+        "uom",
+        "detectedAt",
+        "ageHours",
+        "severity",
+        "resolution"
+      ],
+      "additionalProperties": false
+    },
+    "WarehouseStagingStatus": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "materialDescription": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "requiredQuantity": {
+          "type": "number"
+        },
+        "stagedQuantity": {
+          "type": "number"
+        },
+        "missingQuantity": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "transferRequirementId": {
+          "type": "string"
+        },
+        "stagingArea": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "in-progress",
+            "staged",
+            "partial",
+            "blocked",
+            "not-required"
+          ]
+        },
+        "lastMovementAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "blockerReason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "batchId",
+        "requiredQuantity",
+        "stagedQuantity",
+        "missingQuantity",
+        "uom",
+        "stagingArea",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "WorkOrder": {
+      "type": "object",
+      "properties": {
+        "workOrderId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "equipmentDescription": {
+          "type": "string"
+        },
+        "lineId": {
+          "type": "string"
+        },
+        "workOrderType": {
+          "type": "string",
+          "enum": [
+            "corrective",
+            "preventive",
+            "predictive",
+            "emergency",
+            "inspection"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "in-progress",
+            "on-hold",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "plannedStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "plannedFinish": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualStart": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "estimatedHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "assignedTechnician": {
+          "type": "string"
+        },
+        "productionImpact": {
+          "type": "string",
+          "enum": [
+            "line-down",
+            "reduced-capacity",
+            "no-impact",
+            "risk-only"
+          ]
+        }
+      },
+      "required": [
+        "workOrderId",
+        "title",
+        "equipmentId",
+        "equipmentDescription",
+        "workOrderType",
+        "status",
+        "priority",
+        "estimatedHours",
+        "productionImpact"
+      ],
+      "additionalProperties": false
+    },
+    "WorkspaceContext": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        },
+        "viewId": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "plantId": {
+              "type": "string"
+            },
+            "lineId": {
+              "type": "string"
+            },
+            "workCentreId": {
+              "type": "string"
+            },
+            "regionId": {
+              "type": "string"
+            },
+            "warehouseId": {
+              "type": "string"
+            },
+            "storageLocationId": {
+              "type": "string"
+            },
+            "materialId": {
+              "type": "string"
+            },
+            "batchId": {
+              "type": "string"
+            },
+            "processOrderId": {
+              "type": "string"
+            },
+            "supplierId": {
+              "type": "string"
+            },
+            "customerId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "userId": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspaceId",
+        "scope",
+        "userId"
+      ],
+      "additionalProperties": false
+    },
+    "YieldVarianceSummary": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "lineOrResource": {
+          "type": "string"
+        },
+        "plannedYieldPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "actualYieldPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "variancePercent": {
+          "type": "number"
+        },
+        "scrapQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reworkQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lossReason": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "lineOrResource",
+        "plannedYieldPercent",
+        "actualYieldPercent",
+        "variancePercent",
+        "scrapQuantity",
+        "reworkQuantity",
+        "lossReason",
+        "severity"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

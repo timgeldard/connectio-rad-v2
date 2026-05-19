@@ -388,18 +388,21 @@ def map_trace_graph(
     if depth_reached >= request.max_depth and tagged_rows:
         warnings.append("max_depth_reached")
 
+    upstream_count = sum(1 for n in nodes.values() if "upstream" in n["directions"])
+    downstream_count = sum(1 for n in nodes.values() if "downstream" in n["directions"])
+    unresolved_count = sum(1 for n in nodes.values() if n.get("status") == "unresolved")
+
     return {
-        "anchor": {
-            "materialId": request.material_id,
-            "batchId": request.batch_id,
-            "plantId": request.plant_id,
-            "nodeKey": anchor_key,
-        },
         "nodes": list(nodes.values()),
         "edges": list(edges.values()),
-        "depthReached": depth_reached,
-        "truncated": truncated,
+        "direction": request.direction,
+        "depth": depth_reached,
+        "rootBatch": f"{request.material_id}/{request.batch_id}",
+        "upstreamCount": upstream_count,
+        "downstreamCount": downstream_count,
+        "unresolvedNodeCount": unresolved_count,
         "warnings": warnings,
+        "truncated": truncated,
     }
 
 

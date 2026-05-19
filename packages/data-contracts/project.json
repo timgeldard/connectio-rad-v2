@@ -23,6 +23,17 @@
       "options": {
         "lintFilePatterns": ["packages/data-contracts/**/*.{ts,tsx}"]
       }
+    },
+    "sync-pydantic": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "npx tsx scripts/export-json-schema.ts",
+          "../../apps/api/.venv/bin/python ../../apps/api/scripts/sync_contracts.py"
+        ],
+        "cwd": "packages/data-contracts",
+        "parallel": false
+      }
     }
   }
 }
