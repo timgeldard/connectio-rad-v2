@@ -183,11 +183,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
   // Dynamically compute the active API mode
   const activeSources: string[] = []
   if (isQueryEnabled) {
-    if (overviewQuery.data?.ok && overviewQuery.data.source) activeSources.push(overviewQuery.data.source)
-    if (inboundQuery.data?.ok && inboundQuery.data.source) activeSources.push(inboundQuery.data.source)
-    if (outboundQuery.data?.ok && outboundQuery.data.source) activeSources.push(outboundQuery.data.source)
-    if (stagingQuery.data?.ok && stagingQuery.data.source) activeSources.push(stagingQuery.data.source)
-    if (exceptionsQuery.data?.ok && exceptionsQuery.data.source) activeSources.push(exceptionsQuery.data.source)
+    if (overviewQuery.data?.source) activeSources.push(overviewQuery.data.source)
+    if (inboundQuery.data?.source) activeSources.push(inboundQuery.data.source)
+    if (outboundQuery.data?.source) activeSources.push(outboundQuery.data.source)
+    if (stagingQuery.data?.source) activeSources.push(stagingQuery.data.source)
+    if (exceptionsQuery.data?.source) activeSources.push(exceptionsQuery.data.source)
   }
   const uniqueSources = Array.from(new Set(activeSources))
   const displayedSource = uniqueSources.length === 1 ? uniqueSources[0] : uniqueSources.length > 1 ? 'mixed' : 'mock'
@@ -325,7 +325,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             {sourceBadge.text}
           </div>
           <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 500, textAlign: 'right' }}>
-            UAT Verification Pending by Claude
+            UAT verification pending
           </span>
         </div>
       </div>
@@ -1032,9 +1032,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                     </div>
                   ) : exceptionsData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      ℹ️ No exceptions or stock anomalies found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      ℹ️ No exception records were returned for this Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
                       <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
-                        All stock placements appear fully reconciled and holds managed.
+                        If this is unexpected, verify the warehouse, source coverage, and exception extraction logic before assuming there are no issues.
                       </div>
                     </div>
                   ) : (
@@ -1151,13 +1151,13 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                     <strong>💡 Exception Diagnostic & Recommended Action:</strong>
                     <div style={{ marginTop: 4, lineHeight: 1.4 }}>
                       {String(selectedRow.data.exceptionType || '').toLowerCase().includes('shortage') || String(selectedRow.data.description || '').toLowerCase().includes('mismatch') || String(selectedRow.data.reason || '').toLowerCase().includes('mismatch') ? (
-                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Recommended Action:</strong> Run a reconciliation transaction (e.g., LT22 / LS24 in SAP) to verify bin placements and execute a posting change if necessary.</>
+                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Recommended Action:</strong> Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.</>
                       ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('expiry') || String(selectedRow.data.reason || '').toLowerCase().includes('expiry') || Number(selectedRow.data.daysToExpiry) <= 30 ? (
-                        <>Batch is close to or past expiration date. <strong>Recommended Action:</strong> Block the batch immediately in QM (Quality Management) and coordinate with the laboratory to retest or dispose of the stock.</>
+                        <>Batch is close to or past expiration date. <strong>Recommended Action:</strong> Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.</>
                       ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('hold') || String(selectedRow.data.reason || '').toLowerCase().includes('hold') ? (
-                        <>This batch is currently under an active quality or warehouse hold. <strong>Recommended Action:</strong> Check the Quality Batch Release workspace to identify the block reason code before releasing or moving.</>
+                        <>This batch is currently under an active quality or warehouse hold. <strong>Recommended Action:</strong> Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.</>
                       ) : (
-                        <>General warehouse exception detected. <strong>Recommended Action:</strong> Review bin assignment history, physical counts, and storage unit types in SAP to identify and correct the discrepancy.</>
+                        <>General warehouse exception detected. <strong>Recommended Action:</strong> Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.</>
                       )}
                     </div>
                   </div>

@@ -39,7 +39,7 @@ describe('WarehouseCockpitView', () => {
     // Verify header status is present
     expect(screen.getByText('Warehouse360 Cockpit (Native)')).toBeInTheDocument()
     expect(screen.getByText('API Mode: mock (Fixture Data)')).toBeInTheDocument()
-    expect(screen.getByText('UAT Verification Pending by Claude')).toBeInTheDocument()
+    expect(screen.getByText('UAT verification pending')).toBeInTheDocument()
     
     // Verify helper instruction banner is shown when no warehouse is entered
     expect(screen.getByText('Enter a Warehouse ID to Begin Queries')).toBeInTheDocument()
@@ -261,5 +261,76 @@ describe('WarehouseCockpitView', () => {
     expect(screen.getByText(/"warehouseId": "WH001"/i)).toBeInTheDocument()
     expect(screen.getByText('/api/warehouse360/inbound')).toBeInTheDocument()
     expect(screen.getByText('/api/warehouse360/exceptions')).toBeInTheDocument()
+  })
+
+  it('renders truthfulness notice, safer exceptions empty state, and handles error results in activeSources badge computation', async () => {
+    document.body.innerHTML = ''
+    cleanup()
+
+    const spyOverview = vi.spyOn(warehouse360AdapterInstance, 'getWarehouseOverview').mockResolvedValue({
+      ok: false,
+      source: 'legacy-api',
+      error: { code: 'unknown', message: 'Overview query error', retryable: true },
+      displayState: 'error'
+    })
+
+    vi.spyOn(warehouse360AdapterInstance, 'getWarehouseInbound').mockResolvedValue({
+      ok: true,
+      fetchedAt: new Date().toISOString(),
+      source: 'mock',
+      data: []
+    })
+    vi.spyOn(warehouse360AdapterInstance, 'getWarehouseOutbound').mockResolvedValue({
+      ok: true,
+      fetchedAt: new Date().toISOString(),
+      source: 'mock',
+      data: []
+    })
+    vi.spyOn(warehouse360AdapterInstance, 'getWarehouseStaging').mockResolvedValue({
+      ok: true,
+      fetchedAt: new Date().toISOString(),
+      source: 'mock',
+      data: []
+    })
+    const spyExceptions = vi.spyOn(warehouse360AdapterInstance, 'getWarehouseExceptionItems').mockResolvedValue({
+      ok: true,
+      fetchedAt: new Date().toISOString(),
+      source: 'mock',
+      data: []
+    })
+
+    render(
+      <Wrapper>
+        <WarehouseCockpitView request={mockRequest} />
+      </Wrapper>
+    )
+
+    const demoButton = screen.getByText(/Load demo presets for offline testing/i)
+    fireEvent.click(demoButton)
+
+    await waitFor(() => {
+      const whInput = screen.getByPlaceholderText('e.g. WH001') as HTMLInputElement
+      expect(whInput.value).toBe('WH001')
+    })
+
+    const runButton = screen.getByRole('button', { name: /Run Cockpit Queries/i })
+    fireEvent.click(runButton)
+
+    await waitFor(() => {
+      expect(spyOverview).toHaveBeenCalled()
+      expect(spyExceptions).toHaveBeenCalled()
+    })
+
+    expect(screen.getByText(/Overview KPIs are site-level/i)).toBeInTheDocument()
+    expect(screen.getByText(/not filtered by warehouse/i)).toBeInTheDocument()
+
+    expect(screen.getByText(/API Mode: mixed/i)).toBeInTheDocument()
+
+    const exceptionsTab = screen.getByText(/Exceptions & Alerts/i)
+    fireEvent.click(exceptionsTab)
+
+    expect(screen.getByText(/No exception records were returned for this Warehouse ID/i)).toBeInTheDocument()
+    expect(screen.getByText(/verify the warehouse, source coverage/i)).toBeInTheDocument()
+    expect(screen.queryByText(/All stock placements appear fully reconciled/i)).toBeNull()
   })
 })

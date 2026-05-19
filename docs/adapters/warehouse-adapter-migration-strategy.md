@@ -155,7 +155,7 @@ GET /api/wh360/plants
 ## Warehouse360 Cockpit Layout and Query Behavior
 
 ### Overview KPIs
-Overview KPIs are retrieved from `getWarehouseOverview` which, in the Databricks backend, query the `wh360_kpi_snapshot_v` view. Because this view pre-aggregates KPIs globally across the site, **Overview KPIs are site-level and do not filter by Warehouse ID**.
+The cockpit sends the active request context to all query hooks. Detailed tabs are expected to apply warehouse/date/limit filters. Overview KPIs are site-level from the pre-aggregated snapshot and must not be interpreted as warehouse-filtered unless the backend view changes.
 
 ### Wired Cockpit Filters
 The detailed view tabs (Inbound, Outbound, Staging, and Exceptions) retrieve data filtered dynamically. The following 5 parameters are fully wired and passed in all detailed queries:
