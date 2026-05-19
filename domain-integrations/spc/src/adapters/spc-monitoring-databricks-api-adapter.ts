@@ -16,9 +16,9 @@ import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
  * SPC Monitoring Databricks API Adapter.
  * 
  * @remarks
- * Currently blocked/pending catalog alignment.
- * All methods fall back to the base mock implementation but mark
- * the source as 'databricks-api' (blocked/mock).
+ * Currently blocked/pending gold-view alignment.
+ * All methods return unavailable/not-found status as native Databricks
+ * routes for SPC do not yet exist.
  */
 export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
   private unavailable<T>(): AdapterResult<T> {

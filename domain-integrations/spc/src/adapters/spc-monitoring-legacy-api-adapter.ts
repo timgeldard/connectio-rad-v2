@@ -17,8 +17,8 @@ import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
  * 
  * @remarks
  * Currently a placeholder as no legacy V1 API exists for SPC.
- * All methods fall back to the base mock implementation but mark
- * the source as 'legacy-api' (simulated).
+ * All methods return unavailable/not-found status as there is no 
+ * legacy source to proxy.
  */
 export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
   private unavailable<T>(): AdapterResult<T> {

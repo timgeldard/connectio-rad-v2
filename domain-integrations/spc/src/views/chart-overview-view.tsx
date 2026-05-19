@@ -24,15 +24,19 @@ export interface ChartOverviewViewProps {
   readonly request: SPCMonitoringAdapterRequest
 }
 
-function resolveEvidenceStatus(result: any): 'loading' | 'mock-only' | 'error' | 'unavailable' {
+function resolveEvidenceStatus(result: any): 'loading' | 'mock-only' | 'ready' | 'error' | 'unavailable' {
   if (!result) return 'loading'
   if (!result.ok) {
+    if (result.error?.code === 'unavailable') return 'unavailable'
     if (result.error?.code === 'not-found' && (result.source === 'databricks-api' || result.source === 'legacy-api')) {
       return 'unavailable'
     }
     return 'error'
   }
-  return 'mock-only'
+  
+  // Explicitly check for mock source to avoid mislabeling real API results as mock
+  const isMock = result.source === 'mock' || result.source === 'mock-adapter' || result.mock === true || result.isMock === true
+  return isMock ? 'mock-only' : 'ready'
 }
 
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {

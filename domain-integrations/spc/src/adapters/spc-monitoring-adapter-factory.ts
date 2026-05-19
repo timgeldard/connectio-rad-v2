@@ -10,15 +10,14 @@ export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
   const mode = import.meta.env.VITE_ADAPTER_MODE || 'mock'
 
   if (mode === 'databricks-api') {
-    // Native Databricks integration is currently blocked/pending catalog alignment.
-    // Falling back to Databricks adapter which currently behaves like a 
-    // mock adapter with a warning source.
+    // Native Databricks integration is currently blocked/pending gold-view alignment.
+    // Returns unavailable/not-implemented status until native routes exist.
     return new SPCMonitoringDatabricksApiAdapter()
   }
 
   if (mode === 'legacy-api') {
-    // No legacy API exists for SPC yet. Falling back to Legacy adapter
-    // which currently behaves like a mock adapter with a warning source.
+    // No legacy API exists for SPC. 
+    // Returns unavailable status as no V1 endpoint is available for proxying.
     return new SPCMonitoringLegacyApiAdapter()
   }
 

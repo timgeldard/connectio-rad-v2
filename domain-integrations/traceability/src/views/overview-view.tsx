@@ -17,10 +17,14 @@ import {
 import { calculateConfidence } from '../components/EvidenceConfidence.js'
 import { InvestigationSummary } from '../components/InvestigationSummary.js'
 import { EvidencePackReadiness } from '../components/EvidencePackReadiness.js'
+import { TraceabilityInitialState } from '../components/TraceabilityInitialState.js'
+import { TraceQueryForm } from '../forms/trace-query-form.js'
 
 import type { AdapterError } from '@connectio/source-adapters'
 
 /** Props for OverviewView. */
+import { UAT_CANDIDATE } from '../constants.js'
+
 export interface OverviewViewProps {
   /** Adapter request context forwarded to all panels. */
   readonly request: Trace2AdapterRequest
@@ -72,7 +76,8 @@ function BatchHeaderErrorBanner({ code, message }: Pick<AdapterError, 'code' | '
  * and a split grid containing the 6 modular evidence panels alongside the
  * EvidencePackReadiness digital compilation checklist.
  */
-export function OverviewView({ request }: OverviewViewProps) {
+export function OverviewView({ request: initialRequest }: OverviewViewProps) {
+  const [request, setRequest] = useState<Trace2AdapterRequest>(initialRequest)
   const [sim, setSim] = useState(false)
 
   // Fetch all required data sectors for confidence rating and cockpit header
@@ -106,6 +111,30 @@ export function OverviewView({ request }: OverviewViewProps) {
     traceGraph,
   })
 
+  const isInitialState = !request.batchId || request.batchId === ''
+
+  if (isInitialState) {
+    return (
+      <TraceabilityInitialState 
+        adapterMode={import.meta.env.VITE_ADAPTER_MODE ?? 'mock'}
+        onLoadCandidate={() => {
+           setRequest(prev => ({
+             ...prev,
+             ...UAT_CANDIDATE
+           }))
+        }}
+      >
+        <TraceQueryForm 
+          onSubmit={setRequest}
+          initialMaterialId={request.materialId}
+          initialBatchId={request.batchId}
+          initialPlantId={request.plantId}
+          hideCandidateButton={true}
+        />
+      </TraceabilityInitialState>
+    )
+  }
+
   return (
     <div
       style={{
@@ -121,14 +150,22 @@ export function OverviewView({ request }: OverviewViewProps) {
       )}
 
       {/* Case Header / Investigation cockpit summary */}
-      <InvestigationSummary
-        batchHeader={batchHeader}
-        customerExposure={customerExposure}
-        supplierExposure={supplierExposure}
-        confidence={confidence}
-        sim={sim}
-        onSim={setSim}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <TraceQueryForm 
+          onSubmit={setRequest}
+          initialMaterialId={request.materialId}
+          initialBatchId={request.batchId}
+          initialPlantId={request.plantId}
+        />
+        <InvestigationSummary
+          batchHeader={batchHeader}
+          customerExposure={customerExposure}
+          supplierExposure={supplierExposure}
+          confidence={confidence}
+          sim={sim}
+          onSim={setSim}
+        />
+      </div>
 
       {/* Grid structure dividing modular panels and the digital signature card */}
       <div

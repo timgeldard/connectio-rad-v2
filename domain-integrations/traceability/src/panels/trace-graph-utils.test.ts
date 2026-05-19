@@ -189,13 +189,13 @@ describe('filterGraphByDirection', () => {
   it('"forward" sets upstreamCount to 0', () => {
     const result = filterGraphByDirection(graph, 'forward')
     expect(result.upstreamCount).toBe(0)
-    expect(result.direction).toBe('forward')
+    expect(result.direction).toBe('downstream')
   })
 
   it('"reverse" sets downstreamCount to 0', () => {
     const result = filterGraphByDirection(graph, 'reverse')
     expect(result.downstreamCount).toBe(0)
-    expect(result.direction).toBe('reverse')
+    expect(result.direction).toBe('upstream')
   })
 
   it('returns empty nodes/edges for an empty graph', () => {

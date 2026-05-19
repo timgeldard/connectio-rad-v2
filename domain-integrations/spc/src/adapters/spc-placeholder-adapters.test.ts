@@ -13,7 +13,7 @@ describe('SPC Placeholder Adapters', () => {
   describe('SPCMonitoringDatabricksApiAdapter', () => {
     const adapter = new SPCMonitoringDatabricksApiAdapter()
 
-    it('returns error for all methods', async () => {
+    it('returns error for getSPCSummary', async () => {
       const result = await adapter.getSPCSummary(request)
       expect(result.ok).toBe(false)
       if (!result.ok) {
@@ -27,7 +27,7 @@ describe('SPC Placeholder Adapters', () => {
   describe('SPCMonitoringLegacyApiAdapter', () => {
     const adapter = new SPCMonitoringLegacyApiAdapter()
 
-    it('returns error for all methods', async () => {
+    it('returns error for getSPCSummary', async () => {
       const result = await adapter.getSPCSummary(request)
       expect(result.ok).toBe(false)
       if (!result.ok) {

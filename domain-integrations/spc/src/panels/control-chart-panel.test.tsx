@@ -84,9 +84,9 @@ describe('ControlChartPanel', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Control Limits:').length).toBeGreaterThan(0)
       expect(screen.getAllByText('Specification Limits:').length).toBeGreaterThan(0)
-      expect(screen.getAllByText(/UCL/).length).toBeGreaterThan(0)
-      expect(screen.getAllByText(/CL/).length).toBeGreaterThan(0)
-      expect(screen.getAllByText(/LCL/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^UCL$/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^CL$/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/^LCL$/).length).toBeGreaterThan(0)
       expect(screen.getAllByText(/USL/).length).toBeGreaterThan(0)
       expect(screen.getAllByText(/LSL/).length).toBeGreaterThan(0)
     })
