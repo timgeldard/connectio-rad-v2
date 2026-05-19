@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react'
 import { SPCSummaryPanel } from '../panels/spc-summary-panel.js'
 import { ActiveSPCSignalsPanel } from '../panels/active-spc-signals-panel.js'
 import { ControlChartPanel } from '../panels/control-chart-panel.js'
-import { useMonitoredCharacteristics } from '../adapters/spc-monitoring-queries.js'
+import { SPCEvidenceSummaryPanel } from '../panels/spc-evidence-summary-panel.js'
+import { useMonitoredCharacteristics, useSPCSummary, useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
 
 const HEADER_GRID: CSSProperties = {
@@ -25,6 +26,9 @@ export interface ChartOverviewViewProps {
 
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {
   const { data: charsResult } = useMonitoredCharacteristics(request)
+  const { data: summaryResult } = useSPCSummary(request)
+  const { data: signalsResult } = useActiveSPCSignals(request)
+  
   const characteristics = charsResult?.ok ? charsResult.data : []
 
   return (
@@ -50,6 +54,42 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           'Native Databricks integration pending catalog alignment'
         ]}
         lastVerified="Pending UAT Catalog Alignment"
+      />
+
+      <SPCEvidenceSummaryPanel 
+        sections={[
+          { 
+            id: 'summary', 
+            name: 'SPC Summary Overview', 
+            status: summaryResult?.ok ? 'ready' : 'loading', 
+            source: summaryResult?.source,
+            count: summaryResult?.ok ? summaryResult.data.chartsMonitored : undefined,
+            message: 'High-level aggregation of monitored characteristics.'
+          },
+          { 
+            id: 'signals', 
+            name: 'Active SPC Signals', 
+            status: signalsResult?.ok ? 'ready' : 'loading', 
+            source: signalsResult?.source,
+            count: signalsResult?.ok ? signalsResult.data.length : undefined,
+            message: 'Nelson and Western Electric rule violations.'
+          },
+          { 
+            id: 'chars', 
+            name: 'Monitored Characteristics', 
+            status: charsResult?.ok ? 'ready' : 'loading', 
+            source: charsResult?.source,
+            count: characteristics.length,
+            message: 'MIC-level characteristic registrations.'
+          },
+          { 
+            id: 'charts', 
+            name: 'Control Charts', 
+            status: charsResult?.ok ? 'ready' : 'loading', 
+            source: charsResult?.source,
+            message: 'Time-series control charts with statistical limits.'
+          }
+        ]}
       />
 
       <div style={HEADER_GRID}>

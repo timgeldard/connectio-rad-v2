@@ -45,7 +45,18 @@ export function SPCMonitoringWorkspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'chart-overview'}
       actionSidebar={<SPCActionsPanel context={context} />}
     >
-      {resolveView(viewId, request)}
+      {scope.materialId ? resolveView(viewId, request) : (
+        <div style={{ padding: 40, textAlign: 'center', background: 'var(--shell-surface)', borderRadius: 8, margin: 16, border: '1px dashed var(--shell-line)' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--shell-fg)', marginBottom: 8 }}>UAT Candidate Not Configured</h2>
+          <p style={{ fontSize: 14, color: 'var(--shell-fg-2)', maxWidth: 480, margin: '0 auto 20px' }}>
+            To view SPC monitoring evidence, you must first select a valid material candidate. SPC control charts and capability analysis are material-specific.
+          </p>
+          <div style={{ display: 'inline-block', padding: '12px 24px', background: 'var(--shell-surface-2)', borderRadius: 6, textAlign: 'left', border: '1px solid var(--shell-line)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--shell-fg-3)', display: 'block', marginBottom: 4 }}>Required Selection:</span>
+            <span style={{ fontSize: 13, color: 'var(--shell-fg)' }}>Material ID / Inspection Characteristic</span>
+          </div>
+        </div>
+      )}
     </StandardWorkspaceTemplate>
   )
 }
