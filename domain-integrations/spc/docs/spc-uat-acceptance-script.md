@@ -9,7 +9,8 @@
 ## 1. Prerequisites
 
 - [ ] User has `spc.read` permission.
-- [ ] Application is running in `mock` or `legacy-api` adapter mode (configured via `VITE_ADAPTER_MODE`).
+- [ ] Application is running in `mock` adapter mode for sandbox UAT (configured via `VITE_ADAPTER_MODE`).
+- [ ] Note: `legacy-api` and `databricks-api` modes will show "Unavailable" as their backends are not yet deployed.
 - [ ] A valid material candidate has been selected in the global scope.
 
 ---

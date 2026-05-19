@@ -28,7 +28,7 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | ✅ | 🔶 | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment. Code-ready for read-only UAT. | [SPC Detail](#spc) |
+| **SPC** | ✅ | ❌ or 🔶 UI-only | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment. Code-ready for mock/sandbox read-only UAT. | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
@@ -67,7 +67,7 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Code-Ready for Read-Only UAT).
+* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT).
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.

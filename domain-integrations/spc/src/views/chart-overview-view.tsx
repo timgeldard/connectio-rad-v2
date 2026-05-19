@@ -24,6 +24,17 @@ export interface ChartOverviewViewProps {
   readonly request: SPCMonitoringAdapterRequest
 }
 
+function resolveEvidenceStatus(result: any): 'loading' | 'mock-only' | 'error' | 'unavailable' {
+  if (!result) return 'loading'
+  if (!result.ok) {
+    if (result.error?.code === 'not-found' && (result.source === 'databricks-api' || result.source === 'legacy-api')) {
+      return 'unavailable'
+    }
+    return 'error'
+  }
+  return 'mock-only'
+}
+
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {
   const { data: charsResult } = useMonitoredCharacteristics(request)
   const { data: summaryResult } = useSPCSummary(request)
@@ -61,7 +72,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           { 
             id: 'summary', 
             name: 'SPC Summary Overview', 
-            status: summaryResult?.ok ? 'ready' : 'loading', 
+            status: resolveEvidenceStatus(summaryResult), 
             source: summaryResult?.source,
             count: summaryResult?.ok ? summaryResult.data.chartsMonitored : undefined,
             message: 'High-level aggregation of monitored characteristics.'
@@ -69,7 +80,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           { 
             id: 'signals', 
             name: 'Active SPC Signals', 
-            status: signalsResult?.ok ? 'ready' : 'loading', 
+            status: resolveEvidenceStatus(signalsResult), 
             source: signalsResult?.source,
             count: signalsResult?.ok ? signalsResult.data.length : undefined,
             message: 'Nelson and Western Electric rule violations.'
@@ -77,7 +88,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           { 
             id: 'chars', 
             name: 'Monitored Characteristics', 
-            status: charsResult?.ok ? 'ready' : 'loading', 
+            status: resolveEvidenceStatus(charsResult), 
             source: charsResult?.source,
             count: characteristics.length,
             message: 'MIC-level characteristic registrations.'
@@ -85,7 +96,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           { 
             id: 'charts', 
             name: 'Control Charts', 
-            status: charsResult?.ok ? 'ready' : 'loading', 
+            status: resolveEvidenceStatus(charsResult), 
             source: charsResult?.source,
             message: 'Time-series control charts with statistical limits.'
           }

@@ -3,7 +3,7 @@ import type { AdapterSource } from '@connectio/source-adapters'
 interface EvidenceSection {
   readonly id: string
   readonly name: string
-  readonly status: 'loading' | 'ready' | 'error' | 'pending-uat'
+  readonly status: 'loading' | 'ready' | 'loaded' | 'mock-only' | 'error' | 'pending-uat' | 'unavailable'
   readonly source?: AdapterSource
   readonly count?: number
   readonly message?: string
@@ -31,7 +31,7 @@ export function SPCEvidenceSummaryPanel({ sections }: SPCEvidenceSummaryPanelPro
           SPC Evidence Completeness Summary
         </h3>
         <div style={{ fontSize: '11px', color: 'var(--shell-fg-3)', fontWeight: 500 }}>
-          {sections.filter(s => s.status === 'ready').length} / {sections.length} Ready
+          {sections.filter(s => ['ready', 'loaded', 'mock-only'].includes(s.status)).length} / {sections.length} Loaded
         </div>
       </div>
 
@@ -101,8 +101,11 @@ function StatusBadge({ status, source }: { status: EvidenceSection['status']; so
   const styles: Record<EvidenceSection['status'], { bg: string; color: string; border: string }> = {
     loading: { bg: 'var(--shell-surface-2)', color: 'var(--shell-fg-3)', border: 'var(--shell-line)' },
     ready: { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
+    loaded: { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
+    'mock-only': { bg: 'rgba(31, 139, 76, 0.1)', color: 'var(--shell-good, #1F8B4C)', border: 'rgba(31, 139, 76, 0.2)' },
     error: { bg: 'rgba(199, 51, 21, 0.1)', color: 'var(--shell-bad, #C73315)', border: 'rgba(199, 51, 21, 0.2)' },
     'pending-uat': { bg: 'rgba(199, 130, 28, 0.1)', color: 'var(--shell-warn, #C7821C)', border: 'rgba(199, 130, 28, 0.2)' },
+    unavailable: { bg: 'var(--shell-surface-2)', color: 'var(--shell-fg-3)', border: 'var(--shell-line)' },
   }
 
   const style = styles[status]

@@ -21,39 +21,48 @@ import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
  * the source as 'databricks-api' (blocked/mock).
  */
 export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
-  private wrap<T>(result: AdapterResult<T>): AdapterResult<T> {
-    return { ...result, source: 'databricks-api' }
+  private unavailable<T>(): AdapterResult<T> {
+    return {
+      ok: false,
+      error: {
+        code: 'not-found',
+        message: 'SPC Databricks adapter unavailable — required SPC gold views are not deployed.',
+        retryable: false
+      },
+      displayState: 'error',
+      source: 'databricks-api'
+    }
   }
 
-  override async getSPCMonitoringContext(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCMonitoringContext>> {
-    return this.wrap(await super.getSPCMonitoringContext(request))
+  override async getSPCMonitoringContext(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCMonitoringContext>> {
+    return this.unavailable()
   }
 
-  override async getSPCSummary(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSummary>> {
-    return this.wrap(await super.getSPCSummary(request))
+  override async getSPCSummary(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSummary>> {
+    return this.unavailable()
   }
 
-  override async getActiveSPCSignals(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSignal[]>> {
-    return this.wrap(await super.getActiveSPCSignals(request))
+  override async getActiveSPCSignals(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSignal[]>> {
+    return this.unavailable()
   }
 
-  override async getMonitoredCharacteristics(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
-    return this.wrap(await super.getMonitoredCharacteristics(request))
+  override async getMonitoredCharacteristics(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
+    return this.unavailable()
   }
 
-  override async getControlChartSeries(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<ControlChartSeries>> {
-    return this.wrap(await super.getControlChartSeries(request))
+  override async getControlChartSeries(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<ControlChartSeries>> {
+    return this.unavailable()
   }
 
-  override async getCharacteristicCapability(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<CharacteristicCapability>> {
-    return this.wrap(await super.getCharacteristicCapability(request))
+  override async getCharacteristicCapability(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<CharacteristicCapability>> {
+    return this.unavailable()
   }
 
-  override async getSPCAlarmHistory(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
-    return this.wrap(await super.getSPCAlarmHistory(request))
+  override async getSPCAlarmHistory(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
+    return this.unavailable()
   }
 
-  override async getSPCRelatedBatches(request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCRelatedBatch[]>> {
-    return this.wrap(await super.getSPCRelatedBatches(request))
+  override async getSPCRelatedBatches(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCRelatedBatch[]>> {
+    return this.unavailable()
   }
 }
