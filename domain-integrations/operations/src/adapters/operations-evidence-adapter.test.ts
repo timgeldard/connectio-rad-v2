@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { OperationsEvidenceAdapter } from './operations-evidence-adapter.js'
+import { OperationsEvidenceAdapter, toAdapterError } from './operations-evidence-adapter.js'
 import { ProcessOrderReleaseEvidenceSchema } from '@connectio/data-contracts'
 
 const fixedNow = () => '2024-03-08T15:00:00.000Z'
@@ -32,5 +32,14 @@ describe('OperationsEvidenceAdapter', () => {
     if (!result.ok) return
 
     expect(result.data.conformanceStatus).toBe('non-conformant')
+  })
+
+  it('returns source: "mock" for success and error paths', async () => {
+    const result = await adapter.getProcessOrderEvidence(request)
+    expect(result.source).toBe('mock')
+
+    const errResult = toAdapterError(new Error('Test error'))
+    expect(errResult.ok).toBe(false)
+    expect(errResult.source).toBe('mock')
   })
 })

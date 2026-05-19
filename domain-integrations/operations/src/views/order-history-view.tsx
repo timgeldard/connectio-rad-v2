@@ -597,6 +597,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               </label>
               <input
                 type="text"
+                aria-label="Plant ID"
                 value={form.plantId}
                 onChange={e => handleInputChange('plantId', e.target.value)}
                 placeholder="e.g. IE10"
@@ -610,48 +611,59 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   fontSize: 12,
                 }}
               />
+              <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Wired to Header query only</div>
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                Material ID
+                Material ID <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned / Diagnostic)</span>
               </label>
               <input
                 type="text"
+                aria-label="Material ID"
                 value={form.materialId}
                 onChange={e => handleInputChange('materialId', e.target.value)}
                 placeholder="e.g. MAT-CH-EMMENTAL"
+                disabled={true}
                 style={{
                   width: '100%',
                   background: '#111827',
-                  border: '1px solid #4B5563',
+                  border: '1px solid #374151',
                   borderRadius: 4,
                   padding: '8px 10px',
-                  color: '#fff',
+                  color: '#9CA3AF',
                   fontSize: 12,
+                  cursor: 'not-allowed',
+                  opacity: 0.6,
                 }}
               />
+              <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                Batch ID
+                Batch ID <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned / Diagnostic)</span>
               </label>
               <input
                 type="text"
+                aria-label="Batch ID"
                 value={form.batchId}
                 onChange={e => handleInputChange('batchId', e.target.value)}
                 placeholder="e.g. CH-240308-0047"
+                disabled={true}
                 style={{
                   width: '100%',
                   background: '#111827',
-                  border: '1px solid #4B5563',
+                  border: '1px solid #374151',
                   borderRadius: 4,
                   padding: '8px 10px',
-                  color: '#fff',
+                  color: '#9CA3AF',
                   fontSize: 12,
+                  cursor: 'not-allowed',
+                  opacity: 0.6,
                 }}
               />
+              <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
             </div>
           </div>
 
@@ -659,75 +671,90 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             marginTop: 12,
             marginBottom: 16,
             padding: '12px 14px',
-            background: 'rgba(245, 158, 11, 0.03)',
-            border: '1px dashed rgba(245, 158, 11, 0.2)',
+            background: 'rgba(199, 130, 28, 0.03)',
+            border: '1px dashed var(--shell-warn, rgba(199, 130, 28, 0.2))',
             borderRadius: 6,
           }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#FBBF24', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-warn, #C7821C)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>⚠️</span>
               <span>Diagnostic / planned filters — not applied by current native routes</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                  Posting Date From
+                  Posting Date From <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span>
                 </label>
                 <input
                   type="datetime-local"
+                  aria-label="Posting Date From"
                   value={form.dateFrom}
                   onChange={e => handleInputChange('dateFrom', e.target.value)}
+                  disabled={true}
                   style={{
                     width: '100%',
                     background: '#111827',
-                    border: '1px solid #4B5563',
+                    border: '1px solid #374151',
                     borderRadius: 4,
                     padding: '7px 10px',
-                    color: '#fff',
+                    color: '#9CA3AF',
                     fontSize: 12,
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
                   }}
                 />
+                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: 11, color: '#9CA3AF', marginBottom: 4, fontWeight: 500 }}>
-                  Posting Date To
+                  Posting Date To <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span>
                 </label>
                 <input
                   type="datetime-local"
+                  aria-label="Posting Date To"
                   value={form.dateTo}
                   onChange={e => handleInputChange('dateTo', e.target.value)}
+                  disabled={true}
                   style={{
                     width: '100%',
                     background: '#111827',
-                    border: '1px solid #4B5563',
+                    border: '1px solid #374151',
                     borderRadius: 4,
                     padding: '7px 10px',
-                    color: '#fff',
+                    color: '#9CA3AF',
                     fontSize: 12,
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
                   }}
                 />
+                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned filter — not applied to database queries</div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>
-                  <span>Max Rows Limit</span>
-                  <span style={{ fontWeight: 'bold', color: '#38bdf8' }}>{form.limit}</span>
+                  <span>Max Rows Limit <span style={{ fontSize: 9, color: 'var(--shell-warn, #C7821C)' }}>(Planned)</span></span>
+                  <span style={{ fontWeight: 'bold', color: '#64748b' }}>{form.limit}</span>
                 </div>
                 <input
                   type="range"
+                  aria-label="Max Rows Limit"
                   min="1"
                   max="500"
                   value={form.limit}
                   onChange={e => handleInputChange('limit', e.target.value)}
+                  disabled={true}
                   style={{
                     width: '100%',
-                    accentColor: '#38bdf8',
+                    accentColor: '#64748b',
                     background: '#111827',
                     height: 6,
                     borderRadius: 3,
                     outline: 'none',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
                   }}
                 />
+                <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', marginTop: 4 }}>Planned limit — not applied to database queries</div>
               </div>
             </div>
           </div>
@@ -1005,6 +1032,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   {operationsStatus.label.toUpperCase()}
                 </span>
               </div>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                💡 <strong>Operations & process phases</strong> represent scheduled or completed steps (e.g., pasteurisation, standardization). Planned durations are derived from SAP recipe specifications, whereas actual timestamps are captured from execution events on the plant floor.
+              </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -1086,6 +1116,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   {confirmationsStatus.label.toUpperCase()}
                 </span>
               </div>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                💡 <strong>Yield confirmations</strong> record actual production output, scrap, and durations confirmed by operators at each phase. Final confirmations indicate phase completion, while partial confirmations show intermediate progress updates.
+              </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -1157,6 +1190,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <span style={{ fontSize: 10, fontWeight: 'bold', padding: '2px 6px', borderRadius: 3, background: goodsMovementsStatus.bg, color: goodsMovementsStatus.color }}>
                   {goodsMovementsStatus.label.toUpperCase()}
                 </span>
+              </div>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                💡 <strong>Goods movements</strong> represent physical stock transactions: Goods Issues (INPUT/261) represent raw materials consumed into the process order, while Goods Receipts (OUTPUT/101) represent finished or co-product stock produced.
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1262,6 +1298,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
                 Chronological Event Timeline
               </h3>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                💡 The event timeline automatically consolidates and sorts operations, confirmations, and goods movements by their actual posting dates. Events without valid posting dates are grouped below.
+              </div>
 
               {sortedTimeline.dated.length === 0 ? (
                 <p style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>No dated events recorded.</p>

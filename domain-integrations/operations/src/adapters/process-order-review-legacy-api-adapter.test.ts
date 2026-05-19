@@ -114,8 +114,8 @@ describe('ProcessOrderReviewLegacyApiAdapter.getProcessOrderHeader', () => {
     const result = await adapter.getProcessOrderHeader(emptyRequest)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    // Base mock adapter does not set source
-    expect(result.source).toBeUndefined()
+    // Base mock adapter now sets source to 'mock'
+    expect(result.source).toBe('mock')
     expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
   })
 

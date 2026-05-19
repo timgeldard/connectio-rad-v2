@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { OperationsPlanRiskAdapter } from './operations-plan-risk-adapter.js'
+import { OperationsPlanRiskAdapter, toAdapterError } from './operations-plan-risk-adapter.js'
 import {
   OperationsPlanRiskContextSchema,
   PlanRiskSummarySchema,
@@ -123,5 +123,14 @@ describe('OperationsPlanRiskAdapter', () => {
     if (!result.ok) return
 
     expect(result.data.riskStatus).toBe('at-risk')
+  })
+
+  it('returns source: "mock" for success and error paths', async () => {
+    const result = await adapter.getOperationsPlanRiskContext(request)
+    expect(result.source).toBe('mock')
+
+    const errResult = toAdapterError(new Error('Test error'))
+    expect(errResult.ok).toBe(false)
+    expect(errResult.source).toBe('mock')
   })
 })

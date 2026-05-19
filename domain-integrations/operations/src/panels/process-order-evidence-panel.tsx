@@ -58,6 +58,7 @@ export function ProcessOrderEvidencePanel({ request }: ProcessOrderEvidencePanel
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
