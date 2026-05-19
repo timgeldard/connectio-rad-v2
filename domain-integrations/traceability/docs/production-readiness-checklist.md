@@ -29,8 +29,8 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.1 | "Missing evidence" clearly labelled and distinguished from "zero exposure" | ✅ | EvidenceConfidenceBadge + UNKNOWN severity path. |
 | 2.2 | Mock data is not presented as live or verified | ✅ | Adapter factory pattern; mock mode explicit. |
 | 2.3 | Evidence confidence scoring sectors documented | 🔶 | Score logic documented in code; user-facing explanation missing (TRACE-P2-004). |
-| 2.4 | Data freshness / staleness surfaced to user | ❌ | TRACE-P2-002 open. |
-| 2.5 | Quality decision source documented and blocked until QM evidence verified | 🔶 | `_derive_quality_status` returns `pending` (QI stock > 0) or `unknown` only. `accepted`/`rejected`/`conditional` require a verified QM usage-decision field (e.g. `gold_qm_usage_decision_v`) that is not in the current query. Tests prove conservative values are enforced. Blocker documented in adapter docstring. |
+| 2.4 | Data freshness / staleness surfaced to user | 🔶 | Phase 1 disclaimer added to BatchHeaderPanel: "Data freshness not available — displayed values reflect query time only." Full freshness wiring (Approach A: `_updated_at` column from gold view) requires column verification and a future tranche. Implementation roadmap in `data-freshness-plan.md`. TRACE-P2-002 still open for full resolution. |
+| 2.5 | Quality decision source documented and blocked until QM evidence verified | 🔶 | `_derive_quality_status` returns `pending` (QI stock > 0) or `unknown` only. `accepted`/`rejected`/`conditional` require a verified QM usage-decision field (e.g. `gold_qm_usage_decision_v`) that is not in the current query. Tests prove conservative values are enforced. Blocker documented in adapter docstring. Implementation plan in `quality-decision-source-plan.md`. |
 
 ---
 
