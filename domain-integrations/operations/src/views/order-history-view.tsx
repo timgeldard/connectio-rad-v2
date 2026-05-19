@@ -569,24 +569,29 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             { label: 'Confirmations', query: confirmationsQuery, status: confirmationsStatus, count: confirmations.length },
             { label: 'Goods Movements', query: goodsMovementsQuery, status: goodsMovementsStatus, count: goodsMovements.length },
           ].map((sec, i) => (
-            <div key={i} style={{ background: '#111827', padding: 12, borderRadius: 6, border: '1px solid #1f2937' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#D1D5DB' }}>{sec.label}</span>
-                <span style={{
-                  fontSize: 9,
-                  fontWeight: 700,
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  textTransform: 'uppercase',
-                  background: sec.status.bg,
-                  color: sec.status.color
-                }}>
-                  {sec.status.label}
-                </span>
+            <div key={i} style={{ background: '#111827', padding: 12, borderRadius: 6, border: '1px solid #1f2937', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#D1D5DB' }}>{sec.label}</span>
+                  <span style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    textTransform: 'uppercase',
+                    background: sec.status.bg,
+                    color: sec.status.color
+                  }}>
+                    {sec.status.label}
+                  </span>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#F3F4F6' }}>
+                  {sec.query.isLoading ? '...' : sec.count}
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#6B7280', marginLeft: 6 }}>records</span>
+                </div>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#F3F4F6' }}>
-                {sec.query.isLoading ? '...' : sec.count}
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#6B7280', marginLeft: 6 }}>records</span>
+              <div style={{ marginTop: 8, fontSize: 9, color: '#6B7280', borderTop: '1px solid #1f2937', paddingTop: 6 }}>
+                 UAT evidence: pending browser verification
               </div>
             </div>
           ))}
@@ -725,8 +730,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <button
                 type="submit"
                 style={{
@@ -734,16 +738,17 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   color: '#fff',
                   border: 0,
                   borderRadius: 4,
-                  padding: '8px 16px',
-                  fontSize: 12,
+                  padding: '10px 20px',
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'background 0.2s',
                 }}
                 disabled={isAnyLoading}
               >
-                Run Order Investigation
+                {isAnyLoading ? 'Running Investigation...' : 'Run / Refresh Order History'}
               </button>
+
               <button
                 type="button"
                 onClick={handleUatCandidateClick}
@@ -752,14 +757,15 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   color: '#38bdf8',
                   border: '1px solid rgba(56, 189, 248, 0.3)',
                   borderRadius: 4,
-                  padding: '8px 16px',
-                  fontSize: 12,
+                  padding: '10px 20px',
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
               >
                 Load UAT Candidate (7006965038)
               </button>
+
               <button
                 type="button"
                 onClick={handlePresetClick}
@@ -768,56 +774,49 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   color: '#D1D5DB',
                   border: '1px solid #4B5563',
                   borderRadius: 4,
-                  padding: '8px 16px',
-                  fontSize: 12,
+                  padding: '10px 20px',
+                  fontSize: 13,
                   cursor: 'pointer',
                 }}
               >
-                Load Demo Fixture
+                Load Demo-Only Fixture
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReset}
+                style={{
+                  background: 'transparent',
+                  color: '#9CA3AF',
+                  border: '1px solid #374151',
+                  borderRadius: 4,
+                  padding: '10px 20px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Reset
+              </button>
+
+              <div style={{ flexGrow: 1 }} />
+
+              <button
+                type="button"
+                onClick={handleCopyRequestDetails}
+                style={{
+                  background: 'transparent',
+                  color: '#38bdf8',
+                  border: '1px solid #0284c7',
+                  borderRadius: 4,
+                  padding: '10px 20px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                {isCopied ? 'Copied Details!' : 'Copy API Request Details'}
               </button>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={handlePresetClick}
-                  style={{
-                    background: '#1F2937',
-                    color: '#10B981',
-                    border: '1px solid #059669',
-                    borderRadius: 4,
-                    padding: '8px 16px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Load Demo-Only Fixture
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleCopyRequestDetails}
-                  style={{
-                    background: 'transparent',
-                    color: '#38bdf8',
-                    border: '1px solid #0284c7',
-                    borderRadius: 4,
-                    padding: '8px 16px',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {isCopied ? 'Copied URLs!' : 'Copy API Request Details'}
-                </button>
-              </div>
-              <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic', marginTop: 2 }}>
-                Mock fixture values are for UI testing only and are not known UAT process orders.
-              </span>
-            </div>
-          </div>
         </form>
         
         {!queryParams && (
@@ -1363,7 +1362,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                       {JSON.stringify(queryParams, null, 2)}
                     </pre>
                     <div style={{ fontSize: 11, color: '#FBBF24', background: 'rgba(245, 158, 11, 0.08)', padding: '6px 10px', borderRadius: 4, marginTop: 4 }}>
-                      ⚠️ <strong>Note:</strong> Posting date ranges and row limits are diagnostic inputs and are not currently applied by the upstream FastAPI proxy endpoints.
+                      ⚠️ <strong>Note:</strong> Planned filter parameters (materialId, batchId) are not currently applied by the upstream native Databricks routes.
                     </div>
                   </div>
 

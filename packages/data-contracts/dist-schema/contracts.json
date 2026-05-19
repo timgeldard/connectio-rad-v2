@@ -3656,8 +3656,7 @@
         "confirmationId",
         "operationId",
         "confirmedYield",
-        "uom",
-        "confirmedAt"
+        "uom"
       ],
       "additionalProperties": false
     },
@@ -3713,8 +3712,7 @@
         "direction",
         "materialId",
         "quantity",
-        "uom",
-        "postedAt"
+        "uom"
       ],
       "additionalProperties": false
     },
@@ -3801,8 +3799,6 @@
         "plannedQuantity",
         "confirmedQuantity",
         "uom",
-        "plannedStart",
-        "plannedFinish",
         "orderStatus"
       ],
       "additionalProperties": false
@@ -3878,8 +3874,6 @@
         "operationNumber",
         "operationText",
         "workCentre",
-        "plannedStart",
-        "plannedFinish",
         "status",
         "plannedDurationMinutes",
         "confirmationStatus",

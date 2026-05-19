@@ -78,7 +78,7 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const submitBtn = screen.getByRole('button', { name: /Run Order Investigation/i })
+    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -96,7 +96,7 @@ describe('OrderHistoryView', () => {
     const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
     fireEvent.change(orderInput, { target: { value: 'PO-TEST' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Run Order Investigation/i })
+    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -316,14 +316,6 @@ describe('OrderHistoryView', () => {
     expect(screen.getByText(/POST \/api\/por\/order-header/i)).toBeInTheDocument()
   })
 
-  it('displays preset helper text', () => {
-    render(
-      <Wrapper>
-        <OrderHistoryView />
-      </Wrapper>
-    )
-    expect(screen.getByText(/Mock fixture values are for UI testing only and are not known UAT process orders/i)).toBeInTheDocument()
-  })
 
   it('renders section-level route error cards and does not render success content for that section', async () => {
     // Setup a query failure on Operations, but other queries succeed
