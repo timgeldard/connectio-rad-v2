@@ -20,6 +20,10 @@ from shared.query_service.errors import DatabricksConfigError
 # Fixtures
 # ---------------------------------------------------------------------------
 
+# NOTE: batch_status and process_order_id are included here to test the mapper's handling
+# when those keys are present (e.g. passed from a different source or future schema change).
+# The live SQL query no longer selects them from gold_batch_summary_v — they were not found
+# in that view during live validation (2026-05-19, connected_plant_uat).
 _FULL_BATCH_HEADER_ROW = {
     "material_id": "0000020582002",
     "batch_id": "BATCH001",
@@ -124,9 +128,38 @@ class TestGetBatchHeaderSummarySpec:
     def test_sql_has_limit(self) -> None:
         assert "LIMIT :max_rows" in get_batch_header_summary_spec(self._req()).sql
 
-    def test_sql_contains_todo_markers(self) -> None:
-        """gold_batch_summary_v column names are unverified — SQL must carry TODO markers."""
-        assert "TODO" in get_batch_header_summary_spec(self._req()).sql
+    def test_sql_has_no_unverified_column_assumptions(self) -> None:
+        """Column names verified 2026-05-19 against connected_plant_uat — SQL must not carry TODO markers."""
+        assert "TODO" not in get_batch_header_summary_spec(self._req()).sql
+
+    def test_sql_uses_shelf_life_expiration_date_not_expiry_date(self) -> None:
+        """gold_batch_summary_v has SHELF_LIFE_EXPIRATION_DATE, not expiry_date."""
+        sql = get_batch_header_summary_spec(self._req()).sql
+        assert "SHELF_LIFE_EXPIRATION_DATE" in sql
+        assert "b.expiry_date" not in sql
+
+    def test_sql_sources_plant_id_from_stock_v_not_summary_v(self) -> None:
+        """PLANT_ID not in gold_batch_summary_v — must be sourced from gold_batch_stock_v."""
+        sql = get_batch_header_summary_spec(self._req()).sql
+        assert "s.PLANT_ID" in sql
+        assert "b.plant_id" not in sql
+
+    def test_sql_sources_uom_from_material_not_summary_v(self) -> None:
+        """UOM not in gold_batch_summary_v — must be sourced from gold_material.BASE_UNIT_OF_MEASURE."""
+        sql = get_batch_header_summary_spec(self._req()).sql
+        assert "BASE_UNIT_OF_MEASURE" in sql
+        assert "b.uom" not in sql
+
+    def test_sql_uses_language_id_e_not_en(self) -> None:
+        """gold_material uses LANGUAGE_ID = 'E' for English — confirmed 2026-05-19."""
+        sql = get_batch_header_summary_spec(self._req()).sql
+        assert "LANGUAGE_ID = 'E'" in sql
+        assert "'EN'" not in sql
+
+    def test_sql_does_not_select_batch_status(self) -> None:
+        """batch_status not present in gold_batch_summary_v — must not be selected."""
+        sql = get_batch_header_summary_spec(self._req()).sql
+        assert "b.batch_status" not in sql
 
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
@@ -281,11 +314,16 @@ class TestMapBatchHeaderRows:
         assert result is not None
         assert result["batchStatus"] == "blocked"
 
-    def test_batch_status_none_defaults_to_active(self) -> None:
+    def test_batch_status_none_returns_unknown(self) -> None:
+        """batch_status absent from gold_batch_summary_v — must return 'unknown', not 'active'.
+
+        Returning 'active' for an unknown status would falsely signal release for blocked batches.
+        'unknown' is the honest fallback; 'active' is a semantic regression (violates Gate 1.3).
+        """
         row = {**_FULL_BATCH_HEADER_ROW, "batch_status": None}
         result = map_batch_header_rows([row])
         assert result is not None
-        assert result["batchStatus"] == "active"
+        assert result["batchStatus"] == "unknown"
 
 
 # ---------------------------------------------------------------------------
