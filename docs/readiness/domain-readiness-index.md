@@ -28,7 +28,7 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | 🔶 | ❌ | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment. | [SPC Detail](#spc) |
+| **SPC** | ✅ | ❌ or 🔶 UI-only | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment. Code-ready for mock/sandbox read-only UAT. | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
@@ -67,17 +67,21 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Mock Only).
+* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT).
 * **Summary:**
-  * Sandbox/mock data truthfulness has been improved to ensure simulated limits are not shown as live.
-  * Source badges and warnings are active in the UI.
-  * Missing control limits and insufficient data points are explicitly labeled to prevent false assurance.
-  * **UAT Blockers:**
-    * SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
-    * Approved control-limit sources, validated SPC rules, and live QM/MIC data feeds must be established before migrating from the high-fidelity mock Sandbox.
+  * UAT readiness hardening completed: explicit adapter factory pattern implemented.
+  * Evidence completeness summary and truthfulness banners active in Chart Overview.
+  * Control-limit provenance and approval state tracking integrated into UI and data contracts.
+  * Copy SPC UAT Evidence action available for audit logging.
+  * Terminology softened (e.g., "No signals returned") to prevent overconfident process control claims.
+* **UAT Blockers:**
+  * SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
+  * Limits and rules source data must be populated.
 * **Document Registry:**
   * [SPC README](../../domain-integrations/spc/README.md)
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
+  * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
+  * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
 
 ### Process Order History (POH) & Operations
 

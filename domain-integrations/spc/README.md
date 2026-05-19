@@ -2,16 +2,23 @@
 
 This directory houses the SPC domain-integration components, including adapters, queries, views, workspaces, and Evidence Panels.
 
-## Current Readiness & Source Status
+## Current Readiness & Source Status (Read-Only UAT)
 
-- **Current Source Mode**: Sandbox / Simulated Mock Data (`source: 'mock'`).
-- **Data Veracity**: Simulated data for workflow and UI layout validation. These values and charts are **not** production control evidence.
-- **Regulatory Status**: Do **not** use the limits, centrelines, or warning signals rendered in this sandbox for regulatory decisions or real-time process monitoring. Control limits and signals must be validated against approved site-specific SPC rules before operational deployment.
+- **Current Source Mode**: High-Fidelity Sandbox / Read-Only UAT.
+- **Data Veracity**: Simulated data for workflow and UI layout validation. All control limits and signals are marked as **unverified**.
+- **Regulatory Status**: Do **not** use the limits, centrelines, or warning signals rendered in this sandbox for regulatory decisions.
+
+## UAT Readiness Documentation
+
+- [SPC UAT Acceptance Script](./docs/spc-uat-acceptance-script.md)
+- [SPC Known Limitations](./docs/spc-known-limitations.md)
+- [SPC Readiness & Hardening Notes](../../docs/migration/spc-readiness-and-hardening-notes.md)
 
 ## Integration Gates & Out-of-Scope Items
 
 1. **Native Databricks Execution**: Native Databricks SPC execution is out of scope for the current design phase.
-2. **Verification Status**: No live Databricks database, actual browser-based user acceptance testing (UAT), or live endpoint validation has been performed or claimed for this domain. All components run using mock representations of the adapter response contract.
+2. **Adapter Factory**: A factory pattern is implemented to support `mock`, `legacy-api`, and `databricks-api` modes, though the latter two currently fall back to mock with warning metadata.
+3. **Evidence Completeness**: Section-level completeness summaries are visible in the Chart Overview view.
 
 ## Remaining Production Readiness Milestones
 

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+/** @vitest-environment jsdom */
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SPCMonitoringWorkspace } from './spc-monitoring-workspace.js'
 import type { ScopeContext } from '@connectio/data-contracts'
@@ -18,9 +19,17 @@ function Wrapper({ children }: { children: React.ReactNode }) {
   )
 }
 
-const scope: ScopeContext = { plantId: 'IE10' }
+const scope: ScopeContext = { 
+  plantId: 'IE10',
+  workCentreId: 'WC-IE10-PASTEURISATION',
+  materialId: 'MAT-12345'
+}
 
 describe('SPCMonitoringWorkspace', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   it('renders without crashing', () => {
     render(
       <Wrapper>

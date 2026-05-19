@@ -12,6 +12,20 @@ const ChartTypeSchema = z.enum([
   'u-chart',
 ])
 
+const LimitProvenanceSchema = z.enum([
+  'mock-fixture',
+  'calculated-from-sample',
+  'imported-from-approved-source',
+  'unknown',
+])
+
+const ApprovalStateSchema = z.enum([
+  'approved',
+  'not-approved',
+  'pending-validation',
+  'unavailable',
+])
+
 // ---------------------------------------------------------------------------
 // MonitoredSPCCharacteristic
 // ---------------------------------------------------------------------------
@@ -127,6 +141,8 @@ export const ControlChartSeriesSchema = z.object({
   lowerSpecLimit: z.number().optional(),
   unitOfMeasure: z.string(),
   confidence: z.number().min(0).max(1),
+  limitProvenance: LimitProvenanceSchema.optional(),
+  approvalState: ApprovalStateSchema.optional(),
 })
 
 export type ControlChartSeries = z.infer<typeof ControlChartSeriesSchema>
@@ -147,6 +163,8 @@ export const CharacteristicCapabilitySchema = z.object({
   standardDeviation: z.number().min(0),
   confidence: z.number().min(0).max(1),
   interpretation: z.enum(['capable', 'marginal', 'not-capable', 'insufficient-data']),
+  limitProvenance: LimitProvenanceSchema.optional(),
+  approvalState: ApprovalStateSchema.optional(),
 })
 
 export type CharacteristicCapability = z.infer<typeof CharacteristicCapabilitySchema>

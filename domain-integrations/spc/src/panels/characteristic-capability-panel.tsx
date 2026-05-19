@@ -75,6 +75,31 @@ export function CharacteristicCapabilityPanel({ request }: CharacteristicCapabil
             <CapabilityIndex label="Ppk" value={data.ppk} threshold={1.33} isInsufficient={isInsufficient} />
           </div>
 
+          {data.approvalState !== 'approved' && (
+            <div
+              style={{
+                padding: '6px 10px',
+                background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))',
+                border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.3))',
+                borderRadius: 4,
+                fontSize: 11,
+                color: 'var(--shell-warn, #C7821C)',
+                lineHeight: 1.4,
+              }}
+              role="status"
+            >
+              <span style={{ fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                ⚠️ Capability approval source not verified ({data.approvalState?.replace(/-/g, ' ') || 'unknown'})
+              </span>
+              Calculated indices are for workflow validation only.
+              {data.limitProvenance && (
+                <span style={{ display: 'block', marginTop: 2, fontSize: 10, opacity: 0.8 }}>
+                  Source: {data.limitProvenance.replace(/-/g, ' ')}
+                </span>
+              )}
+            </div>
+          )}
+
           {isInsufficient && (
             <div
               style={{

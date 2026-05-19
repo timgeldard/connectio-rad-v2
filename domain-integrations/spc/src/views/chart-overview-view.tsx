@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react'
 import { SPCSummaryPanel } from '../panels/spc-summary-panel.js'
 import { ActiveSPCSignalsPanel } from '../panels/active-spc-signals-panel.js'
 import { ControlChartPanel } from '../panels/control-chart-panel.js'
-import { useMonitoredCharacteristics } from '../adapters/spc-monitoring-queries.js'
+import { SPCEvidenceSummaryPanel } from '../panels/spc-evidence-summary-panel.js'
+import { useMonitoredCharacteristics, useSPCSummary, useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
 
 const HEADER_GRID: CSSProperties = {
@@ -23,8 +24,22 @@ export interface ChartOverviewViewProps {
   readonly request: SPCMonitoringAdapterRequest
 }
 
+function resolveEvidenceStatus(result: any): 'loading' | 'mock-only' | 'error' | 'unavailable' {
+  if (!result) return 'loading'
+  if (!result.ok) {
+    if (result.error?.code === 'not-found' && (result.source === 'databricks-api' || result.source === 'legacy-api')) {
+      return 'unavailable'
+    }
+    return 'error'
+  }
+  return 'mock-only'
+}
+
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {
   const { data: charsResult } = useMonitoredCharacteristics(request)
+  const { data: summaryResult } = useSPCSummary(request)
+  const { data: signalsResult } = useActiveSPCSignals(request)
+  
   const characteristics = charsResult?.ok ? charsResult.data : []
 
   return (
@@ -50,6 +65,42 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           'Native Databricks integration pending catalog alignment'
         ]}
         lastVerified="Pending UAT Catalog Alignment"
+      />
+
+      <SPCEvidenceSummaryPanel 
+        sections={[
+          { 
+            id: 'summary', 
+            name: 'SPC Summary Overview', 
+            status: resolveEvidenceStatus(summaryResult), 
+            source: summaryResult?.source,
+            count: summaryResult?.ok ? summaryResult.data.chartsMonitored : undefined,
+            message: 'High-level aggregation of monitored characteristics.'
+          },
+          { 
+            id: 'signals', 
+            name: 'Active SPC Signals', 
+            status: resolveEvidenceStatus(signalsResult), 
+            source: signalsResult?.source,
+            count: signalsResult?.ok ? signalsResult.data.length : undefined,
+            message: 'Nelson and Western Electric rule violations.'
+          },
+          { 
+            id: 'chars', 
+            name: 'Monitored Characteristics', 
+            status: resolveEvidenceStatus(charsResult), 
+            source: charsResult?.source,
+            count: characteristics.length,
+            message: 'MIC-level characteristic registrations.'
+          },
+          { 
+            id: 'charts', 
+            name: 'Control Charts', 
+            status: resolveEvidenceStatus(charsResult), 
+            source: charsResult?.source,
+            message: 'Time-series control charts with statistical limits.'
+          }
+        ]}
       />
 
       <div style={HEADER_GRID}>

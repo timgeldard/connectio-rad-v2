@@ -86,14 +86,29 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 )}
               </div>
 
-              {series.upperControlLimit == null && series.lowerControlLimit == null && series.centerLine == null && (
+              {series.upperControlLimit == null && series.lowerControlLimit == null && series.centerLine == null ? (
                 <div
                   style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                   role="status"
                 >
                   Control limits not calculated (minimum samples/configuration required) — cannot evaluate process control state.
                 </div>
-              )}
+              ) : series.approvalState !== 'approved' ? (
+                <div
+                  style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.3))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
+                  role="status"
+                >
+                  <span style={{ fontWeight: 600, display: 'block', marginBottom: 2 }}>
+                    ⚠️ Control-limit approval source not verified ({series.approvalState?.replace(/-/g, ' ') || 'unknown'})
+                  </span>
+                  Do not use this chart for operational process-control decisions until approved limits are validated.
+                  {series.limitProvenance && (
+                    <span style={{ display: 'block', marginTop: 2, fontSize: 10, opacity: 0.8 }}>
+                      Source: {series.limitProvenance.replace(/-/g, ' ')}
+                    </span>
+                  )}
+                </div>
+              ) : null}
 
               {validPoints.length > 0 && validPoints.length < 3 && (series.upperControlLimit != null || series.lowerControlLimit != null || series.centerLine != null) && (
                 <div
@@ -107,9 +122,9 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
               <ChartPlaceholder series={{ ...series, points: validPoints }} />
 
               <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
-                <LegendItem color={STATUS_COLOR['in-control']} label="In control" />
+                <LegendItem color={STATUS_COLOR['in-control']} label="No signals returned" />
                 <LegendItem color={STATUS_COLOR['warning']} label="Warning" />
-                <LegendItem color={STATUS_COLOR['out-of-control']} label="Out of control" />
+                <LegendItem color={STATUS_COLOR['out-of-control']} label="Active SPC signal" />
               </div>
             </>
           )}
