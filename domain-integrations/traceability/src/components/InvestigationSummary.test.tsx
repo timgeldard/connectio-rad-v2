@@ -127,4 +127,65 @@ describe('InvestigationSummary', () => {
     expect(screen.getByText('Downstream Exposure')).not.toBeNull()
     expect(screen.getAllByText('2')).toHaveLength(2)
   })
+
+  it('shows UNKNOWN severity and data-unavailable warnings when customerExposure is null', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={null}
+        supplierExposure={mockSupplierExposure}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Exposure Unknown')).not.toBeNull()
+    expect(screen.getByText(/Customer delivery data is unavailable/)).not.toBeNull()
+    expect(screen.getByText(/do not assume containment/)).not.toBeNull()
+    // Both shipped and customer metric cells should show data unavailable
+    expect(screen.getAllByText('data unavailable')).toHaveLength(2)
+  })
+
+  it('does NOT show Critical Exposure when customerExposure is null (no false containment signal)', () => {
+    render(
+      <InvestigationSummary
+        batchHeader={mockBatchHeader}
+        customerExposure={null}
+        supplierExposure={mockSupplierExposure}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+
+    expect(screen.queryByText('Critical Exposure')).toBeNull()
+    expect(screen.queryByText('Low Risk')).toBeNull()
+  })
+
+  it('shows Low Risk severity when customer data is present with no shipments', () => {
+    const containedExposure: CustomerExposureSummary = {
+      shippedQuantity: 0,
+      affectedDeliveries: 0,
+      countries: [],
+      affectedCustomers: 0,
+      highestSeverity: 'low',
+      blockedDeliveries: 0,
+      recallRecommended: false,
+    }
+
+    render(
+      <InvestigationSummary
+        batchHeader={{ ...mockBatchHeader, stockStatus: 'blocked' }}
+        customerExposure={containedExposure}
+        supplierExposure={mockSupplierExposure}
+        confidence={mockConfidence}
+        sim={false}
+        onSim={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Low Risk')).not.toBeNull()
+    expect(screen.getByText('across 0 countries')).not.toBeNull()
+  })
 })
