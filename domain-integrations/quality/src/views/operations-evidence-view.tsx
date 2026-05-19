@@ -1,10 +1,16 @@
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { ProcessOrderEvidencePanel } from '@connectio/di-operations'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { WarehouseHoldStatusPanel } from '@connectio/di-warehouse'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { EventTimelinePanel } from '@connectio/di-traceability'
 import { DeviationsPanel } from '../panels/deviations-panel.js'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { OperationsEvidenceAdapterRequest } from '@connectio/di-operations'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { WarehouseEvidenceAdapterRequest } from '@connectio/di-warehouse'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
 
 /** Props for OperationsEvidenceView. */

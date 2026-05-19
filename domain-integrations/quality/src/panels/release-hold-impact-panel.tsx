@@ -66,6 +66,7 @@ export function ReleaseHoldImpactPanel({ request }: ReleaseHoldImpactPanelProps)
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {sorted && (
         <div style={{ padding: '8px 0' }}>

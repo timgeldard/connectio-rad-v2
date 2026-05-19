@@ -1,30 +1,25 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ReleaseSummaryPanel } from './release-summary-panel.js'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
+import { useReleaseSummary } from '../adapters/quality-release-queries.js'
 
-/**
- * Creates a QueryClient configured for testing (no retries, instant stale time).
- */
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: 0 },
-    },
-  })
-}
-
-/**
- * Wraps children in QueryClientProvider for hook-based components.
- */
-function Wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={makeQueryClient()}>
+// Mock runtime dependencies
+vi.mock('@connectio/evidence-panel-runtime', () => ({
+  EvidencePanel: ({ children, registration }: { children?: React.ReactNode; registration: { panelId: string; displayName: string } }) => (
+    <div data-testid={`evidence-panel-${registration.panelId}`}>
+      <h3>{registration.displayName}</h3>
       {children}
-    </QueryClientProvider>
-  )
-}
+    </div>
+  ),
+  useEvidencePanel: () => ({ displayState: 'ready', markReady: vi.fn(), markError: vi.fn() }),
+}))
+
+vi.mock('@xyflow/react', () => ({}))
+
+vi.mock('../adapters/quality-release-queries.js', () => ({
+  useReleaseSummary: vi.fn(),
+}))
 
 const request: QualityReleaseAdapterRequest = {
   releaseCaseId: 'RC-2024-001847',
@@ -33,57 +28,127 @@ const request: QualityReleaseAdapterRequest = {
 }
 
 describe('ReleaseSummaryPanel', () => {
-  it('renders the panel container with correct data-testid', async () => {
-    render(
-      <Wrapper>
-        <ReleaseSummaryPanel request={request} />
-      </Wrapper>
-    )
-
-    // The EvidencePanel wrapper renders data-testid="evidence-panel-batch-release-summary"
-    await waitFor(() => {
-      const panel = document.querySelector('[data-testid="evidence-panel-batch-release-summary"]')
-      expect(panel).not.toBeNull()
-    })
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  it('renders the panel title', async () => {
-    render(
-      <Wrapper>
-        <ReleaseSummaryPanel request={request} />
-      </Wrapper>
-    )
+  it('renders the panel title', () => {
+    vi.mocked(useReleaseSummary).mockReturnValue({
+      data: {
+        ok: true,
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+        data: {
+          overallReadiness: 'blocked',
+          recommendedAction: 'reject',
+          qualityPassed: true,
+          spcClean: true,
+          coaComplete: true,
+          noOpenHolds: false,
+          deviationsResolved: true,
+          traceClean: true,
+          blockers: ['Active quality hold in place.'],
+          warnings: [],
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReleaseSummary>)
 
-    await waitFor(() => {
-      expect(screen.getByText('Release Summary')).toBeInTheDocument()
-    })
+    render(<ReleaseSummaryPanel request={request} />)
+
+    expect(screen.getByText('Release Summary')).toBeDefined()
   })
 
-  it('renders readiness status after data loads', async () => {
-    render(
-      <Wrapper>
-        <ReleaseSummaryPanel request={request} />
-      </Wrapper>
-    )
+  it('renders readiness status after data loads', () => {
+    vi.mocked(useReleaseSummary).mockReturnValue({
+      data: {
+        ok: true,
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+        data: {
+          overallReadiness: 'blocked',
+          recommendedAction: 'reject',
+          qualityPassed: true,
+          spcClean: true,
+          coaComplete: true,
+          noOpenHolds: false,
+          deviationsResolved: true,
+          traceClean: true,
+          blockers: ['Active quality hold in place.'],
+          warnings: [],
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReleaseSummary>)
 
-    // Mock data has overallReadiness: 'blocked'
-    await waitFor(() => {
-      const blocked = screen.queryByText(/blocked/i)
-      expect(blocked).not.toBeNull()
-    })
+    render(<ReleaseSummaryPanel request={request} />)
+
+    expect(screen.queryByText(/blocked/i)).not.toBeNull()
   })
 
-  it('renders recommended action', async () => {
-    render(
-      <Wrapper>
-        <ReleaseSummaryPanel request={request} />
-      </Wrapper>
-    )
+  it('renders recommended action', () => {
+    vi.mocked(useReleaseSummary).mockReturnValue({
+      data: {
+        ok: true,
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+        data: {
+          overallReadiness: 'blocked',
+          recommendedAction: 'reject',
+          qualityPassed: true,
+          spcClean: true,
+          coaComplete: true,
+          noOpenHolds: false,
+          deviationsResolved: true,
+          traceClean: true,
+          blockers: ['Active quality hold in place.'],
+          warnings: [],
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReleaseSummary>)
 
-    // Mock data has recommendedAction: 'reject'
-    await waitFor(() => {
-      const action = screen.queryByText(/reject/i)
-      expect(action).not.toBeNull()
-    })
+    render(<ReleaseSummaryPanel request={request} />)
+
+    expect(screen.queryByText(/reject/i)).not.toBeNull()
+  })
+
+  it('toggles notes and advisories visibility when Hide/Show button is clicked', () => {
+    vi.mocked(useReleaseSummary).mockReturnValue({
+      data: {
+        ok: true,
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+        data: {
+          overallReadiness: 'ready',
+          recommendedAction: 'release',
+          qualityPassed: true,
+          spcClean: true,
+          coaComplete: true,
+          noOpenHolds: true,
+          deviationsResolved: true,
+          traceClean: true,
+          blockers: [],
+          warnings: [],
+        },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReleaseSummary>)
+
+    render(<ReleaseSummaryPanel request={request} />)
+
+    // Initially advisory text is visible and the button shows 'Hide'
+    expect(screen.queryByText(/Recommended actions are system-generated/i)).not.toBeNull()
+    const toggleBtn = screen.getByRole('button', { name: 'Hide' })
+
+    // Click Hide to collapse advisories
+    fireEvent.click(toggleBtn)
+    expect(screen.queryByText(/Recommended actions are system-generated/i)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show' })).toBeDefined()
+
+    // Click Show to restore advisories
+    fireEvent.click(screen.getByRole('button', { name: 'Show' }))
+    expect(screen.queryByText(/Recommended actions are system-generated/i)).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Hide' })).toBeDefined()
   })
 })

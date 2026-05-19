@@ -1,5 +1,6 @@
 import { StandardWorkspaceTemplate } from '@connectio/workspace-runtime'
 import type { ScopeContext } from '@connectio/data-contracts'
+import { VerificationStatusBanner } from '@connectio/design-system'
 import { batchReleaseRegistration } from './batch-release-registration.js'
 import { ReleaseActionsPanel } from './actions/release-actions-panel.js'
 import { ReleaseQueueView } from './views/release-queue-view.js'
@@ -11,8 +12,13 @@ import { DecisionHistoryView } from './views/decision-history-view.js'
 import { LabBoardView } from './views/lab-board-view.js'
 import { useReleaseContext } from './adapters/quality-release-queries.js'
 import type { QualityReleaseAdapterRequest } from './adapters/quality-release-adapter.js'
+// Type-only cross-domain requests needed to build sub-view props in the consolidated Quality Cockpit.
+// These do not introduce runtime dependency/bundling cycles.
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { OperationsEvidenceAdapterRequest } from '@connectio/di-operations'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import type { WarehouseEvidenceAdapterRequest } from '@connectio/di-warehouse'
 
 /** Valid view identifiers for the Quality Batch Release workspace. */
@@ -112,6 +118,28 @@ export function BatchReleaseWorkspace({
       defaultViewId={isValidViewId(viewId) ? viewId : 'release-queue'}
       actionSidebar={<ReleaseActionsPanel context={context} />}
     >
+      <div style={{ padding: '16px 16px 0 16px' }}>
+        <VerificationStatusBanner
+          title="Quality Batch Release Integration Specifications"
+          status="partial-native"
+          sourceLabel="Hybrid/Mixed Quality Data Source"
+          routes={[
+            'GET /api/cq/lab/fails',
+            'GET /api/cq/lab/plants'
+          ]}
+          sourceObjects={[
+            'vw_cq_lab_failures',
+            'vw_cq_lab_plants'
+          ]}
+          limitations={[
+            'UAT verification pending',
+            'Connected Quality Lab Board uses V1 legacy API (/api/cq/lab/fails)',
+            'Batch release summaries, deviations, and CoA readiness are simulated in-memory (mock mode)',
+            'Read-only cockpit — release actions are simulated and will not execute in SAP'
+          ]}
+          lastVerified="Pending UAT Sweep"
+        />
+      </div>
       {activeView}
     </StandardWorkspaceTemplate>
   )

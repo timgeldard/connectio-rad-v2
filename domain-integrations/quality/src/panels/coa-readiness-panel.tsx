@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { CoAReadiness } from '@connectio/data-contracts'
@@ -38,6 +38,7 @@ export interface CoAReadinessPanelProps {
  */
 export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
   const { data: result, isLoading } = useCoAReadiness(request)
+  const [showCustomerCoAs, setShowCustomerCoAs] = useState(true)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,
@@ -61,13 +62,23 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             <ReadinessStatusBadge status={data.readinessStatus} />
-            {data.coaDocumentId && (
+            {data.coaDocumentId ? (
               <CoAField label="Document" value={data.coaDocumentId} />
+            ) : (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D32F2F', marginBottom: 2 }}>
+                  Document
+                </div>
+                <div style={{ fontSize: 12, color: '#D32F2F', fontWeight: 600 }}>
+                  CoA document unavailable
+                </div>
+              </div>
             )}
             {data.signedOffBy && (
               <CoAField label="Signed Off By" value={data.signedOffBy} />
@@ -94,19 +105,42 @@ export function CoAReadinessPanel({ request }: CoAReadinessPanelProps) {
 
           {data.customerSpecificCoas.length > 0 && (
             <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 4 }}>
-                Customer CoAs
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
+                  Customer CoAs
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerCoAs(!showCustomerCoAs)}
+                  style={{
+                    fontSize: 10,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--shell-accent, #4F46E5)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: '2px 4px',
+                  }}
+                >
+                  {showCustomerCoAs ? 'Hide' : 'Show'}
+                </button>
               </div>
-              <div style={{ display: 'grid', gap: 4 }}>
-                {data.customerSpecificCoas.map((c) => (
-                  <div key={c.customerId} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--shell-fg)' }}>{c.customerName}</span>
-                    <CustomerCoAStatus status={c.status} />
-                  </div>
-                ))}
-              </div>
+              {showCustomerCoAs && (
+                <div style={{ display: 'grid', gap: 4 }}>
+                  {data.customerSpecificCoas.map((c) => (
+                    <div key={c.customerId} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--shell-fg)' }}>{c.customerName}</span>
+                      <CustomerCoAStatus status={c.status} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+
+          <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
+            This panel uses simulated mock data. CoA readiness checks document completeness and draft signature status. Live customer sign-off must be verified before final physical shipment.
+          </div>
         </div>
       )}
     </EvidencePanel>
@@ -118,6 +152,7 @@ const READINESS_STYLE: Record<string, { fg: string }> = {
   incomplete: { fg: '#D32F2F' },
   'pending-sign-off': { fg: '#FF9800' },
   'not-applicable': { fg: '#9E9E9E' },
+  unknown: { fg: '#9E9E9E' },
 }
 
 function ReadinessStatusBadge({ status }: { status: string }) {

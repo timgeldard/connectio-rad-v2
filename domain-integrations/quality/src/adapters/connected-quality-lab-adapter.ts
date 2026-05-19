@@ -22,7 +22,7 @@ function err<T>(
   message: string,
   retryable = false,
 ): AdapterResult<T> {
-  return { ok: false, error: { code, message, retryable }, displayState: 'error' }
+  return { ok: false, error: { code, message, retryable }, displayState: 'error', source: 'mock' }
 }
 
 export interface ConnectedQualityLabAdapterOptions {

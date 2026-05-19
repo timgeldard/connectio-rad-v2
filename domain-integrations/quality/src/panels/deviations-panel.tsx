@@ -54,6 +54,7 @@ export function DeviationsPanel({ request }: DeviationsPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
@@ -69,14 +70,14 @@ export function DeviationsPanel({ request }: DeviationsPanelProps) {
               <div style={{ display: 'grid', gap: 6 }}>
                 {data.deviations.map((dev) => (
                   <div
-                    key={dev.deviationId}
-                    style={{
-                      fontSize: 12,
-                      padding: '6px 8px',
-                      background: 'var(--shell-surface-2)',
-                      borderRadius: 4,
-                      borderLeft: `3px solid ${dev.impactsRelease ? '#D32F2F' : '#9E9E9E'}`,
-                    }}
+                     key={dev.deviationId}
+                     style={{
+                       fontSize: 12,
+                       padding: '6px 8px',
+                       background: 'var(--shell-surface-2)',
+                       borderRadius: 4,
+                       borderLeft: `3px solid ${dev.impactsRelease ? '#D32F2F' : '#9E9E9E'}`,
+                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -98,6 +99,10 @@ export function DeviationsPanel({ request }: DeviationsPanelProps) {
               </div>
             </div>
           )}
+
+          <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 8, marginTop: 4, fontSize: 11, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
+            This panel uses simulated mock data. Deviation blocking status is derived from quality records. Review closed or waived deviations to ensure all critical conditions are verified.
+          </div>
         </div>
       )}
     </EvidencePanel>
