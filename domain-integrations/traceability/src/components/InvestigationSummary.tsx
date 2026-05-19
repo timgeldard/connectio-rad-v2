@@ -194,7 +194,7 @@ export function InvestigationSummary({
             letterSpacing: '0.12em',
             fontWeight: 700,
             textTransform: 'uppercase',
-            color: severity === 'LOW' ? 'var(--shell-good, #1F8B4C)' : 'var(--shell-bad, #C73315)',
+            color: severity === 'LOW' ? 'var(--shell-good, #1F8B4C)' : severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
             background: 'rgba(255, 255, 255, 0.5)',
             padding: '2px 6px',
             borderRadius: 3,
