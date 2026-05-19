@@ -50,7 +50,7 @@ function BatchHeaderErrorBanner({ code, message }: Pick<AdapterError, 'code' | '
         padding: '10px 14px',
         borderRadius: 6,
         border: '1px solid var(--sunset, #F24A00)',
-        background: 'color-mix(in srgb, var(--sunset, #F24A00) 8%, transparent)',
+        background: 'rgba(242, 74, 0, 0.08)',
         display: 'flex',
         gap: 10,
         alignItems: 'flex-start',

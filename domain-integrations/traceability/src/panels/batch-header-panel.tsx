@@ -87,8 +87,7 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
             )}
           </div>
           <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 4 }}>
-            Data freshness not available — displayed values reflect query time only. See{' '}
-            <em>data-freshness-plan.md</em> for the implementation roadmap.
+            Data freshness not available — values were retrieved at query time, but the underlying Databricks refresh time is not yet shown.
           </div>
         </div>
       )}

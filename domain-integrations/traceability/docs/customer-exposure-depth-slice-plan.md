@@ -202,8 +202,8 @@ When implementation begins, add:
 |---|---|
 | Direct shipment batch (depth=1) | `maxExposureDepth=1` → CRITICAL severity in cockpit |
 | Multi-hop indirect batch (depth=2) | `maxExposureDepth=2` → `High Indirect Exposure` label in cockpit |
-| Batch with no downstream deliveries | `CustomerExposureSummary.shippedQuantity=0` → Low Risk with confirmed-zero message |
-| Batch where delivery view returns no rows | `customerExposure=null` → UNKNOWN severity, "do not assume containment" banner |
+| Batch where delivery view returns no rows | `customerExposure=null` → UNKNOWN severity, "do not assume containment" banner. **Note:** zero rows cannot be distinguished from missing delivery data until a confirmed-zero sentinel pattern is verified in a live session — do not interpret as Low Risk. |
+| Batch with confirmed zero deliveries (sentinel validated) | After a confirmed-zero sentinel is implemented and verified: `CustomerExposureSummary.shippedQuantity=0` may map to Low Risk. Requires explicit implementation and UAT sign-off before this scenario is trusted. |
 | Batch with mixed depth=1 and depth=2 deliveries | `maxExposureDepth=1` (min depth) → CRITICAL |
 
 ---

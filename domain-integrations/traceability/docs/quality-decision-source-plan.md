@@ -167,7 +167,7 @@ Before implementation, a Databricks-connected tester must:
 2. Run `DESCRIBE TABLE <catalog>.<schema>.gold_qm_usage_decision_v` (or equivalent confirmed name).
 3. Identify the usage decision code column and its accepted values.
 4. Run a sample join for the reference candidate batch (`000000000020052009` / `0008602411`) to confirm the join produces expected results.
-5. Confirm whether `'not-applicable'` cases (no inspection lot) can be distinguished from `'unknown'` (missing data).
+5. Confirm that an absent inspection lot maps to `'unknown'` (missing data), not `'not-applicable'`. `'not-applicable'` must only be assigned when a confirmed business rule explicitly exempts the material or batch type from QM inspection — it is not a fallback for missing lot data.
 6. Record results in `docs/migration/databricks-column-verification-queries.md`.
 
 ---

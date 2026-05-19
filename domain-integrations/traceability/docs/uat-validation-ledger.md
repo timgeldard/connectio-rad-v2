@@ -74,7 +74,7 @@ Fill these in during the session. Record only observed values — do not infer o
 | Session date | YYYY-MM-DD | — |
 | App version commit | `git rev-parse --short HEAD` on the deployed build | — |
 | App URL / environment name | Full URL or environment label | — |
-| Tester identity | Name or email (no tokens, no credentials) | — |
+| Tester identity | Alias, initials, or ticket reference — no full name or email address | — |
 | Adapter mode confirmed | Source badge text shown on batch header panel | — |
 | **Batch header** | | |
 | Batch header — returned? | Yes / No / Error | — |
@@ -144,7 +144,7 @@ If `qualityStatus` returns `"pending"`: QI stock > 0 was detected. An open quali
 | `date` | Date of the session in YYYY-MM-DD format. |
 | `environment` | Name of the target environment (e.g. `databricks-apps-dev`, `databricks-apps-uat`). |
 | `app_version_commit` | The short git commit SHA (`git rev-parse --short HEAD`) of the build under test. |
-| `tester` | Name or email of the person who ran the session. |
+| `tester` | Alias, initials, or ticket reference — no full name or email address. |
 | `batch_tested` | The material ID, batch ID, and plant ID entered in the query form (format: `materialId / batchId / plantId`). |
 | `scenario_ref` | Scenario number(s) from `uat-acceptance-script.md` exercised in this run (e.g. `S1, S2, S3`). |
 | `result` | `pass` — all pass criteria met; `fail` — one or more fail criteria triggered; `blocked` — scenario could not be executed (state the blocker in notes). |

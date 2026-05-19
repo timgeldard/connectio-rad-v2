@@ -173,6 +173,9 @@ describe('OverviewView — batch header error states (TRACE-P1-003)', () => {
     expect(screen.getByTestId('mock-batch-header-panel')).not.toBeNull()
     expect(screen.getByTestId('mock-risk-signals-panel')).not.toBeNull()
     expect(screen.getByTestId('mock-trace-graph-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-customer-impact-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-coa-release-status-panel')).not.toBeNull()
+    expect(screen.getByTestId('mock-event-timeline-panel')).not.toBeNull()
   })
 })
 
