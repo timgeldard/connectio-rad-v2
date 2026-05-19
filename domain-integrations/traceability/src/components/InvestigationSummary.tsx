@@ -32,6 +32,7 @@ export function InvestigationSummary({
   }
 
   // Calculate shelf-life metrics
+  const hasExpiry = !!batchHeader?.expiryDate
   let daysToExpiry = 0
   let isExpired = false
   let isNearExpiry = false
@@ -74,7 +75,7 @@ export function InvestigationSummary({
     actionGuidance = 'Monitor stock position and adjacent production batches.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
-  } else if (hasUnrestrictedStock && ['blocked', 'quality-inspection'].includes(batchHeader?.stockStatus || '')) {
+  } else if (hasUnrestrictedStock && batchHeader?.stockStatus === 'unrestricted') {
     severity = 'MEDIUM'
     alertMessage = 'Action Required: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
     actionGuidance = 'Monitor stock position and adjacent production batches.'
@@ -274,11 +275,11 @@ export function InvestigationSummary({
           <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
             Shelf Life
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: isExpired ? 'var(--shell-bad, #C73315)' : isNearExpiry ? 'var(--shell-warn, #C7821C)' : 'var(--shell-good, #1F8B4C)' }}>
-            {isExpired ? 'Expired' : `${daysToExpiry} days`}
+          <div style={{ fontSize: 15, fontWeight: 700, color: !hasExpiry ? 'var(--shell-fg-3, #7A8A75)' : isExpired ? 'var(--shell-bad, #C73315)' : isNearExpiry ? 'var(--shell-warn, #C7821C)' : 'var(--shell-good, #1F8B4C)' }}>
+            {!hasExpiry ? '—' : isExpired ? 'Expired' : `${daysToExpiry} days`}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            expires {formattedExpiryDate}
+            {!hasExpiry ? 'No expiry date' : `expires ${formattedExpiryDate}`}
           </div>
         </div>
 

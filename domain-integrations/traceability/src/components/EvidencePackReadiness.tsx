@@ -20,19 +20,21 @@ export function EvidencePackReadiness({ confidence, style }: EvidencePackReadine
   const [checkedSectors, setCheckedSectors] = useState<Record<string, boolean>>({})
   const [dossierCompiled, setDossierCompiled] = useState(false)
 
+  const { lineage, customers, massBalance, quality, coa, suppliers } = confidence.details
+
   // Sync automatic checkmarks from the calculated payload
   useEffect(() => {
     const nextChecks: Record<string, boolean> = {
-      lineage: confidence.details.lineage === 'complete',
-      customers: confidence.details.customers === 'complete',
-      massBalance: confidence.details.massBalance === 'complete',
-      quality: confidence.details.quality === 'complete',
-      coa: confidence.details.coa === 'complete',
-      suppliers: confidence.details.suppliers === 'complete',
+      lineage: lineage === 'complete',
+      customers: customers === 'complete',
+      massBalance: massBalance === 'complete',
+      quality: quality === 'complete',
+      coa: coa === 'complete',
+      suppliers: suppliers === 'complete',
     }
     setCheckedSectors(nextChecks)
     setDossierCompiled(false)
-  }, [confidence])
+  }, [lineage, customers, massBalance, quality, coa, suppliers])
 
   const handleToggle = (id: string) => {
     if (dossierCompiled) return

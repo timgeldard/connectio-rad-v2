@@ -61,4 +61,21 @@ describe('EvidencePackReadiness', () => {
 
     expect(screen.getByText(/Dossier Compiled & Digitally Signed/)).not.toBeNull()
   })
+
+  it('persists manual checklist toggles across re-renders with identical confidence details', () => {
+    const { rerender } = render(<EvidencePackReadiness confidence={mockConfidence} />)
+
+    // Initially 4/6 are checked, so count is 4 / 6 (67%)
+    expect(screen.getByText('4 / 6 (67%)')).not.toBeNull()
+
+    // Toggle 'Quality inspection lots parsed' manually
+    fireEvent.click(screen.getByText('Quality inspection lots parsed'))
+    expect(screen.getByText('5 / 6 (83%)')).not.toBeNull()
+
+    // Rerender with a new confidence object containing identical details
+    rerender(<EvidencePackReadiness confidence={{ ...mockConfidence }} />)
+
+    // Verify it is still 5/6 (83%) and didn't reset back to 4/6 (67%)
+    expect(screen.getByText('5 / 6 (83%)')).not.toBeNull()
+  })
 })
