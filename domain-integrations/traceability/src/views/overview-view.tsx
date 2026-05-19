@@ -129,6 +129,7 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
           initialMaterialId={request.materialId}
           initialBatchId={request.batchId}
           initialPlantId={request.plantId}
+          hideCandidateButton={true}
         />
       </TraceabilityInitialState>
     )

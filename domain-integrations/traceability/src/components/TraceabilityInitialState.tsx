@@ -14,16 +14,42 @@ export interface TraceabilityInitialStateProps {
 
 export function TraceabilityInitialState({ onLoadCandidate, adapterMode, children }: TraceabilityInitialStateProps) {
   const evidenceSlices: EvidenceStatus[] = [
-    { name: 'Batch Header', status: 'live', description: 'Partially live-verified field mapping.' },
-    { name: 'Trace Graph', status: 'live', description: 'Native Databricks path; validation pending.' },
-    { name: 'Mass Balance', status: 'mock', description: 'High-fidelity simulation; live verification pending.' },
-    { name: 'Customer Exposure', status: 'unavailable', description: 'Planned; requires depth-slice validation.' },
-    { name: 'Quality / CoA', status: 'mock', description: 'Mock-fixtures; source QM alignment pending.' },
-    { name: 'Risk Signals', status: 'mock', description: 'Rule-engine simulation.' }
+    { 
+      name: 'Batch Header', 
+      status: 'verified-partial', 
+      description: 'Selected field mapping has live Databricks verification; full source freshness is not yet shown.' 
+    },
+    { 
+      name: 'Trace Graph', 
+      status: 'native-path', 
+      description: 'Native Databricks trace path is available; broader live lineage validation remains pending.' 
+    },
+    { 
+      name: 'Mass Balance', 
+      status: 'pending-validation', 
+      description: 'High-fidelity simulation; live verification pending.' 
+    },
+    { 
+      name: 'Customer Exposure', 
+      status: 'planned', 
+      description: 'Planned; exposure unavailable is not zero exposure.' 
+    },
+    { 
+      name: 'Quality / CoA', 
+      status: 'planned', 
+      description: 'QM usage-decision source remains pending.' 
+    },
+    { 
+      name: 'Risk Signals', 
+      status: 'pending-validation', 
+      description: 'Rule-engine simulation; not yet tied to production rule validation.' 
+    }
   ]
 
-  const statusColors: Record<EvidenceStatus['status'], string> = {
-    live: 'var(--shell-good, #1F8B4C)',
+  const statusColors: Record<string, string> = {
+    'verified-partial': 'var(--shell-good, #1F8B4C)',
+    'native-path': 'var(--shell-accent, #0066CC)',
+    'pending-validation': 'var(--shell-warn, #C7821C)',
     mock: 'var(--shell-warn, #C7821C)',
     planned: 'var(--shell-fg-3)',
     unavailable: 'var(--shell-bad, #C73315)',
@@ -64,9 +90,9 @@ export function TraceabilityInitialState({ onLoadCandidate, adapterMode, childre
           <div style={{ display: 'flex', gap: 8, fontSize: '12px' }}>
              <span style={{ color: 'var(--shell-fg-2)' }}>Mode: <strong>{adapterMode}</strong></span>
              <span style={{ color: 'var(--shell-fg-3)' }}>|</span>
-             <span style={{ color: 'var(--shell-fg-2)' }}>Header: <span style={{ color: statusColors.live }}>Live (Partial)</span></span>
+             <span style={{ color: 'var(--shell-fg-2)' }}>Header: <span style={{ color: statusColors['verified-partial'] }}>Partially Verified</span></span>
              <span style={{ color: 'var(--shell-fg-3)' }}>|</span>
-             <span style={{ color: 'var(--shell-fg-2)' }}>Exposure: <span style={{ color: statusColors.unavailable }}>Unavailable</span></span>
+             <span style={{ color: 'var(--shell-fg-2)' }}>Graph: <span style={{ color: statusColors['native-path'] }}>Native Path</span></span>
           </div>
         </div>
         <p style={{ margin: 0, fontSize: '11px', color: 'var(--shell-fg-3)', maxWidth: 400 }}>
@@ -118,7 +144,7 @@ export function TraceabilityInitialState({ onLoadCandidate, adapterMode, childre
               cursor: 'pointer'
             }}
           >
-            Load UAT Candidate
+            Run UAT Candidate Trace
           </button>
         </div>
       </div>

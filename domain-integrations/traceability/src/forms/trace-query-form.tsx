@@ -21,11 +21,12 @@ export interface TraceQueryFormProps {
   initialMaterialId?: string
   initialBatchId?: string
   initialPlantId?: string
+  hideCandidateButton?: boolean
 }
 
 /** Returns a stored-key suggestion if the input looks like an 18-char SAP ALPHA-padded material ID. */
 function buildSuggestion(materialId: string): string | null {
-  if (materialId.length === 18 && materialId.startsWith('0')) {
+  if (/^\d{18}$/.test(materialId) && materialId.startsWith('0')) {
     const stripped = materialId.replace(/^0+/, '')
     return stripped !== materialId ? stripped : null
   }
@@ -46,6 +47,7 @@ export function TraceQueryForm({
   initialMaterialId,
   initialBatchId,
   initialPlantId,
+  hideCandidateButton = false,
 }: TraceQueryFormProps) {
   const [materialId, setMaterialId] = useState(initialMaterialId ?? DEFAULT_MATERIAL)
   const [batchId, setBatchId] = useState(initialBatchId ?? DEFAULT_BATCH)
@@ -236,7 +238,7 @@ export function TraceQueryForm({
             </select>
           </label>
           <label style={labelStyle}>
-            Max depth (Planned)
+            Max depth (Trace limit)
             <select
               value={maxDepth}
               onChange={e => setMaxDepth(Number(e.target.value))}
@@ -249,9 +251,10 @@ export function TraceQueryForm({
               <option value={3}>3</option>
               <option value={4}>4</option>
             </select>
+            <span style={helperStyle}>Trace limit uses current UAT default.</span>
           </label>
           <label style={labelStyle}>
-            Max edges (Planned)
+            Max edges (Trace limit)
             <select
               value={maxEdges}
               onChange={e => setMaxEdges(Number(e.target.value))}
@@ -263,6 +266,7 @@ export function TraceQueryForm({
               <option value={500}>500</option>
               <option value={1000}>1000</option>
             </select>
+            <span style={helperStyle}>Trace limit uses current UAT default.</span>
           </label>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
@@ -274,14 +278,16 @@ export function TraceQueryForm({
             >
               Reset
             </button>
-            <button
-              type="button"
-              onClick={handleLoadUatCandidate}
-              data-testid="btn-load-uat-candidate"
-              style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--shell-line)', background: 'var(--shell-surface)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
-            >
-              Load UAT Candidate
-            </button>
+            {!hideCandidateButton && (
+              <button
+                type="button"
+                onClick={handleLoadUatCandidate}
+                data-testid="btn-load-uat-candidate"
+                style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--shell-line)', background: 'var(--shell-surface)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+              >
+                Load UAT Candidate
+              </button>
+            )}
             <button
               type="button"
               onClick={handleCopy}

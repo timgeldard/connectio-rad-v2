@@ -24,6 +24,8 @@ describe('TraceQueryForm — defaults', () => {
     expect((screen.getByTestId('select-direction') as HTMLSelectElement).value).toBe('both')
     expect((screen.getByTestId('select-max-depth') as HTMLSelectElement).value).toBe('2')
     expect((screen.getByTestId('select-max-edges') as HTMLSelectElement).value).toBe('100')
+    expect(screen.getByText(/Max depth \(Trace limit\)/)).not.toBeNull()
+    expect(screen.getByText(/Max edges \(Trace limit\)/)).not.toBeNull()
   })
 
   it('renders Run Trace, Reset to test case, and Copy payload buttons', () => {
@@ -90,6 +92,14 @@ describe('TraceQueryForm — material ID suggestion (§6)', () => {
     })
     expect(screen.queryByTestId('material-id-suggestion')).toBeNull()
   })
+
+  it('does not show suggestion for 18-char non-numeric string starting with 0', () => {
+    render(<TraceQueryForm onSubmit={vi.fn()} />)
+    fireEvent.change(screen.getByTestId('input-material-id'), {
+      target: { value: '000000000A10023847' },
+    })
+    expect(screen.queryByTestId('material-id-suggestion')).toBeNull()
+  })
 })
 
 describe('TraceQueryForm — form submission', () => {
@@ -112,13 +122,12 @@ describe('TraceQueryForm — form submission', () => {
     const onSubmit = vi.fn()
     render(<TraceQueryForm onSubmit={onSubmit} />)
     fireEvent.change(screen.getByTestId('select-direction'), { target: { value: 'upstream' } })
-    fireEvent.change(screen.getByTestId('select-max-depth'), { target: { value: '4' } })
-    fireEvent.change(screen.getByTestId('select-max-edges'), { target: { value: '500' } })
+    // maxDepth/maxEdges are disabled in UI but we check they are still in the request builder
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     const req = onSubmit.mock.calls[0][0] as Trace2AdapterRequest
     expect(req.direction).toBe('upstream')
-    expect(req.maxDepth).toBe(4)
-    expect(req.maxEdges).toBe(500)
+    expect(req.maxDepth).toBe(2)
+    expect(req.maxEdges).toBe(100)
   })
 })
 
