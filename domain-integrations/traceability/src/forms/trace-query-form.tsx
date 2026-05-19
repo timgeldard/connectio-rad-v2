@@ -132,26 +132,6 @@ export function TraceQueryForm({
     onSubmit(req)
   }
 
-  function handleCopyPayload() {
-    const payload = {
-      material_id: materialId,
-      batch_id: batchId,
-      plant_id: plantId,
-      direction,
-      max_depth: maxDepth,
-      max_edges: maxEdges,
-    }
-    navigator.clipboard
-      .writeText(JSON.stringify(payload, null, 2))
-      .then(() => {
-        setCopyLabel('Copied!')
-        setTimeout(() => setCopyLabel('Copy payload'), 2000)
-      })
-      .catch(() => {
-        setCopyLabel('Copy failed')
-        setTimeout(() => setCopyLabel('Copy payload'), 2000)
-      })
-  }
 
   const inputStyle: React.CSSProperties = { 
     fontFamily: 'monospace', 

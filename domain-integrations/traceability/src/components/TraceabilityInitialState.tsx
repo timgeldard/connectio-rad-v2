@@ -1,8 +1,17 @@
 import React from 'react'
 
+type EvidenceReadinessStatus =
+  | 'verified-partial'
+  | 'native-path'
+  | 'pending-validation'
+  | 'mock'
+  | 'planned'
+  | 'unavailable'
+  | 'unknown'
+
 interface EvidenceStatus {
   readonly name: string
-  readonly status: 'live' | 'mock' | 'planned' | 'unavailable' | 'unknown'
+  readonly status: EvidenceReadinessStatus
   readonly description: string
 }
 
@@ -46,7 +55,7 @@ export function TraceabilityInitialState({ onLoadCandidate, adapterMode, childre
     }
   ]
 
-  const statusColors: Record<string, string> = {
+  const statusColors: Record<EvidenceReadinessStatus, string> = {
     'verified-partial': 'var(--shell-good, #1F8B4C)',
     'native-path': 'var(--shell-accent, #0066CC)',
     'pending-validation': 'var(--shell-warn, #C7821C)',
