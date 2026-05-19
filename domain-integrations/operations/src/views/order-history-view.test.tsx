@@ -420,4 +420,24 @@ describe('OrderHistoryView', () => {
     expect(screen.getByText(/No process operations or phases recorded/i)).toBeInTheDocument()
     expect(screen.getByText(/EMPTY/i)).toBeInTheDocument()
   })
+
+  it('disables planned/diagnostic filters and renders warning copy and wired labels', () => {
+    render(
+      <Wrapper>
+        <OrderHistoryView />
+      </Wrapper>
+    )
+
+    // Verify disabled inputs
+    expect(screen.getByLabelText('Material ID')).toBeDisabled()
+    expect(screen.getByLabelText('Batch ID')).toBeDisabled()
+    expect(screen.getByLabelText('Posting Date From')).toBeDisabled()
+    expect(screen.getByLabelText('Posting Date To')).toBeDisabled()
+    expect(screen.getByLabelText('Max Rows Limit')).toBeDisabled()
+
+    // Verify warning & explanatory copy
+    expect(screen.getByText(/Diagnostic \/ planned filters — not applied by current native routes/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Planned filter — not applied to database queries/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Wired to Header query only/i)).toBeInTheDocument()
+  })
 })

@@ -597,6 +597,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               </label>
               <input
                 type="text"
+                aria-label="Plant ID"
                 value={form.plantId}
                 onChange={e => handleInputChange('plantId', e.target.value)}
                 placeholder="e.g. IE10"
@@ -619,6 +620,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               </label>
               <input
                 type="text"
+                aria-label="Material ID"
                 value={form.materialId}
                 onChange={e => handleInputChange('materialId', e.target.value)}
                 placeholder="e.g. MAT-CH-EMMENTAL"
@@ -644,6 +646,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
               </label>
               <input
                 type="text"
+                aria-label="Batch ID"
                 value={form.batchId}
                 onChange={e => handleInputChange('batchId', e.target.value)}
                 placeholder="e.g. CH-240308-0047"
@@ -683,6 +686,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </label>
                 <input
                   type="datetime-local"
+                  aria-label="Posting Date From"
                   value={form.dateFrom}
                   onChange={e => handleInputChange('dateFrom', e.target.value)}
                   disabled={true}
@@ -707,6 +711,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </label>
                 <input
                   type="datetime-local"
+                  aria-label="Posting Date To"
                   value={form.dateTo}
                   onChange={e => handleInputChange('dateTo', e.target.value)}
                   disabled={true}
@@ -732,6 +737,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </div>
                 <input
                   type="range"
+                  aria-label="Max Rows Limit"
                   min="1"
                   max="500"
                   value={form.limit}
