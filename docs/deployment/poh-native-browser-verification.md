@@ -64,7 +64,7 @@ Now, change adapter mode to target the live database:
 1. Stop the Vite server, set `VITE_ADAPTER_MODE=legacy-api` to query the FastAPI backend proxy, and ensure the backend is configured with `BACKEND_ADAPTER_MODE=databricks-api` for real Databricks data. Restart the Vite server.
 2. In the query form, enter a known, verified UAT process order ID. Example:
    - **Process Order ID:** `7006965038`
-   - **Plant ID:** `IE10`
+   - **Plant ID:** `C113`
 3. Click **Run / Refresh**.
 4. Check each card's dynamic source status badge:
    - Confirm they display `DATABRICKS-API` (green) instead of `MOCK`.

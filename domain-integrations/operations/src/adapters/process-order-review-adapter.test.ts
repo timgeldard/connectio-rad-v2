@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
+import { ProcessOrderReviewAdapter, toProcessOrderReviewAdapterError } from './process-order-review-adapter.js'
 
 const FIXED_NOW = '2024-03-08T10:00:00.000Z'
 const adapter = new ProcessOrderReviewAdapter({ now: () => FIXED_NOW })
@@ -279,6 +279,28 @@ describe('ProcessOrderReviewAdapter', () => {
     it('includes fetchedAt timestamp', async () => {
       const result = await adapter.getOrderGoodsMovements(request)
       expect(result.ok && result.fetchedAt).toBe(FIXED_NOW)
+    })
+  })
+
+  describe('source attribution', () => {
+    it('returns source: "mock" for success paths', async () => {
+      const headerRes = await adapter.getProcessOrderHeader(request)
+      expect(headerRes.source).toBe('mock')
+
+      const opsRes = await adapter.getOrderOperations(request)
+      expect(opsRes.source).toBe('mock')
+
+      const confRes = await adapter.getOrderConfirmations(request)
+      expect(confRes.source).toBe('mock')
+
+      const movsRes = await adapter.getOrderGoodsMovements(request)
+      expect(movsRes.source).toBe('mock')
+    })
+
+    it('returns source: "mock" for error paths', () => {
+      const errRes = toProcessOrderReviewAdapterError(new Error('Test error'))
+      expect(errRes.ok).toBe(false)
+      expect(errRes.source).toBe('mock')
     })
   })
 })
