@@ -360,13 +360,13 @@ After running the sections above, record results here and in
 
 | Field | Value |
 |---|---|
-| **Tester identity** | TG (tim.geldard@kerry.com) |
+| **Tester identity** | TG / internal UAT tester (identity evidence retained outside repo) |
 | **Date / time (UTC)** | 2026-05-19 |
 | **Databricks workspace URL** | `https://adb-604667594731808.8.azuredatabricks.net` |
 | **Catalog** | `connected_plant_uat` |
 | **Schema** | `gold` |
 | **App version / commit** | ffe581c (feature/traceability-first-live-validation-pack) |
-| **Current user confirmed** | Yes — OAuth identity tim.geldard@kerry.com (not service principal) |
+| **Current user confirmed** | Yes — named user OAuth principal observed, not service principal; identity evidence retained outside repo |
 | **gold_batch_summary_v confirmed** | Partial — MANUFACTURE_DATE and SHELF_LIFE_EXPIRATION_DATE confirmed. PLANT_ID, BATCH_STATUS, UOM, PROCESS_ORDER_ID not present. See `databricks-column-verification-queries.md`. |
 | **gold_batch_stock_v confirmed** | Yes — PLANT_ID, unrestricted, blocked, quality_inspection, total_stock confirmed from candidate batch 20035129/8000049668 |
 | **restricted column exists** | Not confirmed (candidate batch returned rows but restricted/transit values not specifically checked) |

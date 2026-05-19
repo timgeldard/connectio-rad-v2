@@ -195,7 +195,7 @@ into the UAT validation ledger (`domain-integrations/traceability/docs/uat-valid
 
 | Field | Value |
 |-------|-------|
-| **Tester identity** | TG (tim.geldard@kerry.com) |
+| **Tester identity** | TG / internal UAT tester (identity evidence retained outside repo) |
 | **Date / time (UTC)** | 2026-05-19 |
 | **Databricks workspace URL** | `https://adb-604667594731808.8.azuredatabricks.net` |
 | **Catalog** | `connected_plant_uat` |
@@ -255,5 +255,12 @@ Once the column names are confirmed:
 | join key           | gold_batch_summary_v  | `material_id + batch_id`        | VERIFIED |
 | `language_id='EN'` | gold_material         | `LANGUAGE_ID = 'E'`             | RESOLVED |
 
-All items resolved. Adapter updated in `apps/api/adapters/trace2/trace2_databricks_adapter.py`
-(verified 2026-05-19, connected_plant_uat). See commit for full diff.
+All `gold_batch_summary_v` batch-header query assumptions resolved. Adapter updated in
+`apps/api/adapters/trace2/trace2_databricks_adapter.py` (verified 2026-05-19, connected_plant_uat).
+See commit for full diff.
+
+**Remaining open validation items (not addressed by this run):**
+- `gold_batch_mass_balance_v` WHERE filter column names unverified (TODO still present in adapter).
+- Live lineage query (Section 6) not run against confirmed UAT batch — reference candidate returned 0 rows.
+- `gold_batch_delivery_v` and QM views not checked in UAT environment.
+- `batch_status` and `process_order_id` sources in connected_plant_uat unknown.

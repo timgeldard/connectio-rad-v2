@@ -73,6 +73,12 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     Cache: PER_USER_60S — batch release/block status can change during a shift.
     Parallel validation: possible against browser-verified POST /api/trace2/batch-header.
 
+    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When a
+    material/batch exists in multiple plants the query returns rows for all of them, ordered
+    by PLANT_ID, and the mapper takes the first. Future hardening: if Trace2BatchHeaderRequest
+    carries plant_id, add AND s.PLANT_ID = :plant_id to the WHERE clause to avoid
+    cross-plant ambiguity.
+
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
     tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
