@@ -1,19 +1,9 @@
-import type { ProcessOrderReleaseEvidence } from '@connectio/data-contracts'
-import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
+import type {
+  ProcessOrderReleaseEvidence,
+  OperationsEvidenceAdapterRequest,
+} from '@connectio/data-contracts'
+import type { AdapterError, AdapterResult } from '@connectio/source-adapters'
 import { mockProcessOrderEvidence } from './operations-evidence-mock-data.js'
-
-/**
- * Request context for the operations evidence adapter.
- *
- * @remarks
- * Phase 1 uses mock data. Phase 2 will query the POH backend
- * using `processOrderId` and `batchId`.
- */
-export interface OperationsEvidenceAdapterRequest {
-  readonly processOrderId?: string
-  readonly batchId?: string
-  readonly releaseCaseId?: string
-}
 
 /** Resolves to an ISO 8601 timestamp representing "now". */
 export type NowFn = () => string

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { spcMonitoringAdapter } from './spc-monitoring-adapter.js'
+import { spcMonitoringAdapter } from './spc-monitoring-adapter-factory.js'
 import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
 
 const STALE = 5 * 60 * 1000

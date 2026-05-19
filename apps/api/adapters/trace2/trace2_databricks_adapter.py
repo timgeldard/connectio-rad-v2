@@ -335,11 +335,11 @@ def map_trace_graph(
 
     nodes: dict[str, dict] = {
         anchor_key: {
-            "nodeKey": anchor_key,
+            "id": anchor_key,
             "materialId": request.material_id,
+            "materialDescription": "",  # Anchor description often unknown without extra hop
             "batchId": request.batch_id,
             "plantId": request.plant_id,
-            "label": f"{request.material_id} / {request.batch_id}",
             "depth": 0,
             "directions": ["anchor"],
             "isAnchor": True,
@@ -388,18 +388,21 @@ def map_trace_graph(
     if depth_reached >= request.max_depth and tagged_rows:
         warnings.append("max_depth_reached")
 
+    upstream_count = sum(1 for n in nodes.values() if "upstream" in n["directions"])
+    downstream_count = sum(1 for n in nodes.values() if "downstream" in n["directions"])
+    unresolved_count = sum(1 for n in nodes.values() if n.get("status") == "unresolved")
+
     return {
-        "anchor": {
-            "materialId": request.material_id,
-            "batchId": request.batch_id,
-            "plantId": request.plant_id,
-            "nodeKey": anchor_key,
-        },
         "nodes": list(nodes.values()),
         "edges": list(edges.values()),
-        "depthReached": depth_reached,
-        "truncated": truncated,
+        "direction": request.direction,
+        "depth": depth_reached,
+        "rootBatch": f"{request.material_id}/{request.batch_id}",
+        "upstreamCount": upstream_count,
+        "downstreamCount": downstream_count,
+        "unresolvedNodeCount": unresolved_count,
         "warnings": warnings,
+        "truncated": truncated,
     }
 
 
@@ -536,11 +539,11 @@ def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
     bat = row[f"{prefix}_batch_id"]
     pla = row[f"{prefix}_plant_id"]
     return {
-        "nodeKey": _node_key(mat, bat),
+        "id": _node_key(mat, bat),
         "materialId": mat,
+        "materialDescription": row.get(f"{prefix}_material_name") or row.get("material_name") or "",
         "batchId": bat,
         "plantId": pla,
-        "label": f"{mat} / {bat}",
         "depth": depth,
         "directions": [direction],
         "isAnchor": False,
@@ -569,11 +572,9 @@ def _make_graph_edge(
         "deliveryId": row.get("delivery_id"),
         "salesOrderId": row.get("sales_order_id"),
         "quantity": float(qty_raw) if qty_raw is not None else None,
-        "baseUnitOfMeasure": row.get("base_unit_of_measure"),
+        "uom": row.get("uom") or row.get("base_unit_of_measure"),
         "postingDate": row.get("posting_date"),
         "movementType": row.get("movement_type"),
-        "depth": depth,
-        "direction": direction,
     }
 
 

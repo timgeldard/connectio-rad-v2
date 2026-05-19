@@ -1,5 +1,10 @@
 import { StandardWorkspaceTemplate } from '@connectio/workspace-runtime'
-import type { ScopeContext } from '@connectio/data-contracts'
+import type {
+  ScopeContext,
+  Trace2AdapterRequest,
+  OperationsEvidenceAdapterRequest,
+  WarehouseEvidenceAdapterRequest,
+} from '@connectio/data-contracts'
 import { VerificationStatusBanner } from '@connectio/design-system'
 import { batchReleaseRegistration } from './batch-release-registration.js'
 import { ReleaseActionsPanel } from './actions/release-actions-panel.js'
@@ -12,14 +17,6 @@ import { DecisionHistoryView } from './views/decision-history-view.js'
 import { LabBoardView } from './views/lab-board-view.js'
 import { useReleaseContext } from './adapters/quality-release-queries.js'
 import type { QualityReleaseAdapterRequest } from './adapters/quality-release-adapter.js'
-// Type-only cross-domain requests needed to build sub-view props in the consolidated Quality Cockpit.
-// These do not introduce runtime dependency/bundling cycles.
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import type { Trace2AdapterRequest } from '@connectio/di-traceability'
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import type { OperationsEvidenceAdapterRequest } from '@connectio/di-operations'
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import type { WarehouseEvidenceAdapterRequest } from '@connectio/di-warehouse'
 
 /** Valid view identifiers for the Quality Batch Release workspace. */
 export type BatchReleaseViewId =

@@ -176,7 +176,7 @@ describe('TraceGraphSchema', () => {
   })
 
   it('rejects an unknown direction', () => {
-    expect(TraceGraphSchema.safeParse({ ...valid, direction: 'upstream' }).success).toBe(false)
+    expect(TraceGraphSchema.safeParse({ ...valid, direction: 'sideways' }).success).toBe(false)
   })
 })
 

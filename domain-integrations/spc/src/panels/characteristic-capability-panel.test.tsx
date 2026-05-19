@@ -1,3 +1,4 @@
+/** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { CharacteristicCapabilityPanel } from './characteristic-capability-panel.js'
@@ -36,9 +37,9 @@ beforeEach(() => {
 })
 
 describe('CharacteristicCapabilityPanel', () => {
-  it('renders standard capability data successfully', async () => {
+  it('renders standard capability data successfully with approval warning', async () => {
     render(<CharacteristicCapabilityPanel request={request} />)
-
+ 
     await waitFor(() => {
       expect(screen.getByText('Test Characteristic')).toBeInTheDocument()
       expect(screen.getByText('capable')).toBeInTheDocument()
@@ -52,6 +53,8 @@ describe('CharacteristicCapabilityPanel', () => {
       expect(screen.getByText('0.4567')).toBeInTheDocument()
       expect(screen.getByText('50')).toBeInTheDocument()
       expect(screen.getByText('95%')).toBeInTheDocument()
+      // Approval warning
+      expect(screen.getByText(/Capability approval source not verified/)).toBeInTheDocument()
     })
   })
 

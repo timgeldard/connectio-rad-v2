@@ -57,7 +57,7 @@ export function ActiveSPCSignalsPanel({ request }: ActiveSPCSignalsPanelProps) {
       {result?.ok && (
         <div style={{ padding: '12px 16px' }}>
           {signals.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--shell-fg-3)', margin: 0 }}>No active signals — all characteristics in control.</p>
+            <p style={{ fontSize: 12, color: 'var(--shell-fg-3)', margin: 0 }}>No active signals returned.</p>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {signals.map(signal => (

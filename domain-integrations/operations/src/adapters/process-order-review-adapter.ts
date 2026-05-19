@@ -9,6 +9,7 @@ import type {
   ProcessOrderOperation,
   ProcessOrderConfirmation,
   ProcessOrderGoodsMovement,
+  ProcessOrderReviewAdapterRequest,
 } from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
@@ -23,14 +24,6 @@ import {
   mockOrderConfirmations,
   mockOrderGoodsMovements,
 } from './process-order-review-mock-data.js'
-
-export interface ProcessOrderReviewAdapterRequest {
-  readonly processOrderId?: string
-  readonly plantId?: string
-  readonly lineId?: string
-  readonly batchId?: string
-  readonly materialId?: string
-}
 
 type NowFn = () => string
 

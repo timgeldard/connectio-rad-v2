@@ -1,10 +1,15 @@
 import { PlanRiskSummaryPanel } from '../panels/plan-risk-summary-panel.js'
 import { MaterialShortagePanel } from '../panels/material-shortage-panel.js'
 import { OperationsActionQueuePanel } from '../panels/operations-action-queue-panel.js'
+// TODO: Move cross-domain panels to a shared UI package to resolve circularity
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { QualityBlockersPanel, ReleaseHoldImpactPanel } from '@connectio/di-quality'
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { MaintenanceConstraintPanel } from '@connectio/di-maintenance'
-import type { OperationsPlanRiskAdapterRequest } from '../adapters/operations-plan-risk-adapter.js'
-import type { QualityBlockersAdapterRequest } from '@connectio/di-quality'
+import type {
+  OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
+  QualityBlockersAdapterRequest,
+} from '@connectio/data-contracts'
 import type { MaintenanceConstraintsAdapterRequest } from '@connectio/di-maintenance'
 
 export interface CriticalBlockersViewProps {

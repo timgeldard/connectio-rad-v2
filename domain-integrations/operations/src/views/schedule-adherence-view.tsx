@@ -2,9 +2,13 @@ import { ScheduleAdherencePanel } from '../panels/schedule-adherence-panel.js'
 import { LateOrdersPanel } from '../panels/late-orders-panel.js'
 import { YieldVariancePanel } from '../panels/yield-variance-panel.js'
 import { MaterialShortagePanel } from '../panels/material-shortage-panel.js'
+// TODO: Move cross-domain panels to a shared UI package to resolve circularity
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { QualityBlockersPanel } from '@connectio/di-quality'
-import type { OperationsPlanRiskAdapterRequest } from '../adapters/operations-plan-risk-adapter.js'
-import type { QualityBlockersAdapterRequest } from '@connectio/di-quality'
+import type {
+  OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
+  QualityBlockersAdapterRequest,
+} from '@connectio/data-contracts'
 
 export interface ScheduleAdherenceViewProps {
   readonly opsRequest: OperationsPlanRiskAdapterRequest

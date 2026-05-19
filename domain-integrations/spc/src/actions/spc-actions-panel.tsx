@@ -234,6 +234,31 @@ export function SPCActionsPanel({ context }: SPCActionsPanelProps) {
       <ActionButton label="Request Investigation" onClick={() => setActiveAction('request-investigation')} disabled={disabled} variant="primary" />
       <ActionButton label="Open Batch Release" onClick={() => setActiveAction('open-batch-release')} disabled={disabled} variant="secondary" />
       <ActionButton label="Open Trace Investigation" onClick={() => setActiveAction('open-trace')} disabled={disabled} variant="secondary" />
+      
+      <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
+        <ActionButton 
+          label="Copy SPC UAT Evidence" 
+          onClick={() => {
+            const evidence = {
+              domain: 'spc',
+              timestamp: new Date().toISOString(),
+              context: {
+                plant: context?.plantId,
+                material: context?.materialId,
+                batch: context?.batchId,
+                workCentre: context?.workCentreId
+              },
+              adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
+              readiness: 'read-only-uat'
+            }
+            navigator.clipboard.writeText(JSON.stringify(evidence, null, 2))
+            alert('SPC UAT evidence details copied to clipboard')
+          }} 
+          disabled={disabled} 
+          variant="secondary" 
+        />
+      </div>
 
       {activeAction === 'acknowledge-signal' && <AcknowledgeSignalAction context={context} onClose={() => setActiveAction(null)} />}
       {activeAction === 'request-investigation' && <RequestInvestigationAction context={context} onClose={() => setActiveAction(null)} />}

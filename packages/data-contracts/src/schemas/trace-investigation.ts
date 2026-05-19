@@ -132,7 +132,7 @@ export type TraceEdge = z.infer<typeof TraceEdgeSchema>
 export const TraceGraphSchema = z.object({
   nodes: z.array(TraceNodeSchema),
   edges: z.array(TraceEdgeSchema),
-  direction: z.enum(['forward', 'reverse', 'both']),
+  direction: z.enum(['upstream', 'downstream', 'both']),
   depth: z.number().int().min(0),
   rootBatch: z.string(),
   upstreamCount: z.number().int().min(0),

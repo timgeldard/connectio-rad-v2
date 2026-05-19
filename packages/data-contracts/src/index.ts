@@ -295,3 +295,10 @@ export {
   ConnectedQualityLabPlantSchema,
   ConnectedQualityLabPlantsResponseSchema,
 } from './schemas/connected-quality-lab.js'
+export type {
+  OperationsEvidenceAdapterRequest,
+  QualityBlockersAdapterRequest,
+  Trace2AdapterRequest,
+  WarehouseEvidenceAdapterRequest,
+  ProcessOrderReviewAdapterRequest,
+} from './schemas/adapter-requests.js'

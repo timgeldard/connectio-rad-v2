@@ -140,6 +140,8 @@ export const mockControlChartSeries: ControlChartSeries = {
   lowerSpecLimit: 6.20,
   unitOfMeasure: 'pH',
   confidence: 0.95,
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
   points: [
     { pointId: 'PT-001', timestamp: '2026-05-13T06:00:00.000Z', value: 6.55, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-001', signalIds: [], status: 'in-control' },
     { pointId: 'PT-002', timestamp: '2026-05-13T09:00:00.000Z', value: 6.60, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-002', signalIds: [], status: 'in-control' },
@@ -165,6 +167,8 @@ export const mockMoistureChartSeries: ControlChartSeries = {
   lowerSpecLimit: 36.0,
   unitOfMeasure: '%',
   confidence: 0.91,
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
   points: [
     { pointId: 'MP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 39.1, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-M01', signalIds: [], status: 'in-control' },
     { pointId: 'MP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 39.3, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-M02', signalIds: [], status: 'in-control' },
@@ -190,6 +194,8 @@ export const mockFatChartSeries: ControlChartSeries = {
   lowerSpecLimit: 28.0,
   unitOfMeasure: '%',
   confidence: 0.94,
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
   points: [
     { pointId: 'FP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 31.2, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-F01', signalIds: [], status: 'in-control' },
     { pointId: 'FP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 31.6, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-F02', signalIds: [], status: 'in-control' },
@@ -215,6 +221,8 @@ export const mockSaltChartSeries: ControlChartSeries = {
   lowerSpecLimit: 1.00,
   unitOfMeasure: '%',
   confidence: 0.89,
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
   points: [
     { pointId: 'SP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 1.85, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-S01', signalIds: [], status: 'in-control' },
     { pointId: 'SP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 1.79, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-S02', signalIds: [], status: 'in-control' },
@@ -239,6 +247,8 @@ export const mockTextureChartSeries: ControlChartSeries = {
   lowerSpecLimit: 60.0,
   unitOfMeasure: 'pts',
   confidence: 0.86,
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
   points: [
     { pointId: 'TP-001', timestamp: '2026-05-13T06:00:00.000Z', value: 75.2, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-T01', signalIds: [], status: 'in-control' },
     { pointId: 'TP-002', timestamp: '2026-05-13T09:00:00.000Z', value: 73.8, batchId: 'CH-240307-0031', sampleId: 'SMP-0031-T02', signalIds: [], status: 'in-control' },
@@ -262,6 +272,8 @@ export const mockCharacteristicCapability: CharacteristicCapability = {
   standardDeviation: 0.089,
   confidence: 0.91,
   interpretation: 'capable',
+  limitProvenance: 'mock-fixture',
+  approvalState: 'not-approved',
 }
 
 export const mockSPCAlarmHistory: SPCAlarmHistoryItem[] = [
