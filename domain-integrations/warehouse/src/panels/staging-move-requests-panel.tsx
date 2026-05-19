@@ -61,6 +61,7 @@ export function StagingMoveRequestsPanel({ request }: StagingMoveRequestsPanelPr
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {open && (
         <div style={{ padding: '8px 0' }}>

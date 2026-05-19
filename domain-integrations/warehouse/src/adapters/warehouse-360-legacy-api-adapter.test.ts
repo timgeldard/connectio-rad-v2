@@ -106,9 +106,8 @@ describe('Warehouse360LegacyApiAdapter.getWarehouse360Summary', () => {
   it('falls back to mock when warehouseId is empty/falsy', async () => {
     const result = await adapter.getWarehouse360Summary(emptyRequest)
     expect(result.ok).toBe(true)
-    if (!result.ok) return
-    // Mock adapter doesn't set source
-    expect(result.source).toBeUndefined()
+    // Mock adapter sets source to 'mock'
+    expect(result.source).toBe('mock')
     expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
   })
 
@@ -443,8 +442,7 @@ describe('Warehouse360LegacyApiAdapter native endpoints', () => {
     for (const fn of methods) {
       const result = await fn()
       expect(result.ok).toBe(true)
-      if (!result.ok) continue
-      expect(result.source).toBeUndefined() // Mock adapter doesn't set source
+      expect(result.source).toBe('mock') // Mock adapter explicitly sets source to 'mock'
     }
   })
 

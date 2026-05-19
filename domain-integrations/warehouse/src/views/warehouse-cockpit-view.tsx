@@ -180,6 +180,33 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
   const totalWorkloadEstimate = totalInboundCount + totalOutboundCount + totalStagingCount
   const criticalExceptionCount = exceptionsData.filter(e => e.severity === 'critical' || e.severity === 'high').length
 
+  // Dynamically compute the active API mode
+  const activeSources: string[] = []
+  if (isQueryEnabled) {
+    if (overviewQuery.data?.source) activeSources.push(overviewQuery.data.source)
+    if (inboundQuery.data?.source) activeSources.push(inboundQuery.data.source)
+    if (outboundQuery.data?.source) activeSources.push(outboundQuery.data.source)
+    if (stagingQuery.data?.source) activeSources.push(stagingQuery.data.source)
+    if (exceptionsQuery.data?.source) activeSources.push(exceptionsQuery.data.source)
+  }
+  const uniqueSources = Array.from(new Set(activeSources))
+  const displayedSource = uniqueSources.length === 1 ? uniqueSources[0] : uniqueSources.length > 1 ? 'mixed' : 'mock'
+
+  const getSourceBadgeColorAndText = () => {
+    switch (displayedSource) {
+      case 'databricks-api':
+        return { text: 'API Mode: databricks-api (Executable)', color: '#ffffff', bg: COLORS.success }
+      case 'legacy-api':
+        return { text: 'API Mode: legacy-api (Proxy)', color: '#ffffff', bg: COLORS.info }
+      case 'mixed':
+        return { text: 'API Mode: mixed (Hybrid)', color: '#ffffff', bg: COLORS.warning }
+      case 'mock':
+      default:
+        return { text: 'API Mode: mock (Fixture Data)', color: COLORS.indigoText, bg: COLORS.indigoBg }
+    }
+  }
+  const sourceBadge = getSourceBadgeColorAndText()
+
   const handleRun = () => {
     const trimmedWh = warehouseId.trim()
     if (!trimmedWh) {
@@ -283,22 +310,22 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <div style={{
-            backgroundColor: COLORS.success,
-            color: '#ffffff',
+            backgroundColor: sourceBadge.bg,
+            color: sourceBadge.color,
             padding: '6px 12px',
             borderRadius: 20,
             fontSize: 12,
             fontWeight: 700,
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+            boxShadow: displayedSource === 'databricks-api' ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
             display: 'flex',
             alignItems: 'center',
             gap: 6
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ffffff', display: 'inline-block' }} />
-            API Mode: databricks-api (Executable)
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: sourceBadge.color, display: 'inline-block' }} />
+            {sourceBadge.text}
           </div>
           <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 500, textAlign: 'right' }}>
-            UAT Verification Pending by Claude
+            UAT verification pending
           </span>
         </div>
       </div>
@@ -370,7 +397,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 16,
-          alignItems: 'end',
+          alignItems: 'start',
           marginBottom: 16
         }}>
           <div>
@@ -384,6 +411,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               onChange={e => setWarehouseId(e.target.value)}
               style={INPUT_STYLE}
             />
+            <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
+              Filters lists in detailed tabs by Warehouse ID.
+            </span>
           </div>
 
           <div>
@@ -397,6 +427,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               onChange={e => setPlantId(e.target.value)}
               style={INPUT_STYLE}
             />
+            <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
+              Filters query results by Plant context if provided.
+            </span>
           </div>
 
           <div>
@@ -409,6 +442,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               onChange={e => setDateFrom(e.target.value)}
               style={INPUT_STYLE}
             />
+            <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
+              Limits records from this start date.
+            </span>
           </div>
 
           <div>
@@ -421,6 +457,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               onChange={e => setDateTo(e.target.value)}
               style={INPUT_STYLE}
             />
+            <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
+              Limits records up to this end date.
+            </span>
           </div>
 
           <div>
@@ -445,6 +484,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 style={{ ...INPUT_STYLE, width: 65, textAlign: 'center', padding: '6px 4px' }}
               />
             </div>
+            <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
+              Max rows fetched per query (1 to 500).
+            </span>
           </div>
         </div>
 
@@ -532,6 +574,21 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         </div>
       ) : (
         <>
+          {/* Overview KPI Info Banner */}
+          <div style={{
+            backgroundColor: '#fffbeb',
+            borderLeft: `4px solid ${COLORS.warning}`,
+            borderRadius: 8,
+            padding: '12px 16px',
+            color: '#78350f',
+            fontSize: 13,
+            fontWeight: 500,
+            marginBottom: 16,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+          }}>
+            <strong>⚠️ Global Metrics Notice:</strong> Overview KPIs are site-level and are not filtered by warehouse. Detailed lists in the tabs below are filtered by the active Warehouse ID.
+          </div>
+
           {/* Overview Metrics Dashboard Card */}
           <div style={GRID_STATS_STYLE}>
             {/* Metric 1 */}
@@ -698,9 +755,17 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       fontWeight: 500
                     }}>
                       ❌ Inbound query failed: {inboundQuery.data.error.message}
+                      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                      </div>
                     </div>
                   ) : inboundData.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>Empty: No inbound items returned for warehouse {activeFilters.warehouseId}.</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      ℹ️ No inbound receipts found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
+                        If this is unexpected, verify the Warehouse ID exists and that there are active Inbound POs/STOs scheduled.
+                      </div>
+                    </div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                       <thead>
@@ -781,9 +846,17 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       fontWeight: 500
                     }}>
                       ❌ Outbound query failed: {outboundQuery.data.error.message}
+                      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                      </div>
                     </div>
                   ) : outboundData.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>Empty: No outbound items returned for warehouse {activeFilters.warehouseId}.</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      ℹ️ No outbound deliveries found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
+                        If this is unexpected, verify the Warehouse ID exists and that there are active Outbound Deliveries planned.
+                      </div>
+                    </div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                       <thead>
@@ -863,9 +936,17 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       fontWeight: 500
                     }}>
                       ❌ Staging query failed: {stagingQuery.data.error.message}
+                      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                      </div>
                     </div>
                   ) : stagingData.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>Empty: No production staging items returned for warehouse {activeFilters.warehouseId}.</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      ℹ️ No production staging items found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
+                        If this is unexpected, verify the Warehouse ID exists and that there are active process orders scheduled.
+                      </div>
+                    </div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                       <thead>
@@ -945,9 +1026,17 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       fontWeight: 500
                     }}>
                       ❌ Exception query failed: {exceptionsQuery.data.error.message}
+                      <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                      </div>
                     </div>
                   ) : exceptionsData.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>Empty: No exception items returned for warehouse {activeFilters.warehouseId}.</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      ℹ️ No exception records were returned for this Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
+                        If this is unexpected, verify the warehouse, source coverage, and exception extraction logic before assuming there are no issues.
+                      </div>
+                    </div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                       <thead>
@@ -1048,6 +1137,31 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                     <DetailRow key={key} label={key} value={val as string | number | null} />
                   ))}
                 </div>
+
+                {selectedRow.type === 'exceptions' && (
+                  <div style={{
+                    marginTop: 16,
+                    padding: 12,
+                    backgroundColor: '#fffbeb',
+                    borderRadius: 6,
+                    borderLeft: `3px solid ${COLORS.warning}`,
+                    fontSize: 12,
+                    color: '#78350f'
+                  }}>
+                    <strong>💡 Exception Diagnostic & Recommended Action:</strong>
+                    <div style={{ marginTop: 4, lineHeight: 1.4 }}>
+                      {String(selectedRow.data.exceptionType || '').toLowerCase().includes('shortage') || String(selectedRow.data.description || '').toLowerCase().includes('mismatch') || String(selectedRow.data.reason || '').toLowerCase().includes('mismatch') ? (
+                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Recommended Action:</strong> Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.</>
+                      ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('expiry') || String(selectedRow.data.reason || '').toLowerCase().includes('expiry') || Number(selectedRow.data.daysToExpiry) <= 30 ? (
+                        <>Batch is close to or past expiration date. <strong>Recommended Action:</strong> Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.</>
+                      ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('hold') || String(selectedRow.data.reason || '').toLowerCase().includes('hold') ? (
+                        <>This batch is currently under an active quality or warehouse hold. <strong>Recommended Action:</strong> Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.</>
+                      ) : (
+                        <>General warehouse exception detected. <strong>Recommended Action:</strong> Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.</>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

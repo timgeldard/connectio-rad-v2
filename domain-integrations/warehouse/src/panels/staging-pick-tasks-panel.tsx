@@ -61,6 +61,7 @@ export function StagingPickTasksPanel({ request }: StagingPickTasksPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {openTasks && (
         <div style={{ padding: '8px 0' }}>

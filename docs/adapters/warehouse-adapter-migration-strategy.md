@@ -149,3 +149,24 @@ GET /api/wh360/inventory/bins/summary
 GET /api/wh360/inventory/lineside
 GET /api/wh360/plants
 ```
+
+---
+
+## Warehouse360 Cockpit Layout and Query Behavior
+
+### Overview KPIs
+The cockpit sends the active request context to all query hooks. Detailed tabs are expected to apply warehouse/date/limit filters. Overview KPIs are site-level from the pre-aggregated snapshot and must not be interpreted as warehouse-filtered unless the backend view changes.
+
+### Wired Cockpit Filters
+The detailed view tabs (Inbound, Outbound, Staging, and Exceptions) retrieve data filtered dynamically. The following 5 parameters are fully wired and passed in all detailed queries:
+- `warehouseId` (Required): Filters detailed tabs to the selected warehouse.
+- `plantId` (Optional): Restricts results to the selected plant context.
+- `dateFrom` (Optional): Restricts results to records on or after the specified start date.
+- `dateTo` (Optional): Restricts results to records on or before the specified end date.
+- `limit` (Optional): Sets a maximum number of records to retrieve (clamped between 1 and 500).
+
+### Diagnostic Exception Actions
+When inspecting items on the **Exceptions & Alerts** tab, the cockpit provides built-in action guidance:
+- **Quantity Mismatch**: Indicates IM/WM discrepancies. *Recommended action:* Run a reconciliation transaction (e.g., LT22/LS24 in SAP) to verify bin placements and execute a posting change.
+- **Expiry Warnings**: Batch is near or past expiration. *Recommended action:* Block batch immediately in QM and coordinate with laboratory for retest or disposal.
+- **Hold Status**: Batch is under an active quality or warehouse hold. *Recommended action:* Verify the block reason code in the Quality Batch Release workspace prior to release.

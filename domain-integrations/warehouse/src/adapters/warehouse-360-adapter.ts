@@ -46,7 +46,7 @@ type NowFn = () => string
 const defaultNow: NowFn = () => new Date().toISOString()
 
 function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
-  return { ok: true, data, fetchedAt: now() }
+  return { ok: true, data, fetchedAt: now(), source: 'mock' }
 }
 
 function err<T>(
@@ -54,7 +54,7 @@ function err<T>(
   message: string,
   retryable = false
 ): AdapterResult<T> {
-  return { ok: false, error: { code, message, retryable }, displayState: 'error' }
+  return { ok: false, error: { code, message, retryable }, displayState: 'error', source: 'mock' }
 }
 
 export interface Warehouse360AdapterOptions {
