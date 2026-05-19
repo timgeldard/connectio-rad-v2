@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useState } from 'react'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { TraceGraphPanel } from './trace-graph-panel.js'
 import type { TraceGraph } from '@connectio/data-contracts'
@@ -43,12 +44,10 @@ vi.mock('@xyflow/react', () => ({
   Background: () => null,
   Controls: () => null,
   useNodesState: (init: unknown[]) => {
-    const { useState } = require('react')
     const [nodes, setNodes] = useState(init)
     return [nodes, setNodes, () => {}]
   },
   useEdgesState: (init: unknown[]) => {
-    const { useState } = require('react')
     const [edges, setEdges] = useState(init)
     return [edges, setEdges, () => {}]
   },

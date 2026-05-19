@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/evidence-panel-runtime/src",
   "projectType": "library",
-  "tags": ["scope:shared", "layer:runtime", "type:lib"],
+  "tags": ["scope:shared", "layer:evidence-panel-runtime", "type:lib"],
   "targets": {
     "test": {
       "executor": "@nx/vitest:test",
