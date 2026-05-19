@@ -537,7 +537,8 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           'no write-back',
           'no SAP transaction execution',
           'mock fixture is UI-only',
-          'date/limit filters captured but not applied by current native routes'
+          'date and limit filters are not exposed in this UAT form',
+          'material and batch filters are planned/diagnostic only'
         ]}
         lastVerified="Pending UAT Sweep"
       />
