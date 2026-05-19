@@ -58,6 +58,7 @@ export function StagingZoneCapacityPanel({ request }: StagingZoneCapacityPanelPr
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {zones && (
         <div style={{ padding: '8px 0' }}>

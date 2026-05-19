@@ -64,6 +64,7 @@ export function StagingOrderListPanel({ request }: StagingOrderListPanelProps) {
       registration={registration}
       displayState={displayState}
       errorMessage={!result?.ok ? result?.error.message : undefined}
+      source={result?.source}
     >
       {orders && (
         <div style={{ padding: '8px 0' }}>

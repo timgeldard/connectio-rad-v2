@@ -38,9 +38,9 @@ describe('WarehouseCockpitView', () => {
 
     // Verify header status is present
     expect(screen.getByText('Warehouse360 Cockpit (Native)')).toBeInTheDocument()
-    expect(screen.getByText('API Mode: databricks-api (Executable)')).toBeInTheDocument()
+    expect(screen.getByText('API Mode: mock (Fixture Data)')).toBeInTheDocument()
     expect(screen.getByText('UAT Verification Pending by Claude')).toBeInTheDocument()
-
+    
     // Verify helper instruction banner is shown when no warehouse is entered
     expect(screen.getByText('Enter a Warehouse ID to Begin Queries')).toBeInTheDocument()
     expect(screen.getByText(/To verify native Databricks connectivity/i)).toBeInTheDocument()
@@ -176,11 +176,41 @@ describe('WarehouseCockpitView', () => {
 
     // Wait for queries to complete and render overview metrics cards
     await waitFor(() => {
-      expect(spyOverview).toHaveBeenCalledWith(expect.objectContaining({ warehouseId: 'WH001' }))
-      expect(spyInbound).toHaveBeenCalledWith(expect.objectContaining({ warehouseId: 'WH001' }))
-      expect(spyOutbound).toHaveBeenCalledWith(expect.objectContaining({ warehouseId: 'WH001' }))
-      expect(spyStaging).toHaveBeenCalledWith(expect.objectContaining({ warehouseId: 'WH001' }))
-      expect(spyExceptions).toHaveBeenCalledWith(expect.objectContaining({ warehouseId: 'WH001' }))
+      expect(spyOverview).toHaveBeenCalledWith({
+        warehouseId: 'WH001',
+        plantId: 'C061',
+        dateFrom: '2026-01-01',
+        dateTo: '2026-05-18',
+        limit: 100
+      })
+      expect(spyInbound).toHaveBeenCalledWith({
+        warehouseId: 'WH001',
+        plantId: 'C061',
+        dateFrom: '2026-01-01',
+        dateTo: '2026-05-18',
+        limit: 100
+      })
+      expect(spyOutbound).toHaveBeenCalledWith({
+        warehouseId: 'WH001',
+        plantId: 'C061',
+        dateFrom: '2026-01-01',
+        dateTo: '2026-05-18',
+        limit: 100
+      })
+      expect(spyStaging).toHaveBeenCalledWith({
+        warehouseId: 'WH001',
+        plantId: 'C061',
+        dateFrom: '2026-01-01',
+        dateTo: '2026-05-18',
+        limit: 100
+      })
+      expect(spyExceptions).toHaveBeenCalledWith({
+        warehouseId: 'WH001',
+        plantId: 'C061',
+        dateFrom: '2026-01-01',
+        dateTo: '2026-05-18',
+        limit: 100
+      })
 
       // Inbound count (10 from mock data in warehouse-360-adapter)
       expect(screen.getByText('INBOUND OPERATIONS')).toBeInTheDocument()
