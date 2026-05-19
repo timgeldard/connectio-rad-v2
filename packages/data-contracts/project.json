@@ -38,7 +38,7 @@
     "check-pydantic": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "npm run sync-pydantic && git diff --exit-code ../../apps/api/contracts/generated.py",
+        "command": "nx run data-contracts:sync-pydantic && git diff --exit-code dist-schema/contracts.json ../../apps/api/contracts/generated.py",
         "cwd": "packages/data-contracts"
       }
     }
