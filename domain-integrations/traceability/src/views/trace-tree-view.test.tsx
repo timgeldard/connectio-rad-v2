@@ -63,12 +63,12 @@ describe('TraceTreeView — after form submission', () => {
 
   it('passes correct materialId and batchId to TraceGraphPanel', () => {
     render(<TraceTreeView request={emptyRequest} />)
-    fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: '20052009' } })
-    fireEvent.change(screen.getByTestId('input-batch-id'), { target: { value: '0008602411' } })
+    fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: '100023847' } })
+    fireEvent.change(screen.getByTestId('input-batch-id'), { target: { value: 'CH-240308-0047' } })
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     const panel = screen.getByTestId('trace-graph-panel')
-    expect(panel.getAttribute('data-material-id')).toBe('20052009')
-    expect(panel.getAttribute('data-batch-id')).toBe('0008602411')
+    expect(panel.getAttribute('data-material-id')).toBe('100023847')
+    expect(panel.getAttribute('data-batch-id')).toBe('CH-240308-0047')
   })
 
   it('passes direction to TraceGraphPanel', () => {
@@ -81,7 +81,7 @@ describe('TraceTreeView — after form submission', () => {
 
   it('renders BatchHeaderPanel after submission when materialId and batchId are set', () => {
     render(<TraceTreeView request={emptyRequest} />)
-    // Default form values include materialId='20052009' and batchId='0008602411'
+    // Default form values include materialId='100023847' and batchId='CH-240308-0047'
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     expect(screen.getByTestId('batch-header-panel')).not.toBeNull()
   })
@@ -91,7 +91,7 @@ describe('TraceTreeView — after form submission', () => {
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     const payload = screen.getByTestId('last-request-payload')
     expect(payload.textContent).toContain('material_id')
-    expect(payload.textContent).toContain('20052009')
+    expect(payload.textContent).toContain('100023847')
   })
 })
 
@@ -111,9 +111,9 @@ describe('TraceTreeView — scope pre-fill', () => {
   it('does not auto-submit when scope is provided — user must click Run Trace', () => {
     const request: Trace2AdapterRequest = {
       investigationId: '',
-      materialId: '20052009',
-      batchId: '0008602411',
-      plantId: 'C061',
+      materialId: '100023847',
+      batchId: 'CH-240308-0047',
+      plantId: 'IE10',
     }
     render(<TraceTreeView request={request} />)
     expect(screen.queryByTestId('trace-graph-panel')).toBeNull()

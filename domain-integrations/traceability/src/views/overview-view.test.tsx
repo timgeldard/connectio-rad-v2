@@ -96,6 +96,17 @@ describe('OverviewView', () => {
 
     expect(screen.queryByRole('alert', { name: 'Batch header error' })).toBeNull()
   })
+
+  it('renders the initial load screen when batchId is missing', () => {
+    const emptyRequest: Trace2AdapterRequest = { investigationId: 'test-inv' }
+    render(<OverviewView request={emptyRequest} />)
+
+    expect(screen.getByText('Trace a batch')).not.toBeNull()
+    expect(screen.getByTestId('trace-query-form')).not.toBeNull()
+    expect(screen.getByText('Evidence Preview')).not.toBeNull()
+    expect(screen.getByText('UAT Candidate')).not.toBeNull()
+    expect(screen.getByText('Safety & Readiness Notice')).not.toBeNull()
+  })
 })
 
 describe('OverviewView — batch header error states (TRACE-P1-003)', () => {

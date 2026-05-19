@@ -14,9 +14,9 @@ beforeEach(() => {
 describe('TraceQueryForm — defaults', () => {
   it('renders with default material, batch, plant values', () => {
     render(<TraceQueryForm onSubmit={vi.fn()} />)
-    expect((screen.getByTestId('input-material-id') as HTMLInputElement).value).toBe('20052009')
-    expect((screen.getByTestId('input-batch-id') as HTMLInputElement).value).toBe('0008602411')
-    expect((screen.getByTestId('input-plant-id') as HTMLInputElement).value).toBe('C061')
+    expect((screen.getByTestId('input-material-id') as HTMLInputElement).value).toBe('100023847')
+    expect((screen.getByTestId('input-batch-id') as HTMLInputElement).value).toBe('CH-240308-0047')
+    expect((screen.getByTestId('input-plant-id') as HTMLInputElement).value).toBe('IE10')
   })
 
   it('renders with default direction=both, maxDepth=2, maxEdges=100', () => {
@@ -61,8 +61,8 @@ describe('TraceQueryForm — initial values from props', () => {
 
   it('falls back to defaults for fields not provided', () => {
     render(<TraceQueryForm onSubmit={vi.fn()} initialMaterialId="CUSTOM-MAT" />)
-    expect((screen.getByTestId('input-batch-id') as HTMLInputElement).value).toBe('0008602411')
-    expect((screen.getByTestId('input-plant-id') as HTMLInputElement).value).toBe('C061')
+    expect((screen.getByTestId('input-batch-id') as HTMLInputElement).value).toBe('CH-240308-0047')
+    expect((screen.getByTestId('input-plant-id') as HTMLInputElement).value).toBe('IE10')
   })
 })
 
@@ -70,16 +70,16 @@ describe('TraceQueryForm — material ID suggestion (§6)', () => {
   it('shows suggestion when 18-char zero-padded material ID is entered', () => {
     render(<TraceQueryForm onSubmit={vi.fn()} />)
     fireEvent.change(screen.getByTestId('input-material-id'), {
-      target: { value: '000000000020052009' },
+      target: { value: '000000000100023847' },
     })
     const suggestion = screen.getByTestId('material-id-suggestion')
     expect(suggestion).not.toBeNull()
-    expect(suggestion.textContent).toContain('20052009')
+    expect(suggestion.textContent).toContain('100023847')
   })
 
   it('does not show suggestion when material ID is not 18 chars', () => {
     render(<TraceQueryForm onSubmit={vi.fn()} />)
-    fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: '20052009' } })
+    fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: '100023847' } })
     expect(screen.queryByTestId('material-id-suggestion')).toBeNull()
   })
 
@@ -99,9 +99,9 @@ describe('TraceQueryForm — form submission', () => {
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     expect(onSubmit).toHaveBeenCalledWith<[Trace2AdapterRequest]>({
       investigationId: '',
-      materialId: '20052009',
-      batchId: '0008602411',
-      plantId: 'C061',
+      materialId: '100023847',
+      batchId: 'CH-240308-0047',
+      plantId: 'IE10',
       direction: 'both',
       maxDepth: 2,
       maxEdges: 100,
@@ -128,7 +128,7 @@ describe('TraceQueryForm — reset button', () => {
     fireEvent.change(screen.getByTestId('input-material-id'), { target: { value: 'EDITED' } })
     fireEvent.change(screen.getByTestId('select-direction'), { target: { value: 'downstream' } })
     fireEvent.click(screen.getByTestId('btn-reset'))
-    expect((screen.getByTestId('input-material-id') as HTMLInputElement).value).toBe('20052009')
+    expect((screen.getByTestId('input-material-id') as HTMLInputElement).value).toBe('100023847')
     expect((screen.getByTestId('select-direction') as HTMLSelectElement).value).toBe('both')
   })
 })
@@ -170,6 +170,6 @@ describe('TraceQueryForm — recent searches (§5)', () => {
     onSubmit.mockClear()
     fireEvent.click(screen.getByTestId('btn-recent-1'))
     const req = onSubmit.mock.calls[0][0] as Trace2AdapterRequest
-    expect(req.materialId).toBe('20052009')
+    expect(req.materialId).toBe('100023847')
   })
 })
