@@ -108,7 +108,7 @@ describe('calculateConfidence', () => {
     expect(result.gaps).toContain('Certificate of Analysis is pending inspection release.')
   })
 
-  it('returns a MISSING grade when score falls below 50 due to critical missing datasets', () => {
+  it('returns an UNKNOWN grade when score is 0 due to critical missing datasets', () => {
     const result = calculateConfidence({
       batchHeader: null,
       customerExposure: null,

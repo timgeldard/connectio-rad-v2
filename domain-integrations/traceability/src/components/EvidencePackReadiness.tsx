@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { ConfidenceResult } from './EvidenceConfidence.js'
 
 export interface EvidencePackReadinessProps {
@@ -16,24 +16,47 @@ export function EvidencePackReadiness({ confidence, style }: EvidencePackReadine
     { id: 'suppliers', label: 'Upstream suppliers verified', autoCompleted: confidence.details.suppliers === 'complete' },
   ]
 
-  // Keep track of manual QA override checkmarks
-  const [checkedSectors, setCheckedSectors] = useState<Record<string, boolean>>({})
+  // Keep track of manual QA override checkmarks (initialize with system-verified checkmarks)
+  const [checkedSectors, setCheckedSectors] = useState<Record<string, boolean>>(() => ({
+    lineage: confidence.details.lineage === 'complete',
+    customers: confidence.details.customers === 'complete',
+    massBalance: confidence.details.massBalance === 'complete',
+    quality: confidence.details.quality === 'complete',
+    coa: confidence.details.coa === 'complete',
+    suppliers: confidence.details.suppliers === 'complete',
+  }))
   const [dossierCompiled, setDossierCompiled] = useState(false)
 
+  // Keep track of previous confidence details to prevent resetting manual overrides on re-render
   const { lineage, customers, massBalance, quality, coa, suppliers } = confidence.details
+  const prevDetailsRef = useRef({ lineage, customers, massBalance, quality, coa, suppliers })
 
-  // Sync automatic checkmarks from the calculated payload
+  // Sync automatic checkmarks from the calculated payload when primitive statuses change
   useEffect(() => {
-    const nextChecks: Record<string, boolean> = {
-      lineage: lineage === 'complete',
-      customers: customers === 'complete',
-      massBalance: massBalance === 'complete',
-      quality: quality === 'complete',
-      coa: coa === 'complete',
-      suppliers: suppliers === 'complete',
+    const prevDetails = prevDetailsRef.current
+    let changed = false
+    const changes: Record<string, boolean> = {}
+
+    const currentDetails = { lineage, customers, massBalance, quality, coa, suppliers }
+    const keys = ['lineage', 'customers', 'massBalance', 'quality', 'coa', 'suppliers'] as const
+    for (const key of keys) {
+      const wasComplete = prevDetails[key] === 'complete'
+      const isComplete = currentDetails[key] === 'complete'
+      if (isComplete !== wasComplete) {
+        changes[key] = isComplete
+        changed = true
+      }
     }
-    setCheckedSectors(nextChecks)
-    setDossierCompiled(false)
+
+    if (changed) {
+      setCheckedSectors((prev) => ({
+        ...prev,
+        ...changes,
+      }))
+      setDossierCompiled(false)
+    }
+
+    prevDetailsRef.current = currentDetails
   }, [lineage, customers, massBalance, quality, coa, suppliers])
 
   const handleToggle = (id: string) => {
@@ -95,9 +118,8 @@ export function EvidencePackReadiness({ confidence, style }: EvidencePackReadine
         {initialSectors.map((s) => {
           const isChecked = !!checkedSectors[s.id]
           return (
-            <div
+            <label
               key={s.id}
-              onClick={() => handleToggle(s.id)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -114,7 +136,7 @@ export function EvidencePackReadiness({ confidence, style }: EvidencePackReadine
               <input
                 type="checkbox"
                 checked={isChecked}
-                onChange={() => {}} // Controlled by click on outer div
+                onChange={() => handleToggle(s.id)}
                 disabled={dossierCompiled}
                 style={{
                   width: 14,
@@ -151,7 +173,7 @@ export function EvidencePackReadiness({ confidence, style }: EvidencePackReadine
                   System Verified
                 </span>
               )}
-            </div>
+            </label>
           )
         })}
       </div>

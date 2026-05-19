@@ -75,7 +75,7 @@ export function InvestigationSummary({
     actionGuidance = 'Monitor stock position and adjacent production batches.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
-  } else if (hasUnrestrictedStock && batchHeader?.stockStatus === 'unrestricted') {
+  } else if (hasUnrestrictedStock) {
     severity = 'MEDIUM'
     alertMessage = 'Action Required: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
     actionGuidance = 'Monitor stock position and adjacent production batches.'
