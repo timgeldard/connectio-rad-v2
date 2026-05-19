@@ -28,11 +28,11 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | 🔶 | ❌ | ❌ | Database catalog alignment of `spc_quality_metrics` schema; approved control limits. | [SPC Detail](#spc) |
-| **Process Order History (POR)** | 🔶 | 🔶 | ❌ | Browser/live verification of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history--operations) |
-| **Warehouse360** | 🔶 | ❌ | ❌ | Aligning schemas of inbound, outbound, staging, and exception views in Databricks. | [Warehouse360 Detail](#warehouse360) |
+| **SPC** | 🔶 | ❌ | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment. | [SPC Detail](#spc) |
+| **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
+| **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
-| **Environmental Monitoring (EnvMon)** | ✅ | ✅ | ❌ | Floorplan zoning heatmap config is deferred; alert rules undefined. | [EnvMon Detail](#environmental-monitoring-envmon) |
+| **Environmental Monitoring (EnvMon)** | ✅ | 🔶 | ❌ | Databricks/API wired; browser/live UAT evidence should be confirmed from existing migration docs. | [EnvMon Detail](#environmental-monitoring-envmon) |
 | **Maintenance & Reliability** | 🔶 | ❌ | ❌ | No gold views identified; SAP PM data-access contracts not signed. | [Maintenance Detail](#maintenance-and-reliability) |
 | **Production Staging** | 🔶 | ❌ | ❌ | No gold views confirmed; WMS source views not identified. | [Production Staging Detail](#production-staging) |
 
@@ -52,18 +52,18 @@ We use the following conservative status classifications:
   * Unified graph truncation banner is code-ready, showing warnings when `max_depth_reached` or `max_edges_reached` is triggered.
   * **UAT Blockers:**
     * Live Databricks UAT is blocked: no live E2E validation against UAT databases has occurred.
-    * Column names in `gold_batch_summary_v` must be verified via queries defined in `databricks-column-verification-queries.md`.
+    * Column names in `gold_batch_summary_v` must be verified via queries defined in the column verification queries doc.
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
 * **Document Registry:**
-  * [Production Readiness Checklist](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/production-readiness-checklist.md)
-  * [Defect Backlog](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/traceability-defect-backlog.md)
-  * [UAT Validation Ledger](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/uat-validation-ledger.md)
-  * [Golden Test Batches](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/golden-test-batches.md)
-  * [Databricks Column Verification Queries](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/databricks-column-verification-queries.md)
-  * [Customer Exposure Depth Plan](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/customer-exposure-depth-slice-plan.md)
-  * [Quality Decision Source Plan](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/quality-decision-source-plan.md)
-  * [Data Freshness Plan](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/docs/data-freshness-plan.md)
-  * [Traceability README](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/traceability/README.md)
+  * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
+  * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
+  * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
+  * [Golden Test Batches](../../domain-integrations/traceability/docs/golden-test-batches.md)
+  * [Databricks Column Verification Queries](../migration/databricks-column-verification-queries.md)
+  * [Customer Exposure Depth Plan](../../domain-integrations/traceability/docs/customer-exposure-depth-slice-plan.md)
+  * [Quality Decision Source Plan](../../domain-integrations/traceability/docs/quality-decision-source-plan.md)
+  * [Data Freshness Plan](../../domain-integrations/traceability/docs/data-freshness-plan.md)
+  * [Traceability README](../../domain-integrations/traceability/README.md)
 
 ### SPC
 
@@ -73,17 +73,17 @@ We use the following conservative status classifications:
   * Source badges and warnings are active in the UI.
   * Missing control limits and insufficient data points are explicitly labeled to prevent false assurance.
   * **UAT Blockers:**
-    * Live execution is blocked by the pending database catalog alignment of the `spc_quality_metrics` schema in UAT.
+    * SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
     * Approved control-limit sources, validated SPC rules, and live QM/MIC data feeds must be established before migrating from the high-fidelity mock Sandbox.
 * **Document Registry:**
-  * [SPC README](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/spc/README.md)
-  * [SPC Readiness & Hardening Notes](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/spc-readiness-and-hardening-notes.md)
+  * [SPC README](../../domain-integrations/spc/README.md)
+  * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
 
-### Process Order History & Operations
+### Process Order History (POH) & Operations
 
-* **Status:** Databricks API (Wired & Verified).
+* **Status:** Databricks/API wired at code or SQL level; browser/live UI validation pending.
 * **Summary:**
-  * A read-only Process Order History (POR) cockpit exists.
+  * A read-only Process Order History (POH) cockpit exists.
   * Source truthfulness has been improved; planned filter inputs (such as limit, date range, etc.) are labeled as planned/diagnostic.
   * Golden process-order candidates exist in UAT (e.g., process order `7006965038`).
   * Direct SQL/DDL reads are verified for `getProcessOrderHeader`, `getOrderOperations`, `getOrderConfirmations`, and `getOrderGoodsMovements`.
@@ -91,9 +91,9 @@ We use the following conservative status classifications:
     * Live browser validation of the HTTP/UI layer is pending (BV pending).
     * Potential module-boundary lint warnings remain on cross-domain type imports from Quality.
 * **Document Registry:**
-  * [Operations README](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/operations/README.md)
-  * [Golden Process Orders Candidates](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/operations/docs/golden-process-orders.md)
-  * [POH Investigation Screen Notes](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/poh-investigation-screen-notes.md)
+  * [Operations README](../../domain-integrations/operations/README.md)
+  * [Golden Process Orders Candidates](../../domain-integrations/operations/docs/golden-process-orders.md)
+  * [POH Investigation Screen Notes](../migration/poh-investigation-screen-notes.md)
 
 ### Warehouse360
 
@@ -101,18 +101,17 @@ We use the following conservative status classifications:
 * **Summary:**
   * Source badges and mock source attribution have been improved.
   * Overview KPI site-level scope is documented; the cockpit warns users that the summary KPI data is global rather than warehouse-filtered.
-  * Exception guidance has been softened to advisory in the codebase (`Review Guidance` instead of `Recommended Action`).
+  * Exception guidance has been softened to advisory in the codebase (`Review Guidance` instead of `Recommended Action`) under PR #35 (merged).
   * **UAT Blockers:**
-    * Schema unalignment exists on `inbound` and `outbound` views.
-    * View names do not exist/are unaligned for `staging` and `exceptions` in the UAT schema (`staging_orders_v` and `wh360_imwm_exceptions_v`).
+    * Warehouse360 source-view/schema alignment requires live UAT verification; specific missing columns/views should be confirmed from the warehouse migration audit.
 * **Document Registry:**
-  * [Warehouse README](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/warehouse/README.md)
-  * [Warehouse Adapter Migration Strategy](file:///home/timgeldard/github/connectio-rad-v2/docs/adapters/warehouse-adapter-migration-strategy.md)
-  * [Warehouse Functional Parity Audit](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/warehouse-functional-parity-audit.md)
+  * [Warehouse README](../../domain-integrations/warehouse/README.md)
+  * [Warehouse Adapter Migration Strategy](../adapters/warehouse-adapter-migration-strategy.md)
+  * [Warehouse Functional Parity Audit](../migration/warehouse-functional-parity-audit.md)
 
 ### Quality Batch Release
 
-* **Status:** High-Fidelity Sandbox (Mock / Legacy API).
+* **Status:** High-Fidelity Sandbox (Mock / Legacy API) — Hardening merged in PR #34.
 * **Summary:**
   * Release decision panels (Summary, Hold/Impact, Deviations, CoA, Decision History) are mock/simulated.
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
@@ -121,24 +120,23 @@ We use the following conservative status classifications:
     * No Databricks adapter exists for quality release.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
 * **Document Registry:**
-  * [Quality README](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/quality/README.md)
-  * [Quality Production Readiness Checklist](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/quality/docs/quality-readiness-checklist.md)
-  * [Golden Quality Batches Candidates](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/quality/docs/golden-quality-batches.md)
-  * [Quality Known Limitations](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/quality/docs/quality-known-limitations.md)
-  * [Quality UAT Acceptance Script](file:///home/timgeldard/github/connectio-rad-v2/domain-integrations/quality/docs/quality-uat-acceptance-script.md)
+  * [Quality README](../../domain-integrations/quality/README.md)
+  * [Quality Production Readiness Checklist](../../domain-integrations/quality/docs/quality-readiness-checklist.md)
+  * [Golden Quality Batches Candidates](../../domain-integrations/quality/docs/golden-quality-batches.md)
+  * [Quality Known Limitations](../../domain-integrations/quality/docs/quality-known-limitations.md)
+  * [Quality UAT Acceptance Script](../../domain-integrations/quality/docs/quality-uat-acceptance-script.md)
 
 ### Environmental Monitoring (EnvMon)
 
-* **Status:** Databricks API (Wired & Verified).
+* **Status:** Databricks/API wired; browser/live UAT evidence should be confirmed from existing migration docs.
 * **Summary:**
-  * Hybrid domain. Both `getEnvMonSiteSummary` and `getEnvMonSwabResults` are wired to Databricks SQL and fully browser-verified in the UAT app deployment.
-  * UI workspace is fully browser-verified with live data.
+  * Hybrid domain. Both `getEnvMonSiteSummary` and `getEnvMonSwabResults` are wired to Databricks SQL.
   * **UAT Blockers:**
     * Plant maps, floors, location coordinates, and heatmap renderings are deferred/scoped-out due to undefined business rules or missing coordinates in UAT.
 * **Document Registry:**
-  * [EnvMon Site Summary Native Route Plan](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/envmon-site-summary-native-route-plan.md)
-  * [EnvMon V1 Functional Recovery](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/envmon-v1-functional-recovery.md)
-  * [EnvMon V1 Deep Dive](file:///home/timgeldard/github/connectio-rad-v2/docs/migration/envmon-v1-deep-dive.md)
+  * [EnvMon Site Summary Native Route Plan](../migration/envmon-site-summary-native-route-plan.md)
+  * [EnvMon V1 Functional Recovery](../migration/envmon-v1-functional-recovery.md)
+  * [EnvMon V1 Deep Dive](../migration/envmon-v1-deep-dive.md)
 
 ### Maintenance and Reliability
 
@@ -173,13 +171,12 @@ The following list summarizes the critical items blocking live validation or pro
   2. The `gold_batch_summary_v` columns must be verified against actual DDL.
   3. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
-  1. Catalog alignment of the `spc_quality_metrics` schema in UAT is pending.
+  1. SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
   2. Limits and rules source data must be populated.
 * **Process Order History Blockers:**
   1. Browser-level validation of the 4 api endpoints inside the UI has not been performed.
 * **Warehouse360 Blockers:**
-  1. WAREHOUSE_NUMBER column is missing from `wh360_deliveries_v`.
-  2. `staging_orders_v` and `wh360_imwm_exceptions_v` do not exist in UAT.
+  1. Warehouse360 source-view/schema alignment requires live UAT verification; specific missing columns/views should be confirmed from the warehouse migration audit.
 * **Quality Batch Release Blockers:**
   1. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented.
 
