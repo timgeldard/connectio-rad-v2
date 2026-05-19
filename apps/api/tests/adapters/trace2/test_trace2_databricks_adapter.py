@@ -225,10 +225,16 @@ class TestMapBatchHeaderRows:
         assert result is not None
         assert result["qualityStatus"] == "pending"
 
-    def test_quality_status_not_applicable_when_no_qi_stock(self) -> None:
+    def test_quality_status_unknown_when_no_qi_stock(self) -> None:
+        """No QI stock and no QM decision field → 'unknown', not 'not-applicable'.
+
+        'not-applicable' would imply quality inspection does not apply to this batch.
+        Without a verified QM usage decision field in the query, 'unknown' is correct.
+        See _derive_quality_status docstring for full reasoning.
+        """
         result = map_batch_header_rows([_FULL_BATCH_HEADER_ROW])
         assert result is not None
-        assert result["qualityStatus"] == "not-applicable"
+        assert result["qualityStatus"] == "unknown"
 
     def test_batch_status_maps_released_to_active(self) -> None:
         row = {**_FULL_BATCH_HEADER_ROW, "batch_status": "RELEASED"}
@@ -293,12 +299,33 @@ class TestGetTraceGraphRecursiveSpec:
         assert "trace-graph" in spec.tags
         assert "lineage" in spec.tags
 
-    def test_params_contain_material_batch_max_depth_no_plant(self) -> None:
+    def test_params_contain_material_batch_max_depth_max_rows_no_plant(self) -> None:
         spec = get_trace_graph_recursive_spec(self._req(max_depth=5))
         assert spec.params["material_id"] == _ANCHOR_MATERIAL_ID
         assert spec.params["batch_id"] == _ANCHOR_BATCH_ID
         assert spec.params["max_depth"] == 5
+        assert "max_rows" in spec.params
         assert "plant_id" not in spec.params
+
+    def test_params_max_rows_equals_request_max_edges(self) -> None:
+        req = TraceGraphRequest(
+            _ANCHOR_MATERIAL_ID, _ANCHOR_BATCH_ID, _ANCHOR_PLANT_ID,
+            direction="both", max_depth=3, max_edges=500,
+        )
+        spec = get_trace_graph_recursive_spec(req)
+        assert spec.params["max_rows"] == 500
+
+    def test_sql_has_limit_max_rows(self) -> None:
+        """P0-4: SQL-level row cap must be present to bound recursive query output."""
+        assert "LIMIT :max_rows" in get_trace_graph_recursive_spec(self._req()).sql
+
+    def test_sql_has_limit_in_downstream_direction(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("downstream")).sql
+        assert "LIMIT :max_rows" in sql
+
+    def test_sql_has_limit_in_upstream_direction(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req("upstream")).sql
+        assert "LIMIT :max_rows" in sql
 
     def test_sql_contains_with_recursive(self) -> None:
         assert "WITH RECURSIVE" in get_trace_graph_recursive_spec(self._req()).sql

@@ -101,7 +101,14 @@ export function calculateConfidence({
   }
 
   // 4. Quality Inspection Verification (Max: 15 pts)
-  if (batchHeader && batchHeader.qualityStatus && batchHeader.qualityStatus !== 'not-applicable') {
+  // 'unknown' means QM decision data is unavailable — not a positive quality signal.
+  // 'not-applicable' means inspection is structurally not applicable to this batch.
+  // Neither counts as quality evidence.
+  const hasQualityDecision =
+    batchHeader?.qualityStatus &&
+    batchHeader.qualityStatus !== 'not-applicable' &&
+    batchHeader.qualityStatus !== 'unknown'
+  if (hasQualityDecision) {
     details.quality = 'complete'
     score += 15
   } else {

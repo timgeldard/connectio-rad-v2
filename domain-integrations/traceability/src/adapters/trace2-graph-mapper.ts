@@ -51,23 +51,27 @@ export interface BackendTraceGraphResponse {
 }
 
 // ---------------------------------------------------------------------------
-// linkType → relationshipType (mirrors Python _LINK_TYPE_MAP in trace2_databricks_adapter.py)
+// linkType → relationshipType
+// The Python adapter passes raw LINK_TYPE strings from gold_batch_lineage.
+// Semantic mapping is owned here (frontend contract layer).
 // ---------------------------------------------------------------------------
 
 type RelationshipType =
-  | 'component-of'
+  | 'component-of'      // legacy/generic — keep for backward compatibility
   | 'produced-from'
   | 'split-from'
   | 'merged-into'
   | 'transferred-to'
   | 'delivered-to'
+  | 'vendor-receipt'    // inbound goods receipt from external supplier
+  | 'consumed-by'       // component consumed into a production order
 
 const LINK_TYPE_MAP: Record<string, RelationshipType> = {
   PRODUCTION: 'produced-from',
   BATCH_TRANSFER: 'transferred-to',
   STO_TRANSFER: 'transferred-to',
-  VENDOR_RECEIPT: 'component-of',
-  CONSUMPTION: 'component-of',
+  VENDOR_RECEIPT: 'vendor-receipt',  // P0-3: distinct from internal consumption
+  CONSUMPTION: 'consumed-by',        // P0-3: distinct from vendor receipt
   DELIVERY: 'delivered-to',
   SPLIT: 'split-from',
   MERGE: 'merged-into',
@@ -114,6 +118,7 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
       id: e.id,
       source: e.source,
       target: e.target,
+      ...(e.linkType ? { linkType: e.linkType } : {}),
       ...(relationshipType !== undefined ? { relationshipType } : {}),
       ...(e.quantity !== null ? { quantity: e.quantity } : {}),
       ...(e.baseUnitOfMeasure ? { uom: e.baseUnitOfMeasure } : {}),

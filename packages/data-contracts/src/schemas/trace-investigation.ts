@@ -49,7 +49,10 @@ export const BatchHeaderSummarySchema = z.object({
   expiryDate: z.string().datetime().optional(),
   processOrderId: z.string().optional(),
   stockStatus: z.enum(['unrestricted', 'quality-inspection', 'blocked', 'returns', 'transit']),
-  qualityStatus: z.enum(['accepted', 'rejected', 'pending', 'conditional', 'not-applicable']),
+  // 'unknown' means QM usage-decision data is not available from this source.
+  // It must NOT be treated as a positive quality signal.
+  // 'not-applicable' means quality inspection is structurally not applicable to this batch type.
+  qualityStatus: z.enum(['accepted', 'rejected', 'pending', 'conditional', 'not-applicable', 'unknown']),
   releaseStatus: z.enum(['released', 'blocked', 'restricted', 'not-released', 'unknown']),
 })
 
@@ -94,13 +97,17 @@ export const TraceEdgeSchema = z.object({
   source: z.string(),
   target: z.string(),
   relationshipType: z.enum([
-    'component-of',
-    'produced-from',
-    'split-from',
-    'merged-into',
-    'transferred-to',
-    'delivered-to',
+    'component-of',      // legacy/generic — retained for backward compatibility
+    'produced-from',     // batch was produced from this upstream batch
+    'split-from',        // batch was split from this batch
+    'merged-into',       // batch was merged into this batch
+    'transferred-to',    // stock transfer (STO or plant transfer)
+    'delivered-to',      // customer delivery
+    'vendor-receipt',    // inbound goods receipt from an external supplier
+    'consumed-by',       // batch/component consumed into a production order
   ]).optional(),
+  // Raw LINK_TYPE value from gold_batch_lineage — preserved for audit and debug.
+  linkType: z.string().optional(),
   quantity: z.number().optional(),
   uom: z.string().optional(),
   movementType: z.string().optional(),

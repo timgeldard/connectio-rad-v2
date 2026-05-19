@@ -151,6 +151,44 @@ describe('mapBackendTraceGraph', () => {
     expect(graph.edges[0].relationshipType).toBeUndefined()
   })
 
+  it('maps VENDOR_RECEIPT to vendor-receipt (not component-of)', () => {
+    const raw = makeResponse()
+    raw.edges[0].linkType = 'VENDOR_RECEIPT'
+    const graph = mapBackendTraceGraph(raw)
+    expect(graph.edges[0].relationshipType).toBe('vendor-receipt')
+  })
+
+  it('maps CONSUMPTION to consumed-by (not component-of)', () => {
+    const raw = makeResponse()
+    raw.edges[0].linkType = 'CONSUMPTION'
+    const graph = mapBackendTraceGraph(raw)
+    expect(graph.edges[0].relationshipType).toBe('consumed-by')
+  })
+
+  it('VENDOR_RECEIPT and CONSUMPTION map to different relationshipType values', () => {
+    const rawVR = makeResponse()
+    rawVR.edges[0].linkType = 'VENDOR_RECEIPT'
+    const rawCON = makeResponse()
+    rawCON.edges[0].linkType = 'CONSUMPTION'
+    const graphVR = mapBackendTraceGraph(rawVR)
+    const graphCON = mapBackendTraceGraph(rawCON)
+    expect(graphVR.edges[0].relationshipType).not.toBe(graphCON.edges[0].relationshipType)
+  })
+
+  it('preserves raw linkType on edge for audit', () => {
+    const raw = makeResponse()
+    raw.edges[0].linkType = 'VENDOR_RECEIPT'
+    const graph = mapBackendTraceGraph(raw)
+    expect((graph.edges[0] as Record<string, unknown>)['linkType']).toBe('VENDOR_RECEIPT')
+  })
+
+  it('does not set linkType on edge when linkType is null', () => {
+    const raw = makeResponse()
+    raw.edges[0].linkType = null
+    const graph = mapBackendTraceGraph(raw)
+    expect((graph.edges[0] as Record<string, unknown>)['linkType']).toBeUndefined()
+  })
+
   it('preserves edge source and target as nodeKey strings', () => {
     const graph = mapBackendTraceGraph(makeResponse())
     expect(graph.edges[0].source).toBe(UPSTREAM_KEY)
