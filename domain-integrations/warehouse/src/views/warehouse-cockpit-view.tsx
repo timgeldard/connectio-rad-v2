@@ -349,11 +349,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           'wh360_imwm_exceptions_v'
         ]}
         limitations={[
-          'UAT verification pending Claude',
+          'UAT verification pending',
           'No write-back or transactional executions allowed',
           'Read-only direct query mode against Unity Catalog views'
         ]}
-        lastVerified="Pending Claude UAT Sweep"
+        lastVerified="Pending"
       />
 
       {/* Safety Notice Warning */}
