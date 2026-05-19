@@ -116,6 +116,19 @@ describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
     expect(result.data.releaseStatus).toBe('blocked')
   })
 
+  it('derives stockStatus=restricted when restricted>0 and transit=0', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ ...V1_BATCH_HEADER_OK, blocked: 0, qi: 0, transit: 0, restricted: 50 }),
+        { status: 200 },
+      ),
+    )
+    const result = await adapter.getBatchHeaderSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.stockStatus).toBe('restricted')
+  })
+
   it('falls back to mock (source from super) when batchId is missing', async () => {
     const result = await adapter.getBatchHeaderSummary(partialRequest)
     expect(result.ok).toBe(true)

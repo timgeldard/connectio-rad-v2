@@ -48,7 +48,7 @@ export const BatchHeaderSummarySchema = z.object({
   manufactureDate: z.string().datetime().optional(),
   expiryDate: z.string().datetime().optional(),
   processOrderId: z.string().optional(),
-  stockStatus: z.enum(['unrestricted', 'quality-inspection', 'blocked', 'returns', 'transit']),
+  stockStatus: z.enum(['unrestricted', 'quality-inspection', 'blocked', 'restricted', 'returns', 'transit']),
   // 'unknown' means QM usage-decision data is not available from this source.
   // It must NOT be treated as a positive quality signal.
   // 'not-applicable' means quality inspection is structurally not applicable to this batch type.

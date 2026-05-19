@@ -17,13 +17,12 @@
 **Requires UAT:** Yes — confirm UNKNOWN banner renders correctly in deployed app when delivery API is down.
 
 ### TRACE-P0-002 — No link-type discrimination on trace graph edges
-**Status:** Open
+**Status:** Code fixed by PR #26 (linkType passthrough added to `TraceEdgeSchema`, expanded `relationshipType` enum with `vendor-receipt` and `consumed-by`, VENDOR_RECEIPT/CONSUMPTION discrimination added in graph mapper). Live Databricks `LINK_TYPE` value validation required before UAT sign-off.
 **Affected:** `trace-graph-panel.tsx`, `trace2-graph-mapper.ts`, `TraceGraphEdge` schema
-**Evidence:** `TraceGraphEdge` has no `linkType` field. The reference SQL engine distinguishes PRODUCTION / BATCH_TRANSFER / STO_TRANSFER / VENDOR_RECEIPT — without this, V2 cannot separate internal batch moves from vendor receipts, making supplier exposure analysis unreliable.
+**Evidence:** `TraceGraphEdge` had no `linkType` field. The reference SQL engine distinguishes PRODUCTION / BATCH_TRANSFER / STO_TRANSFER / VENDOR_RECEIPT — without this, V2 could not separate internal batch moves from vendor receipts, making supplier exposure analysis unreliable.
 **Risk:** An investigator may not identify the vendor receipt path responsible for introducing a non-conforming input batch.
-**Proposed fix:** Add `linkType` to `TraceGraphEdge` Zod schema, update graph mapper, render link type as edge label or colour in graph panel.
-**Owner:** Claude
-**Requires UAT:** Yes (requires live Databricks data to verify link type values)
+**Fix applied:** `linkType: z.string().optional()` passthrough added to `TraceEdgeSchema`; `relationshipType` enum expanded; graph mapper updated to emit `vendor-receipt` and `consumed-by`. Mock fixture exercises both new types.
+**Requires UAT:** Yes — live Databricks `LINK_TYPE` column values must be verified against mock fixture assumptions before UAT sign-off.
 
 ### TRACE-P0-003 — Severity tiering is binary, not depth-based
 **Status:** Open
@@ -48,12 +47,11 @@
 **Requires UAT:** No — can be validated via mock fixture update
 
 ### TRACE-P1-002 — No README or entry-point documentation for the domain
-**Status:** Open
+**Status:** Fixed (PR #25 — `README.md` added to `domain-integrations/traceability/`)
 **Affected:** `domain-integrations/traceability/`
-**Evidence:** No `README.md` exists. A developer onboarding to this domain has no documented entry point, no explanation of the adapter pattern, and no pointers to the UAT docs.
+**Evidence:** No `README.md` existed. A developer onboarding to this domain had no documented entry point, no explanation of the adapter pattern, and no pointers to the UAT docs.
 **Risk:** Slows contributor onboarding; increases chance of bypassing the adapter contract.
-**Proposed fix:** Add a short README covering: purpose, architecture (adapter → queries → panels), mock vs. live mode, test commands, docs index.
-**Owner:** Claude / Gemini
+**Fix applied:** README added covering purpose, architecture (adapter → queries → panels), mock vs. live mode, test commands, and docs index.
 **Requires UAT:** No
 
 ### TRACE-P1-003 — Invalid batch input has no documented graceful error state
