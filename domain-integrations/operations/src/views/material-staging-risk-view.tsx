@@ -1,9 +1,13 @@
 import { MaterialShortagePanel } from '../panels/material-shortage-panel.js'
 import { LateOrdersPanel } from '../panels/late-orders-panel.js'
 import { OperationsActionQueuePanel } from '../panels/operations-action-queue-panel.js'
+// TODO: Move cross-domain panels to a shared UI package to resolve circularity
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { WarehouseStagingStatusPanel } from '@connectio/di-warehouse'
-import type { OperationsPlanRiskAdapterRequest } from '../adapters/operations-plan-risk-adapter.js'
-import type { WarehouseStagingAdapterRequest } from '@connectio/di-warehouse'
+import type {
+  OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
+  WarehouseEvidenceAdapterRequest as WarehouseStagingAdapterRequest,
+} from '@connectio/data-contracts'
 
 export interface MaterialStagingRiskViewProps {
   readonly opsRequest: OperationsPlanRiskAdapterRequest

@@ -1,11 +1,13 @@
 import { StandardWorkspaceTemplate } from '@connectio/workspace-runtime'
-import type { ScopeContext } from '@connectio/data-contracts'
+import type {
+  ScopeContext,
+  OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
+  WarehouseEvidenceAdapterRequest as WarehouseStagingAdapterRequest,
+  QualityBlockersAdapterRequest,
+} from '@connectio/data-contracts'
 import { operationsPlanRiskRegistration } from './operations-plan-risk-registration.js'
 import { OperationsPlanRiskActionsPanel } from './actions/operations-plan-risk-actions-panel.js'
 import { useOperationsPlanRiskContext } from './adapters/operations-plan-risk-queries.js'
-import type { OperationsPlanRiskAdapterRequest } from './adapters/operations-plan-risk-adapter.js'
-import type { WarehouseStagingAdapterRequest } from '@connectio/di-warehouse'
-import type { QualityBlockersAdapterRequest } from '@connectio/di-quality'
 import type { MaintenanceConstraintsAdapterRequest } from '@connectio/di-maintenance'
 import { PlanOverviewView } from './views/plan-overview-view.js'
 import { CriticalBlockersView } from './views/critical-blockers-view.js'

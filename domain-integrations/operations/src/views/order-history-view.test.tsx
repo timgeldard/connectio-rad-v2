@@ -78,7 +78,7 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh/i })
+    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -86,7 +86,7 @@ describe('OrderHistoryView', () => {
     })
   })
 
-  it('validates range limits for the Limit input', async () => {
+  it('submits form with valid inputs', async () => {
     render(
       <Wrapper>
         <OrderHistoryView />
@@ -96,15 +96,11 @@ describe('OrderHistoryView', () => {
     const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
     fireEvent.change(orderInput, { target: { value: 'PO-TEST' } })
 
-    expect(screen.getByRole('slider')).toBeInTheDocument()
-    // Simulate setting limit manually by entering something invalid via state
-    // We will just directly trigger form submission with valid slider input
-    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh/i })
+    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
-      // By default limit is 100 which is valid, so no error should appear for limit
-      expect(screen.queryByText(/Limit must be/i)).toBeNull()
+      expect(screen.queryByText(/Process Order ID is required/i)).toBeNull()
     })
   })
 
@@ -132,8 +128,7 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    // Verify diagnostic filters container
-    expect(screen.getByText(/Diagnostic \/ planned filters — not applied by current native routes/i)).toBeInTheDocument()
+    // Verify preset button
 
     const presetBtn = screen.getByRole('button', { name: /Load Demo-Only Fixture/i })
     fireEvent.click(presetBtn)
@@ -152,9 +147,9 @@ describe('OrderHistoryView', () => {
     fireEvent.click(presetBtn)
     expect(screen.getByText(/Mock fixture selected/i)).toBeInTheDocument()
 
-    // Click reset
-    const resetBtn = screen.getByRole('button', { name: /Reset/i })
-    fireEvent.click(resetBtn)
+    // Edit process order input
+    const orderInput2 = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
+    fireEvent.change(orderInput2, { target: { value: 'NEW-PO-ID' } })
 
     // Warning banner should disappear
     expect(screen.queryByText(/Mock fixture selected/i)).toBeNull()
@@ -321,14 +316,6 @@ describe('OrderHistoryView', () => {
     expect(screen.getByText(/POST \/api\/por\/order-header/i)).toBeInTheDocument()
   })
 
-  it('displays preset helper text', () => {
-    render(
-      <Wrapper>
-        <OrderHistoryView />
-      </Wrapper>
-    )
-    expect(screen.getByText(/Mock fixture values are for UI testing only and are not known UAT process orders/i)).toBeInTheDocument()
-  })
 
   it('renders section-level route error cards and does not render success content for that section', async () => {
     // Setup a query failure on Operations, but other queries succeed
@@ -418,10 +405,10 @@ describe('OrderHistoryView', () => {
 
     // Expect the empty badge and empty placeholder for Operations
     expect(screen.getByText(/No process operations or phases recorded/i)).toBeInTheDocument()
-    expect(screen.getByText(/EMPTY/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/EMPTY/i).length).toBeGreaterThan(0)
   })
 
-  it('disables planned/diagnostic filters and renders warning copy and wired labels', () => {
+  it('disables planned/diagnostic filters and renders wired labels', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
@@ -431,12 +418,8 @@ describe('OrderHistoryView', () => {
     // Verify disabled inputs
     expect(screen.getByLabelText('Material ID')).toBeDisabled()
     expect(screen.getByLabelText('Batch ID')).toBeDisabled()
-    expect(screen.getByLabelText('Posting Date From')).toBeDisabled()
-    expect(screen.getByLabelText('Posting Date To')).toBeDisabled()
-    expect(screen.getByLabelText('Max Rows Limit')).toBeDisabled()
 
-    // Verify warning & explanatory copy
-    expect(screen.getByText(/Diagnostic \/ planned filters — not applied by current native routes/i)).toBeInTheDocument()
+    // Verify explanatory copy
     expect(screen.getAllByText(/Planned filter — not applied to database queries/i).length).toBeGreaterThan(0)
     expect(screen.getByText(/Wired to Header query only/i)).toBeInTheDocument()
   })

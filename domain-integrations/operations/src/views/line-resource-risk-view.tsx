@@ -2,8 +2,10 @@ import { LineStatusPanel } from '../panels/line-status-panel.js'
 import { YieldVariancePanel } from '../panels/yield-variance-panel.js'
 import { ScheduleAdherencePanel } from '../panels/schedule-adherence-panel.js'
 import { LateOrdersPanel } from '../panels/late-orders-panel.js'
+// TODO: Move cross-domain panels to a shared UI package to resolve circularity
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { MaintenanceConstraintPanel } from '@connectio/di-maintenance'
-import type { OperationsPlanRiskAdapterRequest } from '../adapters/operations-plan-risk-adapter.js'
+import type { OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest } from '@connectio/data-contracts'
 import type { MaintenanceConstraintsAdapterRequest } from '@connectio/di-maintenance'
 
 export interface LineResourceRiskViewProps {

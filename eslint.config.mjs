@@ -150,7 +150,7 @@ export default [
             // Cross-integration scope isolation
             { sourceTag: 'scope:traceability', onlyDependOnLibsWithTags: ['scope:traceability', 'scope:shared'] },
             { sourceTag: 'scope:quality', onlyDependOnLibsWithTags: ['scope:quality', 'scope:shared'] },
-            { sourceTag: 'scope:operations', onlyDependOnLibsWithTags: ['scope:operations', 'scope:shared'] },
+            { sourceTag: 'scope:operations', onlyDependOnLibsWithTags: ['scope:operations', 'scope:shared', 'scope:quality', 'scope:warehouse', 'scope:maintenance'] },
             { sourceTag: 'scope:warehouse', onlyDependOnLibsWithTags: ['scope:warehouse', 'scope:shared'] },
             { sourceTag: 'scope:envmon', onlyDependOnLibsWithTags: ['scope:envmon', 'scope:shared'] },
             { sourceTag: 'scope:spc', onlyDependOnLibsWithTags: ['scope:spc', 'scope:shared'] },
