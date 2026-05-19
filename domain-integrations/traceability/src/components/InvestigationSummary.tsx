@@ -54,8 +54,12 @@ export function InvestigationSummary({
     !customerDataUnavailable &&
     ((customerExposure.shippedQuantity || 0) > 0 || (customerExposure.affectedCustomers || 0) > 0)
   const hasUnrestrictedStock = batchHeader?.stockStatus === 'unrestricted'
+  // maxExposureDepth: minimum hop count to closest affected customer delivery.
+  // Populated from live Databricks data (TRACE-P0-003); undefined in mock mode.
+  const maxExposureDepth = customerExposure?.maxExposureDepth
 
   let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'LOW'
+  let severityLabel = ''
   let alertMessage = 'Unrestricted stock remains fully contained. Low immediate downstream exposure risk.'
   let actionGuidance = 'Review batch details & inventory balance.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
@@ -74,11 +78,29 @@ export function InvestigationSummary({
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   } else if (hasShippedExposure) {
-    severity = 'CRITICAL'
-    alertMessage = 'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
-    actionGuidance = 'Activate product recall and containment protocol.'
-    bannerBg = 'rgba(199, 51, 21, 0.08)'
-    bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
+    // Depth-aware tiering (reference engine: depth=1→CRITICAL, depth≥2→HIGH).
+    // Falls back to CRITICAL when depth is unavailable (conservative).
+    if (maxExposureDepth !== undefined && maxExposureDepth >= 2) {
+      severity = 'HIGH'
+      severityLabel = 'High Indirect Exposure'
+      alertMessage = 'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
+      actionGuidance = 'Assess scope of indirect exposure and initiate recall review.'
+      bannerBg = 'rgba(199, 130, 28, 0.08)'
+      bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
+    } else {
+      severity = 'CRITICAL'
+      alertMessage = 'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
+      actionGuidance = 'Activate product recall and containment protocol.'
+      bannerBg = 'rgba(199, 51, 21, 0.08)'
+      bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
+    }
+  } else if (maxExposureDepth !== undefined && maxExposureDepth >= 2) {
+    // Indirect multi-hop lineage with no confirmed shipments — reference engine: MEDIUM.
+    severity = 'MEDIUM'
+    alertMessage = 'Warning: Indirect lineage exposure detected at depth 2 or beyond. No direct shipments confirmed.'
+    actionGuidance = 'Review multi-hop lineage for downstream risk before concluding containment.'
+    bannerBg = 'rgba(199, 130, 28, 0.08)'
+    bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   } else if (isExpired || isNearExpiry) {
     severity = 'HIGH'
     alertMessage = 'Warning: Suspect batch is approaching shelf-life limit or has expired.'
@@ -100,6 +122,8 @@ export function InvestigationSummary({
     LOW: 'Low Risk',
     UNKNOWN: 'Exposure Unknown',
   }
+  // Use reason-specific label if set (e.g. depth-based HIGH), otherwise fall back to severity map.
+  if (!severityLabel) severityLabel = severityLabels[severity]
 
   return (
     <div
@@ -201,7 +225,7 @@ export function InvestigationSummary({
             border: '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          {severityLabels[severity]}
+          {severityLabel}
         </span>
         <div style={{ flex: 1 }}>
           <strong>Action Recommended:</strong> {alertMessage} <br />

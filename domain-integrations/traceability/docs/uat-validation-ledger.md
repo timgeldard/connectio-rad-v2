@@ -41,6 +41,93 @@ First UAT is expected to occur once:
 
 ---
 
+## First Live Validation Run — Preparation
+
+This section pre-defines exactly what to capture when a tester runs the first live Databricks-connected session. No values are filled in; the section acts as a template. Copy it into a new run entry in the [Run table](#run-table) when the session is complete.
+
+### Candidate batch
+
+| Field | Value |
+|---|---|
+| material_id | `000000000020052009` |
+| batch_id | `0008602411` |
+| plant_id | `C061` |
+
+This batch was selected because its lineage rows exist in the `gold_batch_lineage` view (confirmed from V1 source inspection) and it was the fixture anchor in adapter integration tests. It is the most likely batch to return non-empty data from a fresh query. See `golden-test-batches.md` for the full justification.
+
+### Environment prerequisites
+
+Before running, confirm all of the following:
+
+- [ ] V2 app deployed to a Databricks Apps environment (not a local dev server with mock data)
+- [ ] `VITE_ADAPTER_MODE` (or equivalent) is set to `databricks-api` — confirm via the source badge shown on each panel
+- [ ] Tester is authenticated via AAD OAuth (not a service principal)
+- [ ] Unity Catalog grants for `gold_batch_stock_v`, `gold_batch_lineage`, `gold_batch_mass_balance_v`, `gold_material`, `gold_plant` are active for the tester's identity
+- [ ] `gold_batch_summary_v` column names have been verified against the live catalog (see `databricks-column-verification-queries.md`)
+
+### What to capture
+
+Fill these in during the session. Record only observed values — do not infer or extrapolate.
+
+| Evidence field | What to record | Value |
+|---|---|---|
+| Session date | YYYY-MM-DD | — |
+| App version commit | `git rev-parse --short HEAD` on the deployed build | — |
+| App URL / environment name | Full URL or environment label | — |
+| Tester identity | Name or email (no tokens, no credentials) | — |
+| Adapter mode confirmed | Source badge text shown on batch header panel | — |
+| **Batch header** | | |
+| Batch header — returned? | Yes / No / Error | — |
+| Batch header — batchStatus value | Exact value as shown in UI | — |
+| Batch header — stockStatus value | Exact value as shown in UI | — |
+| Batch header — qualityStatus value | Exact value as shown in UI | — |
+| Batch header — releaseStatus value | Exact value as shown in UI | — |
+| Batch header — plantName | Populated or blank | — |
+| Batch header — manufactureDate | Populated or blank | — |
+| Batch header — expiryDate | Populated or blank | — |
+| **Trace graph** | | |
+| Trace graph — returned? | Yes / No / Error | — |
+| Trace graph — node count | Integer | — |
+| Trace graph — edge count | Integer | — |
+| Trace graph — truncated flag | true / false / not shown | — |
+| Trace graph — truncation banner shown? | Yes / No | — |
+| Trace graph — linkType examples | List up to 3 raw LINK_TYPE values as shown in edge details | — |
+| Trace graph — relationshipType examples | Mapped values from those edges | — |
+| Trace graph — upstream nodes | Count of nodes with direction upstream | — |
+| Trace graph — downstream nodes | Count of nodes with direction downstream | — |
+| **Mass balance** | | |
+| Mass balance — returned? | Yes / No / Error | — |
+| Mass balance — confidence value | 0.0 – 1.0 as shown | — |
+| Mass balance — unresolvedMovements | Integer | — |
+| Mass balance — movement row count | Integer | — |
+| **Quality / CoA** | | |
+| Quality status source | Label shown in UI (e.g. "QI stock", "unknown") | — |
+| CoA panel — returned? | Yes / No / Error / Not implemented | — |
+| **Customer exposure** | | |
+| Customer exposure — returned? | Yes / No / Error | — |
+| Customer exposure — severity banner | Exact banner text shown | — |
+| Customer exposure — affectedCustomers | Integer or "data unavailable" | — |
+| Customer exposure — shippedQuantity | Value or "data unavailable" | — |
+| **Other** | | |
+| Any error messages shown | Exact text | — |
+| Screenshots taken? | Yes / No | — |
+| Defects observed | Brief description or "none" | — |
+
+### Quality status interpretation note
+
+If `qualityStatus` returns `"unknown"`: this is the **expected safe result** from the current adapter when no QI stock is present and no QM usage-decision field is available. It does not mean the batch was accepted — it means the information needed to make that determination was not in the query. Record it as-is and do not interpret it as positive quality signal.
+
+If `qualityStatus` returns `"pending"`: QI stock > 0 was detected. An open quality inspection is in progress. Do not release or conclude quality status from this run alone.
+
+### After the session
+
+1. Create a new row in the [Run table](#run-table) with the evidence captured above.
+2. Update any defect entries that were resolved or reproduced.
+3. Update `production-readiness-checklist.md` rows 1.1, 1.2, 1.5, 3.2, 3.4 to reflect the result.
+4. If `gold_batch_summary_v` column names were verified, update `databricks-column-verification-queries.md` with date, environment, and confirmed columns.
+
+---
+
 ## Run table
 
 | run_id | date | environment | app_version_commit | tester | batch_tested | scenario_ref | result | defects_found | notes |
@@ -99,28 +186,34 @@ When the customer delivery data source was unavailable (i.e. the adapter returne
 ### DEF-TRACE-002 — Truncation state not surfaced in trace graph UI
 
 **Identified:** Gap analysis (`mb56-parity-review.md`), prior to UAT  
-**Fixed in:** Not yet fixed  
-**Status:** Open — known gap, not scheduled in current tranche
+**Fixed in:** Current tranche — `trace-graph-panel.tsx` truncation banner  
+**Status:** Code-fixed — live validation pending
 
 **Description:**  
-The `TraceGraph` data-contract schema has a `truncated` boolean field. The reference Python engine sets this to `true` when the recursive CTE reaches the configured depth limit, preventing an investigator from assuming the displayed graph is the full lineage. In the current V2 mock, `truncated` is never set to `true` and no UI element surfaces a truncation indicator.
+The `TraceGraph` data-contract schema has a `truncated` boolean field. The reference Python engine sets this to `true` when the recursive CTE reaches the configured depth limit, preventing an investigator from assuming the displayed graph is the full lineage.
 
-An investigator viewing a large batch lineage graph in V2 currently cannot know whether the graph they see is complete or a subset.
+**Behaviour after fix (expected):**  
+An amber banner is shown when `truncated === true`, `max_depth_reached` is in `warnings`, or `max_edges_reached` is in `warnings`. The banner reads: "Trace graph truncated — the displayed lineage may be incomplete because the max depth or row limit was reached. Review with a deeper trace or Databricks validation before concluding exposure is complete."
 
-**UAT verification:** Scenario 8 in `uat-acceptance-script.md`. Expected to fail until this gap is addressed.
+**UAT verification:** Scenario 8 in `uat-acceptance-script.md`. Requires a live Databricks lineage query that reaches the depth or edge limit to confirm the banner appears.
 
 ---
 
 ### DEF-TRACE-003 — HIGH severity label refers to shelf-life only, not lineage depth
 
 **Identified:** Code review against mb56 reference behaviour  
-**Fixed in:** Not applicable — this is a behavioural gap, not a regression  
-**Status:** Open — documented in `mb56-parity-review.md`
+**Fixed in:** Current tranche — `InvestigationSummary.tsx` depth-aware severity (TRACE-P0-003)  
+**Status:** Schema/code-ready — live data population pending
 
 **Description:**  
-In `InvestigationSummary.tsx`, the severity label "HIGH" (labelled "Near Expiry" in the UI) is triggered only when the batch is approaching or past its expiry date. The V1 reference engine assigns HIGH risk based on lineage depth (depth 2+ with shipped exposure). V2 does not implement depth-based recall tiering. An investigator assessing a batch with second-hop indirect customer exposure may see a lower severity than the risk warrants.
+In `InvestigationSummary.tsx`, the severity label "HIGH" (labelled "Near Expiry" in the UI) was triggered only when the batch was approaching or past its expiry date. The V1 reference engine assigns HIGH risk based on lineage depth (depth 2+ with shipped exposure). V2 did not implement depth-based recall tiering.
 
-**UAT verification:** No current test scenario covers this gap directly. Requires a batch with known second-hop downstream exposure and confirmed behaviour in V1 for comparison.
+**Behaviour after fix (expected):**  
+`maxExposureDepth` added to `CustomerExposureSummarySchema`. When populated: depth=1+shipped→CRITICAL, depth≥2+shipped→HIGH ("multi-hop indirect exposure"), depth≥2 no-ship→MEDIUM. When `maxExposureDepth` is absent (current mock mode), severity falls back to the conservative shipped/not-shipped binary logic — no change in mock behaviour.
+
+**Blocker:** The `maxExposureDepth` field requires the customer-exposure Databricks slice to be implemented and validated against live lineage data. The field is intentionally absent from the mock fixture.
+
+**UAT verification:** Requires a batch with known second-hop downstream exposure. Compare displayed severity to reference engine output for that batch.
 
 ---
 

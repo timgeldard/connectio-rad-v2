@@ -25,26 +25,24 @@
 **Requires UAT:** Yes — live Databricks `LINK_TYPE` column values must be verified against mock fixture assumptions before UAT sign-off.
 
 ### TRACE-P0-003 — Severity tiering is binary, not depth-based
-**Status:** Open
-**Affected:** `InvestigationSummary.tsx` severity logic
+**Status:** Schema/code-ready — population from live data pending
+**Affected:** `InvestigationSummary.tsx` severity logic, `CustomerExposureSummarySchema`
 **Evidence:** V2 assigns CRITICAL based on `shippedQuantity > 0` only. The reference engine (`fetch_recall_readiness()`) uses depth: depth=1 → CRITICAL, depth=2+ with shipments → HIGH, depth=2 no shipments → MEDIUM. A multi-hop indirect exposure at depth 2 with no direct shipments gets LOW in V2 but HIGH in the reference engine.
 **Risk:** Under-escalation of multi-hop indirect exposure scenarios.
-**Proposed fix:** Add `maxExposureDepth` to `CustomerExposureSummary` schema; update severity logic to factor in depth.
-**Owner:** Claude
-**Requires UAT:** Yes (requires live lineage data with known depth)
+**Fix applied:** `maxExposureDepth?: number` added to `CustomerExposureSummarySchema`. `InvestigationSummary.tsx` severity logic updated: depth=1+shipped→CRITICAL, depth≥2+shipped→HIGH, depth≥2 no-ship→MEDIUM, depth undefined→CRITICAL (conservative fallback). Mock data leaves `maxExposureDepth` undefined — depth-aware tiering activates only when the customer-exposure Databricks slice populates the field.
+**Requires UAT:** Yes — requires live Databricks customer-exposure data with verified lineage depth.
 
 ---
 
 ## P1 — Blocks Credible UAT Use
 
 ### TRACE-P1-001 — Truncation state not surfaced in trace graph UI
-**Status:** Open
+**Status:** Code-fixed — live validation pending
 **Affected:** `trace-graph-panel.tsx`, `TraceGraph.truncated` schema field
-**Evidence:** `TraceGraph.truncated` exists in the Zod schema but the mock always sets it to `false` and the panel has no truncation warning banner. An investigator viewing a depth-limited graph has no signal that upstream exposure may extend beyond what is shown.
+**Evidence:** `TraceGraph.truncated` exists in the Zod schema but the mock always sets it to `false` and the panel had no truncation warning banner. An investigator viewing a depth-limited graph has no signal that upstream exposure may extend beyond what is shown.
 **Risk:** Investigator concludes lineage is complete when the graph was cut at max depth.
-**Proposed fix:** Render a dismissible amber banner in `trace-graph-panel.tsx` when `traceGraph.truncated === true`. Update mock to exercise this path.
-**Owner:** Claude
-**Requires UAT:** No — can be validated via mock fixture update
+**Fix applied:** Amber truncation banner rendered in `trace-graph-panel.tsx` when `truncated === true`, `max_depth_reached` is in warnings, or `max_edges_reached` is in warnings. Copy updated: "Trace graph truncated — the displayed lineage may be incomplete because the max depth or row limit was reached. Review with a deeper trace or Databricks validation before concluding exposure is complete." Tests cover all three trigger conditions.
+**Requires UAT:** Yes — confirm banner renders on a live Databricks graph that reaches depth/edge limit.
 
 ### TRACE-P1-002 — No README or entry-point documentation for the domain
 **Status:** Fixed (PR #25 — `README.md` added to `domain-integrations/traceability/`)

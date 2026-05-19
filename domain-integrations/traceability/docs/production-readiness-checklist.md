@@ -15,9 +15,10 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 1.1 | Lineage correctness validated against live Databricks gold views | ❌ | Mock only. See `mb56-parity-review.md`. |
 | 1.2 | MB56-style behaviour compared to reference engine | 🔶 | Gap analysis complete (`mb56-parity-review.md`). Live parity not verified. |
 | 1.3 | Null/unavailable data states do not imply false containment | ✅ | Fixed PR #24 (null customerExposure → UNKNOWN severity). |
-| 1.4 | Severity tiering reflects exposure depth, not only binary shipped flag | ❌ | TRACE-P0-003 open. |
+| 1.4 | Severity tiering reflects exposure depth, not only binary shipped flag | 🔶 | Schema/code-ready: `maxExposureDepth` added to `CustomerExposureSummarySchema`; depth-aware severity logic implemented in `InvestigationSummary.tsx`. Live population requires Databricks customer-exposure slice (TRACE-P0-003 — population pending). |
 | 1.5 | Link types on trace graph edges discriminate vendor receipts from internal moves | 🔶 | Code fixed PR #26 (linkType passthrough, expanded relationshipType enum). Live Databricks LINK_TYPE value validation still required before UAT sign-off. |
-| 1.6 | Graph truncation signalled when depth limit is reached | ❌ | TRACE-P1-001 open. |
+| 1.6 | Graph truncation signalled when depth limit is reached | 🔶 | Code fixed: unified truncation banner copy updated; `max_edges_reached` warning now triggers banner alongside `max_depth_reached` and `truncated=true`. Live validation pending (TRACE-P1-001 — code-fixed). |
+| 1.7 | `gold_batch_summary_v` column names verified in live Databricks catalog | ❌ | All 6 column aliases in `get_batch_header_summary_spec` are marked TODO (plant_id, manufacture_date, expiry_date, batch_status, uom, process_order_id, join key). No Databricks access available at code time. Validation procedure documented in `databricks-column-verification-queries.md`. Must be run before live batch header data is trusted. |
 
 ---
 
@@ -29,6 +30,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.2 | Mock data is not presented as live or verified | ✅ | Adapter factory pattern; mock mode explicit. |
 | 2.3 | Evidence confidence scoring sectors documented | 🔶 | Score logic documented in code; user-facing explanation missing (TRACE-P2-004). |
 | 2.4 | Data freshness / staleness surfaced to user | ❌ | TRACE-P2-002 open. |
+| 2.5 | Quality decision source documented and blocked until QM evidence verified | 🔶 | `_derive_quality_status` returns `pending` (QI stock > 0) or `unknown` only. `accepted`/`rejected`/`conditional` require a verified QM usage-decision field (e.g. `gold_qm_usage_decision_v`) that is not in the current query. Tests prove conservative values are enforced. Blocker documented in adapter docstring. |
 
 ---
 
@@ -108,5 +110,5 @@ These gates must be satisfied before the databricks-api adapter is activated for
 |-------|---------|
 | Development / code review | ✅ Ready |
 | Internal mock-mode demonstration | ✅ Ready |
-| UAT with live Databricks data | ❌ Blocked — P0 defects open, no live validation performed |
-| Production / recall decision support | ❌ Blocked — requires UAT sign-off, P0 resolution, OAuth wiring |
+| UAT with live Databricks data | ❌ Blocked — depth severity and column verification require live data; no live validation performed |
+| Production / recall decision support | ❌ Blocked — requires UAT sign-off, P0 population from live data, OAuth wiring |
