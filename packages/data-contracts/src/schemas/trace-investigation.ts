@@ -190,6 +190,11 @@ export const CustomerExposureSummarySchema = z.object({
   highestSeverity: z.enum(['none', 'low', 'medium', 'high', 'critical']),
   blockedDeliveries: z.number().int().min(0),
   recallRecommended: z.boolean(),
+  // Minimum hop count from anchor batch to the closest affected customer delivery.
+  // depth=1 → direct shipment; depth≥2 → multi-hop indirect exposure.
+  // When absent, severity logic falls back to conservative binary shipped/not-shipped rules.
+  // Requires population from live Databricks lineage data (TRACE-P0-003).
+  maxExposureDepth: z.number().int().min(1).optional(),
 })
 
 export type CustomerExposureSummary = z.infer<typeof CustomerExposureSummarySchema>
