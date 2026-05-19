@@ -122,6 +122,21 @@ describe('calculateConfidence', () => {
     expect(result.score).toBe(0)
     expect(result.gaps).toHaveLength(4) // lineage, mb, quality, suppliers
   })
+
+  it('qualityStatus unknown does not count as quality evidence (P0-2)', () => {
+    const batchHeaderUnknownQuality = { ...completeBatchHeader, qualityStatus: 'unknown' as const }
+    const result = calculateConfidence({
+      batchHeader: batchHeaderUnknownQuality,
+      customerExposure: completeCustomerExposure,
+      massBalance: completeMassBalance,
+      coaRelease: completeCoARelease,
+      supplierExposure: completeSupplierExposure,
+      traceGraph: completeTraceGraph,
+    })
+    expect(result.details.quality).toBe('missing')
+    expect(result.gaps).toContain('Suspect batch lacks a registered quality batch status.')
+    expect(result.score).toBe(85) // 100 - 15 quality points
+  })
 })
 
 describe('EvidenceConfidenceBadge', () => {
