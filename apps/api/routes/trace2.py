@@ -14,7 +14,6 @@ from adapters.trace2.trace2_databricks_adapter import (
     map_trace_graph,
 )
 from contracts.generated import (
-    BatchHeaderSummary,
     TraceGraph,
 )
 from routes._databricks import (
@@ -59,7 +58,7 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
     return response.json()
 
 
-@router.post("/trace2/batch-header", response_model=BatchHeaderSummary)
+@router.post("/trace2/batch-header")
 async def batch_header(
     body: BatchRequest,
     x_forwarded_access_token: str | None = Header(default=None),

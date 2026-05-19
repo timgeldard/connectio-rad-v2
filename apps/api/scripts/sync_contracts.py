@@ -10,7 +10,7 @@ def main():
 
     if not json_schema_path.exists():
         print(f"Error: {json_schema_path} does not exist. Run the TS export script first.")
-        return
+        sys.exit(1)
 
     print(f"Generating Pydantic models from {json_schema_path}...")
 
@@ -26,6 +26,8 @@ def main():
         "--enum-field-as-literal", "all",
         "--field-constraints",
         "--target-python-version", "3.11",
+        "--allow-population-by-field-name",
+        "--use-standard-primitive-types",
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -33,7 +35,7 @@ def main():
     if result.returncode != 0:
         print("Error generating models:")
         print(result.stderr)
-        return
+        sys.exit(1)
 
     print(f"Successfully generated Pydantic models at {output_path}")
 

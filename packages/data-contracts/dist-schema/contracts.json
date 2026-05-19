@@ -6627,8 +6627,8 @@
         "direction": {
           "type": "string",
           "enum": [
-            "forward",
-            "reverse",
+            "upstream",
+            "downstream",
             "both"
           ]
         },

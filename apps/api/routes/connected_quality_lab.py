@@ -15,10 +15,6 @@ import os
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
-from contracts.generated import (
-    ConnectedQualityLabFailuresResponse,
-    ConnectedQualityLabPlantsResponse,
-)
 
 from adapters.cq.cq_databricks_adapter import get_lab_plants_spec, map_lab_plants_rows
 from routes._databricks import require_databricks_config, set_databricks_response_headers
@@ -66,7 +62,7 @@ async def _forward_get(v1_path: str, params: dict, token: str | None) -> dict:
     return response.json()
 
 
-@router.get("/cq/lab/fails", response_model=ConnectedQualityLabFailuresResponse)
+@router.get("/cq/lab/fails")
 async def lab_fails(
     plant_id: str | None = None,
     lot_type: str | None = None,
@@ -81,7 +77,7 @@ async def lab_fails(
     return await _forward_get("/api/cq/lab/fails", params, x_forwarded_access_token)
 
 
-@router.get("/cq/lab/plants", response_model=ConnectedQualityLabPlantsResponse)
+@router.get("/cq/lab/plants")
 async def lab_plants(
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),

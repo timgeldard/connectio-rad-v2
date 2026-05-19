@@ -29,10 +29,17 @@
       "options": {
         "commands": [
           "npx tsx scripts/export-json-schema.ts",
-          "../../apps/api/.venv/bin/python ../../apps/api/scripts/sync_contracts.py"
+          "uv run --project ../../apps/api ../../apps/api/scripts/sync_contracts.py"
         ],
         "cwd": "packages/data-contracts",
         "parallel": false
+      }
+    },
+    "check-pydantic": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm run sync-pydantic && git diff --exit-code ../../apps/api/contracts/generated.py",
+        "cwd": "packages/data-contracts"
       }
     }
   }
