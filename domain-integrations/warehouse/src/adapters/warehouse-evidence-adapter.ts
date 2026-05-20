@@ -2,6 +2,7 @@ import type {
   WarehouseHoldStatus,
   WarehouseEvidenceAdapterRequest,
 } from '@connectio/data-contracts'
+export type { WarehouseHoldStatus, WarehouseEvidenceAdapterRequest }
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import { mockWarehouseHoldStatus } from './warehouse-evidence-mock-data.js'
 

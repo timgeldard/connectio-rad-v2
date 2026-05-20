@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { SPCMonitoringContext } from '@connectio/data-contracts'
+import type { SPCMonitoringContext, UATEvidencePayload } from '@connectio/data-contracts'
 
 // ---------------------------------------------------------------------------
 // Shared sheet primitives
@@ -216,7 +216,7 @@ function LinkAction({ label, href, onClose }: { label: string; href: string; onC
 // Actions Panel
 // ---------------------------------------------------------------------------
 
-type ActiveAction = 'acknowledge-signal' | 'open-batch-release' | 'open-trace' | 'request-investigation' | null
+type ActiveAction = 'acknowledge-signal' | 'open-batch-release' | 'open-trace' | 'request-investigation' | 'copy-success' | 'copy-failed' | null
 
 export interface SPCActionsPanelProps {
   readonly context: SPCMonitoringContext | null
@@ -238,22 +238,60 @@ export function SPCActionsPanel({ context }: SPCActionsPanelProps) {
       <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
         <ActionButton 
-          label="Copy SPC UAT Evidence" 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : activeAction === 'copy-failed' ? 'Copy Failed!' : 'Copy SPC UAT Evidence'} 
           onClick={() => {
-            const evidence = {
+            const payload: UATEvidencePayload = {
               domain: 'spc',
-              timestamp: new Date().toISOString(),
-              context: {
-                plant: context?.plantId,
-                material: context?.materialId,
-                batch: context?.batchId,
-                workCentre: context?.workCentreId
-              },
+              workspace: 'SPC Monitoring',
+              capturedAt: new Date().toISOString(),
               adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
-              readiness: 'read-only-uat'
+              inputs: {
+                plantId: context?.plantId ?? null,
+                materialId: context?.materialId ?? null,
+                batchId: context?.batchId ?? null,
+                workCentreId: context?.workCentreId ?? null
+              },
+              sourceSummary: {
+                overall: 'mock', // SPC is currently mock-only
+                sections: {
+                  summary: 'mock',
+                  signals: 'mock',
+                  characteristics: 'mock',
+                  charts: 'mock'
+                }
+              },
+              evidenceCompleteness: {
+                status: 'loaded',
+                sections: {
+                  summary: 'loaded',
+                  signals: 'loaded',
+                  characteristics: 'loaded',
+                  charts: 'loaded'
+                }
+              },
+              warnings: [
+                'SPC sandbox mode — simulated data for validation only.',
+                'Native Databricks integration is pending catalog alignment.'
+              ],
+              uatNotes: [
+                'No live validation claimed.',
+                'Unavailable evidence must not be interpreted as zero exposure or no risk.'
+              ]
             }
-            navigator.clipboard.writeText(JSON.stringify(evidence, null, 2))
-            alert('SPC UAT evidence details copied to clipboard')
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+                .then(() => {
+                  setActiveAction('copy-success')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+                .catch(() => {
+                  setActiveAction('copy-failed')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+            } else {
+              setActiveAction('copy-failed')
+              setTimeout(() => setActiveAction(null), 2000)
+            }
           }} 
           disabled={disabled} 
           variant="secondary" 

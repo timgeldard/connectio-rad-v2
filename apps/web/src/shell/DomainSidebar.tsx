@@ -1,5 +1,6 @@
-﻿import { usePinnedWorkspaces } from '@connectio/personalization'
+import { usePinnedWorkspaces } from '@connectio/personalization'
 import { isNavigable } from '@connectio/product-model'
+import { isWorkspaceFlagEnabled } from '@connectio/feature-flags'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 
@@ -21,6 +22,7 @@ export function DomainSidebar() {
   const visible = workspaceRegistry.filter(
     w =>
       isNavigable(w.lifecycle) &&
+      isWorkspaceFlagEnabled(w.workspaceId) &&
       (pinnedWorkspaces === null || pinnedWorkspaces.includes(w.workspaceId)),
   )
 

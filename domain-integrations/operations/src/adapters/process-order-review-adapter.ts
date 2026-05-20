@@ -11,6 +11,7 @@ import type {
   ProcessOrderGoodsMovement,
   ProcessOrderReviewAdapterRequest,
 } from '@connectio/data-contracts'
+export type { ProcessOrderReviewAdapterRequest }
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
   mockProcessOrderReviewContext,

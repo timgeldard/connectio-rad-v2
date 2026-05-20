@@ -1,16 +1,43 @@
+import '@testing-library/jest-dom'
 import { describe, it, expect } from 'vitest'
 import { ProcessOrderReviewAdapter, toProcessOrderReviewAdapterError } from './process-order-review-adapter.js'
+
+import {
+  ProcessOrderReviewContextSchema,
+  ProcessOrderHeaderSchema,
+  OrderProgressSummarySchema,
+  ExecutionTimelineItemSchema,
+  OrderQualityContextSchema,
+  OrderStagingContextSchema,
+  RelatedBatchContextSchema,
+  ProcessOrderOperationSchema,
+  ProcessOrderConfirmationSchema,
+  ProcessOrderGoodsMovementSchema,
+} from '@connectio/data-contracts'
+import { z } from 'zod'
 
 const FIXED_NOW = '2024-03-08T10:00:00.000Z'
 const adapter = new ProcessOrderReviewAdapter({ now: () => FIXED_NOW })
 
 const request = { processOrderId: 'PO-240308-3847', plantId: 'IE10' }
 
+function assertSchema<T>(result: unknown, schema: z.ZodType<T>) {
+  const res = result as { ok: boolean; data?: unknown }
+  expect(res.ok).toBe(true)
+  if (res.ok) {
+    const parsed = schema.safeParse(res.data)
+    if (!parsed.success) {
+      console.error(parsed.error)
+    }
+    expect(parsed.success).toBe(true)
+  }
+}
+
 describe('ProcessOrderReviewAdapter', () => {
   describe('getProcessOrderReviewContext', () => {
     it('returns ok result', async () => {
       const result = await adapter.getProcessOrderReviewContext(request)
-      expect(result.ok).toBe(true)
+      assertSchema(result, ProcessOrderReviewContextSchema)
     })
 
     it('returns processOrderId PO-240308-3847', async () => {
@@ -34,7 +61,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getProcessOrderHeader', () => {
     it('returns ok result', async () => {
       const result = await adapter.getProcessOrderHeader(request)
-      expect(result.ok).toBe(true)
+      assertSchema(result, ProcessOrderHeaderSchema)
     })
 
     it('returns valid quantities', async () => {
@@ -54,7 +81,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderProgressSummary', () => {
     it('returns ok result', async () => {
       const result = await adapter.getOrderProgressSummary(request)
-      expect(result.ok).toBe(true)
+      assertSchema(result, OrderProgressSummarySchema)
     })
 
     it('progressPercent is between 0 and 100', async () => {
@@ -75,6 +102,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getExecutionTimeline', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getExecutionTimeline(request)
+      assertSchema(result, z.array(ExecutionTimelineItemSchema))
       expect(result.ok).toBe(true)
       if (!result.ok) throw new Error('Expected ok result')
       expect(Array.isArray(result.data)).toBe(true)
@@ -95,7 +123,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderQualityContext', () => {
     it('returns ok result', async () => {
       const result = await adapter.getOrderQualityContext(request)
-      expect(result.ok).toBe(true)
+      assertSchema(result, OrderQualityContextSchema)
     })
 
     it('releaseBlockers is an array', async () => {
@@ -114,7 +142,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderStagingContext', () => {
     it('returns ok result', async () => {
       const result = await adapter.getOrderStagingContext(request)
-      expect(result.ok).toBe(true)
+      assertSchema(result, OrderStagingContextSchema)
     })
 
     it('componentsStaged does not exceed componentsRequired', async () => {
@@ -127,6 +155,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getRelatedBatchContext', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getRelatedBatchContext(request)
+      assertSchema(result, z.array(RelatedBatchContextSchema))
       expect(result.ok).toBe(true)
       if (!result.ok) throw new Error('Expected ok result')
       expect(Array.isArray(result.data)).toBe(true)
@@ -153,6 +182,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderOperations', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getOrderOperations(request)
+      assertSchema(result, z.array(ProcessOrderOperationSchema))
       expect(result.ok).toBe(true)
       if (!result.ok) throw new Error('Expected ok result')
       expect(Array.isArray(result.data)).toBe(true)
@@ -197,6 +227,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderConfirmations', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getOrderConfirmations(request)
+      assertSchema(result, z.array(ProcessOrderConfirmationSchema))
       expect(result.ok).toBe(true)
       if (!result.ok) throw new Error('Expected ok result')
       expect(Array.isArray(result.data)).toBe(true)
@@ -239,6 +270,7 @@ describe('ProcessOrderReviewAdapter', () => {
   describe('getOrderGoodsMovements', () => {
     it('returns ok result with array', async () => {
       const result = await adapter.getOrderGoodsMovements(request)
+      assertSchema(result, z.array(ProcessOrderGoodsMovementSchema))
       expect(result.ok).toBe(true)
       if (!result.ok) throw new Error('Expected ok result')
       expect(Array.isArray(result.data)).toBe(true)
@@ -300,7 +332,12 @@ describe('ProcessOrderReviewAdapter', () => {
     it('returns source: "mock" for error paths', () => {
       const errRes = toProcessOrderReviewAdapterError(new Error('Test error'))
       expect(errRes.ok).toBe(false)
-      expect(errRes.source).toBe('mock')
+      if (!errRes.ok) {
+        expect(errRes.source).toBe('mock')
+        expect(errRes.displayState).toBe('error')
+        expect(errRes.error.code).toBe('unknown')
+        expect(errRes.error.message).toBe('Test error')
+      }
     })
   })
 })

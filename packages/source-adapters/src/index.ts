@@ -8,3 +8,4 @@ export type {
   SourceAdapter,
 } from './types.js'
 export { SourceAdapterRegistry, adapterRegistry } from './registry.js'
+export { createDisabledAdapter } from './disabled.js'

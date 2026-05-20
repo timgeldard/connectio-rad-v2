@@ -1,4 +1,4 @@
-import type { ProcessOrderConfirmation, ProcessOrderGoodsMovement, ProcessOrderHeader, ProcessOrderOperation } from '@connectio/data-contracts'
+import type { ProcessOrderHeader } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'

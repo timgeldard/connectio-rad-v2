@@ -1,5 +1,7 @@
 # Cross-Domain Readiness Index & Navigation Layer
 
+*   [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
+
 **Date:** 2026-05-19  
 **Status:** Living Document  
 **Target Audience:** Product Owners, Architects, and UAT Leads  
@@ -59,6 +61,7 @@ We use the following conservative status classifications:
   * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
   * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
   * [Golden Test Batches](../../domain-integrations/traceability/docs/golden-test-batches.md)
+  * [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
   * [Databricks Column Verification Queries](../migration/databricks-column-verification-queries.md)
   * [Customer Exposure Depth Plan](../../domain-integrations/traceability/docs/customer-exposure-depth-slice-plan.md)
   * [Quality Decision Source Plan](../../domain-integrations/traceability/docs/quality-decision-source-plan.md)

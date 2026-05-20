@@ -1,4 +1,8 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
+expect.extend(matchers)
+import '@testing-library/jest-dom/vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QualityResultsPanel } from './quality-results-panel.js'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
@@ -102,9 +106,9 @@ describe('QualityResultsPanel', () => {
 
     render(<QualityResultsPanel request={request} />)
 
-    expect(screen.getByText('Inspection Lot:')).toBeDefined()
-    expect(screen.getByText('LOT-12345')).toBeDefined()
-    expect(screen.getByText(/This panel uses simulated mock data/i)).toBeDefined()
+    expect(screen.getAllByText(/Inspection Lot:/i)[0]).toBeInTheDocument()
+    expect(screen.getAllByText('LOT-12345')[0]).toBeInTheDocument()
+    expect(screen.getAllByText(/This panel uses simulated mock data/i)[0]).toBeInTheDocument()
   })
 
   it('toggles MIC failures list visibility when Hide/Show button is clicked', () => {

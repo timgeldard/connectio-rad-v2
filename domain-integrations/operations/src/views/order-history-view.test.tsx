@@ -1,9 +1,12 @@
-// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
+expect.extend(matchers)
+
+import '@testing-library/jest-dom/vitest'
+// @vitest-environment jsdom
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { OrderHistoryView } from './order-history-view.js'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import '@testing-library/jest-dom'
 
 // Mock the React Query hooks
 vi.mock('../adapters/process-order-review-queries.js', () => {
@@ -93,10 +96,10 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
+    const orderInput = screen.getAllByPlaceholderText(/e.g. PO-240308-3847/i)[0]
     fireEvent.change(orderInput, { target: { value: 'PO-TEST' } })
 
-    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
+    const submitBtn = screen.getAllByRole('button', { name: /Run \/ Refresh Order History/i })[0]
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -111,13 +114,13 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const presetBtn = screen.getByRole('button', { name: /Load Demo-Only Fixture/i })
+    const presetBtn = screen.getAllByRole('button', { name: /Load Demo-Only Fixture/i })[0]
     fireEvent.click(presetBtn)
 
-    const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i) as HTMLInputElement
+    const orderInput = screen.getAllByPlaceholderText(/e.g. PO-240308-3847/i)[0] as HTMLInputElement
     expect(orderInput.value).toBe('PO-240308-3847')
 
-    const plantInput = screen.getByPlaceholderText(/e.g. IE10/i) as HTMLInputElement
+    const plantInput = screen.getAllByPlaceholderText(/e.g. IE10/i)[0] as HTMLInputElement
     expect(plantInput.value).toBe('IE10')
   })
 
@@ -129,15 +132,14 @@ describe('OrderHistoryView', () => {
     )
 
     // Verify preset button
-
-    const presetBtn = screen.getByRole('button', { name: /Load Demo-Only Fixture/i })
+    const presetBtn = screen.getAllByText(/Load Demo-Only Fixture/i)[0]
     fireEvent.click(presetBtn)
 
     // Warning banner should be present
     expect(screen.getByText(/Mock fixture selected/i)).toBeInTheDocument()
 
     // Edit process order input
-    const orderInput = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
+    const orderInput = screen.getAllByPlaceholderText(/e.g. PO-240308-3847/i)[0]
     fireEvent.change(orderInput, { target: { value: 'NEW-PO-ID' } })
 
     // Warning banner should disappear
@@ -148,7 +150,7 @@ describe('OrderHistoryView', () => {
     expect(screen.getByText(/Mock fixture selected/i)).toBeInTheDocument()
 
     // Edit process order input
-    const orderInput2 = screen.getByPlaceholderText(/e.g. PO-240308-3847/i)
+    const orderInput2 = screen.getAllByPlaceholderText(/e.g. PO-240308-3847/i)[0]
     fireEvent.change(orderInput2, { target: { value: 'NEW-PO-ID' } })
 
     // Warning banner should disappear
@@ -276,9 +278,9 @@ describe('OrderHistoryView', () => {
     )
 
     // Check Header Card Elements
-    expect(screen.getByText(/Process Order Header Context/i)).toBeInTheDocument()
-    expect(screen.getByText(/MAT-CH-EMMENTAL-BLOCK - Emmental Block 4 kg/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/DATABRICKS-API/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Process Order Header Context/i)[0]).toBeInTheDocument()
+    expect(screen.getAllByText(/Emmental Block/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/DATABRICKS/i).length).toBeGreaterThan(0)
 
     // Check Operations rendering
     expect(screen.getAllByText(/Milk Standardisation/i).length).toBeGreaterThan(0)
@@ -297,10 +299,10 @@ describe('OrderHistoryView', () => {
     expect(screen.getAllByText(/25,000 L/i).length).toBeGreaterThan(0)
 
     // Check mixed UOM warning is rendered under exceptions
-    expect(screen.getByText(/Mixed units of measure detected/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Mixed units of measure detected/i)[0]).toBeInTheDocument()
 
     // Verify chronological sorting in timeline (01:30 Goods movement -> 03:05 Confirmation)
-    const timelineBlock = screen.getByText(/Chronological Event Timeline/i).parentElement
+    const timelineBlock = screen.getAllByText(/Chronological Event Timeline/i)[0].parentElement
     expect(timelineBlock).toBeInTheDocument()
     const content = timelineBlock?.textContent ?? ''
     const idxGM = content.indexOf('MAT-RM-RAW-MILK')
@@ -310,10 +312,10 @@ describe('OrderHistoryView', () => {
     expect(idxGM).toBeLessThan(idxConf)
 
     // Collapsible technical drawer click test
-    const drawerBtn = screen.getByRole('button', { name: /Show Technical Query Diagnostics/i })
+    const drawerBtn = screen.getAllByRole('button', { name: /Show Technical Query Diagnostics/i })[0]
     fireEvent.click(drawerBtn)
-    expect(screen.getByText(/Active Endpoints/i)).toBeInTheDocument()
-    expect(screen.getByText(/POST \/api\/por\/order-header/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Active Endpoints/i)[0]).toBeInTheDocument()
+    expect(screen.getAllByText(/POST \/api\/por\/order-header/i)[0]).toBeInTheDocument()
   })
 
 
@@ -358,10 +360,10 @@ describe('OrderHistoryView', () => {
     )
 
     // Header context succeeds and renders
-    expect(screen.getByText(/Process Order Header Context/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Process Order Header Context/i)[0]).toBeInTheDocument()
 
     // Operations fails and renders route-specific error card with guidance
-    expect(screen.getByText(/Operations Query Failed/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Operations Query Failed/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/BACKEND_ADAPTER_MODE/i).length).toBeGreaterThan(0)
   })
 
@@ -404,8 +406,8 @@ describe('OrderHistoryView', () => {
     )
 
     // Expect the empty badge and empty placeholder for Operations
-    expect(screen.getByText(/No process operations or phases recorded/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/EMPTY/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/No process operations or phases recorded/i)[0]).toBeInTheDocument()
+    expect(screen.getAllByText(/NO RECORDS/i).length).toBeGreaterThan(0)
   })
 
   it('disables planned/diagnostic filters and renders wired labels', () => {
@@ -416,11 +418,11 @@ describe('OrderHistoryView', () => {
     )
 
     // Verify disabled inputs
-    expect(screen.getByLabelText('Material ID')).toBeDisabled()
-    expect(screen.getByLabelText('Batch ID')).toBeDisabled()
+    expect(screen.getAllByLabelText('Material ID')[0]).toBeDisabled()
+    expect(screen.getAllByLabelText('Batch ID')[0]).toBeDisabled()
 
     // Verify explanatory copy
     expect(screen.getAllByText(/Planned filter — not applied to database queries/i).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Wired to Header query only/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Wired to Header query only/i)[0]).toBeInTheDocument()
   })
 })

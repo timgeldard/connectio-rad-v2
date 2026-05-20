@@ -1,7 +1,7 @@
 import type { EvidencePanelDisplayState } from '@connectio/data-contracts'
 
 /** Identifies which data source backed an adapter response. */
-export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api'
+export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api' | 'mixed'
 
 /** Structured error returned from a source adapter. */
 export interface AdapterError {

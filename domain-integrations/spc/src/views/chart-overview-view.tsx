@@ -1,4 +1,9 @@
-import { VerificationStatusBanner } from '@connectio/design-system'
+import {
+  VerificationStatusBanner,
+  SourceConfidenceStrip,
+  type ExtendedSourceMode,
+  type EvidenceStatus,
+} from '@connectio/design-system'
 import type { CSSProperties } from 'react'
 import { SPCSummaryPanel } from '../panels/spc-summary-panel.js'
 import { ActiveSPCSignalsPanel } from '../panels/active-spc-signals-panel.js'
@@ -6,6 +11,7 @@ import { ControlChartPanel } from '../panels/control-chart-panel.js'
 import { SPCEvidenceSummaryPanel } from '../panels/spc-evidence-summary-panel.js'
 import { useMonitoredCharacteristics, useSPCSummary, useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const HEADER_GRID: CSSProperties = {
   display: 'grid',
@@ -24,19 +30,16 @@ export interface ChartOverviewViewProps {
   readonly request: SPCMonitoringAdapterRequest
 }
 
-function resolveEvidenceStatus(result: any): 'loading' | 'mock-only' | 'ready' | 'error' | 'unavailable' {
-  if (!result) return 'loading'
+function resolveEvidenceStatus(result: AdapterResult<unknown> | undefined): EvidenceStatus {
+  if (!result) return 'pending-validation'
   if (!result.ok) {
-    if (result.error?.code === 'unavailable') return 'unavailable'
-    if (result.error?.code === 'not-found' && (result.source === 'databricks-api' || result.source === 'legacy-api')) {
-      return 'unavailable'
-    }
+    if (result.error?.code === 'unauthorized') return 'permission-denied'
+    if (result.error?.code === 'timeout') return 'timed-out'
     return 'error'
   }
   
-  // Explicitly check for mock source to avoid mislabeling real API results as mock
-  const isMock = result.source === 'mock' || result.source === 'mock-adapter' || result.mock === true || result.isMock === true
-  return isMock ? 'mock-only' : 'ready'
+  if (result.source === 'mock') return 'mock-only'
+  return 'loaded'
 }
 
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {
@@ -69,6 +72,13 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
           'Native Databricks integration pending catalog alignment'
         ]}
         lastVerified="Pending UAT Catalog Alignment"
+      />
+
+      <SourceConfidenceStrip
+        mode={(summaryResult?.source as ExtendedSourceMode) || 'mock'}
+        status={summaryResult?.ok ? 'loaded' : 'partial'}
+        fetchedAt={summaryResult?.ok ? summaryResult.fetchedAt : undefined}
+        style={{ marginBottom: '16px' }}
       />
 
       <SPCEvidenceSummaryPanel 

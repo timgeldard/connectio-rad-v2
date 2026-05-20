@@ -102,7 +102,7 @@ export function OrderConfirmationsPanel({ request }: OrderConfirmationsPanelProp
                       )}
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginTop: 1 }}>
-                      {new Date(conf.confirmedAt).toLocaleString()}
+                      {conf.confirmedAt ? new Date(conf.confirmedAt).toLocaleString() : '-'}
                       {conf.confirmedBy && ` · ${conf.confirmedBy}`}
                     </div>
                   </div>

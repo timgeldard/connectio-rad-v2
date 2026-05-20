@@ -34,7 +34,7 @@ import {
  * `batchId` are accepted for type-safety and future API wiring.
  */
 export interface Trace2AdapterRequest {
-  readonly investigationId: string
+  readonly investigationId?: string
   readonly batchId?: string
   readonly plantId?: string
   readonly materialId?: string
