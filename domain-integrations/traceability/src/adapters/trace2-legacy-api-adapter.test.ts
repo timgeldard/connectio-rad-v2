@@ -514,10 +514,13 @@ describe('Trace2LegacyApiAdapter.getCustomerExposureSummary', () => {
     vi.unstubAllGlobals()
   })
 
-  it('falls back to mock when batchId is missing', async () => {
+  it('returns ok:false (not mock) when batchId is missing', async () => {
     const result = await adapter.getCustomerExposureSummary(partialRequest)
-    expect(result.ok).toBe(true)
-    // fetch should NOT have been called — fell through to super
+    expect(result.ok).toBe(false)
+    // fetch must NOT have been called — no network request for missing context
     expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
   })
 })

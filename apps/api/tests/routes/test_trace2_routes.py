@@ -476,6 +476,15 @@ class TestCustomerExposureSuccess:
             response = await client.post(_CE_URL, json=body, headers=_HEADERS_WITH_TOKEN)
         assert response.status_code == 422
 
+    async def test_plant_id_forwarded_to_spec(self, monkeypatch) -> None:
+        """plant_id in request body must be accepted and not cause an error."""
+        _databricks_env(monkeypatch)
+        body = {**_CE_VALID_BODY, "plant_id": "C061"}
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
     async def test_sets_x_data_source_header(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         with _patch_executor([]):

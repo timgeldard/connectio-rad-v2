@@ -87,7 +87,7 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
                 Shipped Qty
               </span>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--shell-fg)' }}>
-                {data.shippedQuantity.toLocaleString()} KG
+                {data.shippedQuantity.toLocaleString()} source units
               </div>
             </div>
             {data.countries.length > 0 && (

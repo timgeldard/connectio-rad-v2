@@ -619,6 +619,7 @@ def get_customer_exposure_spec(request: Trace2CustomerExposureRequest) -> QueryS
                CHILD_MATERIAL_ID, ':', CHILD_BATCH_ID, '|') AS path
       FROM {tbl}
       WHERE PARENT_MATERIAL_ID = :material_id AND PARENT_BATCH_ID = :batch_id
+        AND (:plant_id = '' OR PARENT_PLANT_ID = :plant_id)
         AND {_null_guard}
       UNION ALL
       SELECT
@@ -659,6 +660,7 @@ def get_customer_exposure_spec(request: Trace2CustomerExposureRequest) -> QueryS
         params={
             "material_id": request.material_id,
             "batch_id": request.batch_id,
+            "plant_id": request.plant_id,
             "max_depth": request.max_depth,
             "max_rows": request.max_rows,
         },

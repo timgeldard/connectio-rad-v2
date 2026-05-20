@@ -187,7 +187,16 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
     request: Trace2AdapterRequest,
   ): Promise<AdapterResult<CustomerExposureSummary>> {
     if (!request.batchId || !request.materialId) {
-      return super.getCustomerExposureSummary(request)
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'Material and batch are required to evaluate customer exposure.',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
     }
 
     try {

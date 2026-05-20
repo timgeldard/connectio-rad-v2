@@ -939,8 +939,8 @@ class TestGetCustomerExposureSpec:
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
         monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
-    def _req(self, max_depth: int = 5, max_rows: int = 5000) -> Trace2CustomerExposureRequest:
-        return Trace2CustomerExposureRequest("MAT001", "BATCH001", max_depth=max_depth, max_rows=max_rows)
+    def _req(self, max_depth: int = 5, max_rows: int = 5000, plant_id: str = "") -> Trace2CustomerExposureRequest:
+        return Trace2CustomerExposureRequest("MAT001", "BATCH001", plant_id=plant_id, max_depth=max_depth, max_rows=max_rows)
 
     def test_name(self) -> None:
         assert get_customer_exposure_spec(self._req()).name == "trace2.get_customer_exposure"
@@ -969,6 +969,19 @@ class TestGetCustomerExposureSpec:
         assert spec.params["batch_id"] == "BATCH001"
         assert spec.params["max_depth"] == 7
         assert spec.params["max_rows"] == 1000
+
+    def test_params_contain_plant_id(self) -> None:
+        spec = get_customer_exposure_spec(self._req(plant_id="C061"))
+        assert spec.params["plant_id"] == "C061"
+
+    def test_params_plant_id_defaults_to_empty_string(self) -> None:
+        spec = get_customer_exposure_spec(self._req())
+        assert spec.params["plant_id"] == ""
+
+    def test_sql_has_optional_plant_filter(self) -> None:
+        sql = get_customer_exposure_spec(self._req()).sql
+        assert ":plant_id" in sql
+        assert "PARENT_PLANT_ID" in sql
 
     def test_sql_references_gold_batch_lineage(self) -> None:
         assert "gold_batch_lineage" in get_customer_exposure_spec(self._req()).sql
