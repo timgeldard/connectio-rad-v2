@@ -282,46 +282,47 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     BASE_UNIT_OF_MEASURE AS base_unit_of_measure, POSTING_DATE AS posting_date, MOVEMENT_TYPE AS movement_type"""
 
     mat_select = "    m_parent.MATERIAL_NAME AS parent_material_name, m_child.MATERIAL_NAME AS child_material_name"
+    # :language_id is a QuerySpec param (default 'E') so callers can override for non-English
+    # environments without touching SQL. Verified live: connected_plant_uat uses 'E', not 'EN'.
     mat_joins = (
         f"LEFT JOIN {tbl_material} m_parent"
-        f" ON _lin.parent_material_id = m_parent.MATERIAL_ID AND m_parent.LANGUAGE_ID = 'E'\n"
+        f" ON _lin.parent_material_id = m_parent.MATERIAL_ID AND m_parent.LANGUAGE_ID = :language_id\n"
         f"LEFT JOIN {tbl_material} m_child"
-        f" ON _lin.child_material_id = m_child.MATERIAL_ID AND m_child.LANGUAGE_ID = 'E'"
+        f" ON _lin.child_material_id = m_child.MATERIAL_ID AND m_child.LANGUAGE_ID = :language_id"
     )
 
-    # P0-4: Apply SQL-level row cap before Python-side mapping.
-    # LIMIT :max_rows is a hard cap on rows returned from Databricks before any
-    # Python deduplication. The Python loop in the route applies a second
-    # max_edges check on distinct edge keys; both limits work together.
-    # For UNION ALL (direction="both"), the LIMIT must wrap the entire union in
-    # a subquery — a bare LIMIT after UNION ALL only limits the second SELECT.
+    # P0-4: LIMIT is applied inside the _lin subquery so rows are capped before
+    # gold_material JOIN executes — avoids enriching rows that will be discarded.
+    # The Python loop in the route applies a second max_edges check on distinct
+    # edge keys; both limits work together.
+    # For UNION ALL (direction="both"), LIMIT wraps the whole union so it caps
+    # the combined result, not each arm individually.
     if request.direction == "downstream":
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{ds_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
-            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM ds) AS _lin\n"
-            f"{mat_joins}\n"
-            f"LIMIT :max_rows"
+            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM ds\nLIMIT :max_rows) AS _lin\n"
+            f"{mat_joins}"
         )
     elif request.direction == "upstream":
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{us_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
-            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM us) AS _lin\n"
-            f"{mat_joins}\n"
-            f"LIMIT :max_rows"
+            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM us\nLIMIT :max_rows) AS _lin\n"
+            f"{mat_joins}"
         )
     else:  # both — two independent recursive CTEs in one WITH RECURSIVE block
         sql = (
             f"WITH RECURSIVE\n{ue_cte},\n{ds_cte},\n{us_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
             f"FROM (\n"
+            f"SELECT * FROM (\n"
             f"SELECT DISTINCT\n{select_cols}\nFROM ds\n"
             f"UNION ALL\n"
             f"SELECT DISTINCT\n{select_cols}\nFROM us\n"
+            f") AS _combined\nLIMIT :max_rows\n"
             f") AS _lin\n"
-            f"{mat_joins}\n"
-            f"LIMIT :max_rows"
+            f"{mat_joins}"
         )
 
     return QuerySpec(
@@ -334,6 +335,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
             "batch_id": request.batch_id,
             "max_depth": request.max_depth,
             "max_rows": request.max_edges,
+            "language_id": "E",
         },
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_lineage",

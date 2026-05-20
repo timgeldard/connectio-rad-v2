@@ -461,9 +461,10 @@ class TestGetTraceGraphRecursiveSpec:
         assert "parent_material_name" in sql
         assert "child_material_name" in sql
 
-    def test_sql_uses_language_id_e_for_material_join(self) -> None:
-        sql = get_trace_graph_recursive_spec(self._req()).sql
-        assert "LANGUAGE_ID = 'E'" in sql
+    def test_sql_uses_language_id_param_not_hardcoded(self) -> None:
+        spec = get_trace_graph_recursive_spec(self._req())
+        assert "LANGUAGE_ID = :language_id" in spec.sql
+        assert spec.params["language_id"] == "E"
 
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
