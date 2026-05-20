@@ -88,7 +88,11 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ material_id: request.materialId, batch_id: request.batchId }),
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+          ...(request.plantId ? { plant_id: request.plantId } : {}),
+        }),
       })
 
       if (!response.ok) {

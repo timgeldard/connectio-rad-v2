@@ -75,6 +75,11 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
             <BatchHeaderStatusField label="Quality Status" value={data.qualityStatus} />
             <BatchHeaderStatusField label="Release Status" value={data.releaseStatus} highlight={data.releaseStatus === 'blocked' || data.releaseStatus === 'not-released'} />
           </div>
+          {data.qualityStatus === 'unknown' && (
+            <div style={{ fontSize: 11, color: 'var(--amber, #C07000)', marginTop: 4 }}>
+              Quality decision source not yet verified — unknown must not be interpreted as accepted or rejected.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {data.quantity != null && (
               <BatchHeaderField label="Total Stock" value={`${data.quantity.toLocaleString()} ${data.uom ?? ''}`} />

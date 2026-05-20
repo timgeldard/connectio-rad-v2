@@ -38,8 +38,12 @@ interface BackendEdge {
 export interface BackendTraceGraphResponse {
   nodes: BackendNode[]
   edges: BackendEdge[]
+  direction?: 'upstream' | 'downstream' | 'both'
   depth: number
   rootBatch: string
+  upstreamCount?: number
+  downstreamCount?: number
+  unresolvedNodeCount?: number
   truncated: boolean
   warnings: string[]
 }
@@ -85,9 +89,10 @@ const LINK_TYPE_MAP: Record<string, RelationshipType> = {
  * - edge.documentReference ← materialDocumentNumber ?? processOrderId
  * - edge.uom ← uom
  * - graph.rootBatch ← anchor node's batchId (node with isAnchor=true)
- * - graph.upstreamCount ← non-anchor nodes with 'upstream' in directions
- * - graph.downstreamCount ← non-anchor nodes with 'downstream' in directions
- * - graph.unresolvedNodeCount ← 0 (not available from lineage table)
+ * - graph.direction ← raw.direction ?? 'both' (backend now returns actual request direction)
+ * - graph.upstreamCount ← raw.upstreamCount if present, else local node count
+ * - graph.downstreamCount ← raw.downstreamCount if present, else local node count
+ * - graph.unresolvedNodeCount ← raw.unresolvedNodeCount if present, else 0
  */
 export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph {
   const nodes = raw.nodes.map(n => ({
@@ -128,18 +133,21 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
   })
 
   const anchorNode = raw.nodes.find(n => n.isAnchor)
-  const upstreamCount = raw.nodes.filter(n => !n.isAnchor && n.directions.includes('upstream')).length
-  const downstreamCount = raw.nodes.filter(n => !n.isAnchor && n.directions.includes('downstream')).length
+
+  // Prefer backend-computed counts; fall back to local recalculation if absent.
+  const upstreamCount = raw.upstreamCount ?? raw.nodes.filter(n => !n.isAnchor && n.directions.includes('upstream')).length
+  const downstreamCount = raw.downstreamCount ?? raw.nodes.filter(n => !n.isAnchor && n.directions.includes('downstream')).length
+  const unresolvedNodeCount = raw.unresolvedNodeCount ?? 0
 
   return TraceGraphSchema.parse({
     nodes,
     edges,
-    direction: 'both',
+    direction: raw.direction ?? 'both',
     depth: raw.depth,
     rootBatch: anchorNode?.batchId ?? '',
     upstreamCount,
     downstreamCount,
-    unresolvedNodeCount: 0,
+    unresolvedNodeCount,
     warnings: raw.warnings,
     truncated: raw.truncated,
   })

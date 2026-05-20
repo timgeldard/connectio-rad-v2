@@ -209,6 +209,27 @@ describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
     expect(body.material_id).toBe('100023847')
     expect(body.batch_id).toBe('CH-240308-0047')
   })
+
+  it('includes plant_id in body when request has plantId', async () => {
+    await adapter.getBatchHeaderSummary(fullRequest)  // fullRequest has plantId='IE10'
+    const fetchMock = vi.mocked(global.fetch)
+    const [, opts] = fetchMock.mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.plant_id).toBe('IE10')
+  })
+
+  it('omits plant_id from body when request has no plantId', async () => {
+    const noPlantRequest: Trace2AdapterRequest = {
+      investigationId: 'INV-001',
+      batchId: 'CH-240308-0047',
+      materialId: '100023847',
+    }
+    await adapter.getBatchHeaderSummary(noPlantRequest)
+    const fetchMock = vi.mocked(global.fetch)
+    const [, opts] = fetchMock.mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.plant_id).toBeUndefined()
+  })
 })
 
 // ---------------------------------------------------------------------------

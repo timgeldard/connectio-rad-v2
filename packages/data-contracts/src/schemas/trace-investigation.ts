@@ -55,6 +55,8 @@ export const BatchHeaderSummarySchema = z.object({
   qualityInspection: z.number().optional(),
   restricted: z.number().optional(),
   transit: z.number().optional(),
+  // SAP restricted stock maps to 'restricted', NOT 'returns'. 'returns' is retained only for
+  // legacy/mock compatibility or explicit returns-type stock if sourced from a verified field.
   stockStatus: z.enum(['unrestricted', 'quality-inspection', 'blocked', 'restricted', 'returns', 'transit']),
   // 'unknown' means QM usage-decision data is not available from this source.
   // It must NOT be treated as a positive quality signal.

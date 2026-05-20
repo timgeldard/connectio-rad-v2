@@ -52,8 +52,12 @@ We use the following conservative status classifications:
   * Edge relationship link types are code-ready, allowing UI to discriminate vendor receipts from internal moves.
   * Depth-aware severity schema is code-ready (incorporating `maxExposureDepth` on frontend).
   * Unified graph truncation banner is code-ready, showing warnings when `max_depth_reached` or `max_edges_reached` is triggered.
-  * **Batch header stock bucket breakdown implemented (2026-05-20):** Individual UNRESTRICTED, BLOCKED, QI HOLD, RESTRICTED, and TRANSIT quantities now surfaced from `gold_batch_stock_v` (all columns confirmed live 2026-05-19). Previously only the total stock quantity was shown. Blocked and QI Hold quantities are highlighted when non-zero.
-  * **V1→V2 parity matrix completed (2026-05-20):** 27 V1 capabilities assessed across all functional areas. Near-100% parity roadmap ranked and documented. Key remaining P0 gaps: customer exposure live slice, quality usage decision source, edge LINK_TYPE live validation.
+  * **Batch header stock bucket breakdown implemented (2026-05-20, PR#50):** Individual UNRESTRICTED, BLOCKED, QI HOLD, RESTRICTED, and TRANSIT quantities now surfaced from `gold_batch_stock_v` (all columns confirmed live 2026-05-19). Blocked and QI Hold quantities are highlighted when non-zero. Live browser validation still pending.
+  * **Batch header is now plant-aware (2026-05-20, PR#50):** `plant_id` forwarded from the form to the batch-header SQL WHERE clause, eliminating multi-plant row ambiguity for UAT flows that include a plant.
+  * **Both-direction graph retrieval safer (2026-05-20, PR#50):** `direction=both` splits the edge budget evenly between downstream and upstream (max_edges // 2 per direction) so dense downstream results cannot starve upstream rows before the Python truncation cap applies.
+  * **Graph direction now preserved in frontend contract (2026-05-20, PR#50):** `mapBackendTraceGraph` reads `direction`, `upstreamCount`, `downstreamCount`, and `unresolvedNodeCount` from the backend response rather than always defaulting to `both`.
+  * **Quality unknown state is now explicitly warned (2026-05-20, PR#50):** `BatchHeaderPanel` shows a visible note when `qualityStatus === 'unknown'` stating that unknown must not be interpreted as accepted or rejected.
+  * **V1→V2 parity matrix completed (2026-05-20):** 27 V1 capabilities assessed. Key remaining P0 gaps: customer exposure live slice (mock-only), quality usage-decision source (source-blocked), edge LINK_TYPE live validation. **Production recall readiness is not claimed.**
   * **UAT Blockers:**
     * Live Databricks UAT is blocked: no live E2E validation against UAT databases has occurred.
     * Column names in `gold_batch_summary_v` confirmed (2026-05-19); `gold_batch_mass_balance_v` WHERE filter columns still unverified.

@@ -50,7 +50,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | All existing tests passing on CI | ✅ | `pnpm nx test di-traceability` passes (163 tests). |
+| 4.1 | All existing tests passing on CI | ✅ | `pnpm nx test di-traceability` passes (163+ tests after PR#50 additions). |
 | 4.2 | Null/unknown data states covered by unit tests | ✅ | `InvestigationSummary.test.tsx` — 4 null-path tests added PR #24. |
 | 4.3 | Evidence confidence scoring edge cases tested | ✅ | `EvidenceConfidence.test.tsx` — COMPLETE / PARTIAL / UNKNOWN cases. |
 | 4.4 | Adapter error states (`ok: false`) tested across all panels | 🔶 | Legacy adapter tested; panel-level `displayState` handling not systematically tested. |

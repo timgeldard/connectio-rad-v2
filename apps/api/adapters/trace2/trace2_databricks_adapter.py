@@ -42,6 +42,7 @@ from shared.query_service.query_spec import QuerySpec
 class Trace2BatchHeaderRequest:
     material_id: str
     batch_id: str
+    plant_id: str = ""   # optional — filters to a single plant when provided
 
 
 @dataclass
@@ -73,11 +74,11 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     Cache: PER_USER_60S — batch release/block status can change during a shift.
     Parallel validation: possible against browser-verified POST /api/trace2/batch-header.
 
-    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When a
-    material/batch exists in multiple plants the query returns rows for all of them, ordered
-    by PLANT_ID, and the mapper takes the first. Future hardening: if Trace2BatchHeaderRequest
-    carries plant_id, add AND s.PLANT_ID = :plant_id to the WHERE clause to avoid
-    cross-plant ambiguity.
+    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When
+    plant_id is provided the SQL filters to that plant, removing cross-plant ambiguity.
+    When plant_id is absent the query returns all plants ordered by PLANT_ID; the mapper
+    takes the first row. UAT inputs normally include plant_id so multi-plant ambiguity
+    is resolved in the standard flow.
 
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
@@ -111,6 +112,7 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         ON s.PLANT_ID = p.PLANT_ID                              -- verified: 2026-05-19 connected_plant_uat
     WHERE s.MATERIAL_ID = :material_id
       AND s.BATCH_ID = :batch_id
+      AND (:plant_id = '' OR s.PLANT_ID = :plant_id)
     ORDER BY s.PLANT_ID
     LIMIT :max_rows
     """
@@ -120,7 +122,7 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         module="trace2",
         endpoint="/api/trace2/batch-header",
         sql=sql,
-        params={"material_id": request.material_id, "batch_id": request.batch_id},
+        params={"material_id": request.material_id, "batch_id": request.batch_id, "plant_id": request.plant_id},
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_summary_v",
         tags=["trace2", "batch-header", "summary"],

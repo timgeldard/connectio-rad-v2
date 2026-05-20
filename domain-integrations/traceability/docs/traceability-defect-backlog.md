@@ -44,6 +44,13 @@
 **Fix applied:** Added `unrestricted`, `blocked`, `qualityInspection`, `restricted`, `transit` as optional number fields to `BatchHeaderSummarySchema`. Python mapper now surfaces all 5 fields (null row value → field absent, not zero). `BatchHeaderPanel` shows a stock bucket row beneath the quantity row; QI Hold and Blocked fields are highlighted amber/sunset when non-zero.
 **Requires UAT:** Yes — confirm bucket values are populated from live `gold_batch_stock_v` and match values shown in V1 batch header.
 
+### TRACE-P1-008 — Batch header multi-plant ambiguity when plant_id absent
+**Status:** Fixed (2026-05-20, `feature/traceability-functional-parity-plan`)
+**Affected:** `Trace2BatchHeaderRequest`, `get_batch_header_summary_spec`, `BatchRequest`, `trace2-legacy-api-adapter.ts`
+**Evidence:** `gold_batch_stock_v` returns one row per plant for a given material/batch combination. Without plant filtering, the mapper silently returned data for whichever plant sorts first alphabetically by PLANT_ID. UAT inputs include `plantId`, making the ambiguity avoidable.
+**Fix applied:** `plant_id` added to `Trace2BatchHeaderRequest` (default `""`), to the SQL WHERE clause as `AND (:plant_id = '' OR s.PLANT_ID = :plant_id)`, to `BatchRequest` in the FastAPI route, and to the frontend POST body in `trace2-legacy-api-adapter.ts`. When plant is absent behaviour is unchanged (all plants returned, mapper takes first).
+**Requires UAT:** Yes — confirm single-plant result when `plant_id = C061` is passed for the reference candidate.
+
 ### TRACE-P1-005 — Mass balance not wired to a live Databricks route
 **Status:** Open — adapter+mapper done, live route and WHERE filter verification pending
 **Affected:** `mass-balance-view.tsx`, `get_mass_balance_spec`, `apps/api/routes/trace2.py`

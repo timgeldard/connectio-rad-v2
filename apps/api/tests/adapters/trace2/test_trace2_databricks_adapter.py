@@ -168,6 +168,21 @@ class TestGetBatchHeaderSummarySpec:
         with pytest.raises(DatabricksConfigError):
             get_batch_header_summary_spec(self._req())
 
+    def test_params_include_plant_id_empty_string_by_default(self) -> None:
+        spec = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1"))
+        assert spec.params["plant_id"] == ""
+
+    def test_params_include_plant_id_when_provided(self) -> None:
+        req = Trace2BatchHeaderRequest("MAT1", "B1", plant_id="IE01")
+        spec = get_batch_header_summary_spec(req)
+        assert spec.params["plant_id"] == "IE01"
+
+    def test_sql_contains_plant_id_filter(self) -> None:
+        """SQL must include the optional plant filter so multi-plant ambiguity is resolved."""
+        sql = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1")).sql
+        assert ":plant_id" in sql
+        assert "PLANT_ID" in sql
+
     def test_params_not_shared_between_requests(self) -> None:
         spec1 = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1"))
         spec2 = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT2", "B2"))
