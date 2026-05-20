@@ -4,6 +4,11 @@
 **Last updated:** 2026-05-20  
 **Known UAT candidate:** process order `7006965038`, plant `C113`
 
+Next build prompt:
+`domain-integrations/operations/docs/poh-next-build-prompt.md`. The next POH
+tranche must inspect V1 Process Order History first and document V1 to V2
+functional parity before selecting a bounded implementation slice.
+
 Process Order History is a read-only workspace. It does not perform SAP
 write-back, order confirmations, goods movement posting, release, TECO, or
 change actions. Native Databricks evidence must still be validated against
