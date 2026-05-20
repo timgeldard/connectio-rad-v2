@@ -1,7 +1,7 @@
 # Traceability Defect Backlog
 
 **Domain:** `domain-integrations/traceability`
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-20
 **Classification:** P0 = could mislead recall/exposure decisions · P1 = blocks credible UAT · P2 = improves trust/usability · P3 = future enhancement
 
 ---
@@ -36,6 +36,38 @@
 
 ## P1 — Blocks Credible UAT Use
 
+### TRACE-P1-004 — Individual stock bucket quantities not surfaced in batch header
+**Status:** Fixed (2026-05-20, `feature/traceability-functional-parity-plan`)
+**Affected:** `BatchHeaderSummarySchema`, `map_batch_header_rows`, `BatchHeaderPanel`
+**Evidence:** V1 showed UNRESTRICTED, BLOCKED, QUALITY_INSPECTION, RESTRICTED, TRANSIT as separate KPIs on the batch header. V2 fetched all 6 columns from `gold_batch_stock_v` (confirmed live 2026-05-19) but surfaced only `total_stock` as the single `quantity` field. An investigator could not determine whether stock was blocked, in QI hold, or unrestricted without drill-through.
+**Risk:** Investigator cannot assess the significance of a non-zero stock figure (blocked vs. unrestricted are materially different recall signals).
+**Fix applied:** Added `unrestricted`, `blocked`, `qualityInspection`, `restricted`, `transit` as optional number fields to `BatchHeaderSummarySchema`. Python mapper now surfaces all 5 fields (null row value → field absent, not zero). `BatchHeaderPanel` shows a stock bucket row beneath the quantity row; QI Hold and Blocked fields are highlighted amber/sunset when non-zero.
+**Requires UAT:** Yes — confirm bucket values are populated from live `gold_batch_stock_v` and match values shown in V1 batch header.
+
+### TRACE-P1-005 — Mass balance not wired to a live Databricks route
+**Status:** Open — adapter+mapper done, live route and WHERE filter verification pending
+**Affected:** `mass-balance-view.tsx`, `get_mass_balance_spec`, `apps/api/routes/trace2.py`
+**Evidence:** V1 provided a full per-day movement timeline (daily delta + running cumulative balance chart) via `POST /api/mass-balance`. V2 has a complete mass balance QuerySpec and row mapper, but: (a) the WHERE filter column names in `gold_batch_mass_balance_v` are unverified (TODO markers present in SQL), and (b) no FastAPI route exists. The frontend shows input/output/variance totals only.
+**Risk:** Investigators cannot see individual goods movement events for a batch; mass balance chart is absent.
+**Proposed fix:** Verify WHERE filter column names in `gold_batch_mass_balance_v` against live catalog; wire `POST /trace2/mass-balance` FastAPI route; add daily timeline rendering to `MassBalancePanel`.
+**Requires UAT:** Yes
+
+### TRACE-P1-006 — Supplier exposure panel has no live Databricks slice
+**Status:** Open — schema + mock panel exists; `gold_supplier` not in catalog resolver
+**Affected:** `MaterialSupplierExposurePanel`, catalog resolver
+**Evidence:** V1 `/api/supplier-risk` provided a per-supplier table (supplier ID, name, country, received quantity, batch count, quality failure rate) via upstream walk through `gold_batch_lineage` + `gold_supplier` join. V2 `MaterialSupplierExposurePanel` exists with mock data; `gold_supplier` is not in the domain object resolver so no Databricks query can be formed.
+**Risk:** Investigators cannot identify which suppliers contributed input batches to a recalled product without this panel being live.
+**Proposed fix:** Add `gold_supplier` to catalog resolver; implement QuerySpec for upstream VENDOR_RECEIPT aggregation; add quality summary join.
+**Requires UAT:** Yes
+
+### TRACE-P1-007 — Production history panel missing
+**Status:** Open — no panel implemented
+**Affected:** Investigation cockpit (no panel exists)
+**Evidence:** V1 provided a production history page showing the most recent 24 batches for the same material (process order, plant, manufacture date, quantity, UOM, quality status, yield%). Used to identify whether a quality issue is isolated to one batch or systemic across recent production. V2 has no equivalent panel.
+**Risk:** Investigators cannot assess whether a quality issue is isolated or spans multiple recent batches.
+**Proposed fix:** Build `ProductionHistoryPanel` using `gold_batch_production_history_v` when columns are verified.
+**Requires UAT:** Yes
+
 ### TRACE-P1-001 — Truncation state not surfaced in trace graph UI
 **Status:** Code-fixed — live validation pending
 **Affected:** `trace-graph-panel.tsx`, `TraceGraph.truncated` schema field
@@ -65,12 +97,12 @@
 
 ## P2 — Improves Trust or Usability
 
-### TRACE-P2-001 — Plant ID absent from trace graph nodes
-**Status:** Open
-**Affected:** `TraceGraphNode` schema, `trace-graph-panel.tsx`
-**Evidence:** `TraceGraphNode` has no `plantId` field. The reference engine anchors lineage walks to the production plant. Without per-node plant context, cross-plant investigations cannot distinguish which plant produced each upstream/downstream batch.
-**Risk:** Investigator cannot determine which plant site is the source of a lineage path.
-**Proposed fix:** Add `plantId?: string` to `TraceGraphNode` Zod schema; render plant as node tooltip or secondary label.
+### TRACE-P2-001 — Plant ID not displayed on trace graph nodes
+**Status:** Schema fixed — UI display pending
+**Affected:** `trace-graph-panel.tsx`
+**Evidence:** `TraceNodeSchema` already has `plantId?: z.string().optional()` (confirmed in codebase review 2026-05-20). The Databricks graph mapper populates `plantId` on each node from `gold_batch_lineage` PARENT/CHILD_PLANT_ID. However, `trace-graph-panel.tsx` does not display `plantId` in node labels, tooltips, or detail panels. Cross-plant investigations cannot distinguish which plant produced each upstream/downstream batch from the graph view alone.
+**Risk:** Investigator cannot determine which plant site is the source of a lineage path from the graph.
+**Proposed fix:** Render `plantId` as a secondary label or tooltip on graph nodes.
 **Owner:** Claude
 **Requires UAT:** Yes
 

@@ -2,7 +2,7 @@
 
 *   [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
 
-**Date:** 2026-05-19  
+**Date:** 2026-05-20  
 **Status:** Living Document  
 **Target Audience:** Product Owners, Architects, and UAT Leads  
 
@@ -52,14 +52,18 @@ We use the following conservative status classifications:
   * Edge relationship link types are code-ready, allowing UI to discriminate vendor receipts from internal moves.
   * Depth-aware severity schema is code-ready (incorporating `maxExposureDepth` on frontend).
   * Unified graph truncation banner is code-ready, showing warnings when `max_depth_reached` or `max_edges_reached` is triggered.
+  * **Batch header stock bucket breakdown implemented (2026-05-20):** Individual UNRESTRICTED, BLOCKED, QI HOLD, RESTRICTED, and TRANSIT quantities now surfaced from `gold_batch_stock_v` (all columns confirmed live 2026-05-19). Previously only the total stock quantity was shown. Blocked and QI Hold quantities are highlighted when non-zero.
+  * **V1→V2 parity matrix completed (2026-05-20):** 27 V1 capabilities assessed across all functional areas. Near-100% parity roadmap ranked and documented. Key remaining P0 gaps: customer exposure live slice, quality usage decision source, edge LINK_TYPE live validation.
   * **UAT Blockers:**
     * Live Databricks UAT is blocked: no live E2E validation against UAT databases has occurred.
-    * Column names in `gold_batch_summary_v` must be verified via queries defined in the column verification queries doc.
+    * Column names in `gold_batch_summary_v` confirmed (2026-05-19); `gold_batch_mass_balance_v` WHERE filter columns still unverified.
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
+    * Customer exposure (`gold_batch_delivery_v`), quality usage decision (`gold_qm_usage_decision_v`), and supplier exposure (`gold_supplier`) slices remain mock-only.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
   * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
   * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
+  * [V1→V2 Functional Parity Matrix](../../domain-integrations/traceability/docs/traceability-v1-v2-functional-parity.md) ← **new**
   * [Golden Test Batches](../../domain-integrations/traceability/docs/golden-test-batches.md)
   * [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
   * [Databricks Column Verification Queries](../migration/databricks-column-verification-queries.md)
@@ -182,8 +186,11 @@ The following list summarizes the critical items blocking live validation or pro
 
 * **Traceability Blockers:**
   1. Live Databricks UAT validation has not occurred.
-  2. The `gold_batch_summary_v` columns must be verified against actual DDL.
-  3. OAuth token forwarding validation in the deployed environment.
+  2. `gold_batch_mass_balance_v` WHERE filter column names unverified (TODO markers remain in SQL) — blocks mass balance live route.
+  3. `gold_batch_delivery_v` column names unverified — blocks customer exposure live slice (P0).
+  4. `gold_qm_usage_decision_v` (or equivalent) not yet identified — blocks quality usage decision (P0).
+  5. `gold_supplier` not in catalog resolver — blocks supplier exposure live slice (P1).
+  6. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).
   2. `SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).
