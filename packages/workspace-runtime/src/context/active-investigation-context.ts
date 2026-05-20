@@ -15,7 +15,15 @@ export const ActiveInvestigationContextSchema = z.object({
   timestamp: z.string().datetime(),
 })
 
-export type InvestigationContextKey = keyof Omit<ActiveInvestigationContext, 'timestamp' | 'lastChangedByPanel'>
+export const INVESTIGATION_CONTEXT_KEYS = [
+  'batchId',
+  'materialId',
+  'plantId',
+  'processOrderId',
+  'scope',
+] as const
+
+export type InvestigationContextKey = typeof INVESTIGATION_CONTEXT_KEYS[number]
 
 export type ActiveInvestigationContext = z.infer<typeof ActiveInvestigationContextSchema>
 

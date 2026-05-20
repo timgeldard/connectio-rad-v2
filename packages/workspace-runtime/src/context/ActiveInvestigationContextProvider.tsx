@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { featureFlags } from '@connectio/feature-flags'
@@ -19,10 +19,6 @@ import {
 } from './url-sync.js'
 
 const ActiveInvestigationStoreContext = createContext<ActiveInvestigationStore | null>(null)
-const OptionalFallbackInvestigationStore = createActiveInvestigationStore({
-  workspaceId: 'unscoped-workspace',
-  initialContext: { timestamp: '1970-01-01T00:00:00.000Z' },
-})
 
 export interface ActiveInvestigationContextProviderProps {
   readonly workspaceId: string
@@ -73,9 +69,8 @@ export function ActiveInvestigationContextProvider({
     })
 
     function onPopState() {
-      const current = activeStore.getState().context
       const fromUrl = readInvestigationContextFromUrl(window.location.search)
-      activeStore.getState().replaceContext(normalizeInvestigationPatch(current, fromUrl))
+      activeStore.getState().replaceContext(fromUrl)
     }
 
     window.addEventListener('popstate', onPopState)
@@ -109,8 +104,19 @@ export function useOptionalActiveInvestigationContext<T>(
   fallback: T,
 ): T {
   const store = useContext(ActiveInvestigationStoreContext)
-  const selected = useStore(store ?? OptionalFallbackInvestigationStore, selector)
-  return store ? selected : fallback
+  const subscribe = useMemo(
+    () => store
+      ? (listener: () => void) => store.subscribe(listener)
+      : () => () => undefined,
+    [store],
+  )
+  const getSnapshot = useMemo(
+    () => store
+      ? () => selector(store.getState())
+      : () => fallback,
+    [fallback, selector, store],
+  )
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
 export function useActiveInvestigationStore(): ActiveInvestigationStore {

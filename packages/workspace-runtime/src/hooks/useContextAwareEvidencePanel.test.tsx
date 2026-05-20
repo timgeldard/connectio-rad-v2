@@ -3,7 +3,11 @@ import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { setFeatureFlags } from '@connectio/feature-flags'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
-import { ActiveInvestigationContextProvider, useActiveInvestigationContext } from '../context/ActiveInvestigationContextProvider.js'
+import {
+  ActiveInvestigationContextProvider,
+  useActiveInvestigationContext,
+  useOptionalActiveInvestigationContext,
+} from '../context/ActiveInvestigationContextProvider.js'
 import { useContextAwareEvidencePanel } from './useContextAwareEvidencePanel.js'
 
 vi.mock('@connectio/telemetry', () => ({
@@ -108,5 +112,14 @@ describe('useContextAwareEvidencePanel', () => {
 
     expect(result.current.displayState).toBe('loading')
     expect(result.current.queryEnabled).toBe(true)
+  })
+
+  it('allows optional context consumers to render outside a provider', () => {
+    const fallback = vi.fn()
+    const { result } = renderHook(
+      () => useOptionalActiveInvestigationContext((state) => state.setContext, fallback),
+    )
+
+    expect(result.current).toBe(fallback)
   })
 })

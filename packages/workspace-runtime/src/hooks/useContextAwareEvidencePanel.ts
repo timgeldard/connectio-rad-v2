@@ -9,6 +9,7 @@ import type {
   ActiveInvestigationContext,
   InvestigationContextKey,
 } from '../context/active-investigation-context.js'
+import { INVESTIGATION_CONTEXT_KEYS } from '../context/active-investigation-context.js'
 import { useActiveInvestigationContext } from '../context/ActiveInvestigationContextProvider.js'
 
 export interface UseContextAwareEvidencePanelOptions
@@ -109,5 +110,5 @@ function contextHasValue(context: ActiveInvestigationContext, key: Investigation
 }
 
 function isInvestigationContextKey(key: string): key is InvestigationContextKey {
-  return ['batchId', 'materialId', 'plantId', 'processOrderId', 'scope'].includes(key)
+  return INVESTIGATION_CONTEXT_KEYS.includes(key as InvestigationContextKey)
 }

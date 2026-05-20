@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { trackEvent } from '@connectio/telemetry'
 import { createActiveInvestigationStore } from './active-investigation-store.js'
 
 vi.mock('@connectio/telemetry', () => ({
@@ -6,6 +7,10 @@ vi.mock('@connectio/telemetry', () => ({
 }))
 
 describe('createActiveInvestigationStore', () => {
+  beforeEach(() => {
+    vi.mocked(trackEvent).mockClear()
+  })
+
   it('starts with a valid timestamped empty context', () => {
     const store = createActiveInvestigationStore({
       workspaceId: 'trace-investigation',
@@ -64,5 +69,24 @@ describe('createActiveInvestigationStore', () => {
     expect(store.getState().context).toEqual({
       timestamp: '2026-05-20T10:02:00.000Z',
     })
+  })
+
+  it('does not emit context-change telemetry when only the timestamp changes', () => {
+    const store = createActiveInvestigationStore({
+      workspaceId: 'trace-investigation',
+      initialContext: {
+        batchId: 'B-001',
+        plantId: 'IE10',
+        timestamp: '2026-05-20T10:00:00.000Z',
+      },
+    })
+
+    store.getState().setContext({
+      batchId: 'B-001',
+      plantId: 'IE10',
+      timestamp: '2026-05-20T10:01:00.000Z',
+    })
+
+    expect(trackEvent).not.toHaveBeenCalled()
   })
 })

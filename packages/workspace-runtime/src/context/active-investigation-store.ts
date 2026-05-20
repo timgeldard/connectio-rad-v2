@@ -88,5 +88,13 @@ function contextsEqual(
   previous: ActiveInvestigationContext,
   next: ActiveInvestigationContext,
 ): boolean {
-  return JSON.stringify(previous) === JSON.stringify(next)
+  return (
+    previous.batchId === next.batchId &&
+    previous.materialId === next.materialId &&
+    previous.plantId === next.plantId &&
+    previous.processOrderId === next.processOrderId &&
+    previous.lastChangedByPanel === next.lastChangedByPanel &&
+    previous.scope?.from?.getTime() === next.scope?.from?.getTime() &&
+    previous.scope?.to?.getTime() === next.scope?.to?.getTime()
+  )
 }
