@@ -17,9 +17,11 @@ function envBool(envVar: string, defaultVal: boolean): boolean {
       return val === 'true' || (val as unknown) === true
     }
   }
-  // Fallback to process.env for Node/testing environment compatibility
-  if (typeof process !== 'undefined' && process.env) {
-    const val = process.env[envVar]
+  // Fallback to process.env for Node/testing without requiring Node globals
+  // in browser-oriented package tsconfigs.
+  const processEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+  if (processEnv) {
+    const val = processEnv[envVar]
     if (val !== undefined) {
       return val === 'true' || (val as unknown) === true
     }
@@ -77,6 +79,9 @@ export const featureFlags = {
     get orderConfirmationAction() { return getFlag('writeBack.orderConfirmationAction', 'VITE_FEATURE_ORDER_CONFIRMATION_ACTION', false) },
     get goodsMovementPosting() { return getFlag('writeBack.goodsMovementPosting', 'VITE_FEATURE_GOODS_MOVEMENT_POSTING', false) },
     get electronicSignature() { return getFlag('writeBack.electronicSignature', 'VITE_FEATURE_ELECTRONIC_SIGNATURE', false) },
+  },
+  runtime: {
+    get enableCrossDomainContext() { return getFlag('runtime.enableCrossDomainContext', 'VITE_FEATURE_ENABLE_CROSS_DOMAIN_CONTEXT', false) },
   },
 }
 

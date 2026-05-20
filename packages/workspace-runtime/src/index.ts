@@ -39,3 +39,40 @@ export type { WorkspaceBottomActionBarProps } from './WorkspaceBottomActionBar.j
 export { WorkspaceErrorBoundary } from './WorkspaceErrorBoundary.js'
 
 export { useWorkspace } from './hooks/useWorkspace.js'
+
+export {
+  ActiveInvestigationContextProvider,
+  useActiveInvestigationContext,
+  useActiveInvestigationStore,
+  useOptionalActiveInvestigationContext,
+} from './context/ActiveInvestigationContextProvider.js'
+export type { ActiveInvestigationContextProviderProps } from './context/ActiveInvestigationContextProvider.js'
+export {
+  ActiveInvestigationContextSchema,
+  InvestigationDateScopeSchema,
+  createEmptyInvestigationContext,
+  normalizeInvestigationPatch,
+  validateInvestigationContext,
+} from './context/active-investigation-context.js'
+export type {
+  ActiveInvestigationContext,
+  ActiveInvestigationContextPatch,
+  InvestigationContextKey,
+} from './context/active-investigation-context.js'
+export {
+  createActiveInvestigationStore,
+} from './context/active-investigation-store.js'
+export type {
+  ActiveInvestigationStore,
+  ActiveInvestigationStoreState,
+} from './context/active-investigation-store.js'
+export {
+  readInvestigationContextFromUrl,
+  replaceInvestigationContextInBrowserUrl,
+  writeInvestigationContextToUrl,
+} from './context/url-sync.js'
+export { useContextAwareEvidencePanel } from './hooks/useContextAwareEvidencePanel.js'
+export type {
+  UseContextAwareEvidencePanelOptions,
+  UseContextAwareEvidencePanelResult,
+} from './hooks/useContextAwareEvidencePanel.js'

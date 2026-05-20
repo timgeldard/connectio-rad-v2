@@ -61,8 +61,8 @@ Active mode is configured at build time via `VITE_ADAPTER_MODE`:
 
 ```bash
 VITE_ADAPTER_MODE=mock          # default in development
-VITE_ADAPTER_MODE=legacy-api    # uses FastAPI proxy → V1 backends
-VITE_ADAPTER_MODE=databricks-api  # enabled for domains with an explicit frontend Databricks adapter
+VITE_ADAPTER_MODE=legacy-api    # FastAPI proxy/same-origin HTTP; backend may execute V1 calls or native QuerySpecs
+VITE_ADAPTER_MODE=databricks-api  # explicit frontend Databricks adapters where implemented
 ```
 
 The backend has an independent `BACKEND_ADAPTER_MODE`. In Databricks Apps UAT,

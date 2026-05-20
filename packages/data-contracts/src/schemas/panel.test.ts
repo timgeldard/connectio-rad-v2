@@ -7,7 +7,7 @@ import {
 } from './panel.js'
 
 describe('EvidencePanelDisplayStateSchema', () => {
-  const validStates = ['loading', 'ready', 'stale', 'partial', 'error', 'unauthorized', 'not-applicable'] as const
+  const validStates = ['loading', 'ready', 'stale', 'partial', 'error', 'unauthorized', 'not-applicable', 'waiting-for-context'] as const
 
   for (const state of validStates) {
     it(`accepts '${state}'`, () => {

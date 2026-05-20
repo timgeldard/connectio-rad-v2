@@ -23,6 +23,7 @@ export interface EvidencePanelStateRendererProps {
  * - `loading`        → animated skeleton lines
  * - `error`          → error panel with optional message
  * - `unauthorized`   → plain permission-denied message
+ * - `waiting-for-context` → recoverable empty state until a driving panel supplies context
  * - `not-applicable` → empty state explaining out-of-scope context
  * - `partial`        → children with a "Partial data" footnote
  * - `ready`          → children rendered as-is
@@ -57,6 +58,14 @@ export function EvidencePanelStateRenderer({
         >
           You do not have permission to view this panel
         </p>
+      )
+
+    case 'waiting-for-context':
+      return (
+        <EmptyState
+          title="Waiting for investigation context"
+          description="Select a batch, process order, material, or plant to load this panel."
+        />
       )
 
     case 'not-applicable':

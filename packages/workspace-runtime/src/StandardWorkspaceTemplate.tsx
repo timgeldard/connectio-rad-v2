@@ -4,6 +4,7 @@ import type { ScopeContext } from '@connectio/data-contracts'
 import { WorkspaceProvider } from './WorkspaceProvider.js'
 import { WorkspaceLayout } from './WorkspaceLayout.js'
 import { WorkspaceErrorBoundary } from './WorkspaceErrorBoundary.js'
+import { ActiveInvestigationContextProvider } from './context/ActiveInvestigationContextProvider.js'
 
 /** Props for StandardWorkspaceTemplate. */
 export interface StandardWorkspaceTemplateProps {
@@ -54,12 +55,17 @@ export function StandardWorkspaceTemplate({
         scope={scope}
         defaultViewId={defaultViewId}
       >
-        <WorkspaceLayout
-          actionSidebar={actionSidebar}
-          bottomActions={bottomActions}
+        <ActiveInvestigationContextProvider
+          workspaceId={registration.workspaceId}
+          scope={scope}
         >
-          {children}
-        </WorkspaceLayout>
+          <WorkspaceLayout
+            actionSidebar={actionSidebar}
+            bottomActions={bottomActions}
+          >
+            {children}
+          </WorkspaceLayout>
+        </ActiveInvestigationContextProvider>
       </WorkspaceProvider>
     </WorkspaceErrorBoundary>
   )

@@ -19,6 +19,8 @@ import { InvestigationSummary } from '../components/InvestigationSummary.js'
 import { EvidencePackReadiness } from '../components/EvidencePackReadiness.js'
 import { TraceabilityInitialState } from '../components/TraceabilityInitialState.js'
 import { TraceQueryForm } from '../forms/trace-query-form.js'
+import { featureFlags } from '@connectio/feature-flags'
+import { useOptionalActiveInvestigationContext } from '@connectio/workspace-runtime'
 
 import type { AdapterError } from '@connectio/source-adapters'
 
@@ -80,6 +82,21 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
   const [request, setRequest] = useState<Trace2AdapterRequest>(initialRequest)
   const [sim, setSim] = useState(false)
   const adapterMode = import.meta.env.VITE_ADAPTER_MODE ?? 'mock'
+  const setActiveInvestigationContext = useOptionalActiveInvestigationContext(
+    (state) => state.setContext,
+    () => undefined,
+  )
+
+  function submitInvestigationContext(nextRequest: Trace2AdapterRequest) {
+    setRequest(nextRequest)
+    if (!featureFlags.runtime.enableCrossDomainContext) return
+    setActiveInvestigationContext({
+      batchId: nextRequest.batchId,
+      materialId: nextRequest.materialId,
+      plantId: nextRequest.plantId,
+      lastChangedByPanel: 'trace-query-form',
+    })
+  }
 
   // Fetch all required data sectors for confidence rating and cockpit header
   const { data: batchHeaderResult } = useBatchHeaderSummary(request)
@@ -119,14 +136,14 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
       <TraceabilityInitialState 
         adapterMode={adapterMode}
         onLoadCandidate={() => {
-           setRequest(prev => ({
-             ...prev,
+           submitInvestigationContext({
+             ...request,
              ...UAT_CANDIDATE
-           }))
+           })
         }}
       >
         <TraceQueryForm 
-          onSubmit={setRequest}
+          onSubmit={submitInvestigationContext}
           initialMaterialId={request.materialId}
           initialBatchId={request.batchId}
           initialPlantId={request.plantId}
@@ -153,7 +170,7 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
       {/* Case Header / Investigation cockpit summary */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <TraceQueryForm 
-          onSubmit={setRequest}
+          onSubmit={submitInvestigationContext}
           initialMaterialId={request.materialId}
           initialBatchId={request.batchId}
           initialPlantId={request.plantId}
