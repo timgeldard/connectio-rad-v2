@@ -378,10 +378,10 @@ Both `detectWECORules` and `detectNelsonRules` are pure functions operating on t
 
 | V2 Field | V1 Source | V1 Column / Expression | Transform | Confidence | Gap / Risk |
 |----------|-----------|----------------------|-----------|------------|------------|
-| `plantId` | `SPCContext` state | `state.selectedPlant.plant_id` | Direct | High | V2 missing `materialId` in context |
+| `plantId` | `SPCContext` state | `state.selectedPlant.plant_id` | Direct | High | — |
 | `plantName` | `SPCContext` state | `state.selectedPlant.plant_name` | Direct | High | — |
-| `materialId` | `SPCContext` state | `state.selectedMaterial.material_id` | Direct | High | **V2 context schema missing materialId** |
-| `materialDescription` | `SPCContext` state | `state.selectedMaterial.material_name` | Direct | High | **V2 context schema missing this** |
+| `materialId` | `SPCContext` state | `state.selectedMaterial.material_id` | Direct | High | Present in V2 schema; not yet populated in mock adapter |
+| `materialDescription` | `SPCContext` state | `state.selectedMaterial.material_name` | Direct | High | Present in V2 schema; not yet populated in mock adapter |
 | `batchId` | N/A | Not a primary filter in V1 | N/A | Missing | V1 is material+plant not batch scoped |
 | `workCentreId` | N/A | V1 uses `operation_id`, not work-centre | Rename | Low | V2 uses workCentreId; V1 uses operation_id |
 | `characteristicId` | `SPCContext` state | `state.selectedMic.mic_id` | Direct | High | — |
@@ -644,7 +644,7 @@ Keep current mock adapter. Add typed adapter skeleton with documented V1 field m
 | SPC-B14 | Verify `spc_nelson_rule_flags_mv` exists and is queryable in connected_plant_uat | Medium | 0.5d | V1 UAT access |
 | SPC-B15 | Add EWMA and CUSUM to V2 `ChartTypeSchema` | Low | 0.5d | None |
 | SPC-B16 | Add UAT candidate discovery (confirmed plant/material/MIC combination with live SPC data) | Medium | 1d | V1 UAT access |
-| SPC-B17 | Add `ruleCode` to `SPCSignal` schema (field exists in V1) | Medium | 0.5d | None |
+| SPC-B17 | Make `ruleCode` required in `SPCSignal` schema (field already exists as optional; V1 always provides it) | Medium | 0.5d | None |
 
 ---
 
