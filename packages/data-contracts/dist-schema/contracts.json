@@ -78,6 +78,21 @@
         "processOrderId": {
           "type": "string"
         },
+        "unrestricted": {
+          "type": "number"
+        },
+        "blocked": {
+          "type": "number"
+        },
+        "qualityInspection": {
+          "type": "number"
+        },
+        "restricted": {
+          "type": "number"
+        },
+        "transit": {
+          "type": "number"
+        },
         "stockStatus": {
           "type": "string",
           "enum": [
@@ -483,6 +498,24 @@
             "marginal",
             "not-capable",
             "insufficient-data"
+          ]
+        },
+        "limitProvenance": {
+          "type": "string",
+          "enum": [
+            "mock-fixture",
+            "calculated-from-sample",
+            "imported-from-approved-source",
+            "unknown"
+          ]
+        },
+        "approvalState": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "not-approved",
+            "pending-validation",
+            "unavailable"
           ]
         }
       },
@@ -1009,6 +1042,24 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1
+        },
+        "limitProvenance": {
+          "type": "string",
+          "enum": [
+            "mock-fixture",
+            "calculated-from-sample",
+            "imported-from-approved-source",
+            "unknown"
+          ]
+        },
+        "approvalState": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "not-approved",
+            "pending-validation",
+            "unavailable"
+          ]
         }
       },
       "required": [
@@ -1063,6 +1114,16 @@
         "maxExposureDepth": {
           "type": "integer",
           "minimum": 1
+        },
+        "uom": {
+          "type": "string"
+        },
+        "deliveryEvidenceSource": {
+          "type": "string",
+          "enum": [
+            "lineage",
+            "inventory-movements"
+          ]
         }
       },
       "required": [
@@ -2012,7 +2073,8 @@
         "partial",
         "error",
         "unauthorized",
-        "not-applicable"
+        "not-applicable",
+        "waiting-for-context"
       ]
     },
     "EvidencePanelState": {
@@ -2030,7 +2092,8 @@
             "partial",
             "error",
             "unauthorized",
-            "not-applicable"
+            "not-applicable",
+            "waiting-for-context"
           ]
         },
         "freshness": {
@@ -6865,6 +6928,143 @@
         "severity",
         "source",
         "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "UATEvidencePayload": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "adapterMode": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api"
+          ]
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/UATEvidencePayload/properties/inputs/additionalProperties"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/definitions/UATEvidencePayload/properties/inputs/additionalProperties"
+                }
+              }
+            ]
+          }
+        },
+        "sourceSummary": {
+          "type": "object",
+          "properties": {
+            "overall": {
+              "type": "string",
+              "enum": [
+                "mock",
+                "legacy-api",
+                "databricks-api",
+                "mixed",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "sections": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "overall"
+          ],
+          "additionalProperties": false
+        },
+        "evidenceCompleteness": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "loaded",
+                "partial",
+                "mock-only",
+                "unavailable",
+                "pending-validation",
+                "error",
+                "permission-denied",
+                "timed-out"
+              ]
+            },
+            "sections": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uatNotes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "No live validation claimed.",
+            "Unavailable evidence must not be interpreted as zero exposure or no risk."
+          ]
+        }
+      },
+      "required": [
+        "domain",
+        "workspace",
+        "capturedAt",
+        "adapterMode",
+        "inputs",
+        "sourceSummary",
+        "evidenceCompleteness",
+        "warnings"
       ],
       "additionalProperties": false
     },

@@ -12,13 +12,20 @@ from pydantic import BaseModel, field_validator
 
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
+    Trace2CustomerDeliveryRequest,
+    Trace2CustomerExposureRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
+    get_customer_delivery_spec,
+    get_customer_exposure_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
+    map_customer_delivery_rows,
+    map_customer_exposure_rows,
     map_trace_graph,
 )
 from contracts.generated import (
+    CustomerExposureSummary,
     TraceGraph,
 )
 from routes._databricks import (
@@ -204,3 +211,139 @@ async def trace_graph(
     graph = map_trace_graph(tagged_rows, request, depth_reached, truncated)
     set_databricks_response_headers(response, spec)
     return graph
+
+
+# ---------------------------------------------------------------------------
+# POST /trace2/customer-exposure — lineage-backed customer exposure first slice
+# ---------------------------------------------------------------------------
+
+class CustomerExposureBody(BaseModel):
+    material_id: str
+    batch_id: str
+    plant_id: str = ""
+    max_depth: int = 5
+    max_rows: int = 5000
+
+
+@router.post("/trace2/customer-exposure", response_model=CustomerExposureSummary)
+async def customer_exposure(
+    body: CustomerExposureBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/customer-exposure — lineage-only customer exposure first slice.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_lineage downstream WITH RECURSIVE, LINK_TYPE='DELIVERY' edges.
+
+    Zero rows → HTTP 404. Zero rows must NOT be interpreted as zero exposure.
+    Countries and blockedDeliveries are not populated in this slice (no gold_batch_delivery_v).
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="customer-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_depth = min(max(body.max_depth, 1), 10)
+    max_rows = min(max(body.max_rows, 1), 10000)
+
+    request = Trace2CustomerExposureRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        plant_id=body.plant_id,
+        max_depth=max_depth,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_customer_exposure_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_customer_exposure_rows(rows)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No customer delivery records returned from current source — "
+                "do not interpret as zero exposure until source coverage is validated."
+            ),
+        )
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# POST /trace2/customer-deliveries — V1-parity delivery view slice
+# ---------------------------------------------------------------------------
+
+class CustomerDeliveryBody(BaseModel):
+    material_id: str
+    batch_id: str
+    max_rows: int = 5000
+
+
+@router.post("/trace2/customer-deliveries", response_model=CustomerExposureSummary)
+async def customer_deliveries(
+    body: CustomerDeliveryBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/customer-deliveries — V1-parity direct delivery records.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_delivery_v keyed on MATERIAL_ID + BATCH_ID (no plant filter).
+
+    No plant filter: a recall must surface all plants a batch was shipped from.
+    User confirmed 2026-05-20: "plant filtering is not relevant, a user needs to know
+    wherever a material went to a customer regardless for the recall/trace to be effective."
+
+    PENDING: MATERIAL_ID/BATCH_ID WHERE key column names need DESCRIBE TABLE confirmation.
+    See customer-delivery-movement-type-validation.md §1.
+
+    Zero rows → HTTP 404. Zero rows must NOT be interpreted as zero exposure.
+    deliveryEvidenceSource = 'inventory-movements' in all successful responses.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="customer-deliveries requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 10000)
+
+    request = Trace2CustomerDeliveryRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_customer_delivery_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_customer_delivery_rows(rows)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No customer delivery records returned from current source — "
+                "do not interpret as zero exposure until source coverage is validated."
+            ),
+        )
+    set_databricks_response_headers(response, spec)
+    return result

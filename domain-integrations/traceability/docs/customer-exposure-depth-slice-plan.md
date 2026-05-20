@@ -212,3 +212,37 @@ When implementation begins, add:
 
 - Readiness row 1.4: `TRACE-P0-003` — Schema/code-ready; population pending this slice
 - Defect backlog: `TRACE-P0-003 — Severity tiering is binary, not depth-based`
+
+---
+
+## Lineage-Only First Slice (Implemented 2026-05-20)
+
+**Status:** Code-ready. Requires UAT validation.
+
+This section documents a deviation from the original "do not implement until gold_batch_delivery_v verified" constraint. The lineage-only slice is a strictly smaller implementation that does NOT use `gold_batch_delivery_v` at all.
+
+**Deviation rationale:**
+- `gold_batch_lineage` columns confirmed live 2026-05-19 (all 18 columns, including CUSTOMER_ID, DELIVERY_ID, LINK_TYPE).
+- The lineage-only slice uses only verified columns from a verified source.
+- `gold_batch_delivery_v` is still required for countries, blockedDeliveries, and customer names — those fields remain deferred.
+- The zero-rows → 404 semantics ensure no false "no exposure" signals regardless of CUSTOMER_ID sparsity.
+
+**What was implemented (2026-05-20):**
+- `Trace2CustomerExposureRequest` dataclass
+- `get_customer_exposure_spec()` — downstream WITH RECURSIVE CTE on gold_batch_lineage, LINK_TYPE='DELIVERY' filter
+- `map_customer_exposure_rows()` — zero rows → None; non-zero → aggregate counts + depth
+- `POST /api/trace2/customer-exposure` route (databricks-api mode only)
+- `getCustomerExposureSummary()` override in `Trace2LegacyApiAdapter`
+- Panel: countries disclaimer when countries=[] and deliveries > 0; depth language when maxExposureDepth present
+- Source mapping doc: `customer-exposure-source-mapping.md`
+
+**What was NOT implemented (still requires gold_batch_delivery_v):**
+- `countries` — always `[]` in this slice
+- `blockedDeliveries` — always `0` in this slice
+- Customer names and country details
+
+**UAT validation required before production use:**
+1. Confirm LINK_TYPE='DELIVERY' edges exist with CUSTOMER_ID populated for a known shipped batch
+2. Confirm affectedCustomers / affectedDeliveries counts are plausible
+3. Confirm maxExposureDepth=1 for a batch with direct customer shipment
+4. Confirm 404 response for a batch with no downstream deliveries (interpret as "no records" not "no exposure")

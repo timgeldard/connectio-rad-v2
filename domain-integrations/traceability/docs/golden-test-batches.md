@@ -107,7 +107,33 @@ Passing a unit test or showing data in mock mode does not count as validation.
 
 ---
 
-### Entry 4 — Next validated batch (template)
+### Entry 4 — Confirmed high-delivery batch (20514264 / 0005717261)
+
+| Field | Value |
+|---|---|
+| **material_id** | `20514264` |
+| **batch_id** | `0005717261` |
+| **plant_id** | _(multi-plant — not filtered for delivery queries)_ |
+| **why_useful** | Confirmed to have 1977 customer delivery rows in `gold_batch_delivery_v` (connected_plant_uat). Use for CD-2/CD-3 browser UAT — delivery panel should show affectedCustomers > 0, countries populated, UOM=KG. |
+| **expected_customer_evidence** | affectedDeliveries ≥ 1977 (live count from Databricks Statement API 2026-05-20); countries includes 'US'; customer includes SAM'S CLUB.COM (0001141028); UOM=KG; deliveryEvidenceSource='inventory-movements'. |
+| **expected_lineage_direction** | Unknown — requires full UAT session |
+| **expected_downstream_exposure** | Unknown — requires full UAT session |
+| **expected_stock_evidence** | Unknown — requires UAT session |
+| **expected_quality_evidence** | Unknown — requires UAT session |
+| **expected_coa_evidence** | Unknown — CoA panel is mock-only. |
+| **expected_mass_balance_evidence** | Unknown — requires UAT session |
+| **validation_date** | Partial — customer delivery slice only (2026-05-20 via Databricks Statement API). Full app-level UAT not yet performed. |
+| **validation_status** | Partial — delivery query confirmed from direct Databricks Statement API. Browser UAT scenarios CD-4 through CD-6 pending. |
+| **source_of_evidence** | Direct Databricks Statement API query, 2026-05-20, connected_plant_uat, warehouse e76480b94bea6ed5. See DEF-TRACE-006 CD-2/CD-3 in uat-validation-ledger.md. |
+
+**Additional notes:**
+- This batch is the recommended primary candidate for customer delivery UAT (CD-2/CD-3).
+- Do not use Entry 2 (000000000020052009/0008602411) for delivery UAT — that batch returned zero rows in gold_batch_delivery_v.
+- Entry 3 (20035129/8000049668) is the batch stock/summary candidate; use this entry (Entry 4) for delivery panel validation.
+
+---
+
+### Entry 5 — Next validated batch (template)
 
 | Field | Value |
 |---|---|
@@ -132,7 +158,7 @@ Passing a unit test or showing data in mock mode does not count as validation.
 
 To register a new test batch:
 
-1. Copy the template above (Entry 3) and append it to this file as a new numbered entry.
+1. Copy the template above (Entry 5) and append it to this file as a new numbered entry.
 2. Fill in `material_id`, `batch_id`, and `plant_id` from the real SAP records.
 3. Describe why this batch is useful in `why_useful` — the richer the reason, the more useful the register becomes over time.
 4. Leave all "expected" fields as "Unknown — requires UAT validation" until a live session has been completed.

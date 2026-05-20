@@ -451,3 +451,76 @@ describe('Trace2LegacyApiAdapter.getTraceGraph', () => {
     vi.unstubAllGlobals()
   })
 })
+
+// ---------------------------------------------------------------------------
+// getCustomerExposureSummary tests
+// ---------------------------------------------------------------------------
+
+const CE_RESPONSE_OK = {
+  affectedCustomers: 2,
+  affectedDeliveries: 3,
+  shippedQuantity: 600.0,
+  countries: [],
+  highestSeverity: 'medium',
+  blockedDeliveries: 0,
+  recallRecommended: false,
+  maxExposureDepth: 1,
+}
+
+describe('Trace2LegacyApiAdapter.getCustomerExposureSummary', () => {
+  it('calls POST /api/trace2/customer-deliveries', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, CE_RESPONSE_OK))
+    await adapter.getCustomerExposureSummary(fullRequest)
+    const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
+    expect(String(url)).toContain('/api/trace2/customer-deliveries')
+    expect(opts?.method).toBe('POST')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:true with source=databricks-api on success', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, CE_RESPONSE_OK))
+    const result = await adapter.getCustomerExposureSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.affectedCustomers).toBe(2)
+    expect(result.data.countries).toEqual([])
+    expect(result.data.maxExposureDepth).toBe(1)
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false with not-found and "do not interpret" message on 404', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(404, { detail: 'No customer delivery records returned from current source — do not interpret as zero exposure until source coverage is validated.' }, false),
+    )
+    const result = await adapter.getCustomerExposureSummary(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.error.message.toLowerCase()).toContain('do not interpret as zero exposure')
+    expect(result.displayState).toBe('error')
+    expect(result.source).toBe('databricks-api')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false with unavailable message on 503', async () => {
+    vi.stubGlobal('fetch', mockFetch(503, {}, false))
+    const result = await adapter.getCustomerExposureSummary(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.message.toLowerCase()).toContain('do not interpret as zero exposure')
+    expect(result.source).toBe('databricks-api')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false (not mock) when batchId is missing', async () => {
+    const result = await adapter.getCustomerExposureSummary(partialRequest)
+    expect(result.ok).toBe(false)
+    // fetch must NOT have been called — no network request for missing context
+    expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
+  })
+})

@@ -59,6 +59,11 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 8 }}>
+          {data.deliveryEvidenceSource === 'lineage' && (
+            <div style={{ fontSize: 11, color: 'var(--amber, #C07000)', padding: '4px 8px', background: 'var(--amber-bg, #FFFBEB)', border: '1px solid var(--amber, #C07000)', borderRadius: 3 }}>
+              Lineage-only exposure indicator — countries and customer names not available from this source.
+            </div>
+          )}
           {data.recallRecommended && (
             <div
               style={{
@@ -78,16 +83,19 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             <CustomerStat label="Customers" value={data.affectedCustomers} />
-            <CustomerStat label="Deliveries" value={data.affectedDeliveries} />
+            <CustomerStat
+              label={data.deliveryEvidenceSource === 'inventory-movements' ? 'Deliveries' : 'Delivery movements'}
+              value={data.affectedDeliveries}
+            />
             <CustomerStat label="Blocked" value={data.blockedDeliveries} highlight={data.blockedDeliveries > 0} />
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
-                Shipped Qty
+                {data.deliveryEvidenceSource === 'inventory-movements' ? 'Shipped Qty' : 'Exposure Qty'}
               </span>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--shell-fg)' }}>
-                {data.shippedQuantity.toLocaleString()} KG
+                {data.shippedQuantity.toLocaleString()} {data.uom ?? 'source units'}
               </div>
             </div>
             {data.countries.length > 0 && (
@@ -101,6 +109,18 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
               </div>
             )}
           </div>
+          {data.countries.length === 0 && data.affectedDeliveries > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--amber, #C07000)', marginTop: 2 }}>
+              Country data not yet available from current source — do not interpret as geographic containment.
+            </div>
+          )}
+          {data.maxExposureDepth != null && (
+            <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+              {data.maxExposureDepth === 1
+                ? 'Direct shipment detected (depth 1).'
+                : `Indirect exposure detected (min depth ${data.maxExposureDepth}).`}
+            </div>
+          )}
         </div>
       )}
     </EvidencePanel>

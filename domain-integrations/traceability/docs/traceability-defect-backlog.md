@@ -25,12 +25,12 @@
 **Requires UAT:** Yes — live Databricks `LINK_TYPE` column values must be verified against mock fixture assumptions before UAT sign-off.
 
 ### TRACE-P0-003 — Severity tiering is binary, not depth-based
-**Status:** Schema/code-ready — population from live data pending
+**Status:** Partially addressed (2026-05-20) — lineage-only first slice populates `maxExposureDepth` from gold_batch_lineage; DELIVERY-edge population and LINK_TYPE='DELIVERY' live value require UAT validation before depth-aware severity is trustworthy
 **Affected:** `InvestigationSummary.tsx` severity logic, `CustomerExposureSummarySchema`
 **Evidence:** V2 assigns CRITICAL based on `shippedQuantity > 0` only. The reference engine (`fetch_recall_readiness()`) uses depth: depth=1 → CRITICAL, depth=2+ with shipments → HIGH, depth=2 no shipments → MEDIUM. A multi-hop indirect exposure at depth 2 with no direct shipments gets LOW in V2 but HIGH in the reference engine.
 **Risk:** Under-escalation of multi-hop indirect exposure scenarios.
-**Fix applied:** `maxExposureDepth?: number` added to `CustomerExposureSummarySchema`. `InvestigationSummary.tsx` severity logic updated: depth=1+shipped→CRITICAL, depth≥2+shipped→HIGH, depth≥2 no-ship→MEDIUM, depth undefined→CRITICAL (conservative fallback). Mock data leaves `maxExposureDepth` undefined — depth-aware tiering activates only when the customer-exposure Databricks slice populates the field.
-**Requires UAT:** Yes — requires live Databricks customer-exposure data with verified lineage depth.
+**Fix applied:** `maxExposureDepth?: number` added to `CustomerExposureSummarySchema`. `InvestigationSummary.tsx` severity logic updated: depth=1+shipped→CRITICAL, depth≥2+shipped→HIGH, depth≥2 no-ship→MEDIUM, depth undefined→CRITICAL (conservative fallback). Lineage-only first slice implemented 2026-05-20: `get_customer_exposure_spec` populates `maxExposureDepth` as minimum hop_depth across DELIVERY-type edges. `highestSeverity` is preliminary 'medium' pending business rule definition.
+**Requires UAT:** Yes — confirm LINK_TYPE='DELIVERY' edges exist with CUSTOMER_ID populated for a known shipped batch; confirm maxExposureDepth values are plausible.
 
 ---
 
@@ -50,6 +50,13 @@
 **Evidence:** `gold_batch_stock_v` returns one row per plant for a given material/batch combination. Without plant filtering, the mapper silently returned data for whichever plant sorts first alphabetically by PLANT_ID. UAT inputs include `plantId`, making the ambiguity avoidable.
 **Fix applied:** `plant_id` added to `Trace2BatchHeaderRequest` (default `""`), to the SQL WHERE clause as `AND (:plant_id = '' OR s.PLANT_ID = :plant_id)`, to `BatchRequest` in the FastAPI route, and to the frontend POST body in `trace2-legacy-api-adapter.ts`. When plant is absent behaviour is unchanged (all plants returned, mapper takes first).
 **Requires UAT:** Yes — confirm single-plant result when `plant_id = C061` is passed for the reference candidate.
+
+### TRACE-P1-009 — gold_batch_delivery_v WHERE key column names unverified (DEF-TRACE-006)
+**Status:** Fixed (2026-05-20) — DESCRIBE TABLE executed live against connected_plant_uat
+**Affected:** `get_customer_delivery_spec()`, `POST /api/trace2/customer-deliveries`
+**Evidence:** DESCRIBE TABLE confirmed all 17 columns: MATERIAL_ID, BATCH_ID, PLANT_ID, CUSTOMER_ID, CUSTOMER_NAME, STREET, CITY, POSTCODE, COUNTRY_ID, COUNTRY_NAME, DELIVERY, SALES_ORDER_ID, QUANTITY (signed), ABS_QUANTITY, UOM, POSTING_DATE, MOVEMENT_TYPE. WHERE keys MATERIAL_ID + BATCH_ID confirmed. TODO comments removed from SQL. UOM and COUNTRY_NAME added to SELECT and mapper. SQL and adapter tests updated.
+**Fix applied:** `get_customer_delivery_spec()` SQL: TODO comments removed; UOM + COUNTRY_NAME added to SELECT. `map_customer_delivery_rows()`: extracts `uom` from first non-null UOM row; returns it as optional field. `customer-delivery-v1-parity-source-mapping.md` §3 updated with full 17-column set.
+**Requires UAT:** Yes — CD-1 through CD-6 scenarios in DEF-TRACE-006 (uat-validation-ledger.md) remain as the live execution gate
 
 ### TRACE-P1-005 — Mass balance not wired to a live Databricks route
 **Status:** Open — adapter+mapper done, live route and WHERE filter verification pending

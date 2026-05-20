@@ -204,6 +204,13 @@ export const CustomerExposureSummarySchema = z.object({
   // When absent, severity logic falls back to conservative binary shipped/not-shipped rules.
   // Requires population from live Databricks lineage data (TRACE-P0-003).
   maxExposureDepth: z.number().int().min(1).optional(),
+  // Unit of measure for shippedQuantity. Absent when source view does not expose a UoM column.
+  // Display "source units" when absent.
+  uom: z.string().optional(),
+  // Identifies which Databricks source populated this summary.
+  // 'lineage' = gold_batch_lineage DELIVERY edges (preliminary, no countries).
+  // 'inventory-movements' = gold_batch_delivery_v direct delivery records (V1-parity).
+  deliveryEvidenceSource: z.enum(['lineage', 'inventory-movements']).optional(),
 })
 
 export type CustomerExposureSummary = z.infer<typeof CustomerExposureSummarySchema>
