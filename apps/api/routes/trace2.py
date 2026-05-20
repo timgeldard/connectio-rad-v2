@@ -9,8 +9,11 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel, field_validator
 
 from adapters.trace2.trace2_databricks_adapter import (
+    Trace2BatchHeaderRequest,
     TraceGraphRequest,
+    get_batch_header_summary_spec,
     get_trace_graph_recursive_spec,
+    map_batch_header_rows,
     map_trace_graph,
 )
 from contracts.generated import (
@@ -61,9 +64,29 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
 @router.post("/trace2/batch-header")
 async def batch_header(
     body: BatchRequest,
+    response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
-):
-    """Proxy to V1 POST /api/t2/batch-header."""
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> dict:
+    if os.getenv("BACKEND_ADAPTER_MODE", "") == "databricks-api":
+        host, warehouse_id = require_databricks_config()
+        identity = build_user_identity(
+            x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+        )
+        request = Trace2BatchHeaderRequest(
+            material_id=body.material_id,
+            batch_id=body.batch_id,
+        )
+        rows, spec = await run_query(
+            lambda: get_batch_header_summary_spec(request),
+            identity, host, warehouse_id,
+        )
+        result = map_batch_header_rows(rows)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Batch not found")
+        set_databricks_response_headers(response, spec)
+        return result
     return await _forward_post(
         "/api/t2/batch-header",
         body.model_dump(),
