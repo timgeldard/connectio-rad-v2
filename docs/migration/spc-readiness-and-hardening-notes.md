@@ -93,111 +93,12 @@ We classify each candidate view under one of the five standard levels:
 
 ---
 
-## 5. Unblocking Data DDL Plan (For Data Engineering)
+## 5. Unblocking Data DDL Plan — DEPRECATED (2026-05-20)
 
-To transition SPC to native direct Databricks SQL execution, the Data Engineering/Analytics team must create and populate the following tables in the `connected_plant_uat.gold` schema.
+> [!WARNING]
+> **SECTION 5 IS DEPRECATED AND RETIRED**
+> 
+> The DDL statements previously listed in this section are incorrect because they assumed a new, material-agnostic schema design. Real-time SPC database queries must match the actual material-centric schemas deployed by the V1 app.
+> 
+> For the correct schemas, view the [SPC V2 Migration Assessment](../spc-v2-migration-assessment.md) and [SPC V1 Source Discovery](../spc-v1-source-discovery.md) documents. Do not use the scripts below to create tables or views in `connected_plant_uat.gold`.
 
-Below are the exact SQL DDL scripts required:
-
-### A. SPC Control & Specification Limits (`spc_locked_limits`)
-Maintains frozen/locked control and specification limits for each Monitored Inspection Characteristic (MIC) at a given plant.
-
-```sql
-CREATE TABLE IF NOT EXISTS `connected_plant_uat`.`gold`.`spc_locked_limits` (
-    `MIC_ID` STRING NOT NULL COMMENT 'Unique identifier for the Master Inspection Characteristic (SAP LIMS)',
-    `MIC_NAME` STRING NOT NULL COMMENT 'Descriptive name of the characteristic',
-    `PLANT_ID` STRING NOT NULL COMMENT 'Plant identifier',
-    `WORK_CENTRE_ID` STRING COMMENT 'Optional work centre filter',
-    `CL` DOUBLE NOT NULL COMMENT 'Center Line / Historical mean',
-    `UCL` DOUBLE NOT NULL COMMENT 'Upper Control Limit (typically CL + 3σ)',
-    `LCL` DOUBLE NOT NULL COMMENT 'Lower Control Limit (typically CL - 3σ)',
-    `USL` DOUBLE COMMENT 'Upper Specification Limit (Target maximum)',
-    `LSL` DOUBLE COMMENT 'Lower Specification Limit (Target minimum)',
-    `TARGET_VALUE` DOUBLE COMMENT 'Nominal/Target characteristic value',
-    `UNIT_OF_MEASURE` STRING NOT NULL COMMENT 'Measurement unit (e.g. pH, %, C)',
-    `EFFECTIVE_FROM` TIMESTAMP NOT NULL COMMENT 'Starting date for validity window',
-    `EFFECTIVE_TO` TIMESTAMP COMMENT 'Expiration date for validity window',
-    `LOCKED_BY` STRING COMMENT 'User ID/Email who approved these limits',
-    `LOCKED_AT` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Timestamp when limits were locked'
-)
-USING delta
-COMMENT 'Locked/frozen control and specification limits for SPC characteristics';
-```
-
-### B. SPC Calculated Subgroups (`spc_quality_metric_subgroup_v`)
-Exposes rolling subgroups and calculated means/ranges for time-series charts.
-
-```sql
-CREATE OR REPLACE VIEW `connected_plant_uat`.`gold`.`spc_quality_metric_subgroup_v` AS
-WITH raw_results AS (
-    SELECT 
-        lot.PLANT_ID,
-        res.INSPECTION_LOT_ID,
-        res.OPERATION_ID,
-        res.SAMPLE_ID,
-        res.MIC_ID,
-        res.MIC_NAME,
-        lot.CREATED_DATE AS SAMPLE_TIMESTAMP,
-        CAST(res.QUANTITATIVE_RESULT AS DOUBLE) AS RESULT_VALUE,
-        res.UNIT_OF_MEASURE
-    FROM `connected_plant_uat`.`gold`.`gold_inspection_lot` lot
-    JOIN `connected_plant_uat`.`gold`.`gold_batch_quality_result_v` res
-      ON lot.INSPECTION_LOT_ID = res.INSPECTION_LOT_ID
-    WHERE res.QUANTITATIVE_RESULT IS NOT NULL
-),
-subgroups AS (
-    -- Subgroup configuration heuristic: Group by MIC, Plant, and Date window
-    SELECT 
-        MIC_ID,
-        MIC_NAME,
-        PLANT_ID,
-        SAMPLE_TIMESTAMP,
-        RESULT_VALUE,
-        UNIT_OF_MEASURE,
-        AVG(RESULT_VALUE) OVER (PARTITION BY MIC_ID, PLANT_ID ORDER BY SAMPLE_TIMESTAMP ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS SUBGROUP_MEAN,
-        (MAX(RESULT_VALUE) OVER (PARTITION BY MIC_ID, PLANT_ID ORDER BY SAMPLE_TIMESTAMP ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) - 
-         MIN(RESULT_VALUE) OVER (PARTITION BY MIC_ID, PLANT_ID ORDER BY SAMPLE_TIMESTAMP ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)) AS SUBGROUP_RANGE
-    FROM raw_results
-)
-SELECT 
-    sub.*,
-    lim.CL,
-    lim.UCL,
-    lim.LCL,
-    lim.USL,
-    lim.LSL,
-    lim.TARGET_VALUE
-FROM subgroups sub
-LEFT JOIN `connected_plant_uat`.`gold`.`spc_locked_limits` lim
-  ON sub.MIC_ID = lim.MIC_ID
- AND sub.PLANT_ID = lim.PLANT_ID
- AND sub.SAMPLE_TIMESTAMP >= lim.EFFECTIVE_FROM
- AND (lim.EFFECTIVE_TO IS NULL OR sub.SAMPLE_TIMESTAMP <= lim.EFFECTIVE_TO);
-```
-
-### C. Active Alarms & Process Violations (`spc_quality_metrics`)
-Primary table storing active signals and statistical anomalies evaluated by the SPC engine.
-
-```sql
-CREATE TABLE IF NOT EXISTS `connected_plant_uat`.`gold`.`spc_quality_metrics` (
-    `SIGNAL_ID` STRING NOT NULL COMMENT 'Unique UUID for the active alarm',
-    `MIC_ID` STRING NOT NULL COMMENT 'Master Inspection Characteristic ID',
-    `MIC_NAME` STRING NOT NULL COMMENT 'MIC Name',
-    `PLANT_ID` STRING NOT NULL COMMENT 'Plant identifier',
-    `BATCH_ID` STRING NOT NULL COMMENT 'Batch identifier',
-    `MATERIAL_ID` STRING NOT NULL COMMENT 'Material identifier',
-    `CHART_TYPE` STRING NOT NULL COMMENT 'e.g. xbar-r, individuals',
-    `RULE_CODE` STRING NOT NULL COMMENT 'Violation code: e.g. WE1, N2',
-    `RULE_NAME` STRING NOT NULL COMMENT 'Descriptive rule: e.g. Point beyond 3σ',
-    `SEVERITY` STRING NOT NULL COMMENT 'low, medium, high, critical',
-    `STATUS` STRING NOT NULL COMMENT 'active, acknowledged, resolved, false-positive',
-    `DETECTED_AT` TIMESTAMP NOT NULL COMMENT 'Timestamp when rule violation was triggered',
-    `SAMPLE_POINT_ID` STRING COMMENT 'Inspection point sample key',
-    `RESULT_VALUE` DOUBLE COMMENT 'Quantitative value triggering the alarm',
-    `RECOMMENDED_ACTION` STRING COMMENT 'SOP compliance action guidelines',
-    `ACKNOWLEDGED_BY` STRING COMMENT 'Operator email acknowledging',
-    `ACKNOWLEDGED_AT` TIMESTAMP COMMENT 'Timestamp of acknowledgement'
-)
-USING delta
-COMMENT 'Active SPC signals, alarms, and Western Electric/Nelson rule violations';
-```

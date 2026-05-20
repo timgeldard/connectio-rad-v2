@@ -1,8 +1,8 @@
 # SPC V1 Source Discovery — V2 Mapping Plan
 
 **Date:** 2026-05-20
-**Branch:** `claude/build-advisor-feature-I0zch`
-**Status:** Discovery complete — implementation not yet started
+**Branch:** `feature/spc-v1-source-migration-assessment`
+**Status:** Discovery complete — Migration Assessment drafted in [spc-v2-migration-assessment.md](./spc-v2-migration-assessment.md)
 
 ---
 
