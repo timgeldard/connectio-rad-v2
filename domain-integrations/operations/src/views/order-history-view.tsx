@@ -17,6 +17,9 @@ import {
 } from '@connectio/design-system'
 import type { UATEvidencePayload } from '@connectio/data-contracts'
 
+type PohSectionKey = 'header' | 'operations' | 'confirmations' | 'goodsMovements'
+type PohSectionState = 'loaded' | 'no-records-returned' | 'unavailable' | 'error' | 'mock-only' | 'pending-validation'
+
 const safeFormatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-'
   try {
@@ -54,16 +57,67 @@ function getEvidenceStatus(
   return 'loaded'
 }
 
-function getCombinedEvidenceStatus(statuses: EvidenceStatus[]): EvidenceStatus {
-  if (statuses.includes('pending-validation')) return 'pending-validation'
-  if (statuses.includes('error')) return 'error'
-  if (statuses.includes('permission-denied')) return 'permission-denied'
-  if (statuses.includes('timed-out')) return 'timed-out'
-  if (statuses.includes('unavailable')) return 'unavailable'
-  if (statuses.includes('mock-only')) return 'mock-only'
-  if (statuses.includes('no-records')) return 'no-records'
-  if (statuses.includes('partial')) return 'partial'
+function getSectionState(query: QueryLike, isEmpty?: boolean): PohSectionState {
+  if (query.isLoading) return 'pending-validation'
+  if (query.isError || (query.data && !query.data.ok)) return 'error'
+  if (!query.data) return 'unavailable'
+  if (query.data.source === 'mock') return 'mock-only'
+  if (isEmpty) return 'no-records-returned'
   return 'loaded'
+}
+
+function sectionStateToEvidenceStatus(state: PohSectionState): EvidenceStatus {
+  if (state === 'no-records-returned') return 'no-records'
+  return state
+}
+
+function mapSectionStateToUATStatus(
+  state: PohSectionState
+): 'loaded' | 'partial' | 'mock-only' | 'unavailable' | 'pending-validation' | 'error' {
+  if (state === 'no-records-returned') return 'partial'
+  return state
+}
+
+function getOverallEvidenceStatus(sectionStates: Record<PohSectionKey, PohSectionState>): UATEvidencePayload['evidenceCompleteness']['status'] {
+  const states = Object.values(sectionStates)
+  if (states.every(state => state === 'loaded')) return 'loaded'
+  if (states.every(state => state === 'mock-only')) return 'mock-only'
+  if (states.some(state => state === 'error')) return 'error'
+  if (states.some(state => state === 'pending-validation')) return 'pending-validation'
+  if (states.every(state => state === 'unavailable')) return 'unavailable'
+  return 'partial'
+}
+
+function getOverallSource(sections: Record<PohSectionKey, string>): UATEvidencePayload['sourceSummary']['overall'] {
+  const sources = Object.values(sections)
+  const known = sources.filter(source => source !== 'unknown')
+  if (known.length === 0) return 'unknown'
+  if (known.every(source => source === 'unavailable')) return 'unavailable'
+  const unique = new Set(known)
+  if (unique.size > 1) return 'mixed'
+  const [source] = known
+  return source === 'mock' || source === 'legacy-api' || source === 'databricks-api'
+    ? source
+    : 'unknown'
+}
+
+function getSectionSource(query: QueryLike): string {
+  if (query.data?.source) return query.data.source
+  if (query.isError || (query.data && !query.data.ok)) return 'unavailable'
+  return 'unknown'
+}
+
+function getNoRecordsMessage(section: PohSectionKey): string {
+  switch (section) {
+    case 'header':
+      return 'Order header unavailable from current source.'
+    case 'operations':
+      return 'No operation records returned for this order/source.'
+    case 'confirmations':
+      return 'No confirmation records returned for this order/source. Do not interpret as no confirmations until source coverage is validated.'
+    case 'goodsMovements':
+      return 'No goods-movement records returned for this order/source. Do not interpret as no movement history until source coverage is validated.'
+  }
 }
 
 function getQueryError(query: QueryLike) {
@@ -283,6 +337,34 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   const operationsStatus = getEvidenceStatus(operationsQuery, operations.length === 0)
   const confirmationsStatus = getEvidenceStatus(confirmationsQuery, confirmations.length === 0)
   const goodsMovementsStatus = getEvidenceStatus(goodsMovementsQuery, goodsMovements.length === 0)
+  const sectionStates: Record<PohSectionKey, PohSectionState> = {
+    header: getSectionState(headerQuery, !headerData),
+    operations: getSectionState(operationsQuery, operations.length === 0),
+    confirmations: getSectionState(confirmationsQuery, confirmations.length === 0),
+    goodsMovements: getSectionState(goodsMovementsQuery, goodsMovements.length === 0),
+  }
+  const sectionSources: Record<PohSectionKey, string> = {
+    header: getSectionSource(headerQuery),
+    operations: getSectionSource(operationsQuery),
+    confirmations: getSectionSource(confirmationsQuery),
+    goodsMovements: getSectionSource(goodsMovementsQuery),
+  }
+  const overallCompletenessStatus = getOverallEvidenceStatus(sectionStates)
+  const sectionStateValues = Object.values(sectionStates)
+  const hasLoadedSection = sectionStateValues.some(state =>
+    state === 'loaded' || state === 'mock-only' || state === 'no-records-returned'
+  )
+  const hasIncompleteSection = sectionStateValues.some(state =>
+    state === 'error' ||
+    state === 'unavailable' ||
+    state === 'pending-validation' ||
+    state === 'no-records-returned'
+  )
+  const hasPartialOrderHistory =
+    Boolean(queryParams) &&
+    !isAnyLoading &&
+    hasLoadedSection &&
+    hasIncompleteSection
 
   const metrics = useMemo(() => {
     const inputs = goodsMovements.filter(m => m.direction === 'input')
@@ -402,13 +484,13 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
     if (queryParams) {
       if (operations.length === 0 && operationsQuery.data?.ok) {
-        list.push('No operation phase records returned from current source.')
+        list.push(getNoRecordsMessage('operations'))
       }
       if (confirmations.length === 0 && confirmationsQuery.data?.ok) {
-        list.push('Zero confirmation records returned from current source.')
+        list.push(getNoRecordsMessage('confirmations'))
       }
       if (goodsMovements.length === 0 && goodsMovementsQuery.data?.ok) {
-        list.push('Zero goods movement records (GI/GR) returned from current source.')
+        list.push(getNoRecordsMessage('goodsMovements'))
       }
       if (metrics.hasMixedUoms) {
         list.push('Mixed units of measure detected. Bulk summation totals disabled to avoid scaling calculation errors.')
@@ -434,19 +516,6 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   }, [queryParams, operations, confirmations, goodsMovements, metrics, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
 
   const handleCopyRequestDetails = () => {
-    const overallSource: ExtendedSourceMode = (headerQuery.data?.source as ExtendedSourceMode) || 'unknown'
-    const overallStatus: EvidenceStatus = getCombinedEvidenceStatus([
-      headerStatus,
-      operationsStatus,
-      confirmationsStatus,
-      goodsMovementsStatus,
-    ])
-
-    const mapEvidenceStatusToUATStatus = (s: EvidenceStatus): 'loaded' | 'partial' | 'mock-only' | 'unavailable' | 'pending-validation' | 'error' | 'permission-denied' | 'timed-out' => {
-      if (s === 'no-records') return 'loaded'
-      return s
-    }
-
     const payload: UATEvidencePayload = {
       domain: 'operations',
       workspace: 'Process Order History',
@@ -457,31 +526,35 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         plantId: form.plantId,
       },
       sourceSummary: {
-        overall: overallSource,
+        overall: getOverallSource(sectionSources),
         sections: {
-          header: headerQuery.data?.source || 'unknown',
-          operations: operationsQuery.data?.source || 'unknown',
-          confirmations: confirmationsQuery.data?.source || 'unknown',
-          movements: goodsMovementsQuery.data?.source || 'unknown',
+          header: sectionSources.header,
+          operations: sectionSources.operations,
+          confirmations: sectionSources.confirmations,
+          goodsMovements: sectionSources.goodsMovements,
         },
       },
       evidenceCompleteness: {
-        status: mapEvidenceStatusToUATStatus(overallStatus),
+        status: overallCompletenessStatus,
         sections: {
-          header: headerStatus,
-          operations: operationsStatus,
-          confirmations: confirmationsStatus,
-          movements: goodsMovementsStatus,
+          header: mapSectionStateToUATStatus(sectionStates.header),
+          operations: mapSectionStateToUATStatus(sectionStates.operations),
+          confirmations: mapSectionStateToUATStatus(sectionStates.confirmations),
+          goodsMovements: mapSectionStateToUATStatus(sectionStates.goodsMovements),
         },
       },
       counts: {
         operations: operations.length,
         confirmations: confirmations.length,
-        movements: goodsMovements.length,
+        goodsMovements: goodsMovements.length,
       },
-      warnings: exceptions,
+      warnings: [
+        'No production readiness claimed.',
+        'No-record sections must not be interpreted as complete absence until source coverage is validated.',
+        ...exceptions,
+      ],
       uatNotes: [
-        'No live validation claimed.',
+        'Databricks/native path requires UAT validation against SAP/Databricks source evidence.',
         'Unavailable evidence must not be interpreted as zero exposure or no risk.',
       ],
     }
@@ -625,10 +698,10 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
           {[
-            { label: 'Order Header', query: headerQuery, status: headerStatus, count: headerData ? 1 : 0 },
-            { label: 'Operations', query: operationsQuery, status: operationsStatus, count: operations.length },
-            { label: 'Confirmations', query: confirmationsQuery, status: confirmationsStatus, count: confirmations.length },
-            { label: 'Goods Movements', query: goodsMovementsQuery, status: goodsMovementsStatus, count: goodsMovements.length },
+            { key: 'header' as const, label: 'Order Header', query: headerQuery, status: headerStatus, count: headerData ? 1 : 0 },
+            { key: 'operations' as const, label: 'Operations', query: operationsQuery, status: operationsStatus, count: operations.length },
+            { key: 'confirmations' as const, label: 'Confirmations', query: confirmationsQuery, status: confirmationsStatus, count: confirmations.length },
+            { key: 'goodsMovements' as const, label: 'Goods Movements', query: goodsMovementsQuery, status: goodsMovementsStatus, count: goodsMovements.length },
           ].map((sec, i) => (
             <div key={i} style={{ background: '#111827', padding: 12, borderRadius: 6, border: '1px solid #1f2937', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
@@ -640,9 +713,12 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   {sec.query.isLoading ? '...' : sec.count}
                   <span style={{ fontSize: 11, fontWeight: 400, color: '#6B7280', marginLeft: 6 }}>records</span>
                 </div>
+                <div style={{ marginTop: 4, fontSize: 10, color: '#9CA3AF' }}>
+                  Section state: {sectionStates[sec.key]}
+                </div>
               </div>
               <div style={{ marginTop: 8, fontSize: 9, color: '#6B7280', borderTop: '1px solid #1f2937', paddingTop: 6 }}>
-                 UAT evidence: pending browser verification
+                 Source: {sectionSources[sec.key]}
               </div>
             </div>
           ))}
@@ -814,7 +890,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   cursor: 'pointer',
                 }}
               >
-                Load UAT Candidate (7006965038)
+                Load UAT candidate process order 7006965038 / C113
               </button>
 
               <button
@@ -865,9 +941,14 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                   cursor: 'pointer',
                 }}
               >
-                {isCopied ? 'Copied Details!' : 'Copy API Request Details'}
+                {isCopied ? 'Copied UAT Evidence!' : 'Copy UAT Evidence'}
               </button>
             </div>
+            {form.processOrderId === '7006965038' && form.plantId === 'C113' && (
+              <div style={{ marginTop: 10, fontSize: 11, color: '#FBBF24', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 4, padding: '8px 10px' }}>
+                Candidate expected results require UAT validation; loaded data must be compared to SAP/Databricks source evidence.
+              </div>
+            )}
         </form>
         
         {!queryParams && (
@@ -917,6 +998,20 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
+          {hasPartialOrderHistory && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.08)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: 8,
+              padding: 14,
+              marginBottom: 16,
+              color: '#FBBF24',
+              fontSize: 12,
+            }}>
+              <strong>Partial order history loaded</strong> — do not treat this process order history as complete until unavailable, no-record, or failed sections are resolved.
+            </div>
+          )}
+
           {!isAnyLoading && !hasAnyData && !hasAnyError && (
             <div style={{
               textAlign: 'center',
@@ -940,6 +1035,20 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
           {/* C. Order Context Card */}
           {headerErr && (
             renderRouteError("Header Context", headerErr, "POST /api/por/order-header")
+          )}
+
+          {headerQuery.data?.ok && !headerData && !headerErr && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                  Process Order Header Context
+                </h3>
+                <EvidenceStatusBadge status={sectionStateToEvidenceStatus(sectionStates.header)} />
+              </div>
+              <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                {getNoRecordsMessage('header')}
+              </div>
+            </div>
           )}
 
           {headerData && !headerErr && (
@@ -1011,7 +1120,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <EvidenceStatusBadge status={operationsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
-                ℹ️ No process operations or phases recorded for this order.
+                {getNoRecordsMessage('operations')}
               </div>
             </div>
           )}
@@ -1091,7 +1200,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <EvidenceStatusBadge status={confirmationsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
-                ℹ️ No posted yield confirmations recorded for this order.
+                {getNoRecordsMessage('confirmations')}
               </div>
             </div>
           )}
@@ -1162,7 +1271,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <EvidenceStatusBadge status={goodsMovementsStatus} />
               </div>
               <div style={{ padding: '24px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
-                ℹ️ No goods movements recorded for this order.
+                {getNoRecordsMessage('goodsMovements')}
               </div>
             </div>
           )}

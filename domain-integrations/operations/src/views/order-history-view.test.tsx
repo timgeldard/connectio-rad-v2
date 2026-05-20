@@ -42,6 +42,11 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe('OrderHistoryView', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
 
     // Default mock query implementations (empty/no-data baseline)
     vi.mocked(useProcessOrderHeader).mockReturnValue({
@@ -365,6 +370,7 @@ describe('OrderHistoryView', () => {
     // Operations fails and renders route-specific error card with guidance
     expect(screen.getAllByText(/Operations Query Failed/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/BACKEND_ADAPTER_MODE/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Partial order history loaded/i)).toBeInTheDocument()
   })
 
   it('renders empty dynamic source status and empty state for a succeeded but empty route', async () => {
@@ -405,9 +411,87 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    // Expect the empty badge and empty placeholder for Operations
-    expect(screen.getAllByText(/No process operations or phases recorded/i)[0]).toBeInTheDocument()
+    // Expect the empty badge and safe empty placeholder for Operations
+    expect(screen.getAllByText(/No operation records returned for this order\/source/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/NO RECORDS/i).length).toBeGreaterThan(0)
+  })
+
+  it('copies UAT evidence with section statuses, counts, and no-record warnings', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderOperations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [{
+          operationId: 'OP-010',
+          operationNumber: '0010',
+          operationText: 'Phase 010',
+          workCentre: '',
+          status: 'confirmed',
+          plannedDurationMinutes: 0,
+          confirmationStatus: 'final-confirmed',
+          confirmed: true,
+          hasException: false,
+        }],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderOperations>)
+
+    vi.mocked(useOrderConfirmations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderConfirmations>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalled()
+    })
+    const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+    expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+    expect(payload.evidenceCompleteness.status).toBe('partial')
+    expect(payload.evidenceCompleteness.sections.confirmations).toBe('partial')
+    expect(payload.counts.goodsMovements).toBe(0)
+    expect(payload.warnings).toContain('No-record sections must not be interpreted as complete absence until source coverage is validated.')
   })
 
   it('disables planned/diagnostic filters and renders wired labels', () => {
