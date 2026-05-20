@@ -1,5 +1,6 @@
-﻿import { usePinnedWorkspaces } from '@connectio/personalization'
+import { usePinnedWorkspaces } from '@connectio/personalization'
 import { isNavigable } from '@connectio/product-model'
+import { isWorkspaceFlagEnabled } from '@connectio/feature-flags'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 
@@ -279,39 +280,40 @@ export function RoleAwareHome() {
   const pinned = workspaceRegistry.filter(
     w =>
       isNavigable(w.lifecycle) &&
+      isWorkspaceFlagEnabled(w.workspaceId) &&
       (pinnedWorkspaces === null || pinnedWorkspaces.includes(w.workspaceId)),
   )
 
   const hasTraceInvestigation = workspaceRegistry.some(
-    w => w.workspaceId === 'trace-investigation' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'trace-investigation' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasBatchRelease = workspaceRegistry.some(
-    w => w.workspaceId === 'quality-batch-release' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'quality-batch-release' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasOperationsPlanRisk = workspaceRegistry.some(
-    w => w.workspaceId === 'operations-plan-risk' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'operations-plan-risk' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasEnvMon = workspaceRegistry.some(
-    w => w.workspaceId === 'envmon-monitoring' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'envmon-monitoring' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasProductionStaging = workspaceRegistry.some(
-    w => w.workspaceId === 'production-staging' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'production-staging' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasSPCMonitoring = workspaceRegistry.some(
-    w => w.workspaceId === 'spc-monitoring' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'spc-monitoring' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasWarehouse360 = workspaceRegistry.some(
-    w => w.workspaceId === 'warehouse-360-overview' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'warehouse-360-overview' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   const hasMaintenanceReliability = workspaceRegistry.some(
-    w => w.workspaceId === 'maintenance-reliability' && isNavigable(w.lifecycle),
+    w => w.workspaceId === 'maintenance-reliability' && isNavigable(w.lifecycle) && isWorkspaceFlagEnabled(w.workspaceId),
   )
 
   return (

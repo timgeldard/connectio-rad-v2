@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { BatchReleaseContext, UATEvidencePayload } from '@connectio/data-contracts'
+import { featureFlags } from '@connectio/feature-flags'
 import { ReleaseBatchAction } from './release-batch-action.js'
 import { PlaceOnHoldAction } from './place-on-hold-action.js'
 import { RequestRetestAction } from './request-retest-action.js'
@@ -331,6 +332,7 @@ export interface ReleaseActionsPanelProps {
 export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
   const [activeAction, setActiveAction] = useState<ActiveAction>(null)
   const disabled = context === null
+  const writeBackDisabled = !featureFlags.writeBack.qualityReleaseAction
 
   return (
     <div
@@ -358,34 +360,51 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
         Actions
       </h3>
 
+      {writeBackDisabled && (
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'rgba(217, 119, 6, 0.1)',
+            border: '1px solid #D97706',
+            borderRadius: 4,
+            fontSize: 11,
+            color: '#D97706',
+            marginBottom: 8,
+            fontWeight: 500,
+          }}
+        >
+          Write-back actions disabled by configuration.
+        </div>
+      )}
+
       <ActionButton
         label="Release Batch"
         onClick={() => setActiveAction('release')}
-        disabled={disabled || context?.status === 'released' || context?.status === 'rejected'}
+        disabled={disabled || writeBackDisabled || context?.status === 'released' || context?.status === 'rejected'}
         variant="primary"
       />
       <ActionButton
         label="Place on Hold"
         onClick={() => setActiveAction('hold')}
-        disabled={disabled || context?.status === 'on-hold'}
+        disabled={disabled || writeBackDisabled || context?.status === 'on-hold'}
         variant="warning"
       />
       <ActionButton
         label="Request Retest"
         onClick={() => setActiveAction('retest')}
-        disabled={disabled}
+        disabled={disabled || writeBackDisabled}
         variant="secondary"
       />
       <ActionButton
         label="Escalate Deviation"
         onClick={() => setActiveAction('escalate-deviation')}
-        disabled={disabled}
+        disabled={disabled || writeBackDisabled}
         variant="secondary-orange"
       />
       <ActionButton
         label="Open Trace Investigation"
         onClick={() => setActiveAction('open-trace')}
-        disabled={disabled}
+        disabled={disabled || writeBackDisabled}
         variant="secondary"
       />
 

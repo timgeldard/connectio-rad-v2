@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Warehouse360OverviewContext, UATEvidencePayload } from '@connectio/data-contracts'
+import { featureFlags } from '@connectio/feature-flags'
 
 function ActionSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -185,13 +186,31 @@ export interface Warehouse360ActionsPanelProps {
 export function Warehouse360ActionsPanel({ context }: Warehouse360ActionsPanelProps) {
   const [activeAction, setActiveAction] = useState<ActiveAction>(null)
   const disabled = context === null
+  const postingDisabled = !featureFlags.warehouse.postingActions
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16, background: 'var(--shell-surface)', borderLeft: '1px solid var(--shell-line)', minWidth: 200 }} aria-label="Warehouse 360 actions">
       <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>Actions</h3>
 
-      <ActionButton label="Raise Hold Inquiry" onClick={() => setActiveAction('raise-hold-inquiry')} disabled={disabled} variant="warning" />
-      <ActionButton label="Request Replenishment" onClick={() => setActiveAction('request-replenishment')} disabled={disabled} variant="primary" />
+      {postingDisabled && (
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'rgba(217, 119, 6, 0.1)',
+            border: '1px solid #D97706',
+            borderRadius: 4,
+            fontSize: 11,
+            color: '#D97706',
+            marginBottom: 8,
+            fontWeight: 500,
+          }}
+        >
+          Posting actions disabled by configuration.
+        </div>
+      )}
+
+      <ActionButton label="Raise Hold Inquiry" onClick={() => setActiveAction('raise-hold-inquiry')} disabled={disabled || postingDisabled} variant="warning" />
+      <ActionButton label="Request Replenishment" onClick={() => setActiveAction('request-replenishment')} disabled={disabled || postingDisabled} variant="primary" />
       <ActionButton label="Open Batch Release" onClick={() => setActiveAction('open-batch-release')} disabled={disabled} variant="secondary" />
       <ActionButton label="Open Production Staging" onClick={() => setActiveAction('open-staging')} disabled={disabled} variant="secondary" />
       <ActionButton label="Open Trace Investigation" onClick={() => setActiveAction('open-trace')} disabled={disabled} variant="secondary" />

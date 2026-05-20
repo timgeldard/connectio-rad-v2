@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import { isWorkspaceFlagEnabled } from '@connectio/feature-flags'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 import { RoleAwareHome } from '../pages/RoleAwareHome.js'
@@ -87,7 +88,7 @@ function ActivePage({ workspaceId }: { readonly workspaceId: string | null }) {
   if (workspaceId === 'trace-graph-verify') return <div className="connectio-page" data-testid="workspace-view-trace-graph-verify"><TraceGraphVerifyPage /></div>
 
   const found = workspaceRegistry.find(w => w.workspaceId === workspaceId)
-  if (!found) return <div className="connectio-page"><NotFound /></div>
+  if (!found || !isWorkspaceFlagEnabled(workspaceId)) return <div className="connectio-page"><NotFound /></div>
 
   return (
     <Suspense fallback={<div style={{ padding: 24, color: 'var(--shell-fg-2)' }}>Loading…</div>}>
