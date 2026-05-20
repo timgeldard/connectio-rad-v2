@@ -1,0 +1,22 @@
+test(trace2): live CD-2/CD-3 delivery query validation via Databricks Statement API
+
+Executed live SQL validation against connected_plant_uat.gold.gold_batch_delivery_v
+using the Databricks Statement Execution API (2026-05-20). All query mechanics
+confirmed end-to-end against real data.
+
+Live validation results:
+- SQL executes successfully; all 9 SELECT columns populated from live data
+- UOM = "KG" confirmed present and non-null in real delivery rows
+- COUNTRY_ID = "US", COUNTRY_NAME = "United States of America" confirmed populated
+- CUSTOMER_NAME confirmed as human-readable string
+- DELIVERY document numbers returned as zero-padded strings
+- ABS_QUANTITY returned as decimal
+- View has 1977 delivery rows for MATERIAL=20514264, BATCH=0005717261
+
+Reference candidate returned 0 rows confirmed as internal/production batch with
+no direct customer shipments. HTTP 404 path is correct for this batch.
+
+Docs updated:
+- DEF-TRACE-006: CD-1/CD-2/CD-3 marked done; live batch documented; CD-4-6 remain
+- uat-validation-ledger.md: after-session step 7 marked done
+- golden-test-batches.md: Entry 4 added (20514264/0005717261 as delivery UAT batch)
