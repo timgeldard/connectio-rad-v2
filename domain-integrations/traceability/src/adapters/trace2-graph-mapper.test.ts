@@ -18,29 +18,22 @@ const UPSTREAM_KEY = `${UPSTREAM_MAT}:${UPSTREAM_BATCH}:${UPSTREAM_PLANT}`
 
 function makeResponse(overrides: Partial<BackendTraceGraphResponse> = {}): BackendTraceGraphResponse {
   return {
-    anchor: {
-      materialId: ANCHOR_MAT,
-      batchId: ANCHOR_BATCH,
-      plantId: ANCHOR_PLANT,
-      nodeKey: ANCHOR_KEY,
-    },
+    rootBatch: `${ANCHOR_MAT}/${ANCHOR_BATCH}`,
     nodes: [
       {
-        nodeKey: ANCHOR_KEY,
+        id: ANCHOR_KEY,
         materialId: ANCHOR_MAT,
         batchId: ANCHOR_BATCH,
         plantId: ANCHOR_PLANT,
-        label: `${ANCHOR_MAT} / ${ANCHOR_BATCH}`,
         depth: 0,
         directions: ['anchor'],
         isAnchor: true,
       },
       {
-        nodeKey: UPSTREAM_KEY,
+        id: UPSTREAM_KEY,
         materialId: UPSTREAM_MAT,
         batchId: UPSTREAM_BATCH,
         plantId: UPSTREAM_PLANT,
-        label: `${UPSTREAM_MAT} / ${UPSTREAM_BATCH}`,
         depth: 1,
         directions: ['upstream'],
         isAnchor: false,
@@ -60,14 +53,12 @@ function makeResponse(overrides: Partial<BackendTraceGraphResponse> = {}): Backe
         deliveryId: null,
         salesOrderId: null,
         quantity: 500.0,
-        baseUnitOfMeasure: 'KG',
+        uom: 'KG',
         postingDate: '2026-01-15',
         movementType: '101',
-        depth: 0,
-        direction: 'upstream',
       },
     ],
-    depthReached: 1,
+    depth: 1,
     truncated: false,
     warnings: [],
     ...overrides,
@@ -96,7 +87,7 @@ describe('mapBackendTraceGraph', () => {
     expect(upstreamNode?.materialId).toBe('000000000099000001')
   })
 
-  it('sets node id from nodeKey', () => {
+  it('sets node id from id field', () => {
     const graph = mapBackendTraceGraph(makeResponse())
     const ids = graph.nodes.map(n => n.id)
     expect(ids).toContain(ANCHOR_KEY)
@@ -215,7 +206,7 @@ describe('mapBackendTraceGraph', () => {
     expect(graph.edges[0].documentReference).toBeUndefined()
   })
 
-  it('maps baseUnitOfMeasure to uom', () => {
+  it('maps uom field to edge uom', () => {
     const graph = mapBackendTraceGraph(makeResponse())
     expect(graph.edges[0].uom).toBe('KG')
   })
@@ -251,7 +242,7 @@ describe('mapBackendTraceGraph', () => {
     expect(graph.downstreamCount).toBe(1)
   })
 
-  it('sets depthReached as graph.depth', () => {
+  it('sets depth as graph.depth', () => {
     const graph = mapBackendTraceGraph(makeResponse())
     expect(graph.depth).toBe(1)
   })

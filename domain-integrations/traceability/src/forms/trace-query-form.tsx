@@ -6,8 +6,8 @@ const DEFAULT_MATERIAL = '100023847'
 const DEFAULT_BATCH = 'CH-240308-0047'
 const DEFAULT_PLANT = 'IE10'
 const DEFAULT_DIRECTION = 'both' as const
-const DEFAULT_MAX_DEPTH = 2
-const DEFAULT_MAX_EDGES = 100
+const DEFAULT_MAX_DEPTH = 5
+const DEFAULT_MAX_EDGES = 1000
 
 type Direction = 'both' | 'upstream' | 'downstream'
 
@@ -127,11 +127,10 @@ export function TraceQueryForm({
     onSubmit(req)
   }
 
-
-  const inputStyle: React.CSSProperties = { 
-    fontFamily: 'monospace', 
-    padding: '8px 12px', 
-    border: '1px solid var(--shell-line)', 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: 'monospace',
+    padding: '8px 12px',
+    border: '1px solid var(--shell-line)',
     borderRadius: '4px',
     background: 'var(--shell-surface)',
     color: 'var(--shell-fg)',
@@ -206,7 +205,7 @@ export function TraceQueryForm({
 
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', borderTop: '1px solid var(--shell-line)', paddingTop: '16px' }}>
           <label style={labelStyle}>
-            Direction (Diagnostic)
+            Direction
             <select
               value={direction}
               onChange={e => setDirection(e.target.value as Direction)}
@@ -219,35 +218,32 @@ export function TraceQueryForm({
             </select>
           </label>
           <label style={labelStyle}>
-            Max depth (Trace limit)
+            Max depth
             <select
               value={maxDepth}
               onChange={e => setMaxDepth(Number(e.target.value))}
               data-testid="select-max-depth"
               style={selectStyle}
-              disabled
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
               <option value={3}>3</option>
               <option value={4}>4</option>
+              <option value={5}>5</option>
             </select>
-            <span style={helperStyle}>Trace limit uses current UAT default.</span>
           </label>
           <label style={labelStyle}>
-            Max edges (Trace limit)
+            Max edges
             <select
               value={maxEdges}
               onChange={e => setMaxEdges(Number(e.target.value))}
               data-testid="select-max-edges"
               style={selectStyle}
-              disabled
             >
               <option value={100}>100</option>
               <option value={500}>500</option>
               <option value={1000}>1000</option>
             </select>
-            <span style={helperStyle}>Trace limit uses current UAT default.</span>
           </label>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
@@ -277,16 +273,16 @@ export function TraceQueryForm({
             >
               {copyLabel}
             </button>
-            <button 
-              type="submit" 
-              data-testid="btn-run-trace" 
-              style={{ 
-                padding: '8px 24px', 
-                borderRadius: '4px', 
-                border: 'none', 
-                background: 'var(--shell-accent, #0066CC)', 
-                color: 'white', 
-                fontWeight: 600, 
+            <button
+              type="submit"
+              data-testid="btn-run-trace"
+              style={{
+                padding: '8px 24px',
+                borderRadius: '4px',
+                border: 'none',
+                background: 'var(--shell-accent, #0066CC)',
+                color: 'white',
+                fontWeight: 600,
                 cursor: 'pointer',
                 fontSize: '13px'
               }}

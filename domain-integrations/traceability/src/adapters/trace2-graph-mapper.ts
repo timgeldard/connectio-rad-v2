@@ -3,15 +3,15 @@ import type { TraceGraph } from '@connectio/data-contracts'
 
 // ---------------------------------------------------------------------------
 // Backend response shapes (POST /api/trace2/trace-graph)
+// Matches the Python map_trace_graph() output in trace2_databricks_adapter.py
 // ---------------------------------------------------------------------------
 
 interface BackendNode {
-  nodeKey: string
+  id: string
   materialId: string
   materialDescription?: string
   batchId: string
   plantId: string
-  label: string
   depth: number
   directions: string[]
   isAnchor: boolean
@@ -30,23 +30,16 @@ interface BackendEdge {
   deliveryId: string | null
   salesOrderId: string | null
   quantity: number | null
-  baseUnitOfMeasure: string | null
+  uom: string | null
   postingDate: string | null
   movementType: string | null
-  depth: number
-  direction: string
 }
 
 export interface BackendTraceGraphResponse {
-  anchor: {
-    materialId: string
-    batchId: string
-    plantId: string
-    nodeKey: string
-  }
   nodes: BackendNode[]
   edges: BackendEdge[]
-  depthReached: number
+  depth: number
+  rootBatch: string
   truncated: boolean
   warnings: string[]
 }
@@ -85,22 +78,20 @@ const LINK_TYPE_MAP: Record<string, RelationshipType> = {
 /**
  * Maps a POST /api/trace2/trace-graph response to the TraceGraph frontend contract.
  *
- * Mapping rules (u.txt):
- * - node.id ← nodeKey (materialId:batchId:plantId)
- * - node.type ← undefined (not available from gold_batch_lineage)
- * - node.materialDescription ← '' (empty string — no material master join in lineage table)
- * - node.materialId/batchId/plantId ← direct
- * - edge.relationshipType ← mapped from linkType via LINK_TYPE_MAP; undefined if unknown
+ * Mapping rules:
+ * - node.id ← id (materialId:batchId)
+ * - node.materialDescription ← '' when absent (gold_material JOIN populates this)
+ * - edge.relationshipType ← mapped from linkType via LINK_TYPE_MAP; omitted if unknown
  * - edge.documentReference ← materialDocumentNumber ?? processOrderId
- * - edge.uom ← baseUnitOfMeasure
- * - graph.rootBatch ← anchor.batchId
+ * - edge.uom ← uom
+ * - graph.rootBatch ← anchor node's batchId (node with isAnchor=true)
  * - graph.upstreamCount ← non-anchor nodes with 'upstream' in directions
  * - graph.downstreamCount ← non-anchor nodes with 'downstream' in directions
  * - graph.unresolvedNodeCount ← 0 (not available from lineage table)
  */
 export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph {
   const nodes = raw.nodes.map(n => ({
-    id: n.nodeKey,
+    id: n.id,
     materialId: n.materialId,
     materialDescription: n.materialDescription ?? '',
     batchId: n.batchId || undefined,
@@ -122,7 +113,7 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
       ...(e.linkType ? { linkType: e.linkType } : {}),
       ...(relationshipType !== undefined ? { relationshipType } : {}),
       ...(e.quantity !== null ? { quantity: e.quantity } : {}),
-      ...(e.baseUnitOfMeasure ? { uom: e.baseUnitOfMeasure } : {}),
+      ...(e.uom ? { uom: e.uom } : {}),
       ...(e.movementType ? { movementType: e.movementType } : {}),
       ...(documentReference ? { documentReference } : {}),
       ...(e.postingDate ? { postingDate: e.postingDate } : {}),
@@ -136,6 +127,7 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
     }
   })
 
+  const anchorNode = raw.nodes.find(n => n.isAnchor)
   const upstreamCount = raw.nodes.filter(n => !n.isAnchor && n.directions.includes('upstream')).length
   const downstreamCount = raw.nodes.filter(n => !n.isAnchor && n.directions.includes('downstream')).length
 
@@ -143,8 +135,8 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
     nodes,
     edges,
     direction: 'both',
-    depth: raw.depthReached,
-    rootBatch: raw.anchor.batchId,
+    depth: raw.depth,
+    rootBatch: anchorNode?.batchId ?? '',
     upstreamCount,
     downstreamCount,
     unresolvedNodeCount: 0,

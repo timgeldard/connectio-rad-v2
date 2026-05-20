@@ -206,24 +206,22 @@ const ANCHOR_KEY = '20052009:0008602411:C061'
 const UPSTREAM_KEY = '99000001:0001111111:C061'
 
 const BACKEND_GRAPH_OK: BackendTraceGraphResponse = {
-  anchor: { materialId: '20052009', batchId: '0008602411', plantId: 'C061', nodeKey: ANCHOR_KEY },
+  rootBatch: '20052009/0008602411',
   nodes: [
     {
-      nodeKey: ANCHOR_KEY,
+      id: ANCHOR_KEY,
       materialId: '20052009',
       batchId: '0008602411',
       plantId: 'C061',
-      label: '20052009 / 0008602411',
       depth: 0,
       directions: ['anchor'],
       isAnchor: true,
     },
     {
-      nodeKey: UPSTREAM_KEY,
+      id: UPSTREAM_KEY,
       materialId: '99000001',
       batchId: '0001111111',
       plantId: 'C061',
-      label: '99000001 / 0001111111',
       depth: 1,
       directions: ['upstream'],
       isAnchor: false,
@@ -243,14 +241,12 @@ const BACKEND_GRAPH_OK: BackendTraceGraphResponse = {
       deliveryId: null,
       salesOrderId: null,
       quantity: 100.0,
-      baseUnitOfMeasure: 'KG',
+      uom: 'KG',
       postingDate: '2026-01-01',
       movementType: '101',
-      depth: 0,
-      direction: 'upstream',
     },
   ],
-  depthReached: 1,
+  depth: 1,
   truncated: false,
   warnings: [],
 }
