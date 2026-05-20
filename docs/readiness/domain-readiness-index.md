@@ -57,23 +57,27 @@ We use the following conservative status classifications:
   * **Both-direction graph retrieval safer (2026-05-20, PR#50):** `direction=both` splits the edge budget evenly between downstream and upstream (max_edges // 2 per direction) so dense downstream results cannot starve upstream rows before the Python truncation cap applies.
   * **Graph direction now preserved in frontend contract (2026-05-20, PR#50):** `mapBackendTraceGraph` reads `direction`, `upstreamCount`, `downstreamCount`, and `unresolvedNodeCount` from the backend response rather than always defaulting to `both`.
   * **Quality unknown state is now explicitly warned (2026-05-20, PR#50):** `BatchHeaderPanel` shows a visible note when `qualityStatus === 'unknown'` stating that unknown must not be interpreted as accepted or rejected.
-  * **V1→V2 parity matrix completed (2026-05-20):** 27 V1 capabilities assessed. Key remaining P0 gaps: customer exposure (lineage-only first slice implemented), quality usage-decision source (source-blocked), edge LINK_TYPE live validation. **Production recall readiness is not claimed.**
-  * **Customer exposure lineage-only first slice implemented (2026-05-20):** `POST /api/trace2/customer-exposure` route wired to `gold_batch_lineage` downstream CTE. Returns `affectedCustomers`, `affectedDeliveries`, `shippedQuantity`, `maxExposureDepth` from confirmed-live columns. `countries`, `blockedDeliveries`, and customer names deferred — require `gold_batch_delivery_v` column verification. Zero rows → HTTP 404 with explicit "do not interpret as zero exposure" message. `highestSeverity` preliminary `'medium'` pending business rule definition. Source: `customer-exposure-source-mapping.md`.
+  * **V1→V2 parity matrix completed (2026-05-20):** 27 V1 capabilities assessed. Key remaining P0 gaps: quality usage-decision source (source-blocked), edge LINK_TYPE live validation. **Production recall readiness is not claimed.**
+  * **Customer exposure lineage-only first slice implemented (2026-05-20):** `POST /api/trace2/customer-exposure` route wired to `gold_batch_lineage` downstream CTE. Preliminary exposure-depth indicator only — not V1-parity customer delivery evidence. `deliveryEvidenceSource='lineage'` set on responses. Panel shows "Lineage-only exposure indicator" label.
+  * **V1-parity customer delivery slice implemented (2026-05-20):** `POST /api/trace2/customer-deliveries` wired to `gold_batch_delivery_v` (no plant filter — recall coverage requires all plants). Returns `affectedCustomers`, `affectedDeliveries`, `shippedQuantity`, `countries` (from `COUNTRY_ID`). `deliveryEvidenceSource='inventory-movements'`. WHERE key column names (MATERIAL_ID/BATCH_ID) pending DESCRIBE TABLE confirmation — see DEF-TRACE-006/TRACE-P1-009.
   * **UAT Blockers:**
     * Live Databricks UAT is blocked: no live E2E validation against UAT databases has occurred.
     * Column names in `gold_batch_summary_v` confirmed (2026-05-19); `gold_batch_mass_balance_v` WHERE filter columns still unverified.
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
-    * Customer exposure `countries` and `blockedDeliveries` fields require `gold_batch_delivery_v` column verification; LINK_TYPE='DELIVERY' edge population requires live UAT validation before depth-aware severity is trustworthy.
+    * `gold_batch_delivery_v` WHERE key columns (MATERIAL_ID/BATCH_ID) pending DESCRIBE TABLE — run CD-1 scenario in DEF-TRACE-006.
+    * LINK_TYPE='DELIVERY' edge population requires live UAT validation before depth-aware severity is trustworthy.
     * Quality usage decision (`gold_qm_usage_decision_v`) and supplier exposure (`gold_supplier`) slices remain mock-only.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
   * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
   * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
-  * [V1→V2 Functional Parity Matrix](../../domain-integrations/traceability/docs/traceability-v1-v2-functional-parity.md) ← **new**
+  * [V1→V2 Functional Parity Matrix](../../domain-integrations/traceability/docs/traceability-v1-v2-functional-parity.md)
   * [Golden Test Batches](../../domain-integrations/traceability/docs/golden-test-batches.md)
   * [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
   * [Databricks Column Verification Queries](../migration/databricks-column-verification-queries.md)
-  * [Customer Exposure Source Mapping](../../domain-integrations/traceability/docs/customer-exposure-source-mapping.md) ← **new**
+  * [Customer Exposure Source Mapping](../../domain-integrations/traceability/docs/customer-exposure-source-mapping.md)
+  * [Customer Delivery V1 Parity Source Mapping](../../domain-integrations/traceability/docs/customer-delivery-v1-parity-source-mapping.md) ← **new**
+  * [Customer Delivery Movement Type Validation](../../domain-integrations/traceability/docs/customer-delivery-movement-type-validation.md) ← **new**
   * [Customer Exposure Depth Plan](../../domain-integrations/traceability/docs/customer-exposure-depth-slice-plan.md)
   * [Quality Decision Source Plan](../../domain-integrations/traceability/docs/quality-decision-source-plan.md)
   * [Data Freshness Plan](../../domain-integrations/traceability/docs/data-freshness-plan.md)

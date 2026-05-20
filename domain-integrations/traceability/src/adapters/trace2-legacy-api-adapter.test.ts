@@ -468,11 +468,11 @@ const CE_RESPONSE_OK = {
 }
 
 describe('Trace2LegacyApiAdapter.getCustomerExposureSummary', () => {
-  it('calls POST /api/trace2/customer-exposure', async () => {
+  it('calls POST /api/trace2/customer-deliveries', async () => {
     vi.stubGlobal('fetch', mockFetch(200, CE_RESPONSE_OK))
     await adapter.getCustomerExposureSummary(fullRequest)
     const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
-    expect(String(url)).toContain('/api/trace2/customer-exposure')
+    expect(String(url)).toContain('/api/trace2/customer-deliveries')
     expect(opts?.method).toBe('POST')
     vi.unstubAllGlobals()
   })

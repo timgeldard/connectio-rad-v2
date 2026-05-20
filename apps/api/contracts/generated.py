@@ -397,6 +397,10 @@ class CustomerExposureSummary(BaseModel):
     blocked_deliveries: int = Field(..., alias='blockedDeliveries', ge=0)
     recall_recommended: bool = Field(..., alias='recallRecommended')
     max_exposure_depth: int | None = Field(None, alias='maxExposureDepth', ge=1)
+    uom: str | None = None
+    delivery_evidence_source: Literal['lineage', 'inventory-movements'] | None = Field(
+        None, alias='deliveryEvidenceSource'
+    )
 
 
 class Deviation(BaseModel):

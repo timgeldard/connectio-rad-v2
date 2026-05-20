@@ -51,6 +51,14 @@
 **Fix applied:** `plant_id` added to `Trace2BatchHeaderRequest` (default `""`), to the SQL WHERE clause as `AND (:plant_id = '' OR s.PLANT_ID = :plant_id)`, to `BatchRequest` in the FastAPI route, and to the frontend POST body in `trace2-legacy-api-adapter.ts`. When plant is absent behaviour is unchanged (all plants returned, mapper takes first).
 **Requires UAT:** Yes — confirm single-plant result when `plant_id = C061` is passed for the reference candidate.
 
+### TRACE-P1-009 — gold_batch_delivery_v WHERE key column names unverified (DEF-TRACE-006)
+**Status:** Code-implemented — DESCRIBE TABLE and live query not yet executed
+**Affected:** `get_customer_delivery_spec()`, `POST /api/trace2/customer-deliveries`
+**Evidence:** The V1-parity delivery slice queries `gold_batch_delivery_v` with `WHERE MATERIAL_ID = :material_id AND BATCH_ID = :batch_id`. Column name is consistent with all gold views (High confidence) but was not confirmed via DESCRIBE TABLE before code-write. Until confirmed, a column-not-found error will cause HTTP 500 for all customer-deliveries requests.
+**Risk:** If column names differ, the customer delivery panel shows an error state for all batches; investigators will not have V1-parity delivery evidence.
+**Proposed fix:** Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v`. If column names differ, update SQL in `get_customer_delivery_spec()`. Remove TODO comments after verification. See `customer-delivery-movement-type-validation.md` §1 for the full validation SQL.
+**Requires UAT:** Yes — CD-1 through CD-6 scenarios in DEF-TRACE-006 (uat-validation-ledger.md)
+
 ### TRACE-P1-005 — Mass balance not wired to a live Databricks route
 **Status:** Open — adapter+mapper done, live route and WHERE filter verification pending
 **Affected:** `mass-balance-view.tsx`, `get_mass_balance_spec`, `apps/api/routes/trace2.py`

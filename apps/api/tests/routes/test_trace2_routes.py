@@ -702,6 +702,113 @@ class TestBatchHeaderPlantIdFiltering:
         assert response.status_code == 200
 
 
+# ---------------------------------------------------------------------------
+# Customer deliveries route tests (POST /api/trace2/customer-deliveries)
+# ---------------------------------------------------------------------------
+
+_CD_URL = "/api/trace2/customer-deliveries"
+
+_CD_VALID_BODY = {
+    "material_id": "000000000020052009",
+    "batch_id": "0008602411",
+}
+
+_FAKE_DELIVERY_VIEW_ROW = {
+    "delivery": "DEL-001",
+    "customer_id": "CUST-001",
+    "customer_name": "Kerry Ingredients",
+    "country_id": "IE",
+    "city": "Dublin",
+    "abs_quantity": 500.0,
+    "posting_date": "2026-01-15",
+}
+
+
+class TestCustomerDeliveriesWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_mode_is_absent(self, monkeypatch) -> None:
+        monkeypatch.delenv("BACKEND_ADAPTER_MODE", raising=False)
+        async with _make_client() as client:
+            response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+
+class TestCustomerDeliveriesSuccess:
+    async def test_200_returns_delivery_summary(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["affectedCustomers"] == 1
+        assert data["affectedDeliveries"] == 1
+        assert data["shippedQuantity"] == pytest.approx(500.0)
+        assert "IE" in data["countries"]
+        assert data["blockedDeliveries"] == 0
+        assert data["recallRecommended"] is False
+        assert data["highestSeverity"] == "medium"
+        assert data["deliveryEvidenceSource"] == "inventory-movements"
+
+    async def test_zero_rows_returns_404_with_no_exposure_message(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 404
+        detail = response.json().get("detail", "")
+        assert "do not interpret as zero exposure" in detail.lower()
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {k: v for k, v in _CD_VALID_BODY.items() if k != "material_id"}
+        async with _make_client() as client:
+            response = await client.post(_CD_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_no_plant_id_in_valid_body(self, monkeypatch) -> None:
+        """customer-deliveries must not require or accept plant_id — recall coverage requires all plants."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert "gold_batch_delivery_v" in response.headers.get("x-data-source", "")
+
+    async def test_max_rows_clamped_to_10000(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_CD_VALID_BODY, "max_rows": 99999}
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+
 class TestTraceGraphArchitectureGuardrails:
     def test_no_sql_select_in_route_module(self) -> None:
         import inspect

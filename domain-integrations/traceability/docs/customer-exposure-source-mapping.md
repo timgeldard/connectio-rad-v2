@@ -2,7 +2,7 @@
 
 **Domain:** `domain-integrations/traceability`
 **Created:** 2026-05-20
-**Status:** Lineage-only first slice implemented; gold_batch_delivery_v deferred
+**Status:** Lineage-only first slice implemented (preliminary); gold_batch_delivery_v V1-parity slice in progress
 
 ---
 
@@ -100,20 +100,28 @@ This is critical: zero rows could mean no deliveries, or LINK_TYPE not matching 
 
 ---
 
-## Deferred Items
+## Relationship to gold_batch_delivery_v Slice
 
-- `countries` — requires `gold_batch_delivery_v` column verification (`country_code` or equivalent)
-- `blockedDeliveries` — requires `gold_batch_delivery_v` blocked status column
-- Customer names — requires customer master view
+**The lineage-only customer exposure slice is a preliminary exposure indicator.
+V1-parity customer delivery evidence is expected to come from `gold_batch_delivery_v`.**
+
+The `POST /api/trace2/customer-deliveries` endpoint (Scope E, in progress) queries
+`gold_batch_delivery_v` directly and provides V1-parity customer delivery records including
+countries, customer names, and delivery counts. See
+`customer-delivery-v1-parity-source-mapping.md` for full source decision and column mapping.
+
+Items still deferred in the lineage-only slice:
+- `countries` — resolved in gold_batch_delivery_v slice (`COUNTRY_ID` column, High confidence)
+- `blockedDeliveries` — no confirmed blocked-status column in gold_batch_delivery_v yet
 - Severity rules beyond 'medium' preliminary — requires business rules definition
 - `recallRecommended` logic — out of scope
 
 ---
 
-## Next Steps for Full V1 Parity
+## Next Steps
 
-1. Run `DESCRIBE TABLE <catalog>.<schema>.gold_batch_delivery_v` in a Databricks UAT session
-2. Confirm: country column name, blocked status column, join key to lineage
-3. Add Option 3 (hybrid) slice joining lineage CTE to delivery view for enriched fields
-4. UAT-validate that LINK_TYPE='DELIVERY' edges have CUSTOMER_ID populated in live data
-5. Update this document with confirmed column names and elevate confidence to High
+1. ~~Run `DESCRIBE TABLE` to confirm country column~~ — resolved: `COUNTRY_ID` confirmed High confidence
+2. Confirm `MATERIAL_ID`/`BATCH_ID` WHERE keys in `gold_batch_delivery_v` via DESCRIBE TABLE
+3. UAT-validate that `LINK_TYPE='DELIVERY'` edges have CUSTOMER_ID populated in live data (P0-3)
+4. Assess blocked delivery column once DESCRIBE output is available
+5. Update this document once DESCRIBE TABLE results are in hand

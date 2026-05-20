@@ -178,6 +178,8 @@ If `qualityStatus` returns `"pending"`: QI stock > 0 was detected. An open quali
 4. If `gold_batch_summary_v` column names were verified, update `databricks-column-verification-queries.md` with date, environment, and confirmed columns.
 5. If LINK_TYPE='DELIVERY' edge population was confirmed, update `customer-exposure-source-mapping.md` confidence from Medium → High and remove the UAT-pending note from the filter comment in `trace2_databricks_adapter.py`.
 6. If customer exposure returned HTTP 404 for all batches tested, record the live LINK_TYPE values from `gold_batch_lineage` and update the WHERE filter in `get_customer_exposure_spec()` before re-testing.
+7. Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v` and record all column names — update `customer-delivery-v1-parity-source-mapping.md` §3 and remove the TODO comments in `get_customer_delivery_spec()`.
+8. Run CD-1 through CD-6 scenarios (DEF-TRACE-006) and record results. Update `production-readiness-checklist.md` row 1.4 if V1-parity delivery evidence is confirmed.
 
 ---
 
@@ -304,6 +306,54 @@ Zero rows must never be interpreted as confirmed zero exposure: it could mean no
 | CE-4: LINK_TYPE value verification | Any batch | Inspect raw `LINK_TYPE` values in `gold_batch_lineage` for downstream edges; confirm `'DELIVERY'` matches live values or record actual value for filter update |
 | CE-5: Country disclaimer shown | Batch with CE-1 or CE-2 result | Panel shows amber "Country data not yet available from current source — do not interpret as geographic containment." when countries=[] and affectedDeliveries > 0 |
 | CE-6: Adapter mode guard | Any batch when `BACKEND_ADAPTER_MODE=legacy-api` | HTTP 503; customer impact panel falls back to mock/legacy behaviour |
+
+---
+
+### DEF-TRACE-006 — Customer delivery V1-parity slice: gold_batch_delivery_v WHERE key columns unverified
+
+**Identified:** Code review, 2026-05-20  
+**Fixed in:** Current tranche — `POST /api/trace2/customer-deliveries` route + `get_customer_delivery_spec()`  
+**Status:** Code-implemented — DESCRIBE TABLE + live query not yet executed
+
+**Description:**  
+The `gold_batch_delivery_v` query uses `MATERIAL_ID` and `BATCH_ID` as WHERE key column names. These are consistent with naming conventions on all other gold views and are High-confidence from V1 source inspection, but the DESCRIBE TABLE result has not been confirmed against the live `connected_plant_uat.gold.gold_batch_delivery_v` catalog object. If the column names differ (e.g. `MAT_ID`, `BATCH_NUMBER`), the query will fail with a column-not-found error.
+
+Additionally: the reversal de-netting decision (movement types 601 vs 602) is deferred. If `MOVEMENT_TYPE` is not a queryable column in `gold_batch_delivery_v`, the mapper cannot de-net reversals and `shippedQuantity` may overstate true shipped volume for batches with reversal activity.
+
+**Zero-rows semantics (critical — food safety):**  
+Zero rows → mapper returns `None` → route returns HTTP 404 with message:  
+*"No customer delivery records returned from current source — do not interpret as zero exposure until source coverage is validated."*  
+This message must be displayed by the panel; zero rows must never be treated as confirmed no-exposure.
+
+**Column confidence at code-write time (2026-05-20):**
+
+| Column | Confidence | Status |
+|---|---|---|
+| `DELIVERY` | High | Confirmed from V1 inspection (trace2-functional-parity-audit.md §3) |
+| `CUSTOMER_ID` | High | As above |
+| `CUSTOMER_NAME` | High | As above |
+| `COUNTRY_ID` | High | As above |
+| `CITY` | High | As above |
+| `ABS_QUANTITY` | High | As above |
+| `POSTING_DATE` | High | User confirmed 2026-05-20 |
+| `MATERIAL_ID` (WHERE key) | Pending DESCRIBE | Consistent with all gold views — must be confirmed |
+| `BATCH_ID` (WHERE key) | Pending DESCRIBE | Consistent with all gold views — must be confirmed |
+
+**UAT verification scenarios:**
+
+| Scenario | Action | Expected result |
+|---|---|---|
+| CD-1: DESCRIBE TABLE | Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v` | Confirm MATERIAL_ID and BATCH_ID as column names; record any additional columns |
+| CD-2: Known shipped batch | Query POST /api/trace2/customer-deliveries for a batch known to have deliveries | HTTP 200; affectedCustomers > 0; countries non-empty; deliveryEvidenceSource='inventory-movements' |
+| CD-3: countries populated | CD-2 result | `countries` array contains valid ISO country codes; panel shows countries section (not amber disclaimer) |
+| CD-4: Zero-rows batch | Query for a batch with no delivery records | HTTP 404 with "do not interpret as zero exposure" in detail |
+| CD-5: Source comparison | Run both /customer-exposure and /customer-deliveries for same batch | Compare affectedDeliveries counts; delivery view count expected ≥ lineage count (see movement-type-validation.md §5) |
+| CD-6: Reversal check | Run SQL from movement-type-validation.md §4 | If 602 rows present: escalate de-netting to Scope E SQL update |
+
+**Post-verification actions:**  
+- Remove `TODO: verify column name` comments from `get_customer_delivery_spec()` SQL  
+- Update `customer-delivery-v1-parity-source-mapping.md` §3 confidence for MATERIAL_ID/BATCH_ID to High  
+- If additional columns found (UoM, SALES_ORDER_ID, blocked flag): plan next slice additions
 
 ---
 

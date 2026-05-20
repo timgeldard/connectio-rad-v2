@@ -15,7 +15,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 1.1 | Lineage correctness validated against live Databricks gold views | ❌ | Mock only. See `mb56-parity-review.md`. |
 | 1.2 | MB56-style behaviour compared to reference engine | 🔶 | Gap analysis complete (`mb56-parity-review.md`). Live parity not verified. |
 | 1.3 | Null/unavailable data states do not imply false containment | ✅ | Fixed PR #24 (null customerExposure → UNKNOWN severity). |
-| 1.4 | Severity tiering reflects exposure depth, not only binary shipped flag | 🔶 | Schema/code-ready AND lineage-only first Databricks slice implemented 2026-05-20 (TRACE-P0-003). `maxExposureDepth` populated from gold_batch_lineage DELIVERY edges. `highestSeverity` preliminary 'medium' — business rules not yet defined. UAT validation required: confirm DELIVERY edge CUSTOMER_ID population and depth values. |
+| 1.4 | Severity tiering reflects exposure depth, not only binary shipped flag | 🔶 | Schema/code-ready AND lineage-only first Databricks slice implemented 2026-05-20. `maxExposureDepth` populated from gold_batch_lineage DELIVERY edges. V1-parity delivery view slice (gold_batch_delivery_v) implemented 2026-05-20 on POST /api/trace2/customer-deliveries; WHERE key column names pending DESCRIBE TABLE confirmation (DEF-TRACE-006). UAT required: confirm DELIVERY edge CUSTOMER_ID population, depth values, and gold_batch_delivery_v column set. |
 | 1.5 | Link types on trace graph edges discriminate vendor receipts from internal moves | 🔶 | Code fixed PR #26 (linkType passthrough, expanded relationshipType enum). Live Databricks LINK_TYPE value validation still required before UAT sign-off. |
 | 1.6 | Graph truncation signalled when depth limit is reached | 🔶 | Code fixed: unified truncation banner copy updated; `max_edges_reached` warning now triggers banner alongside `max_depth_reached` and `truncated=true`. Live validation pending (TRACE-P1-001 — code-fixed). |
 | 1.7 | `gold_batch_summary_v` column names verified in live Databricks catalog | ✅ | Verified 2026-05-19 against connected_plant_uat. MANUFACTURE_DATE confirmed; SHELF_LIFE_EXPIRATION_DATE replaces expiry_date; PLANT_ID/BATCH_STATUS/UOM/PROCESS_ORDER_ID not in summary_v (sourced from stock_v and gold_material). TODO markers removed from adapter. See `databricks-column-verification-queries.md`. |
@@ -50,7 +50,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | All existing tests passing on CI | ✅ | `pnpm nx test di-traceability` passes (163+ tests after PR#50 additions). |
+| 4.1 | All existing tests passing on CI | ✅ | TypeScript: 224 tests (di-traceability). Python: 252 tests (adapter + route, 2026-05-20). |
 | 4.2 | Null/unknown data states covered by unit tests | ✅ | `InvestigationSummary.test.tsx` — 4 null-path tests added PR #24. |
 | 4.3 | Evidence confidence scoring edge cases tested | ✅ | `EvidenceConfidence.test.tsx` — COMPLETE / PARTIAL / UNKNOWN cases. |
 | 4.4 | Adapter error states (`ok: false`) tested across all panels | 🔶 | Legacy adapter tested; panel-level `displayState` handling not systematically tested. |

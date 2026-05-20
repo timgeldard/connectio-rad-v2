@@ -177,11 +177,11 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
   }
 
   /**
-   * Tier: databricks-api — calls POST /api/trace2/customer-exposure.
-   * Lineage-only first slice: LINK_TYPE='DELIVERY' edges from gold_batch_lineage.
+   * Tier: databricks-api — calls POST /api/trace2/customer-deliveries (V1-parity delivery view slice).
+   * Source: gold_batch_delivery_v direct delivery records (no plant filter — recall coverage).
    * No mock fallback. No legacy-api fallback.
    * Zero rows → route returns 404 → adapter returns error with "do not interpret as zero exposure" message.
-   * Countries and blockedDeliveries are not populated in this slice.
+   * deliveryEvidenceSource='inventory-movements' on successful responses.
    */
   override async getCustomerExposureSummary(
     request: Trace2AdapterRequest,
@@ -200,14 +200,13 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/api/trace2/customer-exposure`, {
+      const response = await fetch(`${this.baseUrl}/api/trace2/customer-deliveries`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           material_id: request.materialId,
           batch_id: request.batchId,
-          ...(request.plantId ? { plant_id: request.plantId } : {}),
         }),
       })
 
