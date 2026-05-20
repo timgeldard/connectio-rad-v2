@@ -298,6 +298,8 @@ describe('OrderHistoryView', () => {
     // Check Goods movements rendering
     expect(screen.getAllByText(/GM-001/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/SL-MILK-SILO/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/This is not a BOM or reservation coverage claim/i)[0]).toBeInTheDocument()
 
     // Check Derived metrics summary
     expect(screen.getAllByText(/1,860 KG/i).length).toBeGreaterThan(0)
@@ -491,7 +493,83 @@ describe('OrderHistoryView', () => {
     expect(payload.evidenceCompleteness.status).toBe('partial')
     expect(payload.evidenceCompleteness.sections.confirmations).toBe('partial')
     expect(payload.counts.goodsMovements).toBe(0)
+    expect(payload.counts.componentMaterials).toBe(0)
     expect(payload.warnings).toContain('No-record sections must not be interpreted as complete absence until source coverage is validated.')
+  })
+
+  it('derives net component consumption from 261 and 262 movement rows', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [
+          {
+            movementId: 'GM-261',
+            movementType: '261',
+            direction: 'input',
+            materialId: '000000000070373871',
+            materialDescription: 'Ingredient A',
+            batchId: 'BATCH-A',
+            quantity: 5000,
+            uom: 'G',
+            postedAt: '2026-05-18T09:00:00.000Z',
+          },
+          {
+            movementId: 'GM-262',
+            movementType: '262',
+            direction: 'input',
+            materialId: '000000000070373871',
+            materialDescription: 'Ingredient A',
+            batchId: 'BATCH-A',
+            quantity: 1000,
+            uom: 'G',
+            postedAt: '2026-05-18T10:00:00.000Z',
+          },
+          {
+            movementId: 'GM-EA',
+            movementType: '261',
+            direction: 'input',
+            materialId: '000000000000PACK',
+            materialDescription: 'Packaging',
+            quantity: 3,
+            uom: 'EA',
+            postedAt: '2026-05-18T11:00:00.000Z',
+          },
+        ],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText('000000000070373871').length).toBeGreaterThan(0)
+    expect(screen.getByText('4 KG')).toBeInTheDocument()
   })
 
   it('disables planned/diagnostic filters and renders wired labels', () => {

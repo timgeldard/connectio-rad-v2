@@ -119,6 +119,7 @@ We use the following conservative status classifications:
   * [Operations README](../../domain-integrations/operations/README.md)
   * [Golden Process Orders Candidates](../../domain-integrations/operations/docs/golden-process-orders.md)
   * [POH UAT Readiness Notes](../../domain-integrations/operations/docs/poh-uat-readiness-notes.md)
+  * [POH V1 to V2 Functional Parity](../../domain-integrations/operations/docs/poh-v1-v2-functional-parity.md)
   * [POH Investigation Screen Notes](../migration/poh-investigation-screen-notes.md)
 
 ### Warehouse360

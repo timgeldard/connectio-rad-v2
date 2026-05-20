@@ -19,6 +19,14 @@ import type { UATEvidencePayload } from '@connectio/data-contracts'
 
 type PohSectionKey = 'header' | 'operations' | 'confirmations' | 'goodsMovements'
 type PohSectionState = 'loaded' | 'no-records-returned' | 'unavailable' | 'error' | 'mock-only' | 'pending-validation'
+type ComponentConsumptionRow = {
+  materialId: string
+  materialDescription?: string
+  batchId?: string
+  totalQuantity: number
+  uom: string
+  sourceMovementCount: number
+}
 
 const safeFormatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-'
@@ -118,6 +126,17 @@ function getNoRecordsMessage(section: PohSectionKey): string {
     case 'goodsMovements':
       return 'No goods-movement records returned for this order/source. Do not interpret as no movement history until source coverage is validated.'
   }
+}
+
+function componentQuantity(quantity: number, uom: string): { quantity: number; uom: string } | null {
+  const normalizedUom = uom.trim().toUpperCase()
+  if (normalizedUom === 'EA') {
+    return null
+  }
+  if (normalizedUom === 'G') {
+    return { quantity: quantity / 1000, uom: 'KG' }
+  }
+  return { quantity, uom: normalizedUom || uom }
 }
 
 function getQueryError(query: QueryLike) {
@@ -394,6 +413,46 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     }
   }, [goodsMovements])
 
+  const componentConsumption = useMemo(() => {
+    const byMaterial = new Map<string, ComponentConsumptionRow>()
+
+    goodsMovements.forEach(movement => {
+      if (movement.movementType !== '261' && movement.movementType !== '262') {
+        return
+      }
+
+      const normalized = componentQuantity(movement.quantity, movement.uom)
+      if (!normalized) {
+        return
+      }
+
+      const existing = byMaterial.get(movement.materialId)
+      const sign = movement.movementType === '262' ? -1 : 1
+      if (existing) {
+        existing.totalQuantity += sign * normalized.quantity
+        existing.sourceMovementCount += 1
+        if (!existing.batchId && movement.movementType === '261') {
+          existing.batchId = movement.batchId
+        }
+        return
+      }
+
+      byMaterial.set(movement.materialId, {
+        materialId: movement.materialId,
+        materialDescription: movement.materialDescription,
+        batchId: movement.movementType === '261' ? movement.batchId : undefined,
+        totalQuantity: sign * normalized.quantity,
+        uom: normalized.uom,
+        sourceMovementCount: 1,
+      })
+    })
+
+    return [...byMaterial.values()]
+      .map(row => ({ ...row, totalQuantity: Number(row.totalQuantity.toFixed(6)) }))
+      .filter(row => row.totalQuantity > 0)
+      .sort((a, b) => a.materialId.localeCompare(b.materialId))
+  }, [goodsMovements])
+
   // 4. Derived Chronological Timeline (no invented events)
   const sortedTimeline = useMemo(() => {
     interface TimelineEvent {
@@ -498,6 +557,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       if (metrics.unclassifiedCount > 0) {
         list.push(`${metrics.unclassifiedCount} goods movement rows have unclassified direction due to unrecognized SAP movement types.`)
       }
+      if (goodsMovements.length > 0 && componentConsumption.length === 0) {
+        list.push('No net component consumption rows derived from 261/262 movement types. Do not interpret as no BOM or reservation requirements until source coverage is validated.')
+      }
 
       // Check missing batches on movements
       const missingBatchMovements = goodsMovements.filter(m => !m.batchId && (m.movementType === '101' || m.movementType === '261' || m.materialId.startsWith('MAT-RM') || m.materialId.startsWith('MAT-CH')))
@@ -513,7 +575,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     }
 
     return list
-  }, [queryParams, operations, confirmations, goodsMovements, metrics, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
+  }, [queryParams, operations, confirmations, goodsMovements, metrics, componentConsumption, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
 
   const handleCopyRequestDetails = () => {
     const payload: UATEvidencePayload = {
@@ -547,6 +609,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         operations: operations.length,
         confirmations: confirmations.length,
         goodsMovements: goodsMovements.length,
+        componentMaterials: componentConsumption.length,
       },
       warnings: [
         'No production readiness claimed.',
@@ -1336,7 +1399,56 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          {/* G. Movement Summary & Derived stats */}
+          {/* G. Component Consumption (Derived from 261/262 movements) */}
+          {goodsMovements.length > 0 && (
+            <div style={cardStyle}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                Component Consumption Evidence
+              </h3>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                Derived from returned goods movements only: 261 adds component issue, 262 subtracts reversal, EA rows are excluded, and G is normalised to KG. This is not a BOM or reservation coverage claim.
+              </div>
+
+              {componentConsumption.length === 0 ? (
+                <div style={{ padding: '20px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                  No net component consumption rows derived from 261/262 movement types. Do not interpret as no BOM or reservation requirements until source coverage is validated.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeaderStyle}>Material ID</th>
+                        <th style={tableHeaderStyle}>Material Desc</th>
+                        <th style={tableHeaderStyle}>Representative Batch</th>
+                        <th style={tableHeaderStyle}>Net Consumed</th>
+                        <th style={tableHeaderStyle}>Source Rows</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {componentConsumption.map((component, idx) => (
+                        <tr key={component.materialId} style={tableRowStyle(idx)}>
+                          <td style={tableCellStyle}>{component.materialId}</td>
+                          <td style={tableCellStyle}>{component.materialDescription || '-'}</td>
+                          <td style={tableCellStyle}>
+                            {component.batchId ? (
+                              <span style={{ fontFamily: 'monospace' }}>{component.batchId}</span>
+                            ) : (
+                              <span style={{ fontStyle: 'italic', color: '#6B7280' }}>not returned</span>
+                            )}
+                          </td>
+                          <td style={tableCellStyle}>{component.totalQuantity.toLocaleString()} {component.uom}</td>
+                          <td style={tableCellStyle}>{component.sourceMovementCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* H. Movement Summary & Derived stats */}
           {goodsMovements.length > 0 && (
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
@@ -1385,7 +1497,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          {/* H. Timeline (Derived) */}
+          {/* I. Timeline (Derived) */}
           {(sortedTimeline.dated.length > 0 || sortedTimeline.undated.length > 0) && (
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
