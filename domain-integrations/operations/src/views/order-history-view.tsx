@@ -27,6 +27,16 @@ type ComponentConsumptionRow = {
   uom: string
   sourceMovementCount: number
 }
+type ProducedOutputRow = {
+  materialId: string
+  materialDescription?: string
+  batchId?: string
+  netQuantity: number
+  uom: string
+  movementTypes: string[]
+  sourceMovementCount: number
+  referenceDocument?: string
+}
 
 const safeFormatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-'
@@ -128,7 +138,7 @@ function getNoRecordsMessage(section: PohSectionKey): string {
   }
 }
 
-function componentQuantity(quantity: number, uom: string): { quantity: number; uom: string } | null {
+function normaliseMovementQuantity(quantity: number, uom: string): { quantity: number; uom: string } | null {
   const normalizedUom = uom.trim().toUpperCase()
   if (normalizedUom === 'EA') {
     return null
@@ -421,7 +431,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         return
       }
 
-      const normalized = componentQuantity(movement.quantity, movement.uom)
+      const normalized = normaliseMovementQuantity(movement.quantity, movement.uom)
       if (!normalized) {
         return
       }
@@ -451,6 +461,58 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       .map(row => ({ ...row, totalQuantity: Number(row.totalQuantity.toFixed(6)) }))
       .filter(row => row.totalQuantity > 0)
       .sort((a, b) => a.materialId.localeCompare(b.materialId))
+  }, [goodsMovements])
+
+  const producedOutput = useMemo(() => {
+    const byMaterialBatchUom = new Map<string, ProducedOutputRow>()
+
+    goodsMovements.forEach(movement => {
+      if (movement.movementType !== '101' && movement.movementType !== '102' && movement.movementType !== '531') {
+        return
+      }
+
+      const normalized = normaliseMovementQuantity(movement.quantity, movement.uom)
+      if (!normalized) {
+        return
+      }
+
+      const batchId = movement.batchId || ''
+      const key = `${movement.materialId}::${batchId}::${normalized.uom}`
+      const sign = movement.movementType === '102' ? -1 : 1
+      const existing = byMaterialBatchUom.get(key)
+
+      if (existing) {
+        existing.netQuantity += sign * normalized.quantity
+        existing.sourceMovementCount += 1
+        if (!existing.movementTypes.includes(movement.movementType)) {
+          existing.movementTypes.push(movement.movementType)
+        }
+        if (!existing.referenceDocument && movement.referenceDocument) {
+          existing.referenceDocument = movement.referenceDocument
+        }
+        return
+      }
+
+      byMaterialBatchUom.set(key, {
+        materialId: movement.materialId,
+        materialDescription: movement.materialDescription,
+        batchId: movement.batchId,
+        netQuantity: sign * normalized.quantity,
+        uom: normalized.uom,
+        movementTypes: [movement.movementType],
+        sourceMovementCount: 1,
+        referenceDocument: movement.referenceDocument,
+      })
+    })
+
+    return [...byMaterialBatchUom.values()]
+      .map(row => ({
+        ...row,
+        movementTypes: [...row.movementTypes].sort(),
+        netQuantity: Number(row.netQuantity.toFixed(6)),
+      }))
+      .filter(row => row.netQuantity > 0)
+      .sort((a, b) => a.materialId.localeCompare(b.materialId) || (a.batchId || '').localeCompare(b.batchId || ''))
   }, [goodsMovements])
 
   // 4. Derived Chronological Timeline (no invented events)
@@ -560,6 +622,9 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       if (goodsMovements.length > 0 && componentConsumption.length === 0) {
         list.push('No net component consumption rows derived from 261/262 movement types. Do not interpret as no BOM or reservation requirements until source coverage is validated.')
       }
+      if (goodsMovements.length > 0 && producedOutput.length === 0) {
+        list.push('No produced-output rows derived from 101/102/531 movement types. Do not interpret as no production output until source coverage is validated.')
+      }
 
       // Check missing batches on movements
       const missingBatchMovements = goodsMovements.filter(m => !m.batchId && (m.movementType === '101' || m.movementType === '261' || m.materialId.startsWith('MAT-RM') || m.materialId.startsWith('MAT-CH')))
@@ -575,7 +640,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     }
 
     return list
-  }, [queryParams, operations, confirmations, goodsMovements, metrics, componentConsumption, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
+  }, [queryParams, operations, confirmations, goodsMovements, metrics, componentConsumption, producedOutput, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
 
   const handleCopyRequestDetails = () => {
     const payload: UATEvidencePayload = {
@@ -610,6 +675,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         confirmations: confirmations.length,
         goodsMovements: goodsMovements.length,
         componentMaterials: componentConsumption.length,
+        producedBatches: producedOutput.length,
       },
       warnings: [
         'No production readiness claimed.',
@@ -1448,7 +1514,60 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          {/* H. Movement Summary & Derived stats */}
+          {/* H. Produced Output (Derived from 101/102/531 movements) */}
+          {goodsMovements.length > 0 && (
+            <div style={cardStyle}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
+                Produced Output Evidence
+              </h3>
+              <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 12, lineHeight: '1.4' }}>
+                Derived from returned goods movements only: 101 and 531 add produced output, 102 subtracts reversal, EA rows are excluded, and G is normalised to KG. This is not a production completion or full yield claim.
+              </div>
+
+              {producedOutput.length === 0 ? (
+                <div style={{ padding: '20px 16px', textAlign: 'center', background: '#111827', borderRadius: 6, border: '1px dashed #374151', color: '#9CA3AF', fontSize: 12 }}>
+                  No produced-output rows derived from 101/102/531 movement types. Do not interpret as no production output until source coverage is validated.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeaderStyle}>Material ID</th>
+                        <th style={tableHeaderStyle}>Material Desc</th>
+                        <th style={tableHeaderStyle}>Produced Batch</th>
+                        <th style={tableHeaderStyle}>Net Received</th>
+                        <th style={tableHeaderStyle}>Movement Types</th>
+                        <th style={tableHeaderStyle}>Reference Doc</th>
+                        <th style={tableHeaderStyle}>Source Rows</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {producedOutput.map((output, idx) => (
+                        <tr key={`${output.materialId}-${output.batchId || 'no-batch'}-${output.uom}`} style={tableRowStyle(idx)}>
+                          <td style={tableCellStyle}>{output.materialId}</td>
+                          <td style={tableCellStyle}>{output.materialDescription || '-'}</td>
+                          <td style={tableCellStyle}>
+                            {output.batchId ? (
+                              <span style={{ fontFamily: 'monospace' }}>{output.batchId}</span>
+                            ) : (
+                              <span style={{ fontStyle: 'italic', color: '#6B7280' }}>not returned</span>
+                            )}
+                          </td>
+                          <td style={tableCellStyle}>{output.netQuantity.toLocaleString()} {output.uom}</td>
+                          <td style={tableCellStyle}>{output.movementTypes.join(', ')}</td>
+                          <td style={tableCellStyle}>{output.referenceDocument || '-'}</td>
+                          <td style={tableCellStyle}>{output.sourceMovementCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* I. Movement Summary & Derived stats */}
           {goodsMovements.length > 0 && (
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>
@@ -1497,7 +1616,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
             </div>
           )}
 
-          {/* I. Timeline (Derived) */}
+          {/* J. Timeline (Derived) */}
           {(sortedTimeline.dated.length > 0 || sortedTimeline.undated.length > 0) && (
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#38bdf8' }}>

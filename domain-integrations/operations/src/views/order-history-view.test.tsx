@@ -300,6 +300,8 @@ describe('OrderHistoryView', () => {
     expect(screen.getAllByText(/SL-MILK-SILO/i).length).toBeGreaterThan(0)
     expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
     expect(screen.getAllByText(/This is not a BOM or reservation coverage claim/i)[0]).toBeInTheDocument()
+    expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/This is not a production completion or full yield claim/i)[0]).toBeInTheDocument()
 
     // Check Derived metrics summary
     expect(screen.getAllByText(/1,860 KG/i).length).toBeGreaterThan(0)
@@ -494,6 +496,7 @@ describe('OrderHistoryView', () => {
     expect(payload.evidenceCompleteness.sections.confirmations).toBe('partial')
     expect(payload.counts.goodsMovements).toBe(0)
     expect(payload.counts.componentMaterials).toBe(0)
+    expect(payload.counts.producedBatches).toBe(0)
     expect(payload.warnings).toContain('No-record sections must not be interpreted as complete absence until source coverage is validated.')
   })
 
@@ -570,6 +573,88 @@ describe('OrderHistoryView', () => {
     expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
     expect(screen.getAllByText('000000000070373871').length).toBeGreaterThan(0)
     expect(screen.getByText('4 KG')).toBeInTheDocument()
+  })
+
+  it('derives produced output evidence from 101, 102, and 531 movement rows', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [
+          {
+            movementId: 'GM-101',
+            movementType: '101',
+            direction: 'output',
+            materialId: '000000000070373871',
+            materialDescription: 'Finished Good',
+            batchId: 'FG-BATCH',
+            quantity: 1200,
+            uom: 'KG',
+            postedAt: '2026-05-18T09:00:00.000Z',
+            referenceDocument: '4900000011',
+          },
+          {
+            movementId: 'GM-102',
+            movementType: '102',
+            direction: 'output',
+            materialId: '000000000070373871',
+            materialDescription: 'Finished Good',
+            batchId: 'FG-BATCH',
+            quantity: 200,
+            uom: 'KG',
+            postedAt: '2026-05-18T10:00:00.000Z',
+            referenceDocument: '4900000012',
+          },
+          {
+            movementId: 'GM-531',
+            movementType: '531',
+            direction: 'output',
+            materialId: '000000000070373872',
+            materialDescription: 'By-product',
+            batchId: 'BY-BATCH',
+            quantity: 500,
+            uom: 'G',
+            postedAt: '2026-05-18T11:00:00.000Z',
+            referenceDocument: '4900000013',
+          },
+        ],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
+    expect(screen.getByText('1,000 KG')).toBeInTheDocument()
+    expect(screen.getByText('0.5 KG')).toBeInTheDocument()
+    expect(screen.getByText('101, 102')).toBeInTheDocument()
+    expect(screen.getAllByText('531').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('4900000011')).toBeInTheDocument()
   })
 
   it('disables planned/diagnostic filters and renders wired labels', () => {

@@ -87,7 +87,7 @@ that source events do not exist.
 | Yields/scrap/rework | Yield analytics and movement summary calculate issued vs received; detail shows yield | `movement_summary`, `yield_analytics_dal.py` | V2 shows confirmations and movement summaries; no yield card from net movements | partial-parity | P1 | Add net issued/received yield only after UOM/source rules are agreed |
 | Goods movements | Full movement log with material, batch, movement type, quantity, storage, user, date | `_q_movements`, `vw_gold_adp_movement` | V2 movement table exists | parity-achieved | P0 | Keep unknown movement types visible |
 | Component consumption | V1 derives `materials` from MT-261 minus MT-262, excludes EA, normalises G to KG | `derive_materials`, `OrderDetail.tsx` Materials section | V2 now derives Component Consumption Evidence from returned movements | v2-improved | P0 | Validate candidate component rows during UAT |
-| Produced batches | V1 summary derives received quantity from MT-101 minus MT-102; output batches appear in movements | `movement_summary`, movement rows | V2 output movements show batches; no produced-batch summary | partial-parity | P1 | Add produced-batch summary as a later derived section from 101/102/531 rows |
+| Produced batches | V1 summary derives received quantity from MT-101 minus MT-102; output batches appear in movements | `movement_summary`, movement rows | V2 now derives Produced Output Evidence from 101/102/531 returned movements | v2-improved | P1 | Validate candidate produced-output rows during UAT |
 | Material documents | V1 movements expose movement rows; mock included `MATERIAL_DOCUMENT`; API docs did not show doc/year in frontend model | `_q_movements`, `api/orders.ts` | V2 exposes `referenceDocument` from `MATERIAL_DOCUMENT` | parity-achieved | P0 | Keep in movement table/UAT payload where visible |
 | Reservations | V1 detail did not expose RESB directly; Warehouse docs reference RESB for staging | Warehouse docs/components | V2 POH has staging context panels but native POH detail route does not source reservations | deferred | P2 | Keep as Warehouse/staging integration, not POH native assumption |
 | Order timeline | V1 detail uses section anchors and timestamped lists; Genie has order milestones query | `OrderDetail.tsx`, `genie/queries/08_order_milestones.sql` | V2 derives chronological timeline from returned operations/confirmations/movements | v2-improved | P1 | Add source labels and continue avoiding invented events |
@@ -121,7 +121,7 @@ that source events do not exist.
 | Movement direction | V1 domain rules | 261/262 input, 101/102/531 output/byproduct | Map known codes only | Medium | 711/712/999 remain unknown |
 | Material document | `vw_gold_adp_movement` | `MATERIAL_DOCUMENT`, `MATERIAL_DOCUMENT_YEAR` | String reference | High | V2 only exposes reference document |
 | Component consumption | V1 `derive_materials` | 261 minus 262, exclude EA, G to KG | Derived from movement rows | High | Not BOM/reservation coverage |
-| Produced output quantity | V1 `movement_summary` | 101 minus 102 | Derived from movement rows | Medium | Not implemented as V2 summary yet |
+| Produced output quantity | V1 `movement_summary` | 101 minus 102, with 531 as by-product receipt in V2 movement map | Derived from movement rows | Medium | Not a production completion or full yield claim |
 | Inspection result | V1 QM joins | inspection result/spec/UD fields | MIC mapping | Medium | Defer to Quality/EnvMon source strategy |
 
 ## Selected Implementation Slice
@@ -150,13 +150,27 @@ Implemented behaviour:
 - Keeps representative batch from the first 261 row where available.
 - Adds `componentMaterials` to the Copy UAT Evidence counts.
 
+Follow-on implemented slice: **produced output evidence derived from returned
+goods movements**.
+
+Implemented behaviour:
+
+- Adds a Produced Output Evidence section to the V2 POH screen when goods
+  movement rows are available.
+- Derives rows from `MOVEMENT_TYPE` 101, 102, and 531 only.
+- Subtracts 102 reversal quantities from 101/531 receipt quantities.
+- Excludes EA rows.
+- Normalises G to KG.
+- Groups by material, batch, and normalised UOM.
+- Keeps movement types, source row count, and first returned reference document.
+- Adds `producedBatches` to the Copy UAT Evidence counts.
+
 ## Highest-Priority Remaining Gaps
 
 | Gap | Priority | Recommendation |
 |---|---|---|
 | Browser/UAT validation for candidate `7006965038 / C113` | P0 | Capture API and UI evidence against SAP/Databricks source |
 | Header planned/actual quantity/date enrichment | P1 | Confirm richer header/source view before adding fields |
-| Produced batch/output summary | P1 | Derive from 101/102/531 movement rows after validating code rules |
 | Confirmation phase timing summary | P1 | Derive from existing confirmation durations by operation/phase |
 | Quality inspection/usage decision parity | P1 | Coordinate with Quality/EnvMon source model; avoid duplicate mock claims |
 | Downtime/equipment activity parity | P2 | Add only after V2 source routes are confirmed |
