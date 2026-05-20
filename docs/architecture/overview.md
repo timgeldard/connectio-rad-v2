@@ -144,6 +144,20 @@ ScopeContext (processOrderId, batchId, plantId, warehouseId…)
 
 React Query manages caching with a default `staleTime` of 5 minutes per domain. Each panel controls its own freshness policy independently.
 
+### Cross-domain workspace context
+
+`StandardWorkspaceTemplate` also provides an active investigation context store
+from `@connectio/workspace-runtime`. The store is scoped per workspace and is
+feature-flagged by `runtime.enableCrossDomainContext`
+(`VITE_FEATURE_ENABLE_CROSS_DOMAIN_CONTEXT`, default `false`).
+
+When enabled, a driving panel such as Trace Query Form can publish the active
+`batchId`, `materialId`, `plantId`, or `processOrderId`. Context-aware panels
+use their existing `requiredContext` registration to decide whether to query or
+show `waiting-for-context`. URL query params are synchronized for deep links,
+and context changes emit telemetry. See
+`docs/adr/ADR-026-cross-domain-workspace-context.md`.
+
 ---
 
 ## Role-aware home
@@ -183,3 +197,4 @@ fallbacks in the repo.
 | ADR-007 | Domain-owned workspaces |
 | ADR-009 | Phase 5 pilot workspace strategy |
 | ADR-023 | Rollout wave model and legacy retirement |
+| ADR-026 | Cross-domain workspace context runtime |

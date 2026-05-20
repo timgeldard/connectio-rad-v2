@@ -8,6 +8,7 @@ export const EvidencePanelDisplayStateSchema = z.enum([
   'error',
   'unauthorized',
   'not-applicable',
+  'waiting-for-context',
 ])
 
 export const FreshnessMetadataSchema = z.object({

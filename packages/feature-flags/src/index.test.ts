@@ -26,6 +26,7 @@ describe('Feature Flags module', () => {
       expect(featureFlags.writeBack.sapWriteBack).toBe(false)
       // Default traceability.workspace is true
       expect(featureFlags.traceability.workspace).toBe(true)
+      expect(featureFlags.runtime.enableCrossDomainContext).toBe(false)
     })
 
     it('falls back to environment variables when present', () => {
@@ -33,11 +34,13 @@ describe('Feature Flags module', () => {
         env: {
           VITE_FEATURE_SAP_WRITE_BACK: 'true',
           VITE_FEATURE_TRACEABILITY_WORKSPACE: 'false',
+          VITE_FEATURE_ENABLE_CROSS_DOMAIN_CONTEXT: 'true',
         },
       })
 
       expect(featureFlags.writeBack.sapWriteBack).toBe(true)
       expect(featureFlags.traceability.workspace).toBe(false)
+      expect(featureFlags.runtime.enableCrossDomainContext).toBe(true)
     })
   })
 

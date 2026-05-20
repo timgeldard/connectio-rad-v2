@@ -64,6 +64,14 @@ describe('EvidencePanelStateRenderer', () => {
     })
   })
 
+  describe('waiting-for-context state', () => {
+    it('renders a recoverable context waiting message', () => {
+      render(<EvidencePanelStateRenderer displayState="waiting-for-context" />)
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      expect(screen.getByText('Waiting for investigation context')).toBeInTheDocument()
+    })
+  })
+
   describe('partial state', () => {
     it('renders children alongside the partial-data footnote', () => {
       render(

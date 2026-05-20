@@ -12,6 +12,10 @@
     "@connectio/product-model": "*",
     "@connectio/data-contracts": "*",
     "@connectio/evidence-panel-runtime": "*",
-    "react": "^18.3.1"
+    "@connectio/feature-flags": "*",
+    "@connectio/telemetry": "*",
+    "react": "^18.3.1",
+    "zod": "^3.24.4",
+    "zustand": "^4.5.7"
   }
 }

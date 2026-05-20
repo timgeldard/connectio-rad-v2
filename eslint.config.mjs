@@ -109,6 +109,8 @@ export default [
                 'layer:product-model',
                 'layer:data-contracts',
                 'layer:evidence-panel-runtime',
+                'layer:feature-flags',
+                'layer:telemetry',
                 'layer:workspace-runtime',
               ],
             },
