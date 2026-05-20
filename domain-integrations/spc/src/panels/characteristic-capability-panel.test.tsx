@@ -12,7 +12,7 @@ vi.mock('../adapters/spc-monitoring-queries.js', () => ({
 
 import { useCharacteristicCapability } from '../adapters/spc-monitoring-queries.js'
 
-const request: SPCMonitoringAdapterRequest = { plantId: 'IE10', characteristicId: 'CHAR-TEST-001' }
+const request: SPCMonitoringAdapterRequest = { materialId: 'MAT-12345', plantId: 'IE10', characteristicId: 'CHAR-TEST-001' }
 
 const baseCapability: CharacteristicCapability = {
   characteristicId: 'CHAR-TEST-001',

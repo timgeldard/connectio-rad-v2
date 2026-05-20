@@ -16,7 +16,7 @@ vi.mock('@connectio/evidence-panel-runtime', () => ({
 
 import { useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 
-const request: SPCMonitoringAdapterRequest = { plantId: 'IE10' }
+const request: SPCMonitoringAdapterRequest = { materialId: 'MAT-12345', plantId: 'IE10' }
 
 const mockSignals: SPCSignal[] = [
   {
@@ -28,6 +28,7 @@ const mockSignals: SPCSignal[] = [
     plantId: 'IE10',
     chartType: 'xbar-r',
     rule: 'Rule 1: Point beyond 3σ control limit (upper)',
+    ruleCode: 'WE1',
     severity: 'high',
     detectedAt: '2026-05-14T05:45:00.000Z',
     samplePointId: 'SP-001',

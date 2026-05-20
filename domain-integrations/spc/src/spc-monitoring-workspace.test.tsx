@@ -102,4 +102,22 @@ describe('SPCMonitoringWorkspace', () => {
       expect(panel).not.toBeNull()
     })
   })
+
+  it('renders UAT candidate not configured when materialId is missing', async () => {
+    const incompleteScope: ScopeContext = {
+      plantId: 'IE10',
+      workCentreId: 'WC-IE10-PASTEURISATION',
+    }
+    render(
+      <Wrapper>
+        <SPCMonitoringWorkspace scope={incompleteScope} />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      expect(document.body.innerHTML).toContain('UAT Candidate Not Configured')
+      const panel = document.querySelector('[data-testid="evidence-panel-spc-summary"]')
+      expect(panel).toBeNull()
+    })
+  })
 })

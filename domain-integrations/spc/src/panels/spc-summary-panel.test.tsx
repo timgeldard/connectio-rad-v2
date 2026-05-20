@@ -20,6 +20,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 const request: SPCMonitoringAdapterRequest = {
+  materialId: 'MAT-12345',
   plantId: 'IE10',
   workCentreId: 'WC-IE10-PASTEURISATION',
 }

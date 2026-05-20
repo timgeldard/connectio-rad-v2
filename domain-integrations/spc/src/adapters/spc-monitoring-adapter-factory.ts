@@ -10,6 +10,7 @@ import { SPCMonitoringDatabricksApiAdapter } from './spc-monitoring-databricks-a
  */
 export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
   const mode = import.meta.env.VITE_ADAPTER_MODE || 'mock'
+  const baseUrl = import.meta.env.VITE_LEGACY_API_BASE_URL ?? 'http://127.0.0.1:8000'
 
   if (mode === 'databricks-api') {
     if (!featureFlags.spc.liveSources) {
@@ -30,9 +31,9 @@ export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
         'SPC Monitoring Legacy API adapter is disabled by feature flags.'
       )
     }
-    // No legacy API exists for SPC. 
-    // Returns unavailable status as no V1 endpoint is available for proxying.
-    return new SPCMonitoringLegacyApiAdapter()
+    // V1 SPC proxy routes exist (wired but not browser-verified).
+    // Proxies to V1 SPC FastAPI backend via V2 gateway.
+    return new SPCMonitoringLegacyApiAdapter(baseUrl)
   }
 
   return new SPCMonitoringAdapter()

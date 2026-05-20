@@ -38,9 +38,9 @@
 
 - **User impact:** Active signals panel shows mock pH and Moisture signals regardless of real production state. This is the most visible panel and will mislead operators.
 - **Current problem:** `getActiveSPCSignals()` returns 2 hardcoded mock signals.
-- **Original behaviour to preserve:** `GET /api/spc/signals` filtered `spc_quality_metrics` WHERE `status = 'active'` for the plant.
-- **Proposed V2 fix:** Add `SPCLegacyApiAdapter.getActiveSPCSignals()` calling `GET /api/spc/signals`. Implement FastAPI route.
-- **Source/data dependency:** V1 `GET /api/spc/signals`
+- **Original behaviour to preserve:** `GET /api/spc/chart-data` returned raw subgroup data and V1 computed rule violations client-side at runtime using `detectWECORules()` / `detectNelsonRules()`.
+- **Proposed V2 fix:** Port V1's `calculations.runtime.ts` rule engine to V2 and apply it to chart data returned by the adapter.
+- **Source/data dependency:** V1 `POST /api/spc/chart-data`
 - **Implementation risk:** Low — signal schema is straightforward; risk is in rule code naming conventions.
 - **Effort:** 2–3 days
 - **Priority:** High

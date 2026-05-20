@@ -1,7 +1,8 @@
 # Golden SPC Candidates — UAT Data Register
 
-**Date:** 2026-05-20
-**Status:** No verified live SPC UAT candidate has been identified from V1 discovery.
+**Date:** 2026-05-20  
+**Status:** No verified live SPC UAT candidate has been identified from V1 discovery.  
+**UAT Target Catalog:** `connected_plant_uat.gold`  
 
 ---
 
@@ -13,20 +14,41 @@ A candidate must be verified — it must have real data in `connected_plant_uat.
 
 ---
 
-## Status
+## Candidate Discovery Protocol
 
-No verified live SPC UAT candidate has been identified from V1 source discovery.
+Because the V1 codebase does not contain hardcoded plant/material/MIC test combinations and discovers materials dynamically, candidates must be retrieved directly from the live Databricks SQL Warehouse.
 
-V1 source code does not contain hardcoded plant/material/MIC test combinations. The V1 SPC app discovers materials dynamically via `GET /api/spc/materials` → `GET /api/spc/plants?material_id=...` → `GET /api/spc/characteristics?material_id=...&plant_id=...`. No fixture data or seeded test candidates were found in the V1 frontend or backend code.
+To discover candidates, run the following query in your Databricks SQL editor:
+
+```sql
+-- Query to find top 20 candidate combinations with recent SPC data
+SELECT
+  material_id,
+  plant_id,
+  mic_id,
+  COUNT(DISTINCT batch_id) AS batch_count,
+  COUNT(*) AS sample_points_count,
+  MIN(sample_timestamp) AS earliest_sample_ts,
+  MAX(sample_timestamp) AS latest_sample_ts
+FROM connected_plant_uat.gold.spc_quality_metric_subgroup_v
+WHERE sample_timestamp >= DATEADD(day, -90, CURRENT_TIMESTAMP())
+GROUP BY material_id, plant_id, mic_id
+HAVING COUNT(DISTINCT batch_id) >= 15
+ORDER BY sample_points_count DESC
+LIMIT 20;
+```
+
+> [!NOTE]
+> Column names like `sample_timestamp` and `material_id` are verified from V1 migration `005_create_spc_quality_metric_subgroup_v.sql`.
 
 ---
 
-## Candidate Template
+## Candidate Register Template
 
-When a candidate is confirmed via UAT data access, record it here using this format:
+When a candidate is confirmed via UAT data access, copy this template and add it to the list of verified candidates below.
 
-```
-### Candidate: [Short label]
+```markdown
+### Candidate: [Material Description / Plant Name]
 
 | Field | Value |
 |-------|-------|
@@ -44,52 +66,22 @@ When a candidate is confirmed via UAT data access, record it here using this for
 | Expected Signal Count | — |
 | Expected Capability (Cpk) | — |
 | Data Source | spc_quality_metric_subgroup_v |
-| Verified by | — |
-| Verified at | — |
-| Validation Status | unverified / confirmed |
+| Verified by | [Developer/QA Name] |
+| Verified at | [YYYY-MM-DD] |
+| Validation Status | confirmed |
 ```
 
 ---
 
-## How to Discover Candidates
+## Verified UAT Candidates
 
-Once V1 SPC app URL is confirmed as accessible in the UAT environment:
-
-1. Open V1 SPC app → type a material ID in the material picker
-2. Select a plant with SPC data
-3. Confirm at least one MIC with ≥ 20 data points in the last 90 days
-4. Note the chart type shown (imr / xbar_r / etc.)
-5. Optionally run control limits to confirm UCL/LCL are reasonable
-6. Record the combination in this file with `Validation Status: confirmed`
-
-Alternatively, run a discovery query against `connected_plant_uat.gold`:
-
-```sql
--- Candidate discovery query (run against connected_plant_uat.gold)
--- Returns material/plant/MIC combinations with recent SPC data
-SELECT
-  material_id,
-  plant_id,
-  mic_id,
-  COUNT(DISTINCT batch_id) AS batch_count,
-  COUNT(*) AS point_count,
-  MIN(sample_timestamp) AS first_sample,
-  MAX(sample_timestamp) AS last_sample
-FROM connected_plant_uat.gold.spc_quality_metric_subgroup_v
-WHERE sample_timestamp >= DATEADD(day, -90, CURRENT_TIMESTAMP)
-GROUP BY material_id, plant_id, mic_id
-HAVING COUNT(DISTINCT batch_id) >= 10
-ORDER BY point_count DESC
-LIMIT 20;
-```
-
-**Note:** Do not run this query until column names have been verified against the actual V1 view DDL (`apps/spc/scripts/migrations/005_create_spc_quality_metric_subgroup_v.sql`). Column names may differ from V2 documentation.
+*No candidates confirmed yet. Populate this section during the implementation/UAT phase once Databricks SQL query access is established.*
 
 ---
 
-## Prerequisite Before UAT Candidate Validation
+## Prerequisite Checklist Before UAT Validation
 
-- [ ] V1 SPC app URL confirmed accessible in UAT Databricks workspace
-- [ ] V1 gold view column names verified (backlog item SPC-B07)
-- [ ] V2 SPC legacy-api proxy routes implemented (backlog items SPC-B08, SPC-B09)
-- [ ] V2 SPC workspace entry updated to material-first navigation (SPC-B03)
+- [ ] V1 SPC app URL confirmed accessible in UAT Databricks workspace (backlog item SPC-B01)
+- [ ] V1 gold view column names verified against metadata DDL (backlog item SPC-B07)
+- [ ] V2 SPC legacy-api proxy routes implemented (backlog items SPC-B03, SPC-B04)
+- [ ] V2 SPC workspace entry updated to material-first navigation (backlog item SPC-B01)
