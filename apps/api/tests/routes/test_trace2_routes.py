@@ -46,9 +46,11 @@ _FAKE_LINEAGE_ROW = {
     "parent_material_id": "000000000020052009",
     "parent_batch_id": "0008602411",
     "parent_plant_id": "C061",
+    "parent_material_name": "Full Cream Milk Powder",
     "child_material_id": "MAT_CHILD",
     "child_batch_id": "BATCH_CHILD",
     "child_plant_id": "C061",
+    "child_material_name": "Skimmed Milk Powder",
     "link_type": "PRODUCTION",
     "process_order_id": "PO-100001",
     "material_document_number": "4900012345",
@@ -79,6 +81,76 @@ def _databricks_env(monkeypatch) -> None:
     monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
     monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
     monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+
+_BATCH_HEADER_URL = "/api/trace2/batch-header"
+
+_BATCH_HEADER_BODY = {
+    "material_id": "0000020582002",
+    "batch_id": "BATCH001",
+}
+
+_FAKE_BATCH_HEADER_ROW = {
+    "material_id": "0000020582002",
+    "batch_id": "BATCH001",
+    "material_name": "Full Cream Milk Powder",
+    "plant_id": "IE01",
+    "plant_name": "Listowel",
+    "unrestricted": 100.0,
+    "blocked": 0.0,
+    "quality_inspection": 0.0,
+    "restricted": 0.0,
+    "transit": 0.0,
+    "total_stock": 100.0,
+    "uom": "KG",
+    "manufacture_date": "2024-03-01T00:00:00Z",
+    "expiry_date": "2025-03-01T00:00:00Z",
+}
+
+
+# ---------------------------------------------------------------------------
+# Batch header — databricks-api mode
+# ---------------------------------------------------------------------------
+
+class TestBatchHeaderDatabricksMode:
+    async def test_200_returns_batch_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["materialId"] == "0000020582002"
+        assert data["materialDescription"] == "Full Cream Milk Powder"
+        assert data["batchId"] == "BATCH001"
+        assert data["plantId"] == "IE01"
+
+    async def test_404_when_batch_not_found(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        assert response.status_code == 404
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_BATCH_HEADER_URL, json=_BATCH_HEADER_BODY)
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

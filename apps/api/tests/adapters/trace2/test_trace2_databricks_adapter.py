@@ -47,9 +47,11 @@ _LINEAGE_ROW_A_TO_B = {
     "parent_material_id": "000000000020052009",
     "parent_batch_id": "0008602411",
     "parent_plant_id": "C061",
+    "parent_material_name": "Full Cream Milk Powder",
     "child_material_id": "MAT_B",
     "child_batch_id": "BATCH_B",
     "child_plant_id": "C061",
+    "child_material_name": "Whole Milk Powder",
     "link_type": "PRODUCTION",
     "process_order_id": "PO-100001",
     "material_document_number": "4900012345",
@@ -453,6 +455,16 @@ class TestGetTraceGraphRecursiveSpec:
     def test_sql_has_instr_cycle_guard(self) -> None:
         assert "INSTR" in get_trace_graph_recursive_spec(self._req()).sql
 
+    def test_sql_joins_gold_material_for_material_names(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req()).sql
+        assert "gold_material" in sql
+        assert "parent_material_name" in sql
+        assert "child_material_name" in sql
+
+    def test_sql_uses_language_id_e_for_material_join(self) -> None:
+        sql = get_trace_graph_recursive_spec(self._req()).sql
+        assert "LANGUAGE_ID = 'E'" in sql
+
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
         with pytest.raises(DatabricksConfigError):
@@ -618,6 +630,25 @@ class TestMapTraceGraph:
         result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
         for key in ("anchor", "nodes", "edges", "depthReached", "truncated", "warnings"):
             assert key in result, f"Missing key: {key}"
+
+    def test_material_description_on_child_node(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        child = next(n for n in result["nodes"] if not n["isAnchor"])
+        assert child["materialDescription"] == "Whole Milk Powder"
+
+    def test_material_description_enriched_on_anchor_when_it_appears_as_parent(self) -> None:
+        tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        anchor = next(n for n in result["nodes"] if n["isAnchor"])
+        assert anchor["materialDescription"] == "Full Cream Milk Powder"
+
+    def test_material_description_absent_when_null_in_row(self) -> None:
+        row = {**_LINEAGE_ROW_A_TO_B, "child_material_name": None}
+        tagged = [(row, 0, "downstream")]
+        result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
+        child = next(n for n in result["nodes"] if not n["isAnchor"])
+        assert child["materialDescription"] == ""
 
     def test_vendor_supplier_fields_preserved_on_edge(self) -> None:
         row = {

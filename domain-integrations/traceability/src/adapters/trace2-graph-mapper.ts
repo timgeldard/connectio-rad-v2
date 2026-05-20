@@ -8,6 +8,7 @@ import type { TraceGraph } from '@connectio/data-contracts'
 interface BackendNode {
   nodeKey: string
   materialId: string
+  materialDescription?: string
   batchId: string
   plantId: string
   label: string
@@ -101,7 +102,7 @@ export function mapBackendTraceGraph(raw: BackendTraceGraphResponse): TraceGraph
   const nodes = raw.nodes.map(n => ({
     id: n.nodeKey,
     materialId: n.materialId,
-    materialDescription: '',
+    materialDescription: n.materialDescription ?? '',
     batchId: n.batchId || undefined,
     plantId: n.plantId || undefined,
     depth: n.depth,
