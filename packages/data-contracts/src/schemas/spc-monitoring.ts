@@ -10,6 +10,8 @@ const ChartTypeSchema = z.enum([
   'np-chart',
   'c-chart',
   'u-chart',
+  'ewma',
+  'cusum',
 ])
 
 const LimitProvenanceSchema = z.enum([
@@ -97,7 +99,7 @@ export const SPCSignalSchema = z.object({
   plantId: z.string(),
   chartType: ChartTypeSchema,
   rule: z.string(),
-  ruleCode: z.string().optional(),
+  ruleCode: z.string(),
   severity: SeveritySchema,
   detectedAt: z.string().datetime(),
   samplePointId: z.string(),
@@ -143,6 +145,9 @@ export const ControlChartSeriesSchema = z.object({
   confidence: z.number().min(0).max(1),
   limitProvenance: LimitProvenanceSchema.optional(),
   approvalState: ApprovalStateSchema.optional(),
+  lockedLimits: z.boolean().optional(),
+  lockedFrom: z.string().datetime().optional(),
+  lockedTo: z.string().datetime().optional(),
 })
 
 export type ControlChartSeries = z.infer<typeof ControlChartSeriesSchema>

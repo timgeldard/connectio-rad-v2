@@ -49,13 +49,13 @@ All routes are `GET` (query-string params), return `{ data, fetchedAt }`:
 
 | Endpoint | Input params | Gold views / source |
 |----------|-------------|---------------------|
-| `GET /api/spc/context` | plantId, workCentreId | `spc_quality_metrics`, `gold_plant` |
-| `GET /api/spc/summary` | plantId, workCentreId | `spc_quality_metrics` (aggregate) |
-| `GET /api/spc/signals` | plantId, workCentreId | `spc_quality_metrics` WHERE status = 'active' |
-| `GET /api/spc/chart` | plantId, workCentreId, characteristicId | `spc_quality_metric_subgroup_v`, `spc_locked_limits` |
-| `GET /api/spc/capability` | plantId, workCentreId, characteristicId | `spc_quality_metrics`, `gold_batch_quality_result_v` |
-| `GET /api/spc/alarms` | plantId, workCentreId, dateFrom, dateTo | `spc_quality_metrics` (history) |
-| `GET /api/spc/batches` | plantId, workCentreId | `gold_batch_quality_result_v`, `spc_quality_metrics` |
+| `GET /api/spc/context` | material_id, plant_id | `spc_characteristic_dim_mv`, `gold_plant` |
+| `GET /api/spc/summary` | material_id, plant_id | `spc_nelson_rule_flags_mv`, `spc_characteristic_dim_mv` |
+| `GET /api/spc/signals` | material_id, plant_id | Computed from `spc_quality_metric_subgroup_v` |
+| `GET /api/spc/chart` | material_id, plant_id, mic_id | `spc_quality_metric_subgroup_v`, `spc_locked_limits` |
+| `GET /api/spc/capability` | material_id, plant_id, mic_id | `spc_capability_detail_mv` |
+| `GET /api/spc/alarms` | material_id, plant_id, dateFrom, dateTo | Computed from `spc_quality_metric_subgroup_v` |
+| `GET /api/spc/batches` | material_id, plant_id | `spc_nelson_rule_flags_mv` |
 | `GET /api/spc/characteristics` | plantId, workCentreId | `gold_batch_quality_result_v` (discovery) |
 | `GET /api/spc/msa` | plantId, characteristicId | `spc_msa_results_v` |
 | `GET /api/spc/correlation` | plantId, workCentreId | `spc_quality_metric_subgroup_v` (pivot) |
@@ -67,10 +67,10 @@ All routes are `GET` (query-string params), return `{ data, fetchedAt }`:
 
 | View | Key columns | Used by |
 |------|------------|---------|
-| `spc_quality_metrics` | MIC_ID, MIC_NAME, PLANT_ID, WORK_CENTRE_ID, CHART_TYPE, SAMPLE_TIMESTAMP, SUBGROUP_MEAN, SUBGROUP_RANGE, UCL, LCL, CL, RULE_CODE, RULE_NAME, STATUS, SEVERITY | chart series, signals, alarms, capability |
-| `spc_quality_metric_subgroup_v` | same as above + individual sample values | chart series, correlation, multivariate |
-| `spc_locked_limits` | MIC_ID, PLANT_ID, UCL, LCL, CL, USL, LSL, EFFECTIVE_FROM, EFFECTIVE_TO, LOCKED_BY | control limit override |
-| `gold_batch_quality_result_v` | MIC_ID, MIC_CODE, MIC_NAME, BATCH_ID, PLANT_ID, WORK_CENTRE_ID, RESULT_VALUE, INSPECTION_LOT_ID | capability, batches, MIC discovery |
+| `spc_quality_metrics` | Databricks AI/BI Metric View (WITH METRICS LANGUAGE YAML) | AI/BI Governance only (not a signal table) |
+| `spc_quality_metric_subgroup_v` | material_id, plant_id, mic_id, batch_id, sample_id, subgroup_mean, subgroup_range | chart series, correlation, multivariate |
+| `spc_locked_limits` | material_id, mic_id, plant_id, operation_id, chart_type, UCL, LCL, CL, USL, LSL, EFFECTIVE_FROM, EFFECTIVE_TO, LOCKED_BY | control limit override |
+| `gold_batch_quality_result_v` | material_id, mic_id, batch_id, plant_id, result_value, inspection_lot_id | capability, batches, MIC discovery |
 | `spc_msa_results_v` | MIC_ID, PLANT_ID, GAUGE_RR_PERCENT, REPRODUCIBILITY, REPEATABILITY, DISTINCT_CATEGORIES | MSA |
 
 ---
