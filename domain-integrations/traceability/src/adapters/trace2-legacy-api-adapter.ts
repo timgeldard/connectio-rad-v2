@@ -1,5 +1,5 @@
-import { BatchHeaderSummarySchema, ApiError } from '@connectio/data-contracts'
-import type { BatchHeaderSummary, TraceGraph } from '@connectio/data-contracts'
+import { BatchHeaderSummarySchema, CustomerExposureSummarySchema, ApiError } from '@connectio/data-contracts'
+import type { BatchHeaderSummary, CustomerExposureSummary, TraceGraph } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
 import type { Trace2AdapterRequest } from './trace2-adapter.js'
@@ -172,6 +172,79 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         error: { code: 'unknown', message, retryable: true },
         displayState: 'error',
         source: 'legacy-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — calls POST /api/trace2/customer-exposure.
+   * Lineage-only first slice: LINK_TYPE='DELIVERY' edges from gold_batch_lineage.
+   * No mock fallback. No legacy-api fallback.
+   * Zero rows → route returns 404 → adapter returns error with "do not interpret as zero exposure" message.
+   * Countries and blockedDeliveries are not populated in this slice.
+   */
+  override async getCustomerExposureSummary(
+    request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<CustomerExposureSummary>> {
+    if (!request.batchId || !request.materialId) {
+      return super.getCustomerExposureSummary(request)
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/customer-exposure`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+          ...(request.plantId ? { plant_id: request.plantId } : {}),
+        }),
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          let detail =
+            'No customer delivery records returned from current source — do not interpret as zero exposure until source coverage is validated.'
+          try {
+            const json = await response.json() as Record<string, unknown>
+            if (typeof json.detail === 'string') detail = json.detail
+          } catch { /* ignore parse errors */ }
+          return {
+            ok: false,
+            error: { code: 'not-found', message: detail, retryable: false },
+            displayState: 'error',
+            source: 'databricks-api',
+          }
+        }
+        const code =
+          response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Customer exposure unavailable — do not interpret as zero exposure. (HTTP ${response.status})`,
+            retryable: response.status >= 500 && response.status !== 503,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const mapped = CustomerExposureSummarySchema.parse(raw)
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: {
+          code: 'unknown',
+          message: `Customer exposure unavailable — do not interpret as zero exposure. (${message})`,
+          retryable: true,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
       }
     }
   }

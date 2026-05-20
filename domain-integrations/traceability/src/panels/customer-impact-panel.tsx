@@ -101,6 +101,18 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
               </div>
             )}
           </div>
+          {data.countries.length === 0 && data.affectedDeliveries > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--amber, #C07000)', marginTop: 2 }}>
+              Country data not yet available from current source — do not interpret as geographic containment.
+            </div>
+          )}
+          {data.maxExposureDepth != null && (
+            <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 2 }}>
+              {data.maxExposureDepth === 1
+                ? 'Direct shipment detected (depth 1).'
+                : `Indirect exposure detected (min depth ${data.maxExposureDepth}).`}
+            </div>
+          )}
         </div>
       )}
     </EvidencePanel>

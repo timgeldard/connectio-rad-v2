@@ -3,12 +3,15 @@ import pytest
 
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
+    Trace2CustomerExposureRequest,
     Trace2MassBalanceRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
+    get_customer_exposure_spec,
     get_mass_balance_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
+    map_customer_exposure_rows,
     map_mass_balance_rows,
     map_trace_graph,
 )
@@ -924,3 +927,199 @@ class TestMapMassBalanceRows:
         result = map_mass_balance_rows(rows)
         assert result["confidence"] == 0.0
         assert result["unresolvedMovements"] == 2
+
+
+# ---------------------------------------------------------------------------
+# TestGetCustomerExposureSpec
+# ---------------------------------------------------------------------------
+
+class TestGetCustomerExposureSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    def _req(self, max_depth: int = 5, max_rows: int = 5000) -> Trace2CustomerExposureRequest:
+        return Trace2CustomerExposureRequest("MAT001", "BATCH001", max_depth=max_depth, max_rows=max_rows)
+
+    def test_name(self) -> None:
+        assert get_customer_exposure_spec(self._req()).name == "trace2.get_customer_exposure"
+
+    def test_module(self) -> None:
+        assert get_customer_exposure_spec(self._req()).module == "trace2"
+
+    def test_endpoint(self) -> None:
+        assert get_customer_exposure_spec(self._req()).endpoint == "/api/trace2/customer-exposure"
+
+    def test_cache_policy_is_per_user(self) -> None:
+        assert get_customer_exposure_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
+
+    def test_source_badge_is_gold_batch_lineage(self) -> None:
+        assert get_customer_exposure_spec(self._req()).source_badge == "view:gold_batch_lineage"
+
+    def test_tags(self) -> None:
+        spec = get_customer_exposure_spec(self._req())
+        assert "trace2" in spec.tags
+        assert "customer-exposure" in spec.tags
+        assert "lineage" in spec.tags
+
+    def test_params_contain_material_batch_depth_rows(self) -> None:
+        spec = get_customer_exposure_spec(self._req(max_depth=7, max_rows=1000))
+        assert spec.params["material_id"] == "MAT001"
+        assert spec.params["batch_id"] == "BATCH001"
+        assert spec.params["max_depth"] == 7
+        assert spec.params["max_rows"] == 1000
+
+    def test_sql_references_gold_batch_lineage(self) -> None:
+        assert "gold_batch_lineage" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_uses_fully_qualified_table(self) -> None:
+        sql = get_customer_exposure_spec(self._req()).sql
+        assert "`connected_plant_uat`" in sql
+        assert "`gold`" in sql
+        assert "FROM gold_batch_lineage" not in sql
+
+    def test_sql_has_with_recursive(self) -> None:
+        assert "WITH RECURSIVE" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_filters_delivery_link_type(self) -> None:
+        assert "LINK_TYPE = 'DELIVERY'" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_filters_null_customer_id(self) -> None:
+        assert "CUSTOMER_ID IS NOT NULL" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_has_limit_max_rows(self) -> None:
+        assert "LIMIT :max_rows" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_has_hop_depth(self) -> None:
+        assert "hop_depth" in get_customer_exposure_spec(self._req()).sql
+
+    def test_sql_has_instr_cycle_guard(self) -> None:
+        assert "INSTR" in get_customer_exposure_spec(self._req()).sql
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_customer_exposure_spec(self._req())
+
+    def test_params_not_shared_between_requests(self) -> None:
+        spec1 = get_customer_exposure_spec(Trace2CustomerExposureRequest("MAT1", "B1"))
+        spec2 = get_customer_exposure_spec(Trace2CustomerExposureRequest("MAT2", "B2"))
+        spec1.params["injected"] = "x"
+        assert "injected" not in spec2.params
+
+
+# ---------------------------------------------------------------------------
+# TestMapCustomerExposureRows
+# ---------------------------------------------------------------------------
+
+def _delivery_row(
+    customer_id: str = "CUST-001",
+    delivery_id: str = "DEL-001",
+    quantity: float = 100.0,
+    hop_depth: int = 1,
+) -> dict:
+    return {
+        "customer_id": customer_id,
+        "delivery_id": delivery_id,
+        "sales_order_id": "SO-001",
+        "quantity": quantity,
+        "base_unit_of_measure": "KG",
+        "posting_date": "2026-01-15",
+        "hop_depth": hop_depth,
+    }
+
+
+class TestMapCustomerExposureRows:
+    def test_empty_rows_returns_none(self) -> None:
+        """Zero rows → None. Caller must return 404; must not be treated as zero exposure."""
+        assert map_customer_exposure_rows([]) is None
+
+    def test_single_delivery_maps_counts(self) -> None:
+        result = map_customer_exposure_rows([_delivery_row()])
+        assert result is not None
+        assert result["affectedCustomers"] == 1
+        assert result["affectedDeliveries"] == 1
+
+    def test_shipped_quantity_sums_rows(self) -> None:
+        rows = [_delivery_row(quantity=200.0), _delivery_row(delivery_id="DEL-002", quantity=300.0)]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["shippedQuantity"] == pytest.approx(500.0)
+
+    def test_duplicate_customers_counted_once(self) -> None:
+        rows = [
+            _delivery_row(customer_id="CUST-001", delivery_id="DEL-001"),
+            _delivery_row(customer_id="CUST-001", delivery_id="DEL-002"),
+        ]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["affectedCustomers"] == 1
+        assert result["affectedDeliveries"] == 2
+
+    def test_multiple_distinct_customers(self) -> None:
+        rows = [
+            _delivery_row(customer_id="CUST-001", delivery_id="DEL-001"),
+            _delivery_row(customer_id="CUST-002", delivery_id="DEL-002"),
+            _delivery_row(customer_id="CUST-003", delivery_id="DEL-003"),
+        ]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["affectedCustomers"] == 3
+        assert result["affectedDeliveries"] == 3
+
+    def test_max_exposure_depth_is_minimum_hop_depth(self) -> None:
+        rows = [
+            _delivery_row(hop_depth=3),
+            _delivery_row(delivery_id="DEL-002", hop_depth=1),
+            _delivery_row(delivery_id="DEL-003", hop_depth=2),
+        ]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["maxExposureDepth"] == 1
+
+    def test_null_quantity_excluded_from_total(self) -> None:
+        rows = [
+            {**_delivery_row(quantity=200.0), "quantity": None},
+            _delivery_row(quantity=300.0, delivery_id="DEL-002"),
+        ]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["shippedQuantity"] == pytest.approx(300.0)
+
+    def test_countries_always_empty_list(self) -> None:
+        """gold_batch_lineage has no country column — countries must be []."""
+        result = map_customer_exposure_rows([_delivery_row()])
+        assert result is not None
+        assert result["countries"] == []
+
+    def test_blocked_deliveries_always_zero(self) -> None:
+        """Blocked delivery status requires gold_batch_delivery_v — must be 0 in this slice."""
+        result = map_customer_exposure_rows([_delivery_row()])
+        assert result is not None
+        assert result["blockedDeliveries"] == 0
+
+    def test_recall_recommended_always_false(self) -> None:
+        """Recall rules not yet defined — must be False in this slice."""
+        result = map_customer_exposure_rows([_delivery_row()])
+        assert result is not None
+        assert result["recallRecommended"] is False
+
+    def test_highest_severity_is_medium_preliminary(self) -> None:
+        """Preliminary — business severity rules not yet defined."""
+        result = map_customer_exposure_rows([_delivery_row()])
+        assert result is not None
+        assert result["highestSeverity"] == "medium"
+
+    def test_customer_id_leading_zeros_preserved(self) -> None:
+        """SAP customer IDs must remain strings — no numeric casting."""
+        rows = [_delivery_row(customer_id="0000012345")]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert result["affectedCustomers"] == 1
+
+    def test_max_exposure_depth_absent_when_no_hop_depth(self) -> None:
+        rows = [{**_delivery_row(), "hop_depth": None}]
+        result = map_customer_exposure_rows(rows)
+        assert result is not None
+        assert "maxExposureDepth" not in result

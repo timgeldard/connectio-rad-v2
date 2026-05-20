@@ -149,10 +149,16 @@ Fill these in during the session. Record only observed values — do not infer o
 | Quality status source | Label shown in UI (e.g. "QI stock", "unknown") | — |
 | CoA panel — returned? | Yes / No / Error / Not implemented | — |
 | **Customer exposure** | | |
-| Customer exposure — returned? | Yes / No / Error | — |
+| Customer exposure — returned? | Yes / No / Error / 404 | — |
+| Customer exposure — HTTP status | 200 / 404 / 503 / other | — |
 | Customer exposure — severity banner | Exact banner text shown | — |
 | Customer exposure — affectedCustomers | Integer or "data unavailable" | — |
+| Customer exposure — affectedDeliveries | Integer or "data unavailable" | — |
 | Customer exposure — shippedQuantity | Value or "data unavailable" | — |
+| Customer exposure — maxExposureDepth | Integer or absent | — |
+| Customer exposure — depth label shown | "Direct shipment detected (depth 1)" / "Indirect exposure detected (min depth N)" / absent | — |
+| Customer exposure — country disclaimer shown? | Yes (expected when countries=[] and deliveries > 0) / No / N/A | — |
+| Customer exposure — 404 zero-rows message | Exact text of 404 detail (confirm "do not interpret as zero exposure" present) | — |
 | **Other** | | |
 | Any error messages shown | Exact text | — |
 | Screenshots taken? | Yes / No | — |
@@ -168,8 +174,10 @@ If `qualityStatus` returns `"pending"`: QI stock > 0 was detected. An open quali
 
 1. Create a new row in the [Run table](#run-table) with the evidence captured above.
 2. Update any defect entries that were resolved or reproduced.
-3. Update `production-readiness-checklist.md` rows 1.1, 1.2, 1.5, 3.2, 3.4 to reflect the result.
+3. Update `production-readiness-checklist.md` rows 1.1, 1.2, 1.4, 1.5, 3.2, 3.4 to reflect the result.
 4. If `gold_batch_summary_v` column names were verified, update `databricks-column-verification-queries.md` with date, environment, and confirmed columns.
+5. If LINK_TYPE='DELIVERY' edge population was confirmed, update `customer-exposure-source-mapping.md` confidence from Medium → High and remove the UAT-pending note from the filter comment in `trace2_databricks_adapter.py`.
+6. If customer exposure returned HTTP 404 for all batches tested, record the live LINK_TYPE values from `gold_batch_lineage` and update the WHERE filter in `get_customer_exposure_spec()` before re-testing.
 
 ---
 
@@ -259,6 +267,43 @@ In `InvestigationSummary.tsx`, the severity label "HIGH" (labelled "Near Expiry"
 **Blocker:** The `maxExposureDepth` field requires the customer-exposure Databricks slice to be implemented and validated against live lineage data. The field is intentionally absent from the mock fixture.
 
 **UAT verification:** Requires a batch with known second-hop downstream exposure. Compare displayed severity to reference engine output for that batch.
+
+---
+
+### DEF-TRACE-005 — Customer exposure lineage-only first slice requires LINK_TYPE='DELIVERY' live validation
+
+**Identified:** Code review and source mapping, 2026-05-20 (TRACE-P0-003)  
+**Fixed in:** Current tranche — `POST /api/trace2/customer-exposure` route + `Trace2LegacyApiAdapter.getCustomerExposureSummary()` override  
+**Status:** Code-implemented — live LINK_TYPE='DELIVERY' edge population not yet UAT-validated
+
+**Description:**  
+The customer exposure slice queries `gold_batch_lineage` downstream CTE filtered on `LINK_TYPE = 'DELIVERY' AND CUSTOMER_ID IS NOT NULL`. The value `'DELIVERY'` was inferred from V1 source inspection of `_LINK_TYPE_MAP` (Medium confidence) — it has not been confirmed against a live Databricks query result. If the live `LINK_TYPE` column uses a different value (e.g. `'DELIVERED_TO'`, `'CUSTOMER_DELIVERY'`), the slice will return zero rows for all batches, triggering HTTP 404 and the "do not interpret as zero exposure" message.
+
+**Zero-rows semantics (critical — food safety):**  
+Zero rows from the CTE → mapper returns `None` → route returns HTTP 404 with message: *"No customer delivery records returned from current source — do not interpret as zero exposure until source coverage is validated."*  
+Zero rows must never be interpreted as confirmed zero exposure: it could mean no deliveries, LINK_TYPE mismatch, or CUSTOMER_ID not populated on delivery edges.
+
+**Fields deferred (require `gold_batch_delivery_v`):**  
+- `countries` — always `[]` in this slice; panel shows country disclaimer when deliveries > 0
+- `blockedDeliveries` — always `0` in this slice
+- Customer names — not available from lineage
+
+**Behaviour after fix (expected — pending live validation):**  
+- 200 response with `affectedCustomers`, `affectedDeliveries`, `shippedQuantity`, `maxExposureDepth` populated from lineage DELIVERY edges
+- Panel shows depth label: "Direct shipment detected (depth 1)" or "Indirect exposure detected (min depth N)"
+- Panel shows amber country disclaimer when `countries=[]` and `affectedDeliveries > 0`
+- `highestSeverity` = `'medium'` preliminary (business rules not yet defined)
+
+**UAT verification scenarios:**
+
+| Scenario | Batch to use | Expected result |
+|---|---|---|
+| CE-1: Direct shipment batch | Batch known to have depth=1 customer delivery | HTTP 200; `maxExposureDepth=1`; depth label "Direct shipment detected (depth 1)"; CRITICAL severity in cockpit |
+| CE-2: Multi-hop indirect batch | Batch known to have depth≥2 delivery | HTTP 200; `maxExposureDepth≥2`; depth label "Indirect exposure detected (min depth N)"; HIGH severity in cockpit |
+| CE-3: Batch with no downstream deliveries | Batch confirmed to have no DELIVERY-edge descendants | HTTP 404; detail message contains "do not interpret as zero exposure"; UNKNOWN severity in cockpit |
+| CE-4: LINK_TYPE value verification | Any batch | Inspect raw `LINK_TYPE` values in `gold_batch_lineage` for downstream edges; confirm `'DELIVERY'` matches live values or record actual value for filter update |
+| CE-5: Country disclaimer shown | Batch with CE-1 or CE-2 result | Panel shows amber "Country data not yet available from current source — do not interpret as geographic containment." when countries=[] and affectedDeliveries > 0 |
+| CE-6: Adapter mode guard | Any batch when `BACKEND_ADAPTER_MODE=legacy-api` | HTTP 503; customer impact panel falls back to mock/legacy behaviour |
 
 ---
 
