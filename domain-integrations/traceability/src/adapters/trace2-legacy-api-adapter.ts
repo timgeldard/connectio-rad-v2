@@ -1,5 +1,15 @@
-import { BatchHeaderSummarySchema, CustomerExposureSummarySchema, ApiError } from '@connectio/data-contracts'
-import type { BatchHeaderSummary, CustomerExposureSummary, TraceGraph } from '@connectio/data-contracts'
+import {
+  BatchHeaderSummarySchema,
+  CustomerExposureSummarySchema,
+  MassBalanceSummarySchema,
+  ApiError,
+} from '@connectio/data-contracts'
+import type {
+  BatchHeaderSummary,
+  CustomerExposureSummary,
+  MassBalanceSummary,
+  TraceGraph,
+} from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
 import type { Trace2AdapterRequest } from './trace2-adapter.js'
@@ -249,6 +259,86 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         error: {
           code: 'unknown',
           message: `Customer exposure unavailable — do not interpret as zero exposure. (${message})`,
+          retryable: true,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — calls POST /api/trace2/mass-balance (live gold_batch_mass_balance_v slice).
+   * No mock fallback. No legacy-api fallback. Returns error if required params are missing.
+   * Zero rows → route returns 404 → adapter returns error with "do not interpret as balanced" message.
+   * Known gaps documented in panel disclaimer (TRACE-P1-010 category mapping, TRACE-P1-011 balance_qty).
+   */
+  override async getMassBalanceSummary(
+    request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<MassBalanceSummary>> {
+    if (!request.batchId || !request.materialId) {
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'Material and batch are required to evaluate mass balance.',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/mass-balance`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+        }),
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          let detail =
+            'No mass balance movements returned for this material + batch — do not interpret as a balanced mass balance until source coverage is validated.'
+          try {
+            const json = await response.json() as Record<string, unknown>
+            if (typeof json.detail === 'string') detail = json.detail
+          } catch { /* ignore parse errors */ }
+          return {
+            ok: false,
+            error: { code: 'not-found', message: detail, retryable: false },
+            displayState: 'error',
+            source: 'databricks-api',
+          }
+        }
+        const code =
+          response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Mass balance unavailable — do not interpret as balanced. (HTTP ${response.status})`,
+            retryable: response.status >= 500 && response.status !== 503,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const mapped = MassBalanceSummarySchema.parse(raw)
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: {
+          code: 'unknown',
+          message: `Mass balance unavailable — do not interpret as balanced. (${message})`,
           retryable: true,
         },
         displayState: 'error',

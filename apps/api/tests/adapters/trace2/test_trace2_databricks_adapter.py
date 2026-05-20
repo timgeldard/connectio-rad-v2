@@ -768,9 +768,16 @@ class TestGetMassBalanceSpec:
     def test_sql_has_limit(self) -> None:
         assert "LIMIT :max_rows" in get_mass_balance_spec(self._req()).sql
 
-    def test_sql_contains_todo_markers(self) -> None:
-        """WHERE column names in gold_batch_mass_balance_v are unverified."""
-        assert "TODO" in get_mass_balance_spec(self._req()).sql
+    def test_sql_no_todo_markers_after_live_verification(self) -> None:
+        """WHERE column names verified live 2026-05-20 — TODO markers removed."""
+        assert "TODO" not in get_mass_balance_spec(self._req()).sql
+
+    def test_params_contain_material_batch_max_rows(self) -> None:
+        """max_rows must be in params — SQL has LIMIT :max_rows and would fail without it."""
+        spec = get_mass_balance_spec(Trace2MassBalanceRequest("MAT001", "BATCH001", max_rows=2500))
+        assert spec.params["material_id"] == "MAT001"
+        assert spec.params["batch_id"] == "BATCH001"
+        assert spec.params["max_rows"] == 2500
 
     def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
         monkeypatch.delenv("TRACE_CATALOG", raising=False)
@@ -844,8 +851,9 @@ class TestMapMassBalanceRows:
         result = map_mass_balance_rows(rows)
         assert result["variancePercent"] == 0.0
 
-    def test_balance_qty_maps_to_running_balance(self) -> None:
-        """balance_qty is the confirmed running-balance column — direct mapping required."""
+    def test_balance_qty_passes_through_to_running_balance(self) -> None:
+        """balance_qty is passed through. Live data shows BALANCE_QTY is not a
+        per-batch running tally (TRACE-P1-011); panel disclaimer reflects this."""
         rows = [self._production_row(500.0, 500.0), self._shipment_row(200.0, 300.0)]
         result = map_mass_balance_rows(rows)
         assert result["movements"][0]["runningBalance"] == 500.0
@@ -929,7 +937,48 @@ class TestMapMassBalanceRows:
         ]
         result = map_mass_balance_rows(rows)
         assert result["confidence"] == 0.0
-        assert result["unresolvedMovements"] == 2
+
+    def test_unmapped_live_movement_category_counts_as_unresolved(self) -> None:
+        """TRACE-P1-010: live MOVEMENT_CATEGORY values like 'STO Receipt',
+        'STO Transfer', 'Other (261)', 'Write-Off' are not in _MOVEMENT_CATEGORY_MAP
+        and fall through to 'adjustment'. The mapper must count these as unresolved
+        so the panel banner reflects truth."""
+        rows = [
+            self._production_row(),                                                  # mapped → not unresolved
+            {**self._production_row(), "movement_category": "STO Receipt"},          # unmapped
+            {**self._production_row(), "movement_category": "STO Transfer"},         # unmapped
+            {**self._production_row(), "movement_category": "Other (261)"},          # unmapped
+            {**self._production_row(), "movement_category": "Write-Off"},            # unmapped
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["unresolvedMovements"] == 4
+
+    def test_mapped_categories_do_not_count_as_unresolved(self) -> None:
+        rows = [
+            {**self._production_row(), "movement_category": "Production"},
+            {**self._production_row(), "movement_category": "Shipment"},
+            {**self._production_row(), "movement_category": "Consumption"},
+            {**self._production_row(), "movement_category": "Adjustment"},
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["unresolvedMovements"] == 0
+
+    def test_null_movement_category_does_not_count_as_unresolved(self) -> None:
+        """Null/empty category is a different (rarer) condition than unmapped."""
+        rows = [
+            {**self._production_row(), "movement_category": None},
+            {**self._production_row(), "movement_category": ""},
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["unresolvedMovements"] == 0
+
+    def test_unmapped_category_and_null_balance_count_once(self) -> None:
+        """A row that fails both unresolved tests counts once, not twice."""
+        rows = [
+            {**self._production_row(), "movement_category": "STO Receipt", "balance_qty": None},
+        ]
+        result = map_mass_balance_rows(rows)
+        assert result["unresolvedMovements"] == 1
 
 
 # ---------------------------------------------------------------------------
