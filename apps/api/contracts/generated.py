@@ -44,6 +44,11 @@ class BatchHeaderSummary(BaseModel):
     manufacture_date: AwareDatetime | None = Field(None, alias='manufactureDate')
     expiry_date: AwareDatetime | None = Field(None, alias='expiryDate')
     process_order_id: str | None = Field(None, alias='processOrderId')
+    unrestricted: float | None = None
+    blocked: float | None = None
+    quality_inspection: float | None = Field(None, alias='qualityInspection')
+    restricted: float | None = None
+    transit: float | None = None
     stock_status: Literal[
         'unrestricted',
         'quality-inspection',

@@ -86,6 +86,19 @@ describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
     expect(d.processOrderId).toBe('PO-240308-1189')
   })
 
+  it('maps V1 individual stock quantities to schema fields', async () => {
+    const result = await adapter.getBatchHeaderSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const d = result.data
+    // Fixture: unrestricted=0, blocked=100, qi=2300, restricted=0, transit=0
+    expect(d.unrestricted).toBe(0)
+    expect(d.blocked).toBe(100)
+    expect(d.qualityInspection).toBe(2300)
+    expect(d.restricted).toBe(0)
+    expect(d.transit).toBe(0)
+  })
+
   it('pads bare dates to ISO 8601 format', async () => {
     const result = await adapter.getBatchHeaderSummary(fullRequest)
     expect(result.ok).toBe(true)

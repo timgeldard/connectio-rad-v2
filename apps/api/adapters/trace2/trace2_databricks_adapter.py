@@ -150,6 +150,16 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
 
     if row.get("total_stock") is not None:
         result["quantity"] = float(row["total_stock"])
+    if row.get("unrestricted") is not None:
+        result["unrestricted"] = float(row["unrestricted"])
+    if row.get("blocked") is not None:
+        result["blocked"] = float(row["blocked"])
+    if row.get("quality_inspection") is not None:
+        result["qualityInspection"] = float(row["quality_inspection"])
+    if row.get("restricted") is not None:
+        result["restricted"] = float(row["restricted"])
+    if row.get("transit") is not None:
+        result["transit"] = float(row["transit"])
     if row.get("uom"):
         result["uom"] = row["uom"]
     if row.get("manufacture_date"):

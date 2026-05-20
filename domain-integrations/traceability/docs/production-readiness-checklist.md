@@ -1,7 +1,7 @@
 # Traceability Production Readiness Checklist
 
 **Domain:** `domain-integrations/traceability`
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-20
 **Purpose:** Gate criteria that must be satisfied before the traceability investigation cockpit is used for real quality, food-safety, or recall decisions.
 
 Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not applicable
@@ -101,6 +101,7 @@ These gates must be satisfied before the databricks-api adapter is activated for
 | 7.3 | i18n coverage complete for all user-facing strings | ❌ | All strings are hardcoded English inline styles. i18n not implemented. |
 | 7.4 | Defect backlog current | ✅ | `traceability-defect-backlog.md` — 10 items classified. |
 | 7.5 | MB56 parity gap analysis current | ✅ | `mb56-parity-review.md` — 5 gaps documented. |
+| 7.6 | V1→V2 functional parity matrix current | ✅ | `traceability-v1-v2-functional-parity.md` — 27 capabilities assessed; ranked P0/P1 gaps documented. |
 
 ---
 

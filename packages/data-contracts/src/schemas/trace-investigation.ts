@@ -48,6 +48,13 @@ export const BatchHeaderSummarySchema = z.object({
   manufactureDate: z.string().datetime().optional(),
   expiryDate: z.string().datetime().optional(),
   processOrderId: z.string().optional(),
+  // Individual stock bucket quantities — sourced from gold_batch_stock_v (all columns verified live 2026-05-19).
+  // All optional: absent means the source row did not return a value, not that the stock is zero.
+  unrestricted: z.number().optional(),
+  blocked: z.number().optional(),
+  qualityInspection: z.number().optional(),
+  restricted: z.number().optional(),
+  transit: z.number().optional(),
   stockStatus: z.enum(['unrestricted', 'quality-inspection', 'blocked', 'restricted', 'returns', 'transit']),
   // 'unknown' means QM usage-decision data is not available from this source.
   // It must NOT be treated as a positive quality signal.

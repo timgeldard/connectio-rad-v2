@@ -204,6 +204,30 @@ class TestMapBatchHeaderRows:
         assert result["expiryDate"] == "2025-03-01T00:00:00Z"
         assert result["processOrderId"] == "PO100001"
 
+    def test_stock_bucket_quantities_surfaced(self) -> None:
+        """Individual stock buckets now surfaced from gold_batch_stock_v (verified live 2026-05-19)."""
+        row = {**_FULL_BATCH_HEADER_ROW, "unrestricted": 80.0, "blocked": 5.0,
+               "quality_inspection": 15.0, "restricted": 2.0, "transit": 1.0}
+        result = map_batch_header_rows([row])
+        assert result is not None
+        assert result["unrestricted"] == 80.0
+        assert result["blocked"] == 5.0
+        assert result["qualityInspection"] == 15.0
+        assert result["restricted"] == 2.0
+        assert result["transit"] == 1.0
+
+    def test_stock_bucket_absent_when_null(self) -> None:
+        """Null stock bucket → field absent from result, not zero (absence ≠ zero stock)."""
+        row = {**_FULL_BATCH_HEADER_ROW, "unrestricted": None, "blocked": None,
+               "quality_inspection": None, "restricted": None, "transit": None}
+        result = map_batch_header_rows([row])
+        assert result is not None
+        assert "unrestricted" not in result
+        assert "blocked" not in result
+        assert "qualityInspection" not in result
+        assert "restricted" not in result
+        assert "transit" not in result
+
     def test_missing_expiry_date_absent_from_result(self) -> None:
         row = {k: v for k, v in _FULL_BATCH_HEADER_ROW.items() if k != "expiry_date"}
         result = map_batch_header_rows([row])
