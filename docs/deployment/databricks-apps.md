@@ -9,14 +9,16 @@ control — the app itself does not implement authentication.
 
 ```
 Browser → Databricks Apps (TLS + OAuth2) → FastAPI (apps/api/)
-                                              ├── /api/...   proxy routes → V1 backends
+                                              ├── /api/...   V1 proxy or native Databricks QuerySpec routes
                                               └── /          static React bundle
 ```
 
-> **UAT status (2026-05-17):** App is RUNNING at the live UAT URL below.
-> `BACKEND_ADAPTER_MODE=databricks-api` — CQ lab plants and POH order header
-> are browser-verified against real Databricks data. V1 proxy routes (legacy-api
-> mode) are wired but unverified while V1 apps are STOPPED.
+> **UAT status (2026-05-20):** App is RUNNING with
+> `BACKEND_ADAPTER_MODE=databricks-api`. Native Databricks reads are functional
+> for Traceability lineage, EnvMon site summary/swab results, multiple POH
+> process-order slices, Warehouse 360 overview groundwork, and CQ Lab plants.
+> Some legacy V1 proxy routes remain wired for fallback/parity work, but V1
+> apps may be stopped and should not be assumed reachable.
 
 ---
 
@@ -108,13 +110,14 @@ build time. Leave base URL vars empty for same-origin Databricks Apps
 deployment so fetch calls resolve against the current host. Set them to the
 full API host only when the React app and API are on different origins.
 
-**Two-layer adapter model:** `VITE_ADAPTER_MODE=legacy-api` tells the frontend
-to call the FastAPI backend via HTTP (not mock). It does not mean the backend
-proxies to V1 — that is controlled by `BACKEND_ADAPTER_MODE` (a backend-only
-env var). `legacy-api` is the correct frontend value for any Databricks Apps
-deploy regardless of whether the backend is in `legacy-api` or `databricks-api`
-mode. There is no `databricks-api` mode on the frontend; Databricks is always
-accessed through the FastAPI layer.
+**Two-layer adapter model:** frontend adapter mode controls whether panels call
+FastAPI over HTTP instead of returning mock fixtures. Backend adapter mode
+controls whether those FastAPI routes proxy to V1 or execute native Databricks
+QuerySpecs. For same-origin Databricks Apps builds, `VITE_ADAPTER_MODE=legacy-api`
+is still valid for domains whose HTTP adapter calls native backend routes.
+Some packages, such as Process Order Review, also expose an explicit frontend
+`databricks-api` adapter. In both cases, Databricks itself is accessed only
+through FastAPI; React does not execute SQL or hold Databricks credentials.
 
 > **Note:** `apps/api/static/` is **committed to git** so that `databricks bundle deploy`
 > can include the compiled React bundle without a build step in the deploy pipeline.
@@ -246,14 +249,18 @@ After deploying to Databricks Apps, verify in order:
 - [ ] `<url>/` loads the React app without blank page or JS errors
 - [ ] Navigate to a workspace (`?workspace=trace-investigation`) — renders correctly
 - [ ] Browser refresh on `<url>/?workspace=trace-investigation` — React app reloads (not 404)
-- [ ] `<url>/api/trace2/batch-header` (POST with `{"material_id":"<id>","batch_id":"<id>"}`) — returns data or a specific error (not 500)
-- [ ] If V1 Trace2 is reachable: source badge shows `legacy-api`
-- [ ] If V1 is unreachable: source badge shows `mock` (fallback working, not crash)
+- [ ] Traceability lineage route returns `X-Data-Source: databricks-api`
+- [ ] EnvMon `site-summary` and `swab-results` return `X-Data-Source: databricks-api`
+- [ ] POH order header / operations / confirmations / goods movements return source headers or specific source errors
+- [ ] Warehouse 360 overview returns source headers or a documented schema/source error
+- [ ] CQ Lab plants returns source headers or a documented source error
 - [ ] Check Databricks Apps logs: `databricks apps logs connectio-v2` — no startup errors
 
-**Expected failure (not a blocker):** WH360 and POH proxy routes will return
-mock data until those V1 endpoints are browser-verified. The UI will render
-but source badges will show `mock`.
+**Expected failures (not blockers when documented):** some Warehouse 360 native
+routes are schema/source blocked; CQ Lab failures is blocked by source view
+availability; Traceability batch-header / mass-balance native paths still need
+DDL verification. These should show honest API errors or deferred UI states,
+not live-looking mock data.
 
 ---
 
@@ -397,10 +404,13 @@ them.
 | Build packaging | Ready | `requirements.txt` contains only PyPI packages; `shared-db` excluded |
 | Static serving | Ready | `StaticFiles(html=True)` correct for search-param routing |
 | OAuth identity forwarding | Confirmed 2026-05-17 | All three `x-forwarded-*` headers verified; `sql` scope in user token confirmed |
+| Traceability lineage (databricks-api) | Browser-verified 2026-05-18 | Trace graph / shell UI confirmed against `gold_batch_lineage`; source badge green |
+| EnvMon site summary + swab results (databricks-api) | API browser-verified / UI wired | `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results`; spatial/CAPA deferred |
+| POH native slices (databricks-api) | Browser-verified 2026-05-17/18 | Order header, operations, confirmations, and goods movements verified on selected process orders |
+| Warehouse 360 overview (databricks-api) | UAT HTTP 200 | Overview route returned real WH360 KPI payload; other WH360 routes still need schema/source alignment |
 | CQ Lab plants (databricks-api) | Browser-verified 2026-05-17 | `GET /api/cq/lab/plants` returns real data; `X-Data-Source: databricks-api` |
-| POH order header (databricks-api) | Browser-verified 2026-05-17 | `POST /api/por/order-header` — process order 7006965038 confirmed |
-| Trace2 proxy (legacy-api) | Partially verified | `getBatchHeaderSummary` browser-verified; other methods unverified |
-| WH360 proxy | Not yet verified | Proxy route wired; all methods return mock until browser-verified |
+| Trace2 proxy (legacy-api) | Partially verified legacy path | `getBatchHeaderSummary` V1 proxy browser-verified historically; V1 reachability may be stopped in UAT |
+| WH360 proxy | Not yet verified legacy path | `POST /api/wh360/warehouse-summary` remains V1 proxy/backlog |
 | POH proxy (legacy-api) | Not yet verified | Wired; unverified while V1 STOPPED |
 | CQ Lab failures | Blocked | `vw_gold_process_order_plan` view missing in `connected_plant_uat` |
 | V1 network connectivity | Not confirmed | Databricks Apps → V1 firewall/private link rules not tested |
@@ -416,5 +426,5 @@ them.
 | Proxy returns 502 | V1 backend unreachable from Databricks network | Verify firewall / private link rules allow egress from the Apps compute to the V1 host |
 | React app shows blank page | Static files not copied before deploy | Re-run `npm run prepare:databricks`, then redeploy |
 | App returns 401 on all routes | Databricks Apps OAuth2 token not forwarded | Ensure the app's permission settings allow the relevant user groups |
-| Source badge shows `mock` instead of `legacy-api` | `VITE_ADAPTER_MODE` was not `legacy-api` at build time | Rebuild with `npm run prepare:databricks` (sets `legacy-api` by default) |
+| Source badge shows `mock` instead of `legacy-api` / `databricks-api` | Frontend adapter mode, feature flag, or route wiring did not select an HTTP-backed adapter | Rebuild with the intended VITE mode, check feature flags, and confirm the panel is on a native/legacy path |
 | pip install fails during deploy | `shared-db` in requirements | Ensure `apps/api/requirements.txt` is present and does not include `shared-db` |
