@@ -14,18 +14,31 @@ This directory houses the SPC domain-integration components, including adapters,
 - [SPC Known Limitations](./docs/spc-known-limitations.md)
 - [SPC Readiness & Hardening Notes](../../docs/migration/spc-readiness-and-hardening-notes.md)
 
+## V1 SPC Source Status
+
+A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo. It deploys gold-layer objects to `connected_plant_uat.gold` and has a live FastAPI backend. Existing V1 SPC data may already exist in Databricks, but the V2 SPC domain has not yet been mapped to that source.
+
+Current V2 target views, control-limit source, rule semantics, and contract mappings require discovery and verification before live SPC UAT. Current V2 SPC remains mock/sandbox until the V1 Databricks source mapping is verified and native V2 routes/mappers are implemented.
+
+See [SPC V1 Source Discovery](./docs/spc-v1-source-discovery.md) for the full finding.
+
 ## Integration Gates & Out-of-Scope Items
 
-1. **Native Databricks Execution**: Native Databricks SPC execution is out of scope for the current design phase.
-2. **Adapter Factory**: A factory pattern is implemented to support `mock`, `legacy-api`, and `databricks-api` modes, though the latter two currently fall back to mock with warning metadata.
-3. **Evidence Completeness**: Section-level completeness summaries are visible in the Chart Overview view.
+1. **V1 Proxy Routes**: `SPCMonitoringLegacyApiAdapter` exists but is not wired. V1 SPC FastAPI endpoints are known (see source discovery doc) but V2 proxy routes in `apps/api/routes/spc.py` do not yet exist.
+2. **Navigation Model**: V2's `SPCMonitoringAdapterRequest` is plant/work-centre-centric. V1 is material-centric. This must be reconciled before any wiring.
+3. **Adapter Factory**: A factory pattern is implemented to support `mock`, `legacy-api`, and `databricks-api` modes; the latter two currently return unavailable status.
+4. **Evidence Completeness**: Section-level completeness summaries are visible in the Chart Overview view.
 
 ## Remaining Production Readiness Milestones
 
-To migrate from the sandbox mock mode to a production-ready state, the following validation gates must be passed:
-- **Live Data Source Alignment**: Map queries to actual database tables or APIs representing pasteurisation, moisture, fat, salt, and texture measurements.
-- **Approved Control-Limits Source**: Interface with an approved repository or calculation service for site/product-specific statistical control limits (`UCL`, `LCL`, `CL`).
-- **Control-Rule Validation**: Align the out-of-control alarm logic (e.g., Western Electric or Nelson rules) with Kerry Ingredients Quality Standard Operating Procedures (SOPs).
-- **Source Badge Verification**: Verify that the `<EvidencePanel>` badge updates correctly to show `source: 'legacy-api'` or `source: 'databricks-api'` once the connection layer is wired up.
-- **Error-State Validation**: Validate how the UI handles network failures, timeout limits, and invalid data responses returned from live backend services.
-- **i18n Support**: Introduce localization support for titles and warning strings if required by repository standards.
+To migrate from sandbox mock mode to a production-ready state:
+
+- **V1 App URL Confirmation**: Confirm the V1 SPC Databricks App URL is accessible in the UAT environment.
+- **Navigation Model Fix**: Update `SPCMonitoringAdapterRequest` to use `materialId` as the primary entry-point parameter.
+- **Proxy Route Implementation**: Create `apps/api/routes/spc.py` with proxy routes to V1 SPC endpoints.
+- **Adapter Wiring**: Implement `SPCMonitoringLegacyApiAdapter` using verified V1 field shapes.
+- **Column Verification**: Verify `spc_quality_metric_subgroup_v` and `spc_locked_limits` column names in UAT.
+- **UAT Candidate Identification**: Confirm a real plant/material/MIC combination with SPC data in `connected_plant_uat.gold`.
+- **Source Badge Verification**: Verify `<EvidencePanel>` badge updates to `source: 'legacy-api'` once proxy is wired.
+- **Control-Rule Semantics**: Confirm whether rule detection should remain frontend-computed (per V1) or move to API layer.
+- **i18n Support**: Introduce localization support for titles and warning strings if required.

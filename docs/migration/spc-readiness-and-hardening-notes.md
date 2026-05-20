@@ -60,25 +60,36 @@ We classify each candidate view under one of the five standard levels:
 | `gold_batch_quality_result_v` | `connected_plant_uat.gold` | **confirmed-ddl** | Shared with Trace/EnvMon. Verified schema contains `INSPECTION_LOT_ID`, `OPERATION_ID`, `SAMPLE_ID`, `MIC_NAME`, `QUANTITATIVE_RESULT`, `INSPECTION_RESULT_VALUATION`, `UPPER_TOLERANCE`, `LOWER_TOLERANCE`. |
 | `gold_inspection_lot` | `connected_plant_uat.gold` | **confirmed-ddl** | Contains inspection lot headers, plant IDs, and lot types. |
 | `gold_inspection_point` | `connected_plant_uat.gold` | **confirmed-ddl** | Maps inspection points and functional locations. |
-| `spc_quality_metrics` | `connected_plant_uat.gold` | **missing / unknown** | Table/view does not exist in `connected_plant_uat.gold`. This is the primary table containing calculated control limit parameters, and until the DDL is executed, no native SPC signals can be evaluated. |
-| `spc_quality_metric_subgroup_v` | `connected_plant_uat.gold` | **missing / unknown** | View containing sample-level subgroup calculations does not exist in UAT. |
-| `spc_locked_limits` | `connected_plant_uat.gold` | **missing / unknown** | Limits override table does not exist in UAT. |
-| `spc_correlation_source_mv` | `connected_plant_uat.gold` | **referenced-only** | Mentioned in older documentation matrices, but does not exist in active UAT configurations. |
+| `spc_quality_metrics` | `connected_plant_uat.gold` | **confirmed-v1 (different type)** | **UPDATED 2026-05-20:** This is a Databricks AI/BI Metric View (`WITH METRICS LANGUAGE YAML`), NOT a signal/alarm storage table. It exists in the V1 SPC app (`apps/spc/scripts/migrations/006_create_spc_quality_metrics_mv.sql`). V2 docs incorrectly assumed it was a signal table. Real-time rule violations are computed client-side in V1. DDL presence in UAT unverified. |
+| `spc_quality_metric_subgroup_v` | `connected_plant_uat.gold` | **confirmed-v1 (unverified in UAT)** | **UPDATED 2026-05-20:** View exists in V1 source (`apps/spc/scripts/migrations/005_create_spc_quality_metric_subgroup_v.sql`). Primary chart data source in V1. Presence in connected_plant_uat.gold unverified — column verification query required. |
+| `spc_locked_limits` | `connected_plant_uat.gold` | **confirmed-v1 (schema differs from V2 DDL)** | **UPDATED 2026-05-20:** Table exists in V1 (`apps/spc/scripts/migrations/000_setup_locked_limits.sql`). Primary key includes `material_id` — missing from V2's proposed DDL below. V2 DDL below is INCORRECT and must not be used to create this table. See `spc-v1-source-discovery.md` for the correct schema. |
+| `spc_correlation_source_mv` | `connected_plant_uat.gold` | **confirmed-v1** | Exists in V1 (`apps/spc/scripts/migrations/016_create_spc_correlation_source_mv.sql`). Used for correlation analysis. UAT presence unverified. |
+| `spc_nelson_rule_flags_mv` | `connected_plant_uat.gold` | **confirmed-v1** | Materialized view for batch-level rule flag summaries. Grain: (material_id, plant_id, mic_id, batch_id). NOT a real-time signal source. UAT presence unverified. |
+| `spc_capability_detail_mv` | `connected_plant_uat.gold` | **confirmed-v1** | Materialized view for Cp/Cpk/Pp/Ppk. UAT presence unverified. |
 
 ---
 
-## 4. The Unsafe Integration Boundary (Risk Warning)
+## 4. Integration Boundary — Updated Status (2026-05-20)
 
-> [!CAUTION]
-> **DO NOT WIRE FAKE NATIVE API ROUTES**  
-> Because `spc_quality_metrics`, `spc_quality_metric_subgroup_v`, and `spc_locked_limits` do **not** exist in the UAT database catalog, it is **operationally unsafe** to write "native" FastAPI route handlers that query these tables. Doing so will trigger `DatabricksQueryError` (causing HTTP 502 Bad Gateway or 503 Service Unavailable) in UAT and crash the smoke test pipelines.
+> [!IMPORTANT]
+> **V1 SOURCE DISCOVERED — BLOCKER IS MAPPING, NOT MISSING DATA**
 >
-> We must **NOT** invent calculated limits, centerlines, or signal rules within the React client or FastAPI handler. To do so violates the primary architecture constraint: **"Do not invent control limits, alarm history, or Western Electric / Nelson rule violations unless confirmed by source data."**
+> V1 source discovery (see `domain-integrations/spc/docs/spc-v1-source-discovery.md`) confirmed that:
 >
-> **Hardening Strategy:**
-> - Keep the SPC adapters strictly running on high-fidelity mock data.
-> - Overlay clear and premium **"Demo data"** status badges on all SPC panels and views.
-> - Implement robust frontend defensive checks inside `ControlChartPanel` to ensure that when we *do* eventually wire to native schemas, missing limits, empty values, or single-point series do not crash the React engine.
+> - `spc_quality_metric_subgroup_v`, `spc_locked_limits`, and related objects exist in V1 and are deployed to `connected_plant_uat.gold`
+> - `spc_quality_metrics` is a Databricks AI/BI Metric View — NOT a signal/alarm storage table
+> - Rule violations in V1 are computed client-side at runtime, not stored
+> - The V1 SPC data model is material-centric; V2 must adapt its request model
+>
+> **The previous DDL plan in Section 5 below is OUTDATED and INCORRECT.** Do not use the DDL scripts below to create tables — they use wrong column names and miss the `material_id` PK dimension. The correct DDL is in the V1 migration scripts at `apps/spc/scripts/migrations/`.
+>
+> **Current safe integration path:**
+> 1. Confirm V1 SPC app URL in UAT (backlog SPC-B01)
+> 2. Add `materialId` to `SPCMonitoringAdapterRequest` (SPC-B02)
+> 3. Implement proxy routes to V1 SPC backend (SPC-B08, SPC-B09)
+> 4. Implement `SPCMonitoringLegacyApiAdapter` mapping (SPC-B10)
+>
+> Until these steps are complete, SPC adapters must remain mock-only. Do not invent control limits or wire native Databricks queries without verified column mappings.
 
 ---
 

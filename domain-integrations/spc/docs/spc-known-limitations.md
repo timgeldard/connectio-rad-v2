@@ -4,8 +4,11 @@ The Statistical Process Control (SPC) domain is currently in a **High-Fidelity S
 
 ## 1. Data Source Gaps
 
-- **Catalog Alignment**: The `spc_quality_metrics`, `spc_quality_metric_subgroup_v`, and `spc_locked_limits` schemas do not yet exist in the `connected_plant_uat.gold` catalog. Native Databricks integration is blocked until these are deployed.
-- **Legacy API**: No legacy V1 backend currently exists for SPC; therefore, no `legacy-api` adapter mode is supported beyond simulation.
+- **Source Not Yet Mapped in V2**: A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 repo. It deploys `spc_quality_metric_subgroup_v`, `spc_locked_limits`, and related objects to `connected_plant_uat.gold`. V2 SPC has not yet been mapped to these sources.
+- **V2 Data Model Misalignment**: The V1 SPC data model is material-centric (`material_id → plant_id → mic_id`). V2's current adapter request uses `plantId + workCentreId` as primary scope. This must be reconciled before live wiring.
+- **`spc_quality_metrics` is an AI/BI Metric View**: V2 docs previously described `spc_quality_metrics` as a signal/alarm storage table. It is actually a Databricks `WITH METRICS LANGUAGE YAML` governance view. Real-time rule violation detection in V1 is computed client-side, not stored.
+- **Legacy API**: A V1 SPC FastAPI backend exists (`apps/spc/backend/spc_backend/`) but V2's `SPCMonitoringLegacyApiAdapter` has not yet been wired to it. The V1 app URL in the UAT Databricks workspace must be confirmed before proxy routes can be implemented.
+- **See**: [SPC V1 Source Discovery](./spc-v1-source-discovery.md) for the full source discovery and mapping.
 
 ## 2. Statistical Limitations
 

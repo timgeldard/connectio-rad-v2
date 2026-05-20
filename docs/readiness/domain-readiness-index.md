@@ -30,7 +30,7 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | ✅ | ❌ or 🔶 UI-only | ❌ | SPC control-limit source DDL and rule calculations require catalog alignment. Code-ready for mock/sandbox read-only UAT. | [SPC Detail](#spc) |
+| **SPC** | ✅ | ❌ | ❌ | V1 SPC source discovered in `connected_plant_uat.gold` but V2 not yet mapped to it. Blocker is not absent data — it is unmapped V1 source model (material-centric, client-side rule computation, different locked-limits schema). | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
@@ -70,18 +70,25 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT).
+* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT). V1 source discovered — live wiring not yet implemented.
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.
   * Control-limit provenance and approval state tracking integrated into UI and data contracts.
   * Copy SPC UAT Evidence action available for audit logging.
   * Terminology softened (e.g., "No signals returned") to prevent overconfident process control claims.
+  * **V1 Source Discovery completed (2026-05-20):** A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo with Databricks gold views deployed to `connected_plant_uat.gold`. The V2 SPC blocker is NOT absence of Databricks data — it is that V2 has not yet been mapped to the V1 source model. Key misalignments: V1 is material-centric (not plant/work-centre-centric); `spc_quality_metrics` is an AI/BI Metric View (not a signal table); rule violations are computed client-side in V1 (not stored); `spc_locked_limits` has `material_id` as a required PK dimension.
 * **UAT Blockers:**
-  * SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
-  * Limits and rules source data must be populated.
+  1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace.
+  2. `SPCMonitoringAdapterRequest` must be updated to be material-centric (add `materialId` as primary parameter).
+  3. FastAPI proxy routes for V1 SPC endpoints must be implemented in `apps/api/routes/spc.py`.
+  4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping.
+  5. Gold view column names must be verified against actual DDL in UAT (`spc_quality_metric_subgroup_v`).
+  6. A confirmed plant/material/MIC UAT candidate with live SPC data must be identified.
 * **Document Registry:**
   * [SPC README](../../domain-integrations/spc/README.md)
+  * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md) ← **new**
+  * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md) ← **new**
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
   * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
   * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
@@ -178,8 +185,12 @@ The following list summarizes the critical items blocking live validation or pro
   2. The `gold_batch_summary_v` columns must be verified against actual DDL.
   3. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
-  1. SPC control-limit source DDL and rule calculations require catalog alignment and data engineering deployment.
-  2. Limits and rules source data must be populated.
+  1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).
+  2. `SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).
+  3. FastAPI proxy routes (`apps/api/routes/spc.py`) must be implemented for V1 SPC endpoints.
+  4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping (see `spc-v1-source-discovery.md`).
+  5. Gold view column names must be verified in `connected_plant_uat.gold.spc_quality_metric_subgroup_v`.
+  6. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified.
 * **Process Order History Blockers:**
   1. Browser-level validation of the 4 api endpoints inside the UI has not been performed.
 * **Warehouse360 Blockers:**
