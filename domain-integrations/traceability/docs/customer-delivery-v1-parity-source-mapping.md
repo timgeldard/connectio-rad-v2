@@ -2,7 +2,7 @@
 
 **Domain:** `domain-integrations/traceability`
 **Created:** 2026-05-20
-**Status:** V1 source identified; gold_batch_delivery_v implementation in progress
+**Status:** V1 source identified; 17 columns verified live 2026-05-20 (DESCRIBE TABLE, connected_plant_uat)
 
 ---
 
@@ -56,22 +56,27 @@ V2 must query `gold_batch_delivery_v` rather than `gold_inventory_movement` dire
 
 ## Q3: Confirmed column set
 
-| Column | Alias in SQL | Confidence | Source |
-|---|---|---|---|
-| `DELIVERY` | `delivery` | High | trace2-functional-parity-audit.md §3; Slice 4 plan |
-| `CUSTOMER_ID` | `customer_id` | High | As above |
-| `CUSTOMER_NAME` | `customer_name` | High | As above |
-| `COUNTRY_ID` | `country_id` | High | As above |
-| `CITY` | `city` | High | As above |
-| `ABS_QUANTITY` | `abs_quantity` | High | As above |
-| `POSTING_DATE` | `posting_date` | High | User confirmed 2026-05-20 |
-| `MATERIAL_ID` | WHERE key | Pending DESCRIBE | Required for query; unverified column name |
-| `BATCH_ID` | WHERE key | Pending DESCRIBE | Required for query; unverified column name |
+All 17 columns verified live 2026-05-20 via `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v`.
 
-**Action required before Scope E SQL:** Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v`
-to confirm `MATERIAL_ID` and `BATCH_ID` as the WHERE-clause keys. The view is over
-`gold_inventory_movement` which uses `MATERIAL_ID`/`BATCH_ID` naming (consistent with all other
-gold views), but this must be confirmed live before writing production SQL.
+| Column | Type | Used in V2 SQL | Notes |
+|---|---|---|---|
+| `MATERIAL_ID` | string | WHERE key | Confirmed |
+| `BATCH_ID` | string | WHERE key | Confirmed |
+| `PLANT_ID` | string | Not selected | Available; not filtered (recall requires all plants) |
+| `CUSTOMER_ID` | string | `customer_id` | Confirmed |
+| `CUSTOMER_NAME` | string | `customer_name` | Confirmed |
+| `STREET` | string | Not selected | Available for future drill-through |
+| `CITY` | string | `city` | Confirmed |
+| `POSTCODE` | string | Not selected | Available for future drill-through |
+| `COUNTRY_ID` | string | `country_id` | Confirmed; populates `countries` array |
+| `COUNTRY_NAME` | string | `country_name` | Added 2026-05-20; available for future display |
+| `DELIVERY` | string | `delivery` | Confirmed |
+| `SALES_ORDER_ID` | string | Not selected | Available for future drill-through |
+| `QUANTITY` | decimal(13,3) | Not selected | Signed quantity; ABS_QUANTITY used instead |
+| `ABS_QUANTITY` | decimal(13,3) | `abs_quantity` | Confirmed; sums to `shippedQuantity` |
+| `UOM` | string | `uom` | Confirmed; returned as optional field in mapper |
+| `POSTING_DATE` | date | `posting_date` | Confirmed |
+| `MOVEMENT_TYPE` | string | Not selected | Available; movement-type filtering encapsulated by view definition |
 
 ---
 
@@ -144,10 +149,11 @@ the summary count, though names could appear in a detail list).
 
 ## Q9: Was shipped quantity calculated?
 
-Yes — from `ABS_QUANTITY` (absolute quantity, confirmed column). The mapper sums `ABS_QUANTITY`
-across all delivery rows to produce `shippedQuantity`. No UoM column has been confirmed in the
-6+1 column set; the panel continues to show "source units" as the unit label until a UoM column
-is confirmed in UAT.
+Yes — from `ABS_QUANTITY` (absolute quantity, decimal(13,3), confirmed). The mapper sums `ABS_QUANTITY`
+across all delivery rows to produce `shippedQuantity`. `UOM` is confirmed as a string column
+(verified live 2026-05-20); the mapper extracts the first non-null UOM value and returns it as
+the optional `uom` field. The panel shows `{shippedQuantity} {uom}` when UOM is available,
+falling back to `{shippedQuantity} source units` when absent.
 
 ---
 
@@ -161,8 +167,9 @@ in this slice until a blocked-status column is verified in UAT.
 
 ## Q11: Were sales orders shown?
 
-V1 had sales order linkage. `gold_batch_delivery_v` may have a `SALES_ORDER_ID` column but
-this was not in the confirmed 6-column set from §3. Deferred — not included in V2 first slice.
+V1 had sales order linkage. `SALES_ORDER_ID` is confirmed as a string column in `gold_batch_delivery_v`
+(verified live 2026-05-20). It is not included in the V2 first slice SELECT but is available for
+a future drill-through slice.
 
 ---
 
@@ -195,11 +202,17 @@ V1-parity implementation.
 
 ---
 
-## Pending Verifications
+## Column Verification Status
 
-| Item | Status | Action |
-|---|---|---|
-| `MATERIAL_ID` column name in `gold_batch_delivery_v` | Pending DESCRIBE | Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v` |
-| `BATCH_ID` column name in `gold_batch_delivery_v` | Pending DESCRIBE | As above |
-| Any additional columns (UoM, SALES_ORDER_ID, blocked flag) | Pending DESCRIBE | As above |
-| Null sparsity of `COUNTRY_ID` in delivery records | Pending UAT | Run validation query after DESCRIBE confirmed |
+DESCRIBE TABLE executed live 2026-05-20 against `connected_plant_uat.gold.gold_batch_delivery_v`.
+
+| Item | Status |
+|---|---|
+| `MATERIAL_ID` as WHERE key | ✅ Confirmed |
+| `BATCH_ID` as WHERE key | ✅ Confirmed |
+| `UOM` column | ✅ Confirmed (string; added to SELECT and mapper) |
+| `COUNTRY_NAME` column | ✅ Confirmed (string; added to SELECT for future display) |
+| `SALES_ORDER_ID` column | ✅ Confirmed (string; available for future drill-through) |
+| `MOVEMENT_TYPE` column | ✅ Confirmed (string; encapsulated by view — not filtered in V2) |
+| Null sparsity of `COUNTRY_ID` in live records | ⬜ Pending UAT — DEF-TRACE-006 CD-3 |
+| Blocked delivery count (`blockedDeliveries`) | ⬜ Pending — no blocked-status column in view; deferred |

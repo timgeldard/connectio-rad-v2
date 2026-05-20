@@ -52,12 +52,11 @@
 **Requires UAT:** Yes — confirm single-plant result when `plant_id = C061` is passed for the reference candidate.
 
 ### TRACE-P1-009 — gold_batch_delivery_v WHERE key column names unverified (DEF-TRACE-006)
-**Status:** Code-implemented — DESCRIBE TABLE and live query not yet executed
+**Status:** Fixed (2026-05-20) — DESCRIBE TABLE executed live against connected_plant_uat
 **Affected:** `get_customer_delivery_spec()`, `POST /api/trace2/customer-deliveries`
-**Evidence:** The V1-parity delivery slice queries `gold_batch_delivery_v` with `WHERE MATERIAL_ID = :material_id AND BATCH_ID = :batch_id`. Column name is consistent with all gold views (High confidence) but was not confirmed via DESCRIBE TABLE before code-write. Until confirmed, a column-not-found error will cause HTTP 500 for all customer-deliveries requests.
-**Risk:** If column names differ, the customer delivery panel shows an error state for all batches; investigators will not have V1-parity delivery evidence.
-**Proposed fix:** Run `DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v`. If column names differ, update SQL in `get_customer_delivery_spec()`. Remove TODO comments after verification. See `customer-delivery-movement-type-validation.md` §1 for the full validation SQL.
-**Requires UAT:** Yes — CD-1 through CD-6 scenarios in DEF-TRACE-006 (uat-validation-ledger.md)
+**Evidence:** DESCRIBE TABLE confirmed all 17 columns: MATERIAL_ID, BATCH_ID, PLANT_ID, CUSTOMER_ID, CUSTOMER_NAME, STREET, CITY, POSTCODE, COUNTRY_ID, COUNTRY_NAME, DELIVERY, SALES_ORDER_ID, QUANTITY (signed), ABS_QUANTITY, UOM, POSTING_DATE, MOVEMENT_TYPE. WHERE keys MATERIAL_ID + BATCH_ID confirmed. TODO comments removed from SQL. UOM and COUNTRY_NAME added to SELECT and mapper. SQL and adapter tests updated.
+**Fix applied:** `get_customer_delivery_spec()` SQL: TODO comments removed; UOM + COUNTRY_NAME added to SELECT. `map_customer_delivery_rows()`: extracts `uom` from first non-null UOM row; returns it as optional field. `customer-delivery-v1-parity-source-mapping.md` §3 updated with full 17-column set.
+**Requires UAT:** Yes — CD-1 through CD-6 scenarios in DEF-TRACE-006 (uat-validation-ledger.md) remain as the live execution gate
 
 ### TRACE-P1-005 — Mass balance not wired to a live Databricks route
 **Status:** Open — adapter+mapper done, live route and WHERE filter verification pending

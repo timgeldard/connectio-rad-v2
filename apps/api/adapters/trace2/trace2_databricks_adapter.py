@@ -7,12 +7,7 @@ Implemented slices:
   - get_customer_exposure_spec / map_customer_exposure_rows  (lineage-only first slice)
   - get_customer_delivery_spec / map_customer_delivery_rows  (gold_batch_delivery_v, V1-parity)
 
-Pending verification (Scope E):
-  - WHERE keys MATERIAL_ID/BATCH_ID in gold_batch_delivery_v need DESCRIBE TABLE confirmation.
-    Column names are consistent with all other gold views but must be validated in UAT before
-    promoting to production. See customer-delivery-movement-type-validation.md §Validation SQL.
-
-Column name verification status (live validation 2026-05-19, connected_plant_uat):
+Column name verification status (live validation 2026-05-19/2026-05-20, connected_plant_uat):
   - gold_batch_summary_v: MANUFACTURE_DATE and SHELF_LIFE_EXPIRATION_DATE verified. PLANT_ID,
     BATCH_STATUS, UOM, PROCESS_ORDER_ID are NOT present in this view. plant_id sourced from
     gold_batch_stock_v; uom from gold_material.BASE_UNIT_OF_MEASURE.
@@ -21,6 +16,8 @@ Column name verification status (live validation 2026-05-19, connected_plant_uat
   - gold_material: LANGUAGE_ID = 'E' (not 'EN'), MATERIAL_NAME, BASE_UNIT_OF_MEASURE verified live.
   - gold_plant: PLANT_ID, PLANT_NAME confirmed from V1 inspection.
   - gold_batch_lineage: all 18 columns confirmed — see trace2-functional-parity-audit.md §3.
+  - gold_batch_delivery_v: all 17 columns verified live 2026-05-20 (DESCRIBE TABLE confirmed
+    MATERIAL_ID + BATCH_ID as WHERE keys; UOM, COUNTRY_NAME, SALES_ORDER_ID, MOVEMENT_TYPE added).
   - gold_batch_mass_balance_v: SELECT columns confirmed; WHERE filter column names unverified (TODO).
 
 Trace graph uses a single WITH RECURSIVE SQL query (server-side traversal). Queries the base
@@ -741,12 +738,11 @@ def get_customer_delivery_spec(request: Trace2CustomerDeliveryRequest) -> QueryS
     No plant filter — all delivery plants must be included for recall coverage.
     See customer-delivery-v1-parity-source-mapping.md for source decision.
 
-    Column confidence (2026-05-20):
-      - DELIVERY, CUSTOMER_ID, CUSTOMER_NAME, COUNTRY_ID, CITY, ABS_QUANTITY: High
-        (confirmed from trace2-functional-parity-audit.md §3 and Slice 4 plan)
-      - POSTING_DATE: High (user confirmed 2026-05-20)
-      - MATERIAL_ID, BATCH_ID as WHERE keys: Pending DESCRIBE TABLE confirmation
-        (consistent with all other gold views; must be verified in UAT session)
+    Column confidence (verified live 2026-05-20, DESCRIBE TABLE connected_plant_uat.gold.gold_batch_delivery_v):
+      17 columns confirmed: MATERIAL_ID, BATCH_ID, PLANT_ID, CUSTOMER_ID, CUSTOMER_NAME,
+      STREET, CITY, POSTCODE, COUNTRY_ID, COUNTRY_NAME, DELIVERY, SALES_ORDER_ID,
+      QUANTITY (signed), ABS_QUANTITY, UOM, POSTING_DATE, MOVEMENT_TYPE.
+      WHERE keys MATERIAL_ID + BATCH_ID confirmed. UOM confirmed as string column.
 
     Zero-rows semantics:
       The mapper returns None for zero rows. The route returns HTTP 404 with message
@@ -758,16 +754,18 @@ def get_customer_delivery_spec(request: Trace2CustomerDeliveryRequest) -> QueryS
 
     sql = f"""
     SELECT
-      DELIVERY        AS delivery,        -- confirmed: gold_batch_delivery_v (High confidence)
-      CUSTOMER_ID     AS customer_id,     -- confirmed: gold_batch_delivery_v (High confidence)
-      CUSTOMER_NAME   AS customer_name,   -- confirmed: gold_batch_delivery_v (High confidence)
-      COUNTRY_ID      AS country_id,      -- confirmed: gold_batch_delivery_v (High confidence)
-      CITY            AS city,            -- confirmed: gold_batch_delivery_v (High confidence)
-      ABS_QUANTITY    AS abs_quantity,    -- confirmed: gold_batch_delivery_v (High confidence)
-      POSTING_DATE    AS posting_date     -- confirmed: gold_batch_delivery_v (user confirmed 2026-05-20)
+      DELIVERY        AS delivery,
+      CUSTOMER_ID     AS customer_id,
+      CUSTOMER_NAME   AS customer_name,
+      COUNTRY_ID      AS country_id,
+      COUNTRY_NAME    AS country_name,
+      CITY            AS city,
+      ABS_QUANTITY    AS abs_quantity,
+      UOM             AS uom,
+      POSTING_DATE    AS posting_date
     FROM {tbl}
-    WHERE MATERIAL_ID = :material_id  -- TODO: verify column name via DESCRIBE TABLE (expected consistent with all gold views)
-      AND BATCH_ID   = :batch_id      -- TODO: verify column name via DESCRIBE TABLE
+    WHERE MATERIAL_ID = :material_id
+      AND BATCH_ID   = :batch_id
       AND DELIVERY IS NOT NULL
       AND CUSTOMER_ID IS NOT NULL
     LIMIT :max_rows
@@ -798,7 +796,8 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
     shippedQuantity: sum of abs_quantity (no de-netting of 602 reversals — see
       customer-delivery-movement-type-validation.md §Reversal Handling for escalation criteria).
     countries: distinct non-null COUNTRY_ID values as strings.
-    blockedDeliveries: 0 — no confirmed blocked-status column in gold_batch_delivery_v yet.
+    uom: first non-null UOM value (consistent across a material/batch; absent if all null).
+    blockedDeliveries: 0 — no confirmed blocked-status column in gold_batch_delivery_v.
     highestSeverity: 'medium' — preliminary; business rules not yet defined for V2.
     maxExposureDepth: not set — gold_batch_delivery_v is direct delivery records, not hop-based.
     deliveryEvidenceSource: 'inventory-movements' — signals V1-parity delivery view source.
@@ -810,6 +809,7 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
     customers: set[str] = set()
     countries: set[str] = set()
     total_qty = 0.0
+    uom: Optional[str] = None
 
     for row in rows:
         did = row.get("delivery")
@@ -824,8 +824,10 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
         qty = row.get("abs_quantity")
         if qty is not None:
             total_qty += float(qty)
+        if uom is None and row.get("uom") is not None:
+            uom = str(row["uom"])
 
-    return {
+    result: dict = {
         "affectedCustomers": len(customers),
         "affectedDeliveries": len(deliveries),
         "shippedQuantity": total_qty,
@@ -835,6 +837,9 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
         "recallRecommended": False,
         "deliveryEvidenceSource": "inventory-movements",
     }
+    if uom is not None:
+        result["uom"] = uom
+    return result
 
 
 # ---------------------------------------------------------------------------

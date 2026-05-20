@@ -1201,13 +1201,16 @@ class TestGetCustomerDeliverySpec:
         assert "`gold`" in sql
 
     def test_sql_selects_confirmed_columns(self) -> None:
+        """All columns verified live 2026-05-20 via DESCRIBE TABLE."""
         sql = get_customer_delivery_spec(self._req()).sql
         assert "DELIVERY" in sql
         assert "CUSTOMER_ID" in sql
         assert "CUSTOMER_NAME" in sql
         assert "COUNTRY_ID" in sql
+        assert "COUNTRY_NAME" in sql
         assert "CITY" in sql
         assert "ABS_QUANTITY" in sql
+        assert "UOM" in sql
         assert "POSTING_DATE" in sql
 
     def test_sql_filters_null_delivery_and_customer(self) -> None:
@@ -1238,8 +1241,10 @@ def _delivery_view_row(
     customer_id: str = "CUST-001",
     customer_name: str = "Kerry Ingredients",
     country_id: str = "IE",
+    country_name: str = "Ireland",
     city: str = "Dublin",
     abs_quantity: float = 100.0,
+    uom: str | None = "KG",
     posting_date: str = "2026-01-15",
 ) -> dict:
     return {
@@ -1247,8 +1252,10 @@ def _delivery_view_row(
         "customer_id": customer_id,
         "customer_name": customer_name,
         "country_id": country_id,
+        "country_name": country_name,
         "city": city,
         "abs_quantity": abs_quantity,
+        "uom": uom,
         "posting_date": posting_date,
     }
 
@@ -1347,3 +1354,22 @@ class TestMapCustomerDeliveryRows:
         result = map_customer_delivery_rows([row])
         assert result is not None
         assert result["shippedQuantity"] == pytest.approx(0.0)
+
+    def test_uom_taken_from_first_non_null_row(self) -> None:
+        """UOM confirmed as string column in gold_batch_delivery_v (DESCRIBE TABLE 2026-05-20)."""
+        rows = [_delivery_view_row(uom="KG"), _delivery_view_row(delivery="DEL-002", uom="KG")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["uom"] == "KG"
+
+    def test_uom_absent_when_all_null(self) -> None:
+        row = {**_delivery_view_row(), "uom": None}
+        result = map_customer_delivery_rows([row])
+        assert result is not None
+        assert "uom" not in result
+
+    def test_uom_absent_when_column_not_present(self) -> None:
+        row = {k: v for k, v in _delivery_view_row().items() if k != "uom"}
+        result = map_customer_delivery_rows([row])
+        assert result is not None
+        assert "uom" not in result
