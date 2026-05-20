@@ -117,5 +117,39 @@ describe('SPC Placeholder Adapters', () => {
         expect(char.operationId).toBe('OP-10')
       }
     })
+
+    it('maps V1 capability response to V2 CharacteristicCapability', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            mic_id: 'CHAR-1',
+            mic_name: 'Length',
+            cp: 1.33,
+            cpk: 1.25,
+            pp: 1.30,
+            ppk: 1.20,
+            sample_count: 100,
+            process_mean: 10.5,
+            process_std_dev: 0.2,
+            confidence: 0.95,
+            interpretation: 'capable'
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      const result = await adapter.getCharacteristicCapability(request)
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.source).toBe('legacy-api')
+        expect(result.data.characteristicId).toBe('CHAR-1')
+        expect(result.data.characteristicName).toBe('Length')
+        expect(result.data.cp).toBe(1.33)
+        expect(result.data.cpk).toBe(1.25)
+        expect(result.data.sampleCount).toBe(100)
+        expect(result.data.mean).toBe(10.5)
+        expect(result.data.standardDeviation).toBe(0.2)
+        expect(result.data.interpretation).toBe('capable')
+      }
+    })
   })
 })

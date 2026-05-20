@@ -176,6 +176,29 @@ async def spc_characteristics(
     )
 
 
+@router.get("/spc/capability")
+async def spc_capability(
+    material_id: str = Query(..., description="SAP material number"),
+    characteristic_id: str = Query(..., description="Characteristic ID"),
+    plant_id: str | None = Query(default=None, description="Plant ID (optional filter)"),
+    x_forwarded_access_token: str | None = Header(default=None),
+) -> dict:
+    """Fetch characteristic capability (Cp/Cpk) summary.
+
+    Proxies to V1 GET /api/spc/capability — queries spc_capability_detail_mv.
+
+    NOT YET BROWSER-VERIFIED: route is wired but has not been tested against
+    a live V1 SPC UAT deployment.
+    """
+    _ensure_legacy_mode()
+    return await _forward_get(
+        "/api/spc/capability",
+        {"material_id": material_id, "mic_id": characteristic_id, "plant_id": plant_id},
+        x_forwarded_access_token,
+    )
+
+
+
 @router.post("/spc/chart-data")
 async def spc_chart_data(
     body: ChartDataRequest,

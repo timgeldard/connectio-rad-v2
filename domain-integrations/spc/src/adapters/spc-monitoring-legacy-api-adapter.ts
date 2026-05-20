@@ -54,6 +54,21 @@ interface V1ChartDataResponse {
 }
 
 
+interface V1CapabilityResponse {
+  mic_id?: string
+  mic_name?: string
+  cp?: number
+  cpk?: number
+  pp?: number
+  ppk?: number
+  sample_count?: number
+  process_mean?: number
+  process_std_dev?: number
+  confidence?: number
+  interpretation?: string
+  [key: string]: unknown
+}
+
 // ---------------------------------------------------------------------------
 // V1 → V2 enum rename (chart type)
 // ---------------------------------------------------------------------------
@@ -69,6 +84,18 @@ function mapChartType(v1Type: string | undefined): ControlChartSeries['chartType
     case 'c_chart': return 'c-chart'
     case 'u_chart': return 'u-chart'
     default: return 'individuals'
+  }
+}
+
+function mapInterpretation(val: string | undefined): CharacteristicCapability['interpretation'] {
+  switch (val?.toLowerCase()) {
+    case 'capable': return 'capable'
+    case 'marginal': return 'marginal'
+    case 'not-capable':
+    case 'not_capable': return 'not-capable'
+    case 'insufficient-data':
+    case 'insufficient_data': return 'insufficient-data'
+    default: return 'insufficient-data'
   }
 }
 
@@ -257,18 +284,49 @@ export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
   /**
    * Returns capability indices (Cp/Cpk/Pp/Ppk) for a material/MIC.
    *
-   * V1 capability data lives in spc_capability_detail_mv. V2 proxy routes
-   * do not yet expose a /spc/capability endpoint — this falls through to mock
-   * until a capability proxy endpoint is added.
-   *
-   * TODO (SPC-B11): Add GET /api/spc/capability proxy route in apps/api/routes/spc.py,
-   * then wire this method.
+   * Maps V1 GET /api/spc/capability → V2 CharacteristicCapability.
+   * Wired but NOT YET browser-verified against live V1 UAT.
    */
   override async getCharacteristicCapability(
     request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<CharacteristicCapability>> {
-    // Falls through to mock — capability endpoint not yet wired
-    return super.getCharacteristicCapability(request)
+    if (!request.materialId || !request.characteristicId) {
+      return super.getCharacteristicCapability(request)
+    }
+
+    try {
+      const params: Record<string, string> = { 
+        material_id: request.materialId,
+        characteristic_id: request.characteristicId,
+      }
+      if (request.plantId) params['plant_id'] = request.plantId
+
+      const raw = await proxyGet(this.baseUrl, '/api/spc/capability', params) as V1CapabilityResponse
+
+      const data: CharacteristicCapability = {
+        characteristicId: raw.mic_id ?? request.characteristicId,
+        characteristicName: raw.mic_name ?? request.characteristicId,
+        cp: typeof raw.cp === 'number' ? raw.cp : 0,
+        cpk: typeof raw.cpk === 'number' ? raw.cpk : 0,
+        pp: typeof raw.pp === 'number' ? raw.pp : 0,
+        ppk: typeof raw.ppk === 'number' ? raw.ppk : 0,
+        sampleCount: typeof raw.sample_count === 'number' ? raw.sample_count : 0,
+        mean: typeof raw.process_mean === 'number' ? raw.process_mean : 0,
+        standardDeviation: typeof raw.process_std_dev === 'number' ? raw.process_std_dev : 0,
+        confidence: typeof raw.confidence === 'number' ? raw.confidence : 1.0,
+        interpretation: mapInterpretation(raw.interpretation),
+        limitProvenance: 'calculated-from-sample',
+      }
+
+      return {
+        ok: true,
+        data,
+        fetchedAt: new Date().toISOString(),
+        source: 'legacy-api',
+      }
+    } catch (err) {
+      return toErrorResult(err)
+    }
   }
 
   // The following methods fall through to the mock adapter as there is no
