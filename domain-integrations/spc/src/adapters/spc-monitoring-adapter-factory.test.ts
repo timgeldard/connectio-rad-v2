@@ -20,7 +20,7 @@ describe('SPCMonitoringAdapter Factory Gating', () => {
     })
 
     const adapter = spcMonitoringAdapterFactory()
-    const result = await adapter.getMonitoredCharacteristics({ plantId: 'IE10' })
+    const result = await adapter.getMonitoredCharacteristics({ materialId: 'MAT-12345', plantId: 'IE10' })
 
     expect(result.ok).toBe(false)
     if (result.ok) return
@@ -46,7 +46,7 @@ describe('SPCMonitoringAdapter Factory Gating', () => {
     })
 
     const adapter = spcMonitoringAdapterFactory()
-    const result = await adapter.getMonitoredCharacteristics({ plantId: 'IE10' })
+    const result = await adapter.getMonitoredCharacteristics({ materialId: 'MAT-12345', plantId: 'IE10' })
 
     expect(result.ok).toBe(false)
     if (result.ok) return

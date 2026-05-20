@@ -4,7 +4,7 @@ import { SPCMonitoringAdapter, toSPCMonitoringAdapterError } from './spc-monitor
 const FIXED_NOW = '2024-03-08T10:00:00.000Z'
 const adapter = new SPCMonitoringAdapter({ now: () => FIXED_NOW })
 
-const request = { plantId: 'IE10', workCentreId: 'WC-IE10-PASTEURISATION' }
+const request = { materialId: 'MAT-12345', plantId: 'IE10', workCentreId: 'WC-IE10-PASTEURISATION' }
 
 describe('SPCMonitoringAdapter', () => {
   describe('getSPCMonitoringContext', () => {

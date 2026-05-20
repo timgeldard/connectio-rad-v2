@@ -25,9 +25,9 @@ import {
 } from './spc-monitoring-mock-data.js'
 
 export interface SPCMonitoringAdapterRequest {
+  readonly materialId: string
   readonly plantId?: string
   readonly workCentreId?: string
-  readonly materialId?: string
   readonly batchId?: string
   readonly characteristicId?: string
 }

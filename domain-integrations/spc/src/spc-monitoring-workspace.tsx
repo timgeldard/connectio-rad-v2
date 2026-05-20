@@ -29,9 +29,9 @@ export function SPCMonitoringWorkspace({
   viewId = 'chart-overview',
 }: SPCMonitoringWorkspaceProps) {
   const request: SPCMonitoringAdapterRequest = {
+    materialId: scope.materialId ?? '',
     plantId: scope.plantId,
     workCentreId: scope.workCentreId,
-    materialId: scope.materialId,
     batchId: scope.batchId,
   }
 

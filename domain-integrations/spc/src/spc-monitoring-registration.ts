@@ -20,7 +20,7 @@ export const spcMonitoringRegistration: WorkspaceRegistration = {
   supportedScopes: ['plant', 'line', 'work-centre', 'material', 'batch'],
   scopePolicy: {
     supportedLevels: ['plant', 'line', 'work-centre', 'material', 'batch'],
-    defaultLevel: 'plant',
+    defaultLevel: 'material',
     autoElevate: false,
   },
   defaultViews: [

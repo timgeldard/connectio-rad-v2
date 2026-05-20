@@ -16,7 +16,7 @@ vi.mock('@connectio/evidence-panel-runtime', () => ({
 
 import { useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 
-const request: SPCMonitoringAdapterRequest = { plantId: 'IE10' }
+const request: SPCMonitoringAdapterRequest = { materialId: 'MAT-12345', plantId: 'IE10' }
 
 const mockSignals: SPCSignal[] = [
   {
