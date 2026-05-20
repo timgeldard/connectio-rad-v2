@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { SPCMonitoringDatabricksApiAdapter } from './spc-monitoring-databricks-api-adapter.js'
 import { SPCMonitoringLegacyApiAdapter } from './spc-monitoring-legacy-api-adapter.js'
 import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
 
-describe('SPC Placeholder Adapters', () => {
-  const request: SPCMonitoringAdapterRequest = {
-    plantId: 'C113',
-    materialId: 'MAT-1',
-    characteristicId: 'CHAR-1'
-  }
+const request: SPCMonitoringAdapterRequest = {
+  materialId: 'MAT-12345',
+  plantId: 'C113',
+  characteristicId: 'CHAR-1',
+}
 
+describe('SPC Placeholder Adapters', () => {
   describe('SPCMonitoringDatabricksApiAdapter', () => {
     const adapter = new SPCMonitoringDatabricksApiAdapter()
 
@@ -25,15 +25,96 @@ describe('SPC Placeholder Adapters', () => {
   })
 
   describe('SPCMonitoringLegacyApiAdapter', () => {
-    const adapter = new SPCMonitoringLegacyApiAdapter()
+    // The legacy adapter now proxies real V1 endpoints. Without a live V1 URL it
+    // falls back to the mock base-class implementation for methods without proxy
+    // coverage, and will throw a network error for wired methods (getMonitoredCharacteristics,
+    // getControlChartSeries) when no server is running.
 
-    it('returns error for getSPCSummary', async () => {
+    const adapter = new SPCMonitoringLegacyApiAdapter('http://127.0.0.1:8000')
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn())
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('falls through to mock for getSPCSummary (no V1 proxy for this method)', async () => {
+      // getSPCSummary has no V1 proxy — falls through to base mock adapter
       const result = await adapter.getSPCSummary(request)
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.chartsMonitored).toBeGreaterThanOrEqual(0)
+      }
+    })
+
+    it('returns error result for getMonitoredCharacteristics on network failure', async () => {
+      vi.mocked(fetch).mockRejectedValue(new TypeError('fetch failed'))
+      const result = await adapter.getMonitoredCharacteristics(request)
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.source).toBe('legacy-api')
-        expect(result.error.code).toBe('not-found')
-        expect(result.error.message).toContain('Legacy API adapter unavailable')
+      }
+    })
+
+    it('returns error result for getMonitoredCharacteristics on 401', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify({ detail: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe('unauthorized')
+        expect(result.source).toBe('legacy-api')
+      }
+    })
+
+    it('returns empty characteristics list on empty V1 response', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(Array.isArray(result.data)).toBe(true)
+        expect(result.data.length).toBe(0)
+        expect(result.source).toBe('legacy-api')
+      }
+    })
+
+    it('maps V1 characteristic fields to V2 MonitoredSPCCharacteristic', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(
+          JSON.stringify([
+            {
+              mic_id: 'MIC-PH-001',
+              mic_name: 'pH',
+              chart_type: 'xbar_r',
+              batch_count: 20,
+              has_active_signal: true,
+              operation_id: 'OP-10',
+            },
+          ]),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const char = result.data[0]
+        expect(char.characteristicId).toBe('MIC-PH-001')
+        expect(char.characteristicName).toBe('pH')
+        expect(char.chartType).toBe('xbar-r') // V1 'xbar_r' → V2 'xbar-r'
+        expect(char.batchCount).toBe(20)
+        expect(char.hasActiveSignal).toBe(true)
+        expect(char.operationId).toBe('OP-10')
       }
     })
   })

@@ -10,6 +10,7 @@ from routes.connected_quality_lab import router as connected_quality_lab_router
 from routes.envmon import router as envmon_router
 from routes.health import router as health_router
 from routes.process_order import router as process_order_router
+from routes.spc import router as spc_router
 from routes.trace2 import router as trace2_router
 from routes.warehouse360 import router as warehouse360_router
 from routes.workspaces import router as workspaces_router
@@ -33,6 +34,7 @@ app.include_router(warehouse360_router, prefix="/api")
 app.include_router(process_order_router, prefix="/api")
 app.include_router(connected_quality_lab_router, prefix="/api")
 app.include_router(envmon_router, prefix="/api")
+app.include_router(spc_router, prefix="/api")
 
 # Serve the React bundle as static files when deployed to Databricks Apps.
 # The static/ directory is absent in local development (Vite serves the frontend directly).
