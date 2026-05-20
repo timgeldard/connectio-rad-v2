@@ -109,12 +109,17 @@ We use the following conservative status classifications:
   * Source truthfulness has been improved; planned filter inputs (such as limit, date range, etc.) are labeled as planned/diagnostic.
   * Golden process-order candidates exist in UAT (e.g., process order `7006965038`).
   * Direct SQL/DDL reads are verified for `getProcessOrderHeader`, `getOrderOperations`, `getOrderConfirmations`, and `getOrderGoodsMovements`.
+  * Section-level completeness is visible in the POH screen for header, operations, confirmations, and goods movements. No-record sections are treated as partial evidence, not proof of absence.
+  * Copy UAT Evidence payload includes section source status, section completeness, counts, and explicit warnings that production readiness is not claimed.
   * **UAT Blockers:**
     * Live browser validation of the HTTP/UI layer is pending (BV pending).
+    * Candidate counts must be compared to SAP/Databricks source evidence during UAT.
     * Potential module-boundary lint warnings remain on cross-domain type imports from Quality.
 * **Document Registry:**
   * [Operations README](../../domain-integrations/operations/README.md)
   * [Golden Process Orders Candidates](../../domain-integrations/operations/docs/golden-process-orders.md)
+  * [POH UAT Readiness Notes](../../domain-integrations/operations/docs/poh-uat-readiness-notes.md)
+  * [POH V1 to V2 Functional Parity](../../domain-integrations/operations/docs/poh-v1-v2-functional-parity.md)
   * [POH Investigation Screen Notes](../migration/poh-investigation-screen-notes.md)
 
 ### Warehouse360

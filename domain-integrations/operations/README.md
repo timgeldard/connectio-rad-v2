@@ -48,3 +48,8 @@ Follow this checklist when verifying the cockpit layout and E2E connectivity in 
   - Verify that the card source badges transition to `DATABRICKS-API` (Green).
   - Verify that the table renders the 11 operation phases matching the Unity Catalog data.
   - Confirm the Event Timeline sorted order is chronologically ascending.
+  - Confirm section states are visible for Header, Operations, Confirmations, and Goods Movements.
+  - Confirm no-record sections use cautious wording and are not interpreted as proof of absence.
+  - Use **Copy UAT Evidence** and paste the payload into the UAT ledger alongside source screenshots/API evidence.
+
+POH is read-only. No SAP write-back, order confirmation posting, goods movement posting, release, TECO, or change action is implemented in this workspace.

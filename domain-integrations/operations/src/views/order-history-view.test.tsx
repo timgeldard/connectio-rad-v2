@@ -42,6 +42,11 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe('OrderHistoryView', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
 
     // Default mock query implementations (empty/no-data baseline)
     vi.mocked(useProcessOrderHeader).mockReturnValue({
@@ -293,6 +298,10 @@ describe('OrderHistoryView', () => {
     // Check Goods movements rendering
     expect(screen.getAllByText(/GM-001/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/SL-MILK-SILO/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/This is not a BOM or reservation coverage claim/i)[0]).toBeInTheDocument()
+    expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/This is not a production completion or full yield claim/i)[0]).toBeInTheDocument()
 
     // Check Derived metrics summary
     expect(screen.getAllByText(/1,860 KG/i).length).toBeGreaterThan(0)
@@ -365,6 +374,7 @@ describe('OrderHistoryView', () => {
     // Operations fails and renders route-specific error card with guidance
     expect(screen.getAllByText(/Operations Query Failed/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/BACKEND_ADAPTER_MODE/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Partial order history loaded/i)).toBeInTheDocument()
   })
 
   it('renders empty dynamic source status and empty state for a succeeded but empty route', async () => {
@@ -405,9 +415,246 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    // Expect the empty badge and empty placeholder for Operations
-    expect(screen.getAllByText(/No process operations or phases recorded/i)[0]).toBeInTheDocument()
+    // Expect the empty badge and safe empty placeholder for Operations
+    expect(screen.getAllByText(/No operation records returned for this order\/source/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/NO RECORDS/i).length).toBeGreaterThan(0)
+  })
+
+  it('copies UAT evidence with section statuses, counts, and no-record warnings', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderOperations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [{
+          operationId: 'OP-010',
+          operationNumber: '0010',
+          operationText: 'Phase 010',
+          workCentre: '',
+          status: 'confirmed',
+          plannedDurationMinutes: 0,
+          confirmationStatus: 'final-confirmed',
+          confirmed: true,
+          hasException: false,
+        }],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderOperations>)
+
+    vi.mocked(useOrderConfirmations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderConfirmations>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalled()
+    })
+    const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+    expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+    expect(payload.evidenceCompleteness.status).toBe('partial')
+    expect(payload.evidenceCompleteness.sections.confirmations).toBe('partial')
+    expect(payload.counts.goodsMovements).toBe(0)
+    expect(payload.counts.componentMaterials).toBe(0)
+    expect(payload.counts.producedBatches).toBe(0)
+    expect(payload.warnings).toContain('No-record sections must not be interpreted as complete absence until source coverage is validated.')
+  })
+
+  it('derives net component consumption from 261 and 262 movement rows', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [
+          {
+            movementId: 'GM-261',
+            movementType: '261',
+            direction: 'input',
+            materialId: '000000000070373871',
+            materialDescription: 'Ingredient A',
+            batchId: 'BATCH-A',
+            quantity: 5000,
+            uom: 'G',
+            postedAt: '2026-05-18T09:00:00.000Z',
+          },
+          {
+            movementId: 'GM-262',
+            movementType: '262',
+            direction: 'input',
+            materialId: '000000000070373871',
+            materialDescription: 'Ingredient A',
+            batchId: 'BATCH-A',
+            quantity: 1000,
+            uom: 'G',
+            postedAt: '2026-05-18T10:00:00.000Z',
+          },
+          {
+            movementId: 'GM-EA',
+            movementType: '261',
+            direction: 'input',
+            materialId: '000000000000PACK',
+            materialDescription: 'Packaging',
+            quantity: 3,
+            uom: 'EA',
+            postedAt: '2026-05-18T11:00:00.000Z',
+          },
+        ],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText('000000000070373871').length).toBeGreaterThan(0)
+    expect(screen.getByText('4 KG')).toBeInTheDocument()
+  })
+
+  it('derives produced output evidence from 101, 102, and 531 movement rows', async () => {
+    vi.mocked(useProcessOrderHeader).mockReturnValue({
+      data: {
+        ok: true,
+        data: {
+          processOrderId: '7006965038',
+          orderType: 'process-order',
+          materialId: '70373871',
+          materialDescription: 'MIXED BERRY FLV LQD',
+          plantId: 'C113',
+          confirmedQuantity: 0,
+          plannedQuantity: 0,
+          uom: '',
+          plannedStart: null,
+          plannedFinish: null,
+          orderStatus: 'closed',
+        },
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+    vi.mocked(useOrderGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [
+          {
+            movementId: 'GM-101',
+            movementType: '101',
+            direction: 'output',
+            materialId: '000000000070373871',
+            materialDescription: 'Finished Good',
+            batchId: 'FG-BATCH',
+            quantity: 1200,
+            uom: 'KG',
+            postedAt: '2026-05-18T09:00:00.000Z',
+            referenceDocument: '4900000011',
+          },
+          {
+            movementId: 'GM-102',
+            movementType: '102',
+            direction: 'output',
+            materialId: '000000000070373871',
+            materialDescription: 'Finished Good',
+            batchId: 'FG-BATCH',
+            quantity: 200,
+            uom: 'KG',
+            postedAt: '2026-05-18T10:00:00.000Z',
+            referenceDocument: '4900000012',
+          },
+          {
+            movementId: 'GM-531',
+            movementType: '531',
+            direction: 'output',
+            materialId: '000000000070373872',
+            materialDescription: 'By-product',
+            batchId: 'BY-BATCH',
+            quantity: 500,
+            uom: 'G',
+            postedAt: '2026-05-18T11:00:00.000Z',
+            referenceDocument: '4900000013',
+          },
+        ],
+        source: 'databricks-api',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+    render(
+      <Wrapper>
+        <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
+    expect(screen.getByText('1,000 KG')).toBeInTheDocument()
+    expect(screen.getByText('0.5 KG')).toBeInTheDocument()
+    expect(screen.getByText('101, 102')).toBeInTheDocument()
+    expect(screen.getAllByText('531').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('4900000011')).toBeInTheDocument()
   })
 
   it('disables planned/diagnostic filters and renders wired labels', () => {

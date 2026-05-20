@@ -1,14 +1,48 @@
-import type { ProcessOrderConfirmation, ProcessOrderGoodsMovement, ProcessOrderOperation } from '@connectio/data-contracts'
+import type {
+  ProcessOrderConfirmation,
+  ProcessOrderGoodsMovement,
+  ProcessOrderHeader,
+  ProcessOrderOperation,
+} from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewLegacyApiAdapter } from './process-order-review-legacy-api-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
 
+function missingProcessOrderId<T>(): AdapterResult<T> {
+  return {
+    ok: false,
+    error: {
+      code: 'invalid-data',
+      message: 'processOrderId is required for the POH databricks-api adapter.',
+      retryable: false,
+    },
+    displayState: 'not-applicable',
+    source: 'databricks-api',
+  }
+}
+
 /**
  * Tier: databricks-api
- * Native Databricks methods verified (2026-05-17): getOrderOperations, getOrderConfirmations, getOrderGoodsMovements
- * Inherits getProcessOrderHeader from LegacyApiAdapter (which proxies to V1).
+ * Native Databricks methods verified (2026-05-17): getProcessOrderHeader, getOrderOperations,
+ * getOrderConfirmations, getOrderGoodsMovements.
+ * Uses the same frontend proxy URL for the header route as legacy mode; BACKEND_ADAPTER_MODE selects native execution.
  */
 export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLegacyApiAdapter {
+  /**
+   * Tier: databricks-api — same route as legacy, but source attribution must
+   * remain databricks-api because BACKEND_ADAPTER_MODE selects native execution.
+   */
+  override async getProcessOrderHeader(
+    request: ProcessOrderReviewAdapterRequest,
+  ): Promise<AdapterResult<ProcessOrderHeader>> {
+    if (!request.processOrderId) {
+      return missingProcessOrderId()
+    }
+
+    const result = await super.getProcessOrderHeader(request)
+    return { ...result, source: 'databricks-api' }
+  }
+
   /**
    * Tier: databricks-api — wired to native Databricks GET /api/por/order-operations.
    * No V1 endpoint exists for this data. Browser-verified 2026-05-17 (PO 7006965038, 11 ops).
@@ -17,7 +51,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     request: ProcessOrderReviewAdapterRequest,
   ): Promise<AdapterResult<ProcessOrderOperation[]>> {
     if (!request.processOrderId) {
-      return super.getOrderOperations(request)
+      return missingProcessOrderId()
     }
 
     try {
@@ -89,7 +123,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     request: ProcessOrderReviewAdapterRequest,
   ): Promise<AdapterResult<ProcessOrderConfirmation[]>> {
     if (!request.processOrderId) {
-      return super.getOrderConfirmations(request)
+      return missingProcessOrderId()
     }
 
     try {
@@ -159,7 +193,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     request: ProcessOrderReviewAdapterRequest,
   ): Promise<AdapterResult<ProcessOrderGoodsMovement[]>> {
     if (!request.processOrderId) {
-      return super.getOrderGoodsMovements(request)
+      return missingProcessOrderId()
     }
 
     try {
