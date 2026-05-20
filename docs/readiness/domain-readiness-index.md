@@ -1,6 +1,6 @@
 # Cross-Domain Readiness Index & Navigation Layer
 
-*   [UX Truthfulness Checklist](./docs/readiness/ux-truthfulness-checklist.md)
+*   [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
 
 **Date:** 2026-05-19  
 **Status:** Living Document  

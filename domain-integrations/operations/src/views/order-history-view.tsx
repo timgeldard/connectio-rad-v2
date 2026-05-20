@@ -7,11 +7,6 @@ import {
   useOrderGoodsMovements,
 } from '../adapters/process-order-review-queries.js'
 import type { ProcessOrderReviewAdapterRequest } from '../adapters/process-order-review-adapter.js'
-import type {
-  ProcessOrderOperation,
-  ProcessOrderConfirmation,
-  ProcessOrderGoodsMovement,
-} from '@connectio/data-contracts'
 import {
   VerificationStatusBanner,
   SourceConfidenceStrip,
@@ -21,6 +16,16 @@ import {
   type EvidenceStatus,
 } from '@connectio/design-system'
 import type { UATEvidencePayload } from '@connectio/data-contracts'
+
+const safeFormatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '-'
+  try {
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? '-' : d.toLocaleString()
+  } catch {
+    return '-'
+  }
+}
 
 interface QueryLike {
   data?: { ok: boolean; source?: string; error?: { code: string; message: string } };
@@ -35,8 +40,9 @@ function getEvidenceStatus(
 ): EvidenceStatus {
   if (query.isLoading) return 'pending-validation'
   if (query.isError || (query.data && !query.data.ok)) {
-    if (query.data?.error?.code === '403') return 'permission-denied'
-    if (query.data?.error?.code === '504') return 'timed-out'
+    const errorCode = String(query.data?.error?.code ?? query.error?.message ?? '')
+    if (errorCode.includes('403')) return 'permission-denied'
+    if (errorCode.includes('504')) return 'timed-out'
     return 'error'
   }
   if (!query.data) return 'unavailable'
@@ -45,6 +51,18 @@ function getEvidenceStatus(
   const source = query.data.source
   if (source === 'mock') return 'mock-only'
   
+  return 'loaded'
+}
+
+function getCombinedEvidenceStatus(statuses: EvidenceStatus[]): EvidenceStatus {
+  if (statuses.includes('pending-validation')) return 'pending-validation'
+  if (statuses.includes('error')) return 'error'
+  if (statuses.includes('permission-denied')) return 'permission-denied'
+  if (statuses.includes('timed-out')) return 'timed-out'
+  if (statuses.includes('unavailable')) return 'unavailable'
+  if (statuses.includes('mock-only')) return 'mock-only'
+  if (statuses.includes('no-records')) return 'no-records'
+  if (statuses.includes('partial')) return 'partial'
   return 'loaded'
 }
 
@@ -249,53 +267,6 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     })
   }
 
-  const handleCopyRequestDetails = () => {
-    const overallSource: ExtendedSourceMode = (headerQuery.data?.source as ExtendedSourceMode) || 'unknown'
-    const overallStatus: EvidenceStatus = headerQuery.data?.ok ? 'loaded' : 'partial'
-
-    const payload: UATEvidencePayload = {
-      domain: 'operations',
-      workspace: 'Process Order History',
-      capturedAt: new Date().toISOString(),
-      adapterMode: import.meta.env.VITE_ADAPTER_MODE ?? 'mock',
-      inputs: {
-        processOrderId: form.processOrderId,
-        plantId: form.plantId,
-      },
-      sourceSummary: {
-        overall: overallSource,
-        sections: {
-          header: headerQuery.data?.source || 'unknown',
-          operations: operationsQuery.data?.source || 'unknown',
-          confirmations: confirmationsQuery.data?.source || 'unknown',
-          movements: goodsMovementsQuery.data?.source || 'unknown',
-        },
-      },
-      evidenceCompleteness: {
-        status: overallStatus,
-        sections: {
-          header: headerStatus,
-          operations: operationsStatus,
-          confirmations: confirmationsStatus,
-          movements: goodsMovementsStatus,
-        },
-      },
-      counts: {
-        operations: operations.length,
-        confirmations: confirmations.length,
-        movements: goodsMovements.length,
-      },
-      warnings: exceptions,
-      uatNotes: [
-        'No live validation claimed.',
-        'Unavailable evidence must not be interpreted as zero exposure or no risk.',
-      ],
-    }
-
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-    setIsCopied(true)
-    setTimeout(() => setIsCopied(false), 2000)
-  }
 
   // 3. Derived operational metrics & summary stats
   const headerData = headerQuery.data?.ok ? headerQuery.data.data : null
@@ -393,8 +364,8 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     confirmations.forEach(conf => {
       events.push({
         id: `conf-${conf.confirmationId}`,
-        date: new Date(conf.confirmedAt),
-        dateString: conf.confirmedAt,
+        date: conf.confirmedAt ? new Date(conf.confirmedAt) : null,
+        dateString: conf.confirmedAt || '',
         type: 'confirmation',
         title: `Yield Confirmed: ${conf.confirmationId}`,
         description: `Confirmed ${conf.confirmedYield.toLocaleString()} ${conf.uom} by ${conf.confirmedBy || 'System'}.${conf.scrapQuantity ? ` (Scrap: ${conf.scrapQuantity})` : ''}`,
@@ -406,8 +377,8 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     goodsMovements.forEach(mov => {
       events.push({
         id: `mov-${mov.movementId}`,
-        date: new Date(mov.postedAt),
-        dateString: mov.postedAt,
+        date: mov.postedAt ? new Date(mov.postedAt) : null,
+        dateString: mov.postedAt || '',
         type: 'movement',
         title: `Goods Movement [${mov.movementType}]`,
         description: `${mov.direction.toUpperCase()}: ${mov.quantity.toLocaleString()} ${mov.uom} of material ${mov.materialId}${mov.batchId ? ` (Batch: ${mov.batchId})` : ''} posted at ${mov.storageLocation || 's-loc'}.`,
@@ -461,6 +432,64 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
 
     return list
   }, [queryParams, operations, confirmations, goodsMovements, metrics, sortedTimeline, operationsQuery.data, confirmationsQuery.data, goodsMovementsQuery.data])
+
+  const handleCopyRequestDetails = () => {
+    const overallSource: ExtendedSourceMode = (headerQuery.data?.source as ExtendedSourceMode) || 'unknown'
+    const overallStatus: EvidenceStatus = getCombinedEvidenceStatus([
+      headerStatus,
+      operationsStatus,
+      confirmationsStatus,
+      goodsMovementsStatus,
+    ])
+
+    const mapEvidenceStatusToUATStatus = (s: EvidenceStatus): 'loaded' | 'partial' | 'mock-only' | 'unavailable' | 'pending-validation' | 'error' | 'permission-denied' | 'timed-out' => {
+      if (s === 'no-records') return 'loaded'
+      return s
+    }
+
+    const payload: UATEvidencePayload = {
+      domain: 'operations',
+      workspace: 'Process Order History',
+      capturedAt: new Date().toISOString(),
+      adapterMode: import.meta.env.VITE_ADAPTER_MODE ?? 'mock',
+      inputs: {
+        processOrderId: form.processOrderId,
+        plantId: form.plantId,
+      },
+      sourceSummary: {
+        overall: overallSource,
+        sections: {
+          header: headerQuery.data?.source || 'unknown',
+          operations: operationsQuery.data?.source || 'unknown',
+          confirmations: confirmationsQuery.data?.source || 'unknown',
+          movements: goodsMovementsQuery.data?.source || 'unknown',
+        },
+      },
+      evidenceCompleteness: {
+        status: mapEvidenceStatusToUATStatus(overallStatus),
+        sections: {
+          header: headerStatus,
+          operations: operationsStatus,
+          confirmations: confirmationsStatus,
+          movements: goodsMovementsStatus,
+        },
+      },
+      counts: {
+        operations: operations.length,
+        confirmations: confirmations.length,
+        movements: goodsMovements.length,
+      },
+      warnings: exceptions,
+      uatNotes: [
+        'No live validation claimed.',
+        'Unavailable evidence must not be interpreted as zero exposure or no risk.',
+      ],
+    }
+
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+    setIsCopied(true)
+    setTimeout(() => setIsCopied(false), 2000)
+  }
 
   // Styles
   const cardStyle: CSSProperties = {
@@ -568,9 +597,8 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
       {queryParams && (
         <SourceConfidenceStrip
           mode={(headerQuery.data?.source as ExtendedSourceMode) || (isMockFixtureSelected ? 'mock' : 'unknown')}
-          status={headerQuery.data?.ok ? 'loaded' : 'partial'}
-          fetchedAt={headerQuery.data?.fetchedAt}
-          dataAsOf={headerData?.dataAsOf}
+          status={headerStatus}
+          fetchedAt={headerQuery.data?.ok ? headerQuery.data.fetchedAt : undefined}
           style={{ marginBottom: '16px' }}
         />
       )}
@@ -952,7 +980,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <div>
                   <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>Planned Schedule</div>
                   <div style={{ fontSize: 12, marginTop: 2 }}>
-                    {new Date(headerData.plannedStart).toLocaleString()} - {new Date(headerData.plannedFinish).toLocaleString()}
+                    {safeFormatDate(headerData.plannedStart)} - {safeFormatDate(headerData.plannedFinish)}
                   </div>
                 </div>
                 {headerData.actualStart && (
@@ -1098,7 +1126,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                         <td style={tableCellStyle}>{conf.confirmationId}</td>
                         <td style={tableCellStyle}>{conf.operationId}</td>
                         <td style={tableCellStyle}>{conf.confirmedYield.toLocaleString()} {conf.uom}</td>
-                        <td style={tableCellStyle}>{new Date(conf.confirmedAt).toLocaleString()}</td>
+                        <td style={tableCellStyle}>{safeFormatDate(conf.confirmedAt)}</td>
                         <td style={tableCellStyle}>
                           {conf.setupDurationMinutes != null ? `${conf.setupDurationMinutes}m / ` : '- / '}
                           {conf.machineDurationMinutes != null ? `${conf.machineDurationMinutes}m / ` : '- / '}
@@ -1189,7 +1217,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                           )}
                         </td>
                         <td style={tableCellStyle}>{mov.quantity.toLocaleString()} {mov.uom}</td>
-                        <td style={tableCellStyle}>{new Date(mov.postedAt).toLocaleString()}</td>
+                        <td style={tableCellStyle}>{safeFormatDate(mov.postedAt)}</td>
                         <td style={tableCellStyle}>{mov.storageLocation || '-'}</td>
                       </tr>
                     ))}
@@ -1380,7 +1408,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     <div>
                       <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>Section Source Statuses</div>
                       <div style={{ fontSize: 11, color: '#E5E7EB', marginTop: 2 }}>
-                        Header: {headerStatus.label} | Ops: {operationsStatus.label} | Conf: {confirmationsStatus.label} | Movements: {goodsMovementsStatus.label}
+                        Header: {headerStatus} | Ops: {operationsStatus} | Conf: {confirmationsStatus} | Movements: {goodsMovementsStatus}
                       </div>
                     </div>
                     <div>

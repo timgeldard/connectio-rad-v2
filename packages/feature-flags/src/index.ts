@@ -14,14 +14,14 @@ function envBool(envVar: string, defaultVal: boolean): boolean {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     const val = import.meta.env[envVar]
     if (val !== undefined) {
-      return val === 'true' || val === true
+      return val === 'true' || (val as unknown) === true
     }
   }
   // Fallback to process.env for Node/testing environment compatibility
   if (typeof process !== 'undefined' && process.env) {
     const val = process.env[envVar]
     if (val !== undefined) {
-      return val === 'true' || val === true
+      return val === 'true' || (val as unknown) === true
     }
   }
   return defaultVal

@@ -303,7 +303,7 @@ export function ActionButton({ label, onClick, disabled, variant }: ActionButton
 // ---------------------------------------------------------------------------
 
 /** Which action sheet (if any) is currently open. */
-type ActiveAction = 'release' | 'hold' | 'retest' | 'escalate-deviation' | 'open-trace' | 'copy-success' | null
+type ActiveAction = 'release' | 'hold' | 'retest' | 'escalate-deviation' | 'open-trace' | 'copy-success' | 'copy-failed' | null
 
 /** Props for ReleaseActionsPanel. */
 export interface ReleaseActionsPanelProps {
@@ -411,7 +411,7 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
       <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
         <ActionButton 
-          label={activeAction === 'copy-success' ? 'Copied Evidence!' : 'Copy Quality UAT Evidence'} 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : activeAction === 'copy-failed' ? 'Copy Failed!' : 'Copy Quality UAT Evidence'} 
           onClick={() => {
             const payload: UATEvidencePayload = {
               domain: 'quality',
@@ -419,7 +419,7 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
               capturedAt: new Date().toISOString(),
               adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
               inputs: {
-                batchId: context?.batchId
+                batchId: context?.batchId ?? null
               },
               sourceSummary: {
                 overall: 'mock',
@@ -431,12 +431,12 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
                 }
               },
               evidenceCompleteness: {
-                status: 'loaded',
+                status: 'mock-only',
                 sections: {
-                  summary: 'loaded',
-                  results: 'loaded',
-                  coa: 'loaded',
-                  deviations: 'loaded'
+                  summary: 'mock-only',
+                  results: 'mock-only',
+                  coa: 'mock-only',
+                  deviations: 'mock-only'
                 }
               },
               warnings: [
@@ -448,9 +448,20 @@ export function ReleaseActionsPanel({ context }: ReleaseActionsPanelProps) {
                 'Unavailable evidence must not be interpreted as zero exposure or no risk.'
               ]
             }
-            navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-            setActiveAction('copy-success')
-            setTimeout(() => setActiveAction(null), 2000)
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+                .then(() => {
+                  setActiveAction('copy-success')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+                .catch(() => {
+                  setActiveAction('copy-failed')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+            } else {
+              setActiveAction('copy-failed')
+              setTimeout(() => setActiveAction(null), 2000)
+            }
           }} 
           disabled={disabled} 
           variant="secondary" 

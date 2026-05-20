@@ -19,7 +19,6 @@ export function SourceConfidenceStrip({
   mode,
   status,
   fetchedAt,
-  dataAsOf,
   className,
   style,
 }: SourceConfidenceStripProps) {
@@ -54,7 +53,7 @@ export function SourceConfidenceStrip({
 
       <FreshnessIndicator
         lastRefreshedAt={fetchedAt || null}
-        dataAsOf={dataAsOf || null}
+        isStale={false}
       />
     </div>
   )

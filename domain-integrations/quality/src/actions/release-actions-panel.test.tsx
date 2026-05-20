@@ -5,13 +5,18 @@ import { ReleaseActionsPanel } from './release-actions-panel.js'
 import type { BatchReleaseContext } from '@connectio/data-contracts'
 
 const mockContext: BatchReleaseContext = {
+  releaseCaseId: 'CASE123',
   batchId: 'BATCH123',
   materialId: 'MAT123',
+  materialDescription: 'Irish Cheddar Block',
   plantId: 'IE10',
-  status: 'pending',
-  usageDecision: null,
-  releasedAt: null,
-  releasedBy: null,
+  plantName: 'Dublin Kerry',
+  status: 'awaiting-review',
+  priority: 'routine',
+  requestedBy: 'user@kerry.com',
+  requestedAt: '2026-05-20T00:00:00Z',
+  lastUpdatedAt: '2026-05-20T00:00:00Z',
+  releaseType: 'standard',
 }
 
 describe('ReleaseActionsPanel Write-Back Gating', () => {

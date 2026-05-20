@@ -6,13 +6,13 @@ import type { Warehouse360OverviewContext } from '@connectio/data-contracts'
 
 const mockContext: Warehouse360OverviewContext = {
   warehouseId: 'WH123',
+  warehouseName: 'Dublin Logistics',
   plantId: 'IE10',
-  summary: {
-    totalItems: 100,
-    openHoldsCount: 5,
-    criticalShortfallsCount: 2,
-    exceptionCount: 1,
-  },
+  totalStockLines: 100,
+  holdPercent: 5.0,
+  openTransfers: 2,
+  capacityUtilizationPercent: 78.5,
+  lastUpdatedAt: '2026-05-20T00:00:00.000Z',
 }
 
 describe('Warehouse360ActionsPanel Posting Actions Gating', () => {

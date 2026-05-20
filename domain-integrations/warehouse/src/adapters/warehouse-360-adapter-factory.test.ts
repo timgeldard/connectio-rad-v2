@@ -19,7 +19,7 @@ describe('Warehouse360Adapter Factory Gating', () => {
     })
 
     const adapter = createWarehouse360Adapter()
-    const result = await adapter.getWarehouseSummary({ plantId: 'IE10', warehouseId: 'W123' })
+    const result = await adapter.getWarehouse360Summary({ plantId: 'IE10', warehouseId: 'W123' })
 
     expect(result.ok).toBe(false)
     if (result.ok) return
@@ -35,7 +35,7 @@ describe('Warehouse360Adapter Factory Gating', () => {
     })
 
     const adapter = createWarehouse360Adapter()
-    const result = await adapter.getWarehouseSummary({ plantId: 'IE10', warehouseId: 'W123' })
+    const result = await adapter.getWarehouse360Summary({ plantId: 'IE10', warehouseId: 'W123' })
 
     expect(result.ok).toBe(false)
     if (result.ok) return

@@ -11,6 +11,7 @@ const SOURCE_BADGE_STYLES: Record<AdapterSource, { background: string; color: st
   mock: { background: '#e5e7eb', color: '#6b7280', label: 'Mock' },
   'legacy-api': { background: '#fef3c7', color: '#92400e', label: 'Legacy API' },
   'databricks-api': { background: '#dcfce7', color: '#166534', label: 'Databricks' },
+  mixed: { background: '#dbeafe', color: '#1e40af', label: 'Mixed' },
 }
 
 /** Props for EvidencePanelHeader. */

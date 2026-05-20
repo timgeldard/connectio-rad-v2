@@ -2,6 +2,7 @@ import type {
   ProcessOrderReleaseEvidence,
   OperationsEvidenceAdapterRequest,
 } from '@connectio/data-contracts'
+export type { ProcessOrderReleaseEvidence, OperationsEvidenceAdapterRequest }
 import type { AdapterError, AdapterResult } from '@connectio/source-adapters'
 import { mockProcessOrderEvidence } from './operations-evidence-mock-data.js'
 

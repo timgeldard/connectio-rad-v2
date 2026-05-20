@@ -21,6 +21,13 @@ const registration: EvidencePanelRegistration = {
   requiredPermissions: [{ permissionId: 'quality.read', displayName: 'Quality Read' }],
 }
 
+const validatedSource = (source: unknown): ExtendedSourceMode => {
+  if (source === 'mock' || source === 'legacy-api' || source === 'databricks-api') {
+    return source
+  }
+  return 'unknown'
+}
+
 /** Props for ReleaseSummaryPanel. */
 export interface ReleaseSummaryPanelProps {
   /** Adapter request context providing releaseCaseId and batchId. */
@@ -66,9 +73,9 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
           <SourceConfidenceStrip
-            mode={(result?.source as ExtendedSourceMode) || 'mock'}
+            mode={validatedSource(result?.source)}
             status="loaded"
-            fetchedAt={result?.fetchedAt}
+            fetchedAt={result?.ok ? result.fetchedAt : undefined}
             style={{ marginBottom: '4px', background: 'var(--shell-surface)', border: 'none', padding: '0 0 8px 0' }}
           />
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>

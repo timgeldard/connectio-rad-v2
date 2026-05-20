@@ -1,7 +1,6 @@
-import type { AdapterSource } from '@connectio/source-adapters'
 import { StatusBadge } from './status-badge.js'
 
-export type ExtendedSourceMode = AdapterSource | 'mixed' | 'unavailable' | 'unknown'
+export type ExtendedSourceMode = 'mock' | 'legacy-api' | 'databricks-api' | 'mixed' | 'unavailable' | 'unknown'
 
 export interface SourceModeBadgeProps {
   mode: ExtendedSourceMode
@@ -43,11 +42,12 @@ export function SourceModeBadge({ mode, className }: SourceModeBadgeProps) {
   const { label, variant } = config[mode] || config.unknown
 
   return (
-    <StatusBadge
-      label={label}
-      variant={variant}
-      className={className}
-      title={mode === 'mock' ? 'Mock/sandbox evidence — not live source data.' : undefined}
-    />
+    <span title={mode === 'mock' ? 'Mock/sandbox evidence — not live source data.' : undefined}>
+      <StatusBadge
+        label={label}
+        variant={variant}
+        className={className}
+      />
+    </span>
   )
 }

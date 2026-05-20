@@ -20,7 +20,7 @@ describe('Trace2Adapter Factory Gating', () => {
     })
 
     const adapter = createTrace2Adapter()
-    const result = await adapter.getBatchHeader({ batchId: 'B123', materialId: 'M123', plantId: 'IE10' })
+    const result = await adapter.getBatchHeaderSummary({ batchId: 'B123', materialId: 'M123', plantId: 'IE10' })
 
     expect(result.ok).toBe(false)
     if (result.ok) return

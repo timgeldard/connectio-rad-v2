@@ -81,7 +81,7 @@ describe('OrderHistoryView', () => {
       </Wrapper>
     )
 
-    const submitBtn = screen.getAllByRole('button', { name: /Run \/ Refresh Order History/i })[0]
+    const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {

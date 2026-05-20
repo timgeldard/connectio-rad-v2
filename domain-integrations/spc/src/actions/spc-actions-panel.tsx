@@ -216,7 +216,7 @@ function LinkAction({ label, href, onClose }: { label: string; href: string; onC
 // Actions Panel
 // ---------------------------------------------------------------------------
 
-type ActiveAction = 'acknowledge-signal' | 'open-batch-release' | 'open-trace' | 'request-investigation' | null
+type ActiveAction = 'acknowledge-signal' | 'open-batch-release' | 'open-trace' | 'request-investigation' | 'copy-success' | 'copy-failed' | null
 
 export interface SPCActionsPanelProps {
   readonly context: SPCMonitoringContext | null
@@ -238,7 +238,7 @@ export function SPCActionsPanel({ context }: SPCActionsPanelProps) {
       <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
         <ActionButton 
-          label={activeAction === 'copy-success' ? 'Copied Evidence!' : 'Copy SPC UAT Evidence'} 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : activeAction === 'copy-failed' ? 'Copy Failed!' : 'Copy SPC UAT Evidence'} 
           onClick={() => {
             const payload: UATEvidencePayload = {
               domain: 'spc',
@@ -246,10 +246,10 @@ export function SPCActionsPanel({ context }: SPCActionsPanelProps) {
               capturedAt: new Date().toISOString(),
               adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
               inputs: {
-                plantId: context?.plantId,
-                materialId: context?.materialId,
-                batchId: context?.batchId,
-                workCentreId: context?.workCentreId
+                plantId: context?.plantId ?? null,
+                materialId: context?.materialId ?? null,
+                batchId: context?.batchId ?? null,
+                workCentreId: context?.workCentreId ?? null
               },
               sourceSummary: {
                 overall: 'mock', // SPC is currently mock-only
@@ -278,9 +278,20 @@ export function SPCActionsPanel({ context }: SPCActionsPanelProps) {
                 'Unavailable evidence must not be interpreted as zero exposure or no risk.'
               ]
             }
-            navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-            setActiveAction('copy-success' as any)
-            setTimeout(() => setActiveAction(null), 2000)
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+                .then(() => {
+                  setActiveAction('copy-success')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+                .catch(() => {
+                  setActiveAction('copy-failed')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+            } else {
+              setActiveAction('copy-failed')
+              setTimeout(() => setActiveAction(null), 2000)
+            }
           }} 
           disabled={disabled} 
           variant="secondary" 

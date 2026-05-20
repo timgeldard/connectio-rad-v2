@@ -79,6 +79,7 @@ function BatchHeaderErrorBanner({ code, message }: Pick<AdapterError, 'code' | '
 export function OverviewView({ request: initialRequest }: OverviewViewProps) {
   const [request, setRequest] = useState<Trace2AdapterRequest>(initialRequest)
   const [sim, setSim] = useState(false)
+  const adapterMode = import.meta.env.VITE_ADAPTER_MODE ?? 'mock'
 
   // Fetch all required data sectors for confidence rating and cockpit header
   const { data: batchHeaderResult } = useBatchHeaderSummary(request)
@@ -116,7 +117,7 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
   if (isInitialState) {
     return (
       <TraceabilityInitialState 
-        adapterMode={import.meta.env.VITE_ADAPTER_MODE ?? 'mock'}
+        adapterMode={adapterMode}
         onLoadCandidate={() => {
            setRequest(prev => ({
              ...prev,
@@ -164,8 +165,8 @@ export function OverviewView({ request: initialRequest }: OverviewViewProps) {
           confidence={confidence}
           sim={sim}
           onSim={setSim}
-          adapterMode={import.meta.env.VITE_ADAPTER_MODE ?? 'mock'}
-          fetchedAt={batchHeaderResult?.fetchedAt}
+          adapterMode={adapterMode}
+          fetchedAt={batchHeaderResult?.ok ? batchHeaderResult.fetchedAt : undefined}
         />
       </div>
 

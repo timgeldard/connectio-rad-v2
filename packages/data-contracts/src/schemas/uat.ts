@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
+type Literal = z.infer<typeof literalSchema>
+type JsonValue = Literal | { [key: string]: JsonValue } | JsonValue[]
+const jsonSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)])
+)
+
 /**
  * Standardized structure for UAT evidence capture.
  * Used for "Copy Evidence" actions across all domains.
@@ -8,8 +15,8 @@ export const UATEvidencePayloadSchema = z.object({
   domain: z.string(),
   workspace: z.string(),
   capturedAt: z.string().datetime(),
-  adapterMode: z.string(),
-  inputs: z.record(z.any()),
+  adapterMode: z.enum(['mock', 'legacy-api', 'databricks-api']),
+  inputs: z.record(jsonSchema),
   sourceSummary: z.object({
     overall: z.enum(['mock', 'legacy-api', 'databricks-api', 'mixed', 'unavailable', 'unknown']),
     sections: z.record(z.string()).optional(),

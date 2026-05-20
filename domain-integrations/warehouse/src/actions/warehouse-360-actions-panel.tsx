@@ -177,7 +177,7 @@ function RequestReplenishmentAction({ context, onClose }: { context: Warehouse36
   )
 }
 
-type ActiveAction = 'raise-hold-inquiry' | 'request-replenishment' | 'open-batch-release' | 'open-staging' | 'open-trace' | 'copy-success' | null
+type ActiveAction = 'raise-hold-inquiry' | 'request-replenishment' | 'open-batch-release' | 'open-staging' | 'open-trace' | 'copy-success' | 'copy-failed' | null
 
 export interface Warehouse360ActionsPanelProps {
   readonly context: Warehouse360OverviewContext | null
@@ -218,32 +218,36 @@ export function Warehouse360ActionsPanel({ context }: Warehouse360ActionsPanelPr
       <div style={{ marginTop: 16, borderTop: '1px solid var(--shell-line)', paddingTop: 16 }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>UAT Readiness</h3>
         <ActionButton 
-          label={activeAction === 'copy-success' ? 'Copied Evidence!' : 'Copy Warehouse UAT Evidence'} 
+          label={activeAction === 'copy-success' ? 'Copied Evidence!' : activeAction === 'copy-failed' ? 'Copy Failed!' : 'Copy Warehouse UAT Evidence'} 
           onClick={() => {
+            const mode = (import.meta.env.VITE_ADAPTER_MODE as 'mock' | 'legacy-api' | 'databricks-api') || 'mock'
+            const overallSource = mode
+            const overallStatus = mode === 'mock' ? 'mock-only' : 'loaded'
+
             const payload: UATEvidencePayload = {
               domain: 'warehouse',
               workspace: 'Warehouse 360',
               capturedAt: new Date().toISOString(),
-              adapterMode: import.meta.env.VITE_ADAPTER_MODE || 'mock',
+              adapterMode: mode,
               inputs: {
-                warehouseId: context?.warehouseId
+                warehouseId: context?.warehouseId ?? null
               },
               sourceSummary: {
-                overall: 'mock',
+                overall: overallSource,
                 sections: {
-                  summary: 'mock',
-                  stock: 'mock',
-                  holds: 'mock',
-                  exceptions: 'mock'
+                  summary: overallSource,
+                  stock: overallSource,
+                  holds: overallSource,
+                  exceptions: overallSource
                 }
               },
               evidenceCompleteness: {
-                status: 'loaded',
+                status: overallStatus,
                 sections: {
-                  summary: 'loaded',
-                  stock: 'loaded',
-                  holds: 'loaded',
-                  exceptions: 'loaded'
+                  summary: overallStatus,
+                  stock: overallStatus,
+                  holds: overallStatus,
+                  exceptions: overallStatus
                 }
               },
               warnings: [
@@ -255,9 +259,20 @@ export function Warehouse360ActionsPanel({ context }: Warehouse360ActionsPanelPr
                 'Unavailable evidence must not be interpreted as zero exposure or no risk.'
               ]
             }
-            navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-            setActiveAction('copy-success')
-            setTimeout(() => setActiveAction(null), 2000)
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+                .then(() => {
+                  setActiveAction('copy-success')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+                .catch(() => {
+                  setActiveAction('copy-failed')
+                  setTimeout(() => setActiveAction(null), 2000)
+                })
+            } else {
+              setActiveAction('copy-failed')
+              setTimeout(() => setActiveAction(null), 2000)
+            }
           }} 
           disabled={disabled} 
           variant="secondary" 

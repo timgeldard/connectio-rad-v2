@@ -7,7 +7,7 @@ import type {
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 
 /** Which data source backed this panel's last fetch. */
-export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api'
+export type AdapterSource = 'mock' | 'legacy-api' | 'databricks-api' | 'mixed'
 
 /**
  * Props shared by all evidence panel components.

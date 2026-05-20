@@ -5,7 +5,7 @@ interface ImportMetaEnv {
    *  'mock'        — return fixture data (default, no backend required)
    *  'legacy-api'  — call V1 APIs via V2 proxy routes
    */
-  readonly VITE_ADAPTER_MODE?: 'mock' | 'legacy-api'
+  readonly VITE_ADAPTER_MODE?: 'mock' | 'legacy-api' | 'databricks-api'
 
   /** Base URL for the V2 API proxy (e.g. http://localhost:8000).
    *  Required when VITE_ADAPTER_MODE=legacy-api.

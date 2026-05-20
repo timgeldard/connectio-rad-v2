@@ -3,6 +3,7 @@ import type {
   ReleaseHoldImpact,
   QualityBlockersAdapterRequest,
 } from '@connectio/data-contracts'
+export type { QualityBlocker, ReleaseHoldImpact, QualityBlockersAdapterRequest }
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import { mockQualityBlockers, mockReleaseHoldImpacts } from './quality-blockers-mock-data.js'
 

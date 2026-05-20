@@ -11,6 +11,7 @@ import { ControlChartPanel } from '../panels/control-chart-panel.js'
 import { SPCEvidenceSummaryPanel } from '../panels/spc-evidence-summary-panel.js'
 import { useMonitoredCharacteristics, useSPCSummary, useActiveSPCSignals } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const HEADER_GRID: CSSProperties = {
   display: 'grid',
@@ -29,11 +30,11 @@ export interface ChartOverviewViewProps {
   readonly request: SPCMonitoringAdapterRequest
 }
 
-function resolveEvidenceStatus(result: any): EvidenceStatus {
+function resolveEvidenceStatus(result: AdapterResult<unknown> | undefined): EvidenceStatus {
   if (!result) return 'pending-validation'
   if (!result.ok) {
-    if (result.error?.code === '403') return 'permission-denied'
-    if (result.error?.code === '504') return 'timed-out'
+    if (result.error?.code === 'unauthorized') return 'permission-denied'
+    if (result.error?.code === 'timeout') return 'timed-out'
     return 'error'
   }
   
@@ -76,7 +77,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
       <SourceConfidenceStrip
         mode={(summaryResult?.source as ExtendedSourceMode) || 'mock'}
         status={summaryResult?.ok ? 'loaded' : 'partial'}
-        fetchedAt={summaryResult?.fetchedAt}
+        fetchedAt={summaryResult?.ok ? summaryResult.fetchedAt : undefined}
         style={{ marginBottom: '16px' }}
       />
 

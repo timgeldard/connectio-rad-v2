@@ -6,6 +6,19 @@ import type {
 import { StatusBadge, Button, SourceConfidenceStrip, type EvidenceStatus, type ExtendedSourceMode } from '@connectio/design-system'
 import { EvidenceConfidenceBadge, type ConfidenceResult } from './EvidenceConfidence.js'
 
+const mapConfidenceToStatus = (grade: string): EvidenceStatus => {
+  switch (grade) {
+    case 'COMPLETE':
+      return 'loaded'
+    case 'PARTIAL':
+      return 'partial'
+    case 'MISSING':
+      return 'unavailable'
+    default:
+      return 'unavailable'
+  }
+}
+
 export interface InvestigationSummaryProps {
   readonly batchHeader: BatchHeaderSummary | null
   readonly customerExposure: CustomerExposureSummary | null
@@ -13,7 +26,7 @@ export interface InvestigationSummaryProps {
   readonly confidence: ConfidenceResult
   readonly sim: boolean
   readonly onSim: (sim: boolean) => void
-  readonly adapterMode: ExtendedSourceMode
+  readonly adapterMode?: ExtendedSourceMode
   readonly fetchedAt?: string | null
 }
 
@@ -24,7 +37,7 @@ export function InvestigationSummary({
   confidence,
   sim,
   onSim,
-  adapterMode,
+  adapterMode = 'mock',
   fetchedAt,
 }: InvestigationSummaryProps) {
   // Navigation helper to update view without router library dependency
@@ -155,13 +168,8 @@ export function InvestigationSummary({
         <div>
             <SourceConfidenceStrip
               mode={adapterMode}
-              status={
-                confidence.grade === 'COMPLETE' ? 'loaded' : 
-                confidence.grade === 'PARTIAL' ? 'partial' : 
-                confidence.grade === 'MISSING' ? 'unavailable' : 'unknown' as EvidenceStatus
-              }
-              fetchedAt={fetchedAt}
-              dataAsOf={batchHeader?.dataAsOf}
+              status={mapConfidenceToStatus(confidence.grade)}
+              fetchedAt={fetchedAt ?? undefined}
               className=""
               style={{ marginBottom: '12px' }}
             />
