@@ -36,6 +36,14 @@ export {
   requiresLifecycleBadge,
   lifecycleBadgeLabel,
 } from './helpers/lifecycle.js'
+export type { AssistantReplyKind, AssistantReply, AssistantReplyOptions } from './helpers/assistant-pilot.js'
+export {
+  buildAssistantCitation,
+  buildAssistantReply,
+  buildBlockedAssistantReply,
+  buildUnsupportedAssistantReply,
+  buildMockWarning,
+} from './helpers/assistant-pilot.js'
 export { scopeIncludes, resolveDefaultScope } from './helpers/scope.js'
 export {
   isReadinessBlocker,

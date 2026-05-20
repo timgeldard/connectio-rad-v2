@@ -7,6 +7,7 @@ import type { ProcessOrderReviewAdapterRequest } from './adapters/process-order-
 import { OrderHistoryView } from './views/order-history-view.js'
 import { OrderOverviewView } from './views/order-overview-view.js'
 import { ExecutionTimelineView } from './views/execution-timeline-view.js'
+import { PohGeniePilotView } from './views/poh-genie-pilot-view.js'
 import { YieldLossesView } from './views/yield-losses-view.js'
 import { QualityContextView } from './views/quality-context-view.js'
 import { StagingContextView } from './views/staging-context-view.js'
@@ -16,6 +17,7 @@ export type ProcessOrderReviewViewId =
   | 'order-history'
   | 'order-overview'
   | 'execution-timeline'
+  | 'poh-genie-pilot'
   | 'yield-losses'
   | 'quality-context'
   | 'staging-context'
@@ -61,6 +63,8 @@ function resolveView(viewId: string, request: ProcessOrderReviewAdapterRequest):
       return <OrderOverviewView request={request} />
     case 'execution-timeline':
       return <ExecutionTimelineView request={request} />
+    case 'poh-genie-pilot':
+      return <PohGeniePilotView request={request} />
     case 'yield-losses':
       return <YieldLossesView request={request} />
     case 'quality-context':
@@ -79,6 +83,7 @@ function isValidViewId(viewId: string): viewId is ProcessOrderReviewViewId {
     'order-history',
     'order-overview',
     'execution-timeline',
+    'poh-genie-pilot',
     'yield-losses',
     'quality-context',
     'staging-context',

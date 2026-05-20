@@ -53,3 +53,19 @@ Follow this checklist when verifying the cockpit layout and E2E connectivity in 
   - Use **Copy UAT Evidence** and paste the payload into the UAT ledger alongside source screenshots/API evidence.
 
 POH is read-only. No SAP write-back, order confirmation posting, goods movement posting, release, TECO, or change action is implemented in this workspace.
+
+## 4. Related parity and readiness docs
+
+- [V1 Genie Discovery and V2 Parity Roadmap](../../docs/migration/v1-genie-discovery-and-v2-parity-roadmap.md)
+- [POH Genie Readiness Pack](./docs/poh-genie-readiness-pack.md)
+
+## 5. POH assistant pilot
+
+The Process Order Review workspace now includes a **POH Assistant Pilot** view. It is a domain-scoped, deterministic assistant surface limited to approved POH topics:
+
+- operations
+- confirmations
+- goods movements
+- the conditional order-header slice
+
+It is **not** a live Databricks Genie integration and it must not answer blocked topics such as lateness root cause, OEE, planning, downtime, genealogy, or release decisions.

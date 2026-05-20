@@ -3,6 +3,7 @@ import type { ScopeContext } from '@connectio/data-contracts'
 import { traceInvestigationRegistration } from './trace-investigation-registration.js'
 import { TraceActionsPanel } from './actions/trace-actions-panel.js'
 import { OverviewView } from './views/overview-view.js'
+import { TraceGeniePilotView } from './views/trace-genie-pilot-view.js'
 import { TraceTreeView } from './views/trace-tree-view.js'
 import { MassBalanceView } from './views/mass-balance-view.js'
 import { CustomerExposureView } from './views/customer-exposure-view.js'
@@ -17,6 +18,7 @@ import { MOCK_INVESTIGATION_ID } from './adapters/trace2-mock-data.js'
 export type TraceInvestigationViewId =
   | 'overview'
   | 'trace-tree'
+  | 'trace-genie-pilot'
   | 'mass-balance'
   | 'customer-exposure'
   | 'supplier-exposure'
@@ -73,7 +75,7 @@ export function TraceInvestigationWorkspace({
 
   const activeView = resolveView(viewId, request)
 
-  const showActionSidebar = viewId !== 'trace-tree'
+  const showActionSidebar = viewId !== 'trace-tree' && viewId !== 'trace-genie-pilot'
 
   return (
     <StandardWorkspaceTemplate
@@ -100,6 +102,8 @@ function resolveView(viewId: string, request: Trace2AdapterRequest): React.React
       return <OverviewView request={request} />
     case 'trace-tree':
       return <TraceTreeView request={request} />
+    case 'trace-genie-pilot':
+      return <TraceGeniePilotView request={request} />
     case 'mass-balance':
       return <MassBalanceView request={request} />
     case 'customer-exposure':
@@ -120,6 +124,7 @@ function isValidViewId(viewId: string): viewId is TraceInvestigationViewId {
   const valid: TraceInvestigationViewId[] = [
     'overview',
     'trace-tree',
+    'trace-genie-pilot',
     'mass-balance',
     'customer-exposure',
     'supplier-exposure',

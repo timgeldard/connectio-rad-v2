@@ -13,6 +13,8 @@ This directory houses the SPC domain-integration components, including adapters,
 - [SPC UAT Acceptance Script](./docs/spc-uat-acceptance-script.md)
 - [SPC Known Limitations](./docs/spc-known-limitations.md)
 - [SPC Readiness & Hardening Notes](../../docs/migration/spc-readiness-and-hardening-notes.md)
+- [V1 Genie Discovery and V2 Parity Roadmap](../../docs/migration/v1-genie-discovery-and-v2-parity-roadmap.md)
+- [SPC Genie Readiness Pack](./docs/spc-genie-readiness-pack.md)
 
 ## V1 SPC Source Status
 

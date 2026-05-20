@@ -40,6 +40,21 @@ We use the following conservative status classifications:
 
 ---
 
+## 3A. Cross-Domain Genie / Natural-Language Analytics
+
+* **Status:** Discovery complete; implementation intentionally deferred.
+* **Summary:**
+  * A repo-wide V1 inventory confirms explicit Genie support in the V1 platform shell, POH, Trace2, and SPC.
+  * V2 currently has no shipped Genie runtime in `apps/`, `domain-integrations/`, or `packages/`; current work is documentation and readiness planning only.
+  * POH is the strongest future parity candidate because V1 preserves a source-controlled semantic pack (`space.yaml`, glossary, rules, joins, expressions, and sample SQL).
+  * A V2 shell-wide assistant should remain blocked until domain-level packs are validated and source-truthful.
+* **Document Registry:**
+  * [Genie Readiness Index](../migration/genie-readiness-index.md) ← **new**
+  * [V1 Genie Discovery and V2 Parity Roadmap](../migration/v1-genie-discovery-and-v2-parity-roadmap.md) ← **new**
+  * [POH Genie Readiness Pack](../../domain-integrations/operations/docs/poh-genie-readiness-pack.md) ← **new**
+  * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md) ← **new**
+  * [V2 Shell Genie Decision Record](../migration/v2-shell-genie-decision-record.md) ← **new**
+
 ## 4. Domain-by-Domain Detail
 
 ### Traceability
@@ -104,6 +119,7 @@ We use the following conservative status classifications:
   * [SPC README](../../domain-integrations/spc/README.md)
   * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md) ← **new**
   * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md) ← **new**
+  * [SPC Genie Readiness Pack](../../domain-integrations/spc/docs/spc-genie-readiness-pack.md) ← **new**
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
   * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
   * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
