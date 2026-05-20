@@ -1,7 +1,7 @@
 # UAT Validation Ledger — Traceability Investigation Cockpit (V2)
 
 **Status:** Pre-validation  
-**Date opened:** 2026-05-19  
+**Date opened:** 2026-05-19 · **Last updated:** 2026-05-20  
 **Audience:** QA, food safety, supply chain — and the engineering team during review
 
 > **Mock-only constraint.**
@@ -61,11 +61,11 @@ Full API smoke-test guide: `docs/migration/traceability-first-live-api-smoke-tes
 ### During the run — what to capture
 
 - [ ] Source badge text on each panel (should read `databricks-api` or `legacy-api`, not `mock`).
-- [ ] Batch header — all field values (material, batch, plant, status, dates).
-- [ ] Trace graph — node count, edge count, `truncated` flag, truncation banner visible/absent.
+- [ ] Batch header — all field values (material, batch, plant, status, dates, individual stock buckets: unrestricted / QI Hold / blocked / restricted / transit). Confirm single plant row when `plant_id=C061` is passed.
+- [ ] Trace graph — node count, edge count, `truncated` flag, truncation banner visible/absent. Confirm upstream and downstream nodes both present when `direction=both`.
 - [ ] Raw `LINK_TYPE` examples from edge detail or network response.
 - [ ] Mass balance — confidence value, row count, unresolved movement count.
-- [ ] Quality status — value shown (`pending` / `unknown` / other).
+- [ ] Quality status — value shown (`pending` / `unknown` / other). When `unknown`, confirm warning note visible and does not imply accepted or rejected.
 - [ ] Customer exposure — severity banner text, shipped quantity, country count.
 - [ ] Any error banners — exact text.
 - [ ] Databricks query ID from response header (for trace-graph route).
@@ -125,6 +125,11 @@ Fill these in during the session. Record only observed values — do not infer o
 | Batch header — plantName | Populated or blank | — |
 | Batch header — manufactureDate | Populated or blank | — |
 | Batch header — expiryDate | Populated or blank | — |
+| Batch header — unrestricted qty | Populated or blank (absent = source null, not zero) | — |
+| Batch header — blocked qty | Populated or blank; amber highlight if non-zero | — |
+| Batch header — QI Hold qty | Populated or blank; amber highlight if non-zero | — |
+| Batch header — restricted qty | Populated or blank | — |
+| Batch header — transit qty | Populated or blank | — |
 | **Trace graph** | | |
 | Trace graph — returned? | Yes / No / Error | — |
 | Trace graph — node count | Integer | — |

@@ -20,7 +20,16 @@ import { trace2Adapter } from "./trace2-adapter-factory.js"
 const TRACE_STALE_TIME_MS = 5 * 60 * 1000
 
 function traceKey(method: string, request: Trace2AdapterRequest) {
-  return ["trace2", method, request.investigationId, request.batchId ?? null] as const
+  return [
+    "trace2", method,
+    request.investigationId,
+    request.materialId ?? null,
+    request.batchId ?? null,
+    request.plantId ?? null,
+    request.direction ?? null,
+    request.maxDepth ?? null,
+    request.maxEdges ?? null,
+  ] as const
 }
 
 export function useTraceInvestigationContext(request: Trace2AdapterRequest) {

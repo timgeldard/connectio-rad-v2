@@ -3,6 +3,8 @@
 POST /trace2/batch-header — proxy to V1 (legacy-api, browser-verified).
 POST /trace2/trace-graph  — native Databricks WITH RECURSIVE lineage graph.
 """
+import asyncio
+import dataclasses
 import os
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
@@ -35,6 +37,7 @@ _VALID_DIRECTIONS = {"upstream", "downstream", "both"}
 class BatchRequest(BaseModel):
     material_id: str
     batch_id: str
+    plant_id: str = ""
 
 
 async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
@@ -77,6 +80,7 @@ async def batch_header(
         request = Trace2BatchHeaderRequest(
             material_id=body.material_id,
             batch_id=body.batch_id,
+            plant_id=body.plant_id,
         )
         rows, spec = await run_query(
             lambda: get_batch_header_summary_spec(request),
@@ -89,7 +93,7 @@ async def batch_header(
         return result
     return await _forward_post(
         "/api/t2/batch-header",
-        body.model_dump(),
+        body.model_dump(exclude_none=True),
         x_forwarded_access_token,
     )
 
@@ -139,8 +143,7 @@ async def trace_graph(
     )
 
     # Clamp depth and edge limits to safe bounds.
-    # Hard cap at 4 — conservative pending UAT verification of WITH RECURSIVE on dense graphs.
-    max_depth = min(max(body.max_depth, 1), 4)
+    max_depth = min(max(body.max_depth, 1), 5)
     max_edges = min(max(body.max_edges, 1), 5000)
 
     request = TraceGraphRequest(
@@ -152,10 +155,29 @@ async def trace_graph(
         max_edges=max_edges,
     )
 
-    rows, spec = await run_query(
-        lambda: get_trace_graph_recursive_spec(request),
-        identity, host, warehouse_id,
-    )
+    # direction="both" is split into two parallel single-direction queries.
+    # Databricks stops WITH RECURSIVE early only when LIMIT is directly on the
+    # recursive CTE reference (FROM ds LIMIT n). In a UNION ALL that placement
+    # is a parse error, so a combined "both" query cannot carry per-arm LIMITs
+    # and will hit the 1M intermediate-row system cap on dense graphs.
+    #
+    # Edge budget is split evenly (max_edges // 2 per direction) so that a
+    # dense downstream result cannot starve upstream rows before the Python
+    # truncation loop applies its max_edges cap on the combined set.
+    if request.direction == "both":
+        per_direction_edges = max(1, max_edges // 2)
+        ds_req = dataclasses.replace(request, direction="downstream", max_edges=per_direction_edges)
+        us_req = dataclasses.replace(request, direction="upstream", max_edges=per_direction_edges)
+        (ds_rows, spec), (us_rows, _) = await asyncio.gather(
+            run_query(lambda: get_trace_graph_recursive_spec(ds_req), identity, host, warehouse_id),
+            run_query(lambda: get_trace_graph_recursive_spec(us_req), identity, host, warehouse_id),
+        )
+        rows = ds_rows + us_rows
+    else:
+        rows, spec = await run_query(
+            lambda: get_trace_graph_recursive_spec(request),
+            identity, host, warehouse_id,
+        )
 
     tagged_rows: list[tuple[dict, int, str]] = []
     seen_edge_keys: set[str] = set()

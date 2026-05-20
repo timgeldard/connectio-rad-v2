@@ -168,6 +168,21 @@ class TestGetBatchHeaderSummarySpec:
         with pytest.raises(DatabricksConfigError):
             get_batch_header_summary_spec(self._req())
 
+    def test_params_include_plant_id_empty_string_by_default(self) -> None:
+        spec = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1"))
+        assert spec.params["plant_id"] == ""
+
+    def test_params_include_plant_id_when_provided(self) -> None:
+        req = Trace2BatchHeaderRequest("MAT1", "B1", plant_id="IE01")
+        spec = get_batch_header_summary_spec(req)
+        assert spec.params["plant_id"] == "IE01"
+
+    def test_sql_contains_plant_id_filter(self) -> None:
+        """SQL must include the optional plant filter so multi-plant ambiguity is resolved."""
+        sql = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1")).sql
+        assert ":plant_id" in sql
+        assert "PLANT_ID" in sql
+
     def test_params_not_shared_between_requests(self) -> None:
         spec1 = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT1", "B1"))
         spec2 = get_batch_header_summary_spec(Trace2BatchHeaderRequest("MAT2", "B2"))
@@ -203,6 +218,30 @@ class TestMapBatchHeaderRows:
         assert result["manufactureDate"] == "2024-03-01T00:00:00Z"
         assert result["expiryDate"] == "2025-03-01T00:00:00Z"
         assert result["processOrderId"] == "PO100001"
+
+    def test_stock_bucket_quantities_surfaced(self) -> None:
+        """Individual stock buckets now surfaced from gold_batch_stock_v (verified live 2026-05-19)."""
+        row = {**_FULL_BATCH_HEADER_ROW, "unrestricted": 80.0, "blocked": 5.0,
+               "quality_inspection": 15.0, "restricted": 2.0, "transit": 1.0}
+        result = map_batch_header_rows([row])
+        assert result is not None
+        assert result["unrestricted"] == 80.0
+        assert result["blocked"] == 5.0
+        assert result["qualityInspection"] == 15.0
+        assert result["restricted"] == 2.0
+        assert result["transit"] == 1.0
+
+    def test_stock_bucket_absent_when_null(self) -> None:
+        """Null stock bucket → field absent from result, not zero (absence ≠ zero stock)."""
+        row = {**_FULL_BATCH_HEADER_ROW, "unrestricted": None, "blocked": None,
+               "quality_inspection": None, "restricted": None, "transit": None}
+        result = map_batch_header_rows([row])
+        assert result is not None
+        assert "unrestricted" not in result
+        assert "blocked" not in result
+        assert "qualityInspection" not in result
+        assert "restricted" not in result
+        assert "transit" not in result
 
     def test_missing_expiry_date_absent_from_result(self) -> None:
         row = {k: v for k, v in _FULL_BATCH_HEADER_ROW.items() if k != "expiry_date"}

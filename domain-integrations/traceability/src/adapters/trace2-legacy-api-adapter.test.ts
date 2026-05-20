@@ -86,6 +86,19 @@ describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
     expect(d.processOrderId).toBe('PO-240308-1189')
   })
 
+  it('maps V1 individual stock quantities to schema fields', async () => {
+    const result = await adapter.getBatchHeaderSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const d = result.data
+    // Fixture: unrestricted=0, blocked=100, qi=2300, restricted=0, transit=0
+    expect(d.unrestricted).toBe(0)
+    expect(d.blocked).toBe(100)
+    expect(d.qualityInspection).toBe(2300)
+    expect(d.restricted).toBe(0)
+    expect(d.transit).toBe(0)
+  })
+
   it('pads bare dates to ISO 8601 format', async () => {
     const result = await adapter.getBatchHeaderSummary(fullRequest)
     expect(result.ok).toBe(true)
@@ -196,6 +209,27 @@ describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
     expect(body.material_id).toBe('100023847')
     expect(body.batch_id).toBe('CH-240308-0047')
   })
+
+  it('includes plant_id in body when request has plantId', async () => {
+    await adapter.getBatchHeaderSummary(fullRequest)  // fullRequest has plantId='IE10'
+    const fetchMock = vi.mocked(global.fetch)
+    const [, opts] = fetchMock.mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.plant_id).toBe('IE10')
+  })
+
+  it('omits plant_id from body when request has no plantId', async () => {
+    const noPlantRequest: Trace2AdapterRequest = {
+      investigationId: 'INV-001',
+      batchId: 'CH-240308-0047',
+      materialId: '100023847',
+    }
+    await adapter.getBatchHeaderSummary(noPlantRequest)
+    const fetchMock = vi.mocked(global.fetch)
+    const [, opts] = fetchMock.mock.calls[0]
+    const body = JSON.parse(opts?.body as string)
+    expect(body.plant_id).toBeUndefined()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -206,24 +240,22 @@ const ANCHOR_KEY = '20052009:0008602411:C061'
 const UPSTREAM_KEY = '99000001:0001111111:C061'
 
 const BACKEND_GRAPH_OK: BackendTraceGraphResponse = {
-  anchor: { materialId: '20052009', batchId: '0008602411', plantId: 'C061', nodeKey: ANCHOR_KEY },
+  rootBatch: '20052009/0008602411',
   nodes: [
     {
-      nodeKey: ANCHOR_KEY,
+      id: ANCHOR_KEY,
       materialId: '20052009',
       batchId: '0008602411',
       plantId: 'C061',
-      label: '20052009 / 0008602411',
       depth: 0,
       directions: ['anchor'],
       isAnchor: true,
     },
     {
-      nodeKey: UPSTREAM_KEY,
+      id: UPSTREAM_KEY,
       materialId: '99000001',
       batchId: '0001111111',
       plantId: 'C061',
-      label: '99000001 / 0001111111',
       depth: 1,
       directions: ['upstream'],
       isAnchor: false,
@@ -243,14 +275,12 @@ const BACKEND_GRAPH_OK: BackendTraceGraphResponse = {
       deliveryId: null,
       salesOrderId: null,
       quantity: 100.0,
-      baseUnitOfMeasure: 'KG',
+      uom: 'KG',
       postingDate: '2026-01-01',
       movementType: '101',
-      depth: 0,
-      direction: 'upstream',
     },
   ],
-  depthReached: 1,
+  depth: 1,
   truncated: false,
   warnings: [],
 }

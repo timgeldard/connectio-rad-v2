@@ -20,9 +20,9 @@ Column name verification status (live validation 2026-05-19, connected_plant_uat
   - gold_batch_lineage: all 18 columns confirmed — see trace2-functional-parity-audit.md §3.
   - gold_batch_mass_balance_v: SELECT columns confirmed; WHERE filter column names unverified (TODO).
 
-Trace graph uses a single WITH RECURSIVE SQL query (server-side traversal) — replaces the
-former iterative multi-hop Python loop that caused 504 Gateway Timeouts on dense lineage graphs
-by exhausting the 30-second Databricks Apps gateway limit with N sequential SQL calls.
+Trace graph uses a single WITH RECURSIVE SQL query (server-side traversal). Queries the base
+table directly in each recursive arm (no preceding ue dedup CTE) so Databricks can use
+file-skipping on the clustered (CHILD_MATERIAL_ID, CHILD_BATCH_ID) columns per hop.
 """
 from __future__ import annotations
 
@@ -42,6 +42,7 @@ from shared.query_service.query_spec import QuerySpec
 class Trace2BatchHeaderRequest:
     material_id: str
     batch_id: str
+    plant_id: str = ""   # optional — filters to a single plant when provided
 
 
 @dataclass
@@ -73,11 +74,11 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     Cache: PER_USER_60S — batch release/block status can change during a shift.
     Parallel validation: possible against browser-verified POST /api/trace2/batch-header.
 
-    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When a
-    material/batch exists in multiple plants the query returns rows for all of them, ordered
-    by PLANT_ID, and the mapper takes the first. Future hardening: if Trace2BatchHeaderRequest
-    carries plant_id, add AND s.PLANT_ID = :plant_id to the WHERE clause to avoid
-    cross-plant ambiguity.
+    Multi-plant note: gold_batch_stock_v returns one row per plant per batch. When
+    plant_id is provided the SQL filters to that plant, removing cross-plant ambiguity.
+    When plant_id is absent the query returns all plants ordered by PLANT_ID; the mapper
+    takes the first row. UAT inputs normally include plant_id so multi-plant ambiguity
+    is resolved in the standard flow.
 
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
@@ -111,6 +112,7 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         ON s.PLANT_ID = p.PLANT_ID                              -- verified: 2026-05-19 connected_plant_uat
     WHERE s.MATERIAL_ID = :material_id
       AND s.BATCH_ID = :batch_id
+      AND (:plant_id = '' OR s.PLANT_ID = :plant_id)
     ORDER BY s.PLANT_ID
     LIMIT :max_rows
     """
@@ -120,7 +122,7 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         module="trace2",
         endpoint="/api/trace2/batch-header",
         sql=sql,
-        params={"material_id": request.material_id, "batch_id": request.batch_id},
+        params={"material_id": request.material_id, "batch_id": request.batch_id, "plant_id": request.plant_id},
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_summary_v",
         tags=["trace2", "batch-header", "summary"],
@@ -150,6 +152,16 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
 
     if row.get("total_stock") is not None:
         result["quantity"] = float(row["total_stock"])
+    if row.get("unrestricted") is not None:
+        result["unrestricted"] = float(row["unrestricted"])
+    if row.get("blocked") is not None:
+        result["blocked"] = float(row["blocked"])
+    if row.get("quality_inspection") is not None:
+        result["qualityInspection"] = float(row["quality_inspection"])
+    if row.get("restricted") is not None:
+        result["restricted"] = float(row["restricted"])
+    if row.get("transit") is not None:
+        result["transit"] = float(row["transit"])
     if row.get("uom"):
         result["uom"] = row["uom"]
     if row.get("manufacture_date"):
@@ -169,9 +181,6 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
 def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     """QuerySpec for trace graph — single WITH RECURSIVE server-side traversal.
 
-    Replaces the former iterative multi-hop Python loop. One SQL call instead of
-    N sequential calls, keeping well within the 30-second Databricks Apps gateway limit.
-
     Anchor matched on material_id + batch_id only (no plant_id filter).
     Returns hop_depth (1-based) and traversal_dir per edge row; the route converts
     hop_depth to 0-based when building tagged_rows for map_trace_graph.
@@ -182,30 +191,27 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     gold_material is LEFT JOINed on the outer SELECT only (not inside the recursive CTE)
     to populate parent_material_name / child_material_name on every edge row.
 
+    No ue dedup CTE: gold_batch_lineage is clustered on (CHILD_MATERIAL_ID, CHILD_BATCH_ID).
+    Querying the table directly lets Databricks skip 99% of files per hop. A preceding
+    SELECT DISTINCT over the full table caused cold-run 504s on a 479M-row table.
+
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
     tbl = resolve_domain_object("trace2", "gold_batch_lineage")
     tbl_material = resolve_domain_object("trace2", "gold_material")
 
-    # Base CTE: deduplicate all lineage edges.
-    # Only material_id + batch_id are required non-null (used in path/cycle keys).
-    # plant_id may be null in gold_batch_lineage; <=> (null-safe equals) in recursive
-    # JOINs below ensures null plant_ids are traversed rather than silently dropped.
-    ue_cte = f"""\
-  ue AS (
-    SELECT DISTINCT
-      PARENT_MATERIAL_ID, PARENT_BATCH_ID, PARENT_PLANT_ID,
-      CHILD_MATERIAL_ID, CHILD_BATCH_ID, CHILD_PLANT_ID,
-      LINK_TYPE, PROCESS_ORDER_ID, MATERIAL_DOCUMENT_NUMBER,
-      PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
-      SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE
-    FROM {tbl}
-    WHERE PARENT_MATERIAL_ID IS NOT NULL AND PARENT_BATCH_ID IS NOT NULL
-      AND CHILD_MATERIAL_ID IS NOT NULL AND CHILD_BATCH_ID IS NOT NULL
-  )"""
+    # gold_batch_lineage is clustered on (CHILD_MATERIAL_ID, CHILD_BATCH_ID).
+    # Referencing the table directly in each recursive arm lets Databricks use
+    # file-skipping per hop. A preceding ue CTE (SELECT DISTINCT over the full
+    # table) materialised 479M rows before any recursion, causing a cold-run
+    # full table scan that reliably exceeded the 30s gateway timeout.
+    _null_guard = (
+        "PARENT_MATERIAL_ID IS NOT NULL AND PARENT_BATCH_ID IS NOT NULL"
+        " AND CHILD_MATERIAL_ID IS NOT NULL AND CHILD_BATCH_ID IS NOT NULL"
+    )
 
     # Downstream CTE: anchor is PARENT, recurse following CHILD edges forward
-    ds_cte = """\
+    ds_cte = f"""\
   ds AS (
     SELECT
       1 AS hop_depth, 'downstream' AS traversal_dir,
@@ -216,8 +222,9 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
       CONCAT('|', :material_id, ':', :batch_id, '|',
              CHILD_MATERIAL_ID, ':', CHILD_BATCH_ID, '|') AS path
-    FROM ue  -- CTE: deduped `gold_batch_lineage` rows
+    FROM {tbl}
     WHERE PARENT_MATERIAL_ID = :material_id AND PARENT_BATCH_ID = :batch_id
+      AND {_null_guard}
     UNION ALL
     SELECT
       t.hop_depth + 1, 'downstream',
@@ -227,17 +234,18 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
       CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')
-    FROM ue e  -- CTE: deduped `gold_batch_lineage` rows
-    JOIN ds t  -- CTE `ds`: downstream recursive accumulator
+    FROM {tbl} e
+    JOIN ds t
       ON e.PARENT_MATERIAL_ID = t.CHILD_MATERIAL_ID
       AND e.PARENT_BATCH_ID = t.CHILD_BATCH_ID
       AND e.PARENT_PLANT_ID <=> t.CHILD_PLANT_ID
     WHERE t.hop_depth < :max_depth
+      AND e.CHILD_MATERIAL_ID IS NOT NULL AND e.CHILD_BATCH_ID IS NOT NULL
       AND INSTR(t.path, CONCAT('|', e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')) = 0
   )"""
 
     # Upstream CTE: anchor is CHILD, recurse following PARENT edges backward
-    us_cte = """\
+    us_cte = f"""\
   us AS (
     SELECT
       1 AS hop_depth, 'upstream' AS traversal_dir,
@@ -248,8 +256,9 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
       CONCAT('|', :material_id, ':', :batch_id, '|',
              PARENT_MATERIAL_ID, ':', PARENT_BATCH_ID, '|') AS path
-    FROM ue  -- CTE: deduped `gold_batch_lineage` rows
+    FROM {tbl}
     WHERE CHILD_MATERIAL_ID = :material_id AND CHILD_BATCH_ID = :batch_id
+      AND {_null_guard}
     UNION ALL
     SELECT
       t.hop_depth + 1, 'upstream',
@@ -259,12 +268,13 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
       CONCAT(t.path, e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')
-    FROM ue e  -- CTE: deduped `gold_batch_lineage` rows
-    JOIN us t  -- CTE `us`: upstream recursive accumulator
+    FROM {tbl} e
+    JOIN us t
       ON e.CHILD_MATERIAL_ID = t.PARENT_MATERIAL_ID
       AND e.CHILD_BATCH_ID = t.PARENT_BATCH_ID
       AND e.CHILD_PLANT_ID <=> t.PARENT_PLANT_ID
     WHERE t.hop_depth < :max_depth
+      AND e.PARENT_MATERIAL_ID IS NOT NULL AND e.PARENT_BATCH_ID IS NOT NULL
       AND INSTR(t.path, CONCAT('|', e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')) = 0
   )"""
 
@@ -299,21 +309,26 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     # the combined result, not each arm individually.
     if request.direction == "downstream":
         sql = (
-            f"WITH RECURSIVE\n{ue_cte},\n{ds_cte}\n"
+            f"WITH RECURSIVE\n{ds_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
             f"FROM (SELECT DISTINCT\n{select_cols}\nFROM ds\nLIMIT :max_rows) AS _lin\n"
             f"{mat_joins}"
         )
     elif request.direction == "upstream":
         sql = (
-            f"WITH RECURSIVE\n{ue_cte},\n{us_cte}\n"
+            f"WITH RECURSIVE\n{us_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
             f"FROM (SELECT DISTINCT\n{select_cols}\nFROM us\nLIMIT :max_rows) AS _lin\n"
             f"{mat_joins}"
         )
     else:  # both — two independent recursive CTEs in one WITH RECURSIVE block
+        # NOTE: direction="both" is never called from the route — the route splits
+        # "both" into two parallel single-direction queries to avoid Databricks'
+        # RECURSION_ROW_LIMIT_EXCEEDED (1M intermediate-row cap). A combined
+        # UNION ALL query cannot carry per-arm LIMITs (parse error), so the route
+        # handles the split. This branch is retained for direct adapter use only.
         sql = (
-            f"WITH RECURSIVE\n{ue_cte},\n{ds_cte},\n{us_cte}\n"
+            f"WITH RECURSIVE\n{ds_cte},\n{us_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
             f"FROM (\n"
             f"SELECT * FROM (\n"

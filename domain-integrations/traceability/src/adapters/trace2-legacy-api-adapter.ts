@@ -88,7 +88,11 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ material_id: request.materialId, batch_id: request.batchId }),
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+          ...(request.plantId ? { plant_id: request.plantId } : {}),
+        }),
       })
 
       if (!response.ok) {
@@ -106,26 +110,51 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         }
       }
 
-      const raw = (await response.json()) as V1BatchHeaderResponse
+      const raw = await response.json()
 
-      const mapped = BatchHeaderSummarySchema.parse({
-        materialId: raw.material_id,
-        materialDescription: raw.material_name,
-        batchId: raw.batch_id,
-        plantId: raw.plant_id,
-        plantName: raw.plant_id,
-        batchStatus: mapBatchStatus(raw.batch_status),
-        quantity: raw.qty_produced,
-        uom: raw.uom,
-        manufactureDate: toIsoDatetime(raw.manufacture_date),
-        expiryDate: toIsoDatetime(raw.expiry_date),
-        processOrderId: raw.process_order ?? undefined,
-        stockStatus: mapStockStatus(raw),
-        qualityStatus: mapQualityStatus(raw),
-        releaseStatus: mapReleaseStatus(raw),
-      })
+      // X-Adapter-Mode is set by FastAPI when the backend ran the databricks-api path.
+      // That path returns a BatchHeaderSummary-shaped camelCase object directly.
+      // The legacy-api path proxies to V1 which returns snake_case V1BatchHeaderResponse.
+      const adapterMode = response.headers?.get('X-Adapter-Mode')
 
-      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
+      let mapped: import('@connectio/data-contracts').BatchHeaderSummary
+      let source: 'databricks-api' | 'legacy-api'
+
+      if (adapterMode === 'databricks-api') {
+        const r = raw as Record<string, unknown>
+        mapped = BatchHeaderSummarySchema.parse({
+          ...r,
+          manufactureDate: toIsoDatetime(r['manufactureDate'] as string | null | undefined),
+          expiryDate: toIsoDatetime(r['expiryDate'] as string | null | undefined),
+        })
+        source = 'databricks-api'
+      } else {
+        const v1 = raw as V1BatchHeaderResponse
+        mapped = BatchHeaderSummarySchema.parse({
+          materialId: v1.material_id,
+          materialDescription: v1.material_name,
+          batchId: v1.batch_id,
+          plantId: v1.plant_id,
+          plantName: v1.plant_id,
+          batchStatus: mapBatchStatus(v1.batch_status),
+          quantity: v1.qty_produced,
+          uom: v1.uom,
+          manufactureDate: toIsoDatetime(v1.manufacture_date),
+          expiryDate: toIsoDatetime(v1.expiry_date),
+          processOrderId: v1.process_order ?? undefined,
+          unrestricted: v1.unrestricted,
+          blocked: v1.blocked,
+          qualityInspection: v1.qi,
+          restricted: v1.restricted,
+          transit: v1.transit,
+          stockStatus: mapStockStatus(v1),
+          qualityStatus: mapQualityStatus(v1),
+          releaseStatus: mapReleaseStatus(v1),
+        })
+        source = 'legacy-api'
+      }
+
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source }
     } catch (e) {
       if (e instanceof ApiError) {
         const code: 'unauthorized' | 'not-found' | 'network' =

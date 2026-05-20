@@ -476,6 +476,138 @@ class TestTraceGraphSuccess:
 # Architecture guardrails
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# direction="both" edge budget split
+# ---------------------------------------------------------------------------
+
+class TestTraceGraphBothDirectionBudgetSplit:
+    """The route must split max_edges evenly between directions so upstream is not starved."""
+
+    async def test_both_direction_calls_executor_twice(self, monkeypatch) -> None:
+        """direction=both must issue two separate Databricks queries."""
+        _databricks_env(monkeypatch)
+        call_count: list[int] = [0]
+
+        async def _mock_execute(*args, **kwargs):
+            call_count[0] += 1
+            return []
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock_execute,
+        ):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert response.status_code == 200
+        assert call_count[0] == 2, f"Expected 2 executor calls for direction=both, got {call_count[0]}"
+
+    async def test_both_direction_upstream_rows_survive_dense_downstream(self, monkeypatch) -> None:
+        """Upstream rows must appear in response even when downstream fills its budget."""
+        _databricks_env(monkeypatch)
+
+        _ds_row = {**_FAKE_LINEAGE_ROW, "traversal_dir": "downstream"}
+        _us_row = {
+            **_FAKE_LINEAGE_ROW,
+            "traversal_dir": "upstream",
+            "parent_material_id": "MAT_UPSTREAM",
+            "parent_batch_id": "BATCH_UPSTREAM",
+            "parent_plant_id": "C061",
+            "parent_material_name": "Raw Ingredient",
+            "child_material_id": "000000000020052009",
+            "child_batch_id": "0008602411",
+            "child_plant_id": "C061",
+            "link_type": "PRODUCTION",
+        }
+
+        call_count = [0]
+
+        async def _mock_execute_alternating(*args, **kwargs):
+            result = [_ds_row] if call_count[0] == 0 else [_us_row]
+            call_count[0] += 1
+            return result
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock_execute_alternating,
+        ):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert response.status_code == 200
+        data = response.json()
+        direction_labels = {d for n in data["nodes"] for d in n.get("directions", [])}
+        assert "downstream" in direction_labels, "downstream direction missing from nodes"
+        assert "upstream" in direction_labels, "upstream direction missing from nodes — upstream was starved"
+
+    async def test_single_direction_calls_executor_once(self, monkeypatch) -> None:
+        """direction=downstream must issue exactly one Databricks query."""
+        _databricks_env(monkeypatch)
+        call_count: list[int] = [0]
+
+        async def _mock_execute(*args, **kwargs):
+            call_count[0] += 1
+            return []
+
+        body = {**_VALID_BODY, "direction": "downstream"}
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock_execute,
+        ):
+            async with _make_client() as client:
+                await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+
+        assert call_count[0] == 1, f"Expected 1 executor call for direction=downstream, got {call_count[0]}"
+
+    async def test_response_direction_matches_request_upstream(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_VALID_BODY, "direction": "upstream"}
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["direction"] == "upstream"
+
+    async def test_response_direction_matches_request_downstream(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_VALID_BODY, "direction": "downstream"}
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["direction"] == "downstream"
+
+    async def test_response_direction_both_when_both_requested(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["direction"] == "both"
+
+
+# ---------------------------------------------------------------------------
+# Batch header plant_id filtering
+# ---------------------------------------------------------------------------
+
+class TestBatchHeaderPlantIdFiltering:
+    async def test_plant_id_accepted_in_request_body(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_BATCH_HEADER_BODY, "plant_id": "IE01"}
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_BATCH_HEADER_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["plantId"] == "IE01"
+
+    async def test_plant_id_optional_absent_returns_200(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+
 class TestTraceGraphArchitectureGuardrails:
     def test_no_sql_select_in_route_module(self) -> None:
         import inspect

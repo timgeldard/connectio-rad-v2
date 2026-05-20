@@ -75,9 +75,14 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
             <BatchHeaderStatusField label="Quality Status" value={data.qualityStatus} />
             <BatchHeaderStatusField label="Release Status" value={data.releaseStatus} highlight={data.releaseStatus === 'blocked' || data.releaseStatus === 'not-released'} />
           </div>
+          {data.qualityStatus === 'unknown' && (
+            <div style={{ fontSize: 11, color: 'var(--amber, #C07000)', marginTop: 4 }}>
+              Quality decision source not yet verified — unknown must not be interpreted as accepted or rejected.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {data.quantity != null && (
-              <BatchHeaderField label="Quantity" value={`${data.quantity.toLocaleString()} ${data.uom ?? ''}`} />
+              <BatchHeaderField label="Total Stock" value={`${data.quantity.toLocaleString()} ${data.uom ?? ''}`} />
             )}
             {data.manufactureDate && (
               <BatchHeaderField label="Manufactured" value={new Date(data.manufactureDate).toLocaleDateString()} />
@@ -86,6 +91,25 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
               <BatchHeaderField label="Expiry" value={new Date(data.expiryDate).toLocaleDateString()} />
             )}
           </div>
+          {(data.unrestricted != null || data.blocked != null || data.qualityInspection != null || data.restricted != null || data.transit != null) && (
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', borderTop: '1px solid var(--shell-line)', paddingTop: 8 }}>
+              {data.unrestricted != null && (
+                <BatchHeaderField label="Unrestricted" value={`${data.unrestricted.toLocaleString()} ${data.uom ?? ''}`} />
+              )}
+              {data.qualityInspection != null && (
+                <BatchHeaderStockField label="QI Hold" value={`${data.qualityInspection.toLocaleString()} ${data.uom ?? ''}`} highlight={data.qualityInspection > 0} />
+              )}
+              {data.blocked != null && (
+                <BatchHeaderStockField label="Blocked" value={`${data.blocked.toLocaleString()} ${data.uom ?? ''}`} highlight={data.blocked > 0} />
+              )}
+              {data.restricted != null && (
+                <BatchHeaderField label="Restricted" value={`${data.restricted.toLocaleString()} ${data.uom ?? ''}`} />
+              )}
+              {data.transit != null && (
+                <BatchHeaderField label="In Transit" value={`${data.transit.toLocaleString()} ${data.uom ?? ''}`} />
+              )}
+            </div>
+          )}
           <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 4 }}>
             Data freshness not available — values were retrieved at query time, but the underlying Databricks refresh time is not yet shown.
           </div>
@@ -103,6 +127,34 @@ function BatchHeaderField({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div style={{ fontSize: 13, color: 'var(--shell-fg)', fontWeight: 500 }}>{value}</div>
+    </div>
+  )
+}
+
+/** Stock quantity field with optional amber highlight when the quantity is non-zero. */
+function BatchHeaderStockField({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string
+  value: string
+  highlight?: boolean
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 2 }}>
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 500,
+          color: highlight ? 'var(--amber, #C07000)' : 'var(--shell-fg)',
+        }}
+      >
+        {value}
+      </div>
     </div>
   )
 }

@@ -19,13 +19,13 @@ describe('TraceQueryForm — defaults', () => {
     expect((screen.getByTestId('input-plant-id') as HTMLInputElement).value).toBe('IE10')
   })
 
-  it('renders with default direction=both, maxDepth=2, maxEdges=100', () => {
+  it('renders with default direction=both, maxDepth=5, maxEdges=1000', () => {
     render(<TraceQueryForm onSubmit={vi.fn()} />)
     expect((screen.getByTestId('select-direction') as HTMLSelectElement).value).toBe('both')
-    expect((screen.getByTestId('select-max-depth') as HTMLSelectElement).value).toBe('2')
-    expect((screen.getByTestId('select-max-edges') as HTMLSelectElement).value).toBe('100')
-    expect(screen.getByText(/Max depth \(Trace limit\)/)).not.toBeNull()
-    expect(screen.getByText(/Max edges \(Trace limit\)/)).not.toBeNull()
+    expect((screen.getByTestId('select-max-depth') as HTMLSelectElement).value).toBe('5')
+    expect((screen.getByTestId('select-max-edges') as HTMLSelectElement).value).toBe('1000')
+    expect(screen.getByText(/Max depth/)).not.toBeNull()
+    expect(screen.getByText(/Max edges/)).not.toBeNull()
   })
 
   it('renders Run Trace, Reset to test case, and Copy payload buttons', () => {
@@ -113,8 +113,8 @@ describe('TraceQueryForm — form submission', () => {
       batchId: 'CH-240308-0047',
       plantId: 'IE10',
       direction: 'both',
-      maxDepth: 2,
-      maxEdges: 100,
+      maxDepth: 5,
+      maxEdges: 1000,
     })
   })
 
@@ -122,12 +122,13 @@ describe('TraceQueryForm — form submission', () => {
     const onSubmit = vi.fn()
     render(<TraceQueryForm onSubmit={onSubmit} />)
     fireEvent.change(screen.getByTestId('select-direction'), { target: { value: 'upstream' } })
-    // maxDepth/maxEdges are disabled in UI but we check they are still in the request builder
+    fireEvent.change(screen.getByTestId('select-max-depth'), { target: { value: '3' } })
+    fireEvent.change(screen.getByTestId('select-max-edges'), { target: { value: '500' } })
     fireEvent.click(screen.getByTestId('btn-run-trace'))
     const req = onSubmit.mock.calls[0][0] as Trace2AdapterRequest
     expect(req.direction).toBe('upstream')
-    expect(req.maxDepth).toBe(2)
-    expect(req.maxEdges).toBe(100)
+    expect(req.maxDepth).toBe(3)
+    expect(req.maxEdges).toBe(500)
   })
 })
 
