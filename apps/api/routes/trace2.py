@@ -16,6 +16,9 @@ from adapters.trace2.trace2_databricks_adapter import (
     map_batch_header_rows,
     map_trace_graph,
 )
+from contracts.generated import (
+    TraceGraph,
+)
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -111,14 +114,14 @@ class TraceGraphBody(BaseModel):
         return v
 
 
-@router.post("/trace2/trace-graph")
+@router.post("/trace2/trace-graph", response_model=TraceGraph)
 async def trace_graph(
     body: TraceGraphBody,
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+):
     """POST /api/trace2/trace-graph — WITH RECURSIVE batch lineage graph.
 
     Only available in databricks-api mode. No legacy-api fallback. No mock fallback.

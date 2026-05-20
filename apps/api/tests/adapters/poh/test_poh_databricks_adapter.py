@@ -270,6 +270,16 @@ class TestMapProcessOrderHeaderRows:
         assert result is not None
         assert result["orderType"] == "process-order"
 
+    def test_planned_start_defaults_to_none(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result["plannedStart"] is None
+
+    def test_planned_finish_defaults_to_none(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result["plannedFinish"] is None
+
     def test_planned_quantity_defaults_to_zero(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
@@ -342,8 +352,8 @@ class TestFormatDatetime:
     def test_date_only_gets_midnight_appended(self) -> None:
         assert _format_datetime("2024-01-15") == "2024-01-15T00:00:00"
 
-    def test_none_returns_empty_string(self) -> None:
-        assert _format_datetime(None) == ""
+    def test_none_returns_none(self) -> None:
+        assert _format_datetime(None) is None
 
 
 # ---------------------------------------------------------------------------
@@ -399,13 +409,13 @@ class TestMapOrderOperationsRows:
         result = map_order_operations_rows([self._full_row()])
         assert result[0]["workCentre"] == ""
 
-    def test_planned_start_defaults_to_empty(self) -> None:
+    def test_planned_start_defaults_to_none(self) -> None:
         result = map_order_operations_rows([self._full_row()])
-        assert result[0]["plannedStart"] == ""
+        assert result[0]["plannedStart"] is None
 
-    def test_planned_finish_defaults_to_empty(self) -> None:
+    def test_planned_finish_defaults_to_none(self) -> None:
         result = map_order_operations_rows([self._full_row()])
-        assert result[0]["plannedFinish"] == ""
+        assert result[0]["plannedFinish"] is None
 
     def test_planned_duration_defaults_to_zero(self) -> None:
         result = map_order_operations_rows([self._full_row()])

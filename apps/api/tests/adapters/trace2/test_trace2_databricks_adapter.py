@@ -491,12 +491,13 @@ def _make_req(**kwargs) -> TraceGraphRequest:
 class TestMapTraceGraph:
     def test_empty_rows_returns_anchor_only_and_warning(self) -> None:
         result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
-        assert result["anchor"]["materialId"] == _ANCHOR_MATERIAL_ID
-        assert result["anchor"]["batchId"] == _ANCHOR_BATCH_ID
-        assert result["anchor"]["plantId"] == _ANCHOR_PLANT_ID
-        assert result["anchor"]["nodeKey"] == _ANCHOR_KEY
+        assert result["rootBatch"] == f"{_ANCHOR_MATERIAL_ID}/{_ANCHOR_BATCH_ID}"
         assert len(result["nodes"]) == 1
-        assert result["nodes"][0]["isAnchor"] is True
+        anchor = result["nodes"][0]
+        assert anchor["isAnchor"] is True
+        assert anchor["materialId"] == _ANCHOR_MATERIAL_ID
+        assert anchor["batchId"] == _ANCHOR_BATCH_ID
+        assert anchor["id"] == _ANCHOR_KEY
         assert result["edges"] == []
         assert "no_edges_found" in result["warnings"]
 
@@ -511,7 +512,7 @@ class TestMapTraceGraph:
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         anchor_nodes = [n for n in result["nodes"] if n["isAnchor"]]
         assert len(anchor_nodes) == 1
-        assert anchor_nodes[0]["nodeKey"] == _ANCHOR_KEY
+        assert anchor_nodes[0]["id"] == _ANCHOR_KEY
 
     def test_anchor_directions_is_anchor_label(self) -> None:
         result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
@@ -543,7 +544,7 @@ class TestMapTraceGraph:
         tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         child = next(n for n in result["nodes"] if not n["isAnchor"])
-        assert child["nodeKey"] == "MAT_B:BATCH_B"
+        assert child["id"] == "MAT_B:BATCH_B"
         assert child["plantId"] == "C061"
 
     def test_duplicate_rows_produce_single_edge(self) -> None:
@@ -565,7 +566,7 @@ class TestMapTraceGraph:
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         edge = result["edges"][0]
         assert edge["quantity"] == 500.0
-        assert edge["baseUnitOfMeasure"] == "KG"
+        assert edge["uom"] == "KG"
 
     def test_edge_preserves_posting_date_and_movement_type(self) -> None:
         tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
@@ -597,10 +598,12 @@ class TestMapTraceGraph:
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
         assert result["edges"][0]["quantity"] is None
 
-    def test_edge_direction_field_reflects_tagged_direction(self) -> None:
+    def test_edge_has_source_and_target_keys(self) -> None:
         tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
         result = map_trace_graph(tagged, _make_req(), depth_reached=1, truncated=False)
-        assert result["edges"][0]["direction"] == "downstream"
+        edge = result["edges"][0]
+        assert edge["source"] == _ANCHOR_KEY
+        assert edge["target"] == "MAT_B:BATCH_B"
 
     def test_truncated_true_adds_max_edges_warning(self) -> None:
         tagged = [(_LINEAGE_ROW_A_TO_B, 0, "downstream")]
@@ -624,11 +627,12 @@ class TestMapTraceGraph:
 
     def test_depth_reached_in_response(self) -> None:
         result = map_trace_graph([], _make_req(), depth_reached=3, truncated=False)
-        assert result["depthReached"] == 3
+        assert result["depth"] == 3
 
     def test_response_has_required_top_level_keys(self) -> None:
         result = map_trace_graph([], _make_req(), depth_reached=0, truncated=False)
-        for key in ("anchor", "nodes", "edges", "depthReached", "truncated", "warnings"):
+        for key in ("nodes", "edges", "depth", "rootBatch", "upstreamCount", "downstreamCount",
+                    "unresolvedNodeCount", "truncated", "warnings"):
             assert key in result, f"Missing key: {key}"
 
     def test_material_description_on_child_node(self) -> None:

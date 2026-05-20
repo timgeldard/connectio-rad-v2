@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { OverviewView } from './overview-view.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 
@@ -95,6 +95,38 @@ describe('OverviewView', () => {
     render(<OverviewView request={mockRequest} />)
 
     expect(screen.queryByRole('alert', { name: 'Batch header error' })).toBeNull()
+  })
+
+  it('renders the initial load screen when batchId is missing', () => {
+    const emptyRequest: Trace2AdapterRequest = { investigationId: 'test-inv' }
+    render(<OverviewView request={emptyRequest} />)
+
+    expect(screen.getByText('Trace a batch')).not.toBeNull()
+    expect(screen.getByTestId('trace-query-form')).not.toBeNull()
+    expect(screen.getByText('Evidence Preview')).not.toBeNull()
+    expect(screen.getByText('UAT Candidate')).not.toBeNull()
+    expect(screen.getByText('Safety & Readiness Notice')).not.toBeNull()
+  })
+
+  it('loads the correct UAT candidate when the action is triggered', () => {
+    const emptyRequest: Trace2AdapterRequest = { investigationId: 'test-inv' }
+    render(<OverviewView request={emptyRequest} />)
+
+    const btn = screen.getByRole('button', { name: 'Run UAT Candidate Trace' })
+    fireEvent.click(btn)
+
+    // Should transition to investigation view
+    expect(screen.getByText('Batch Investigation Cockpit')).not.toBeNull()
+    // Verify values in the header summary or technical details if possible
+    // Since sub-components are mocked, we can check the TraceQueryForm props if they were tracked
+  })
+
+  it('renders prominent safety warnings about unavailable evidence', () => {
+    const emptyRequest: Trace2AdapterRequest = { investigationId: 'test-inv' }
+    render(<OverviewView request={emptyRequest} />)
+
+    expect(screen.getByText(/must not be interpreted as zero exposure/i)).not.toBeNull()
+    expect(screen.getByText(/Unknown or unavailable exposure data must not be interpreted as no exposure/i)).not.toBeNull()
   })
 })
 

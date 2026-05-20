@@ -160,8 +160,8 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
         "plannedQuantity": 0.0,   # not in view
         "confirmedQuantity": 0.0, # not in view
         "uom": "",                # not in view
-        "plannedStart": "",       # not in view
-        "plannedFinish": "",      # not in view
+        "plannedStart": None,       # not in view
+        "plannedFinish": None,      # not in view
         "orderStatus": _map_order_status(row.get("order_status_raw")),
     }
 
@@ -188,13 +188,13 @@ def _safe_float(value: object) -> float:
         return 0.0
 
 
-def _format_datetime(value: object) -> str:
+def _format_datetime(value: object) -> str | None:
     """Normalise a Databricks date/datetime value to an ISO 8601 string."""
     if value is None:
-        return ""
+        return None
     s = str(value).strip()
     if not s or s == "None":
-        return ""
+        return None
     # Databricks may return "2024-01-15 06:00:00.000" — convert space to T
     if " " in s:
         s = s.replace(" ", "T", 1)
@@ -289,8 +289,8 @@ def map_order_operations_rows(rows: list[dict]) -> list[dict]:
             "operationNumber": str(row.get("operation_number") or ""),
             "operationText": str(row.get("operation_text") or ""),
             "workCentre": "",              # not in view
-            "plannedStart": "",            # not in view
-            "plannedFinish": "",           # not in view
+            "plannedStart": None,            # not in view
+            "plannedFinish": None,           # not in view
             "plannedDurationMinutes": 0,   # not in view
             "status": status,
             "confirmationStatus": confirmation_status,

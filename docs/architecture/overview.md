@@ -101,6 +101,25 @@ The `useEvidencePanel` hook manages the display state machine (loading → ready
 
 ---
 
+## Data Contracts & Synchronization
+
+Data contracts are defined as Zod schemas in `packages/data-contracts`. These schemas are the source of truth for both the React frontend and the FastAPI backend.
+
+### Synchronization Workflow
+To prevent contract drift, Pydantic V2 models are automatically generated from the Zod schemas:
+
+1.  **Define Schema**: Add or update a Zod schema in `packages/data-contracts/src/schemas/`.
+2.  **Export**: Export the schema from `packages/data-contracts/src/index.ts`.
+3.  **Sync**: Run `nx run data-contracts:sync-pydantic`.
+
+This task performs a two-step conversion:
+- `Zod` → `JSON Schema` (via `zod-to-json-schema`)
+- `JSON Schema` → `Pydantic V2` (via `datamodel-code-generator`)
+
+Generated models are stored in `apps/api/contracts/generated.py`.
+
+---
+
 ## Data flow
 
 ```

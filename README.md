@@ -141,4 +141,5 @@ See `docs/deployment/databricks-apps.md` for Databricks Apps deployment.
 | V1 → V2 functionality preservation | `docs/migration/v1-to-v2-functionality-preservation.md` |
 | Databricks Apps deployment | `docs/deployment/databricks-apps.md` |
 | Workspace + panel registry | `docs/governance/workspace-and-panel-registry.md` |
+| Cross-domain readiness index | `docs/readiness/domain-readiness-index.md` |
 | ADRs | `docs/adr/` |

@@ -351,10 +351,10 @@ class TestTraceGraphSuccess:
                 )
         assert response.status_code == 200
         data = response.json()
-        assert "anchor" in data
         assert "nodes" in data
         assert "edges" in data
-        assert "depthReached" in data
+        assert "depth" in data
+        assert "rootBatch" in data
         assert "truncated" in data
         assert "warnings" in data
 
@@ -367,7 +367,7 @@ class TestTraceGraphSuccess:
                 )
         assert response.status_code == 200
         data = response.json()
-        assert data["anchor"]["materialId"] == "000000000020052009"
+        assert data["rootBatch"] == "000000000020052009/0008602411"
         assert len(data["nodes"]) == 1
         assert data["edges"] == []
         assert "no_edges_found" in data["warnings"]
@@ -418,9 +418,10 @@ class TestTraceGraphSuccess:
                 response = await client.post(
                     _URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN
                 )
-        anchor = response.json()["anchor"]
-        assert anchor["materialId"] == "000000000020052009"
-        assert anchor["batchId"] == "0008602411"
+        data = response.json()
+        anchor_node = next(n for n in data["nodes"] if n["isAnchor"])
+        assert anchor_node["materialId"] == "000000000020052009"
+        assert anchor_node["batchId"] == "0008602411"
 
     async def test_max_depth_clamped_to_4(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)

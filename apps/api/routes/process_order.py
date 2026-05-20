@@ -30,6 +30,12 @@ from adapters.poh.poh_databricks_adapter import (
     map_order_operations_rows,
     map_process_order_header_rows,
 )
+from contracts.generated import (
+    ProcessOrderConfirmation,
+    ProcessOrderGoodsMovement,
+    ProcessOrderHeader,
+    ProcessOrderOperation,
+)
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -124,7 +130,7 @@ async def _order_header_databricks(
     return result
 
 
-@router.get("/por/order-operations")
+@router.get("/por/order-operations", response_model=list[ProcessOrderOperation])
 async def order_operations(
     process_order_id: str,
     response: Response,
@@ -155,7 +161,7 @@ async def order_operations(
     return map_order_operations_rows(rows)
 
 
-@router.get("/por/order-confirmations")
+@router.get("/por/order-confirmations", response_model=list[ProcessOrderConfirmation])
 async def order_confirmations(
     process_order_id: str,
     response: Response,
@@ -188,7 +194,7 @@ async def order_confirmations(
     return map_order_confirmations_rows(rows)
 
 
-@router.get("/por/order-goods-movements")
+@router.get("/por/order-goods-movements", response_model=list[ProcessOrderGoodsMovement])
 async def order_goods_movements(
     process_order_id: str,
     response: Response,

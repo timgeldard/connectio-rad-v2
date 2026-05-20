@@ -154,7 +154,7 @@ export function filterGraphByDirection(
 
   return {
     ...graph,
-    direction: activeDirection,
+    direction: activeDirection === 'forward' ? 'downstream' : 'upstream',
     nodes: filteredNodes,
     edges: filteredEdges,
     upstreamCount: activeDirection === 'forward' ? 0 : graph.upstreamCount,

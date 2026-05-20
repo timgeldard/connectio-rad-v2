@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { UAT_CANDIDATE } from '../constants.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 
-const DEFAULT_MATERIAL = '20052009'
-const DEFAULT_BATCH = '0008602411'
-const DEFAULT_PLANT = 'C061'
+const DEFAULT_MATERIAL = '100023847'
+const DEFAULT_BATCH = 'CH-240308-0047'
+const DEFAULT_PLANT = 'IE10'
 const DEFAULT_DIRECTION = 'both' as const
 const DEFAULT_MAX_DEPTH = 2
 const DEFAULT_MAX_EDGES = 100
@@ -15,6 +16,7 @@ export interface TraceQueryFormProps {
   initialMaterialId?: string
   initialBatchId?: string
   initialPlantId?: string
+  hideCandidateButton?: boolean
 }
 
 /** Returns a stored-key suggestion if the input looks like an 18-char SAP ALPHA-padded material ID. */
@@ -40,6 +42,7 @@ export function TraceQueryForm({
   initialMaterialId,
   initialBatchId,
   initialPlantId,
+  hideCandidateButton = false,
 }: TraceQueryFormProps) {
   const [materialId, setMaterialId] = useState(initialMaterialId ?? DEFAULT_MATERIAL)
   const [batchId, setBatchId] = useState(initialBatchId ?? DEFAULT_BATCH)
@@ -49,6 +52,13 @@ export function TraceQueryForm({
   const [maxEdges, setMaxEdges] = useState(DEFAULT_MAX_EDGES)
   const [recentSearches, setRecentSearches] = useState<readonly Trace2AdapterRequest[]>([])
   const [copyLabel, setCopyLabel] = useState('Copy payload')
+
+  // Sync state with props if they change (e.g. from Load UAT Candidate in parent)
+  useEffect(() => {
+    if (initialMaterialId !== undefined) setMaterialId(initialMaterialId)
+    if (initialBatchId !== undefined) setBatchId(initialBatchId)
+    if (initialPlantId !== undefined) setPlantId(initialPlantId)
+  }, [initialMaterialId, initialBatchId, initialPlantId])
 
   const suggestion = buildSuggestion(materialId)
 
@@ -84,6 +94,29 @@ export function TraceQueryForm({
     setMaxEdges(DEFAULT_MAX_EDGES)
   }
 
+  function handleLoadUatCandidate() {
+    setMaterialId(UAT_CANDIDATE.materialId)
+    setBatchId(UAT_CANDIDATE.batchId)
+    setPlantId(UAT_CANDIDATE.plantId)
+    setDirection(DEFAULT_DIRECTION)
+    setMaxDepth(DEFAULT_MAX_DEPTH)
+    setMaxEdges(DEFAULT_MAX_EDGES)
+  }
+
+  async function handleCopy() {
+    const payload = buildRequest()
+    const json = JSON.stringify(payload, null, 2)
+    try {
+      await navigator.clipboard.writeText(json)
+      setCopyLabel('Copied!')
+      setTimeout(() => setCopyLabel('Copy payload'), 2000)
+    } catch (err) {
+      console.error('Failed to copy payload:', err)
+      setCopyLabel('Failed')
+      setTimeout(() => setCopyLabel('Copy payload'), 2000)
+    }
+  }
+
   function reloadRecent(req: Trace2AdapterRequest) {
     setMaterialId(req.materialId ?? DEFAULT_MATERIAL)
     setBatchId(req.batchId ?? DEFAULT_BATCH)
@@ -94,137 +127,175 @@ export function TraceQueryForm({
     onSubmit(req)
   }
 
-  function handleCopyPayload() {
-    const payload = {
-      material_id: materialId,
-      batch_id: batchId,
-      plant_id: plantId,
-      direction,
-      max_depth: maxDepth,
-      max_edges: maxEdges,
-    }
-    navigator.clipboard
-      .writeText(JSON.stringify(payload, null, 2))
-      .then(() => {
-        setCopyLabel('Copied!')
-        setTimeout(() => setCopyLabel('Copy payload'), 2000)
-      })
-      .catch(() => {
-        setCopyLabel('Copy failed')
-        setTimeout(() => setCopyLabel('Copy payload'), 2000)
-      })
-  }
 
-  const selectStyle = { fontFamily: 'monospace', padding: '4px 8px' }
-  const labelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12 }
+  const inputStyle: React.CSSProperties = { 
+    fontFamily: 'monospace', 
+    padding: '8px 12px', 
+    border: '1px solid var(--shell-line)', 
+    borderRadius: '4px',
+    background: 'var(--shell-surface)',
+    color: 'var(--shell-fg)',
+    fontSize: '13px'
+  }
+  const selectStyle: React.CSSProperties = { ...inputStyle, padding: '7px 12px' }
+  const labelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--shell-fg-2)' }
+  const helperStyle: React.CSSProperties = { fontSize: '10px', fontWeight: 400, color: 'var(--shell-fg-3)', marginTop: '2px' }
 
   return (
-    <div data-testid="trace-query-form">
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 8 }}
-      >
-        <label style={labelStyle}>
-          Material ID
-          <input
-            type="text"
-            value={materialId}
-            onChange={e => setMaterialId(e.target.value)}
-            data-testid="input-material-id"
-            style={{ fontFamily: 'monospace', padding: '4px 8px' }}
-          />
-        </label>
-        <label style={labelStyle}>
-          Batch ID
-          <input
-            type="text"
-            value={batchId}
-            onChange={e => setBatchId(e.target.value)}
-            data-testid="input-batch-id"
-            style={{ fontFamily: 'monospace', padding: '4px 8px' }}
-          />
-        </label>
-        <label style={labelStyle}>
-          Plant ID
-          <input
-            type="text"
-            value={plantId}
-            onChange={e => setPlantId(e.target.value)}
-            data-testid="input-plant-id"
-            style={{ fontFamily: 'monospace', padding: '4px 8px' }}
-          />
-        </label>
-        <label style={labelStyle}>
-          Direction
-          <select
-            value={direction}
-            onChange={e => setDirection(e.target.value as Direction)}
-            data-testid="select-direction"
-            style={selectStyle}
-          >
-            <option value="both">Both</option>
-            <option value="upstream">Upstream</option>
-            <option value="downstream">Downstream</option>
-          </select>
-        </label>
-        <label style={labelStyle}>
-          Max depth
-          <select
-            value={maxDepth}
-            onChange={e => setMaxDepth(Number(e.target.value))}
-            data-testid="select-max-depth"
-            style={selectStyle}
-          >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-            <option value={3}>3</option>
-            <option value={4}>4</option>
-          </select>
-        </label>
-        <label style={labelStyle}>
-          Max edges
-          <select
-            value={maxEdges}
-            onChange={e => setMaxEdges(Number(e.target.value))}
-            data-testid="select-max-edges"
-            style={selectStyle}
-          >
-            <option value={100}>100</option>
-            <option value={500}>500</option>
-            <option value={1000}>1000</option>
-          </select>
-        </label>
-        <button type="submit" data-testid="btn-run-trace" style={{ padding: '4px 16px' }}>
-          Run Trace
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          data-testid="btn-reset"
-          style={{ padding: '4px 12px', fontSize: 11, color: 'var(--shell-fg-3)' }}
-        >
-          Reset to test case
-        </button>
-        <button
-          type="button"
-          onClick={handleCopyPayload}
-          data-testid="btn-copy-payload"
-          style={{ padding: '4px 12px', fontSize: 11, color: 'var(--shell-fg-3)' }}
-        >
-          {copyLabel}
-        </button>
-      </form>
+    <div data-testid="trace-query-form" style={{ background: 'var(--shell-surface-2)', padding: '20px', borderRadius: '8px', border: '1px solid var(--shell-line)' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          <label style={labelStyle}>
+            Material ID
+            <input
+              type="text"
+              value={materialId}
+              onChange={e => setMaterialId(e.target.value)}
+              data-testid="input-material-id"
+              placeholder="e.g. 20035129"
+              style={inputStyle}
+            />
+            {suggestion && (
+              <button
+                type="button"
+                data-testid="material-id-suggestion"
+                onClick={() => setMaterialId(suggestion)}
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--shell-accent)',
+                  cursor: 'pointer',
+                  marginTop: '4px',
+                  textDecoration: 'underline',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  textAlign: 'left',
+                  display: 'block'
+                }}
+              >
+                Use normalized ID: {suggestion}
+              </button>
+            )}
+            <span style={helperStyle}>SAP material number or normalized identifier</span>
+          </label>
+          <label style={labelStyle}>
+            Batch ID
+            <input
+              type="text"
+              value={batchId}
+              onChange={e => setBatchId(e.target.value)}
+              data-testid="input-batch-id"
+              placeholder="e.g. 8000049668"
+              style={inputStyle}
+            />
+            <span style={helperStyle}>SAP batch / lot identifier (preserves leading zeros)</span>
+          </label>
+          <label style={labelStyle}>
+            Plant ID
+            <input
+              type="text"
+              value={plantId}
+              onChange={e => setPlantId(e.target.value)}
+              data-testid="input-plant-id"
+              placeholder="e.g. C061"
+              style={inputStyle}
+            />
+            <span style={helperStyle}>SAP plant code</span>
+          </label>
+        </div>
 
-      {suggestion !== null && (
-        <p
-          data-testid="material-id-suggestion"
-          style={{ fontSize: 11, color: '#D97706', margin: '0 0 8px 0' }}
-        >
-          SAP ALPHA-padded material IDs are not automatically normalized. Try stored key{' '}
-          <strong>{suggestion}</strong> (e.g. 20052009, not 000000000020052009). Batch IDs
-          preserve leading zeros.
-        </p>
-      )}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', borderTop: '1px solid var(--shell-line)', paddingTop: '16px' }}>
+          <label style={labelStyle}>
+            Direction (Diagnostic)
+            <select
+              value={direction}
+              onChange={e => setDirection(e.target.value as Direction)}
+              data-testid="select-direction"
+              style={selectStyle}
+            >
+              <option value="both">Both</option>
+              <option value="upstream">Upstream</option>
+              <option value="downstream">Downstream</option>
+            </select>
+          </label>
+          <label style={labelStyle}>
+            Max depth (Trace limit)
+            <select
+              value={maxDepth}
+              onChange={e => setMaxDepth(Number(e.target.value))}
+              data-testid="select-max-depth"
+              style={selectStyle}
+              disabled
+            >
+              <option value={1}>1</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+            </select>
+            <span style={helperStyle}>Trace limit uses current UAT default.</span>
+          </label>
+          <label style={labelStyle}>
+            Max edges (Trace limit)
+            <select
+              value={maxEdges}
+              onChange={e => setMaxEdges(Number(e.target.value))}
+              data-testid="select-max-edges"
+              style={selectStyle}
+              disabled
+            >
+              <option value={100}>100</option>
+              <option value={500}>500</option>
+              <option value={1000}>1000</option>
+            </select>
+            <span style={helperStyle}>Trace limit uses current UAT default.</span>
+          </label>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={handleReset}
+              data-testid="btn-reset"
+              style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--shell-line)', background: 'transparent', cursor: 'pointer', fontSize: '13px' }}
+            >
+              Reset
+            </button>
+            {!hideCandidateButton && (
+              <button
+                type="button"
+                onClick={handleLoadUatCandidate}
+                data-testid="btn-load-uat-candidate"
+                style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--shell-line)', background: 'var(--shell-surface)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+              >
+                Load UAT Candidate
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleCopy}
+              data-testid="btn-copy-payload"
+              style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--shell-line)', background: 'transparent', cursor: 'pointer', fontSize: '13px' }}
+            >
+              {copyLabel}
+            </button>
+            <button 
+              type="submit" 
+              data-testid="btn-run-trace" 
+              style={{ 
+                padding: '8px 24px', 
+                borderRadius: '4px', 
+                border: 'none', 
+                background: 'var(--shell-accent, #0066CC)', 
+                color: 'white', 
+                fontWeight: 600, 
+                cursor: 'pointer',
+                fontSize: '13px'
+              }}
+            >
+              Run Trace
+            </button>
+          </div>
+        </div>
+      </form>
 
       {recentSearches.length > 0 && (
         <div
