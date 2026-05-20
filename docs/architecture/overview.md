@@ -8,9 +8,11 @@ ConnectIO RAD V2 is a supply-chain visibility application for Kerry Ingredients 
 Browser
   └─ Databricks Apps (TLS + OAuth2 token forwarding)
        └─ FastAPI  apps/api/
-            ├─ /api/trace2/...   → V1 Trace2 backend
-            ├─ /api/wh360/...    → V1 Warehouse 360 backend
-            ├─ /api/por/...      → V1 POH backend
+            ├─ /api/trace2/...   → V1 Trace2 or native Databricks QuerySpec routes
+            ├─ /api/warehouse360/... → native Databricks QuerySpec routes
+            ├─ /api/wh360/...    → V1 Warehouse 360 proxy route
+            ├─ /api/por/...      → V1 POH or native Databricks QuerySpec routes
+            ├─ /api/envmon/...   → native Databricks QuerySpec routes
             └─ /                 → React bundle (StaticFiles)
 ```
 
@@ -71,10 +73,17 @@ Each domain-integration (`di-*`) owns:
 ```
 MockAdapter                     always works, returns fixture data
   └── LegacyApiAdapter          overrides only verified V1 endpoints
-        └── DatabricksApiAdapter  (future — calls SQL/UC directly)
+        └── DatabricksApiAdapter  native route adapter where implemented
 ```
 
-`VITE_ADAPTER_MODE` selects the tier at module init in each adapter factory. The legacy adapter calls the FastAPI proxy; unverified methods fall back to `super` (mock).
+`VITE_ADAPTER_MODE` selects the frontend adapter tier at module init in each
+adapter factory. `BACKEND_ADAPTER_MODE` separately controls whether mode-gated
+FastAPI routes proxy to V1 or execute native Databricks QuerySpecs. In UAT,
+native Databricks paths are functional for Traceability lineage, EnvMon
+site-summary/swab-results, multiple POH process-order slices, Warehouse 360
+overview groundwork, and CQ Lab plants. Unverified legacy methods may fall
+back to `super` (mock), but native Databricks routes must return explicit
+errors rather than silently falling back to mock or V1 data.
 
 **Trim principle:** proxy routes and adapter overrides are added only when the corresponding V1 endpoint has been browser-verified. Speculative routes are not added.
 
@@ -128,9 +137,9 @@ ScopeContext (processOrderId, batchId, plantId, warehouseId…)
        └─ View (e.g. OrderOverviewView)
             └─ Panel (e.g. ProcessOrderHeaderPanel)
                  └─ useProcessOrderHeader(request)  ← React Query hook
-                      └─ ProcessOrderReviewLegacyApiAdapter.getProcessOrderHeader()
+                      └─ ProcessOrderReviewDatabricksApiAdapter.getProcessOrderHeader()
                            └─ fetch POST /api/por/order-header
-                                └─ FastAPI proxy → V1 POH backend
+                                └─ FastAPI QuerySpec route → Databricks SQL warehouse
 ```
 
 React Query manages caching with a default `staleTime` of 5 minutes per domain. Each panel controls its own freshness policy independently.
@@ -155,7 +164,11 @@ The home screen (`RoleAwareHome`) renders workspaces and actions relevant to the
 
 ## Deployment
 
-V2 deploys as a Databricks App. See `docs/deployment/databricks-apps.md` for the build + deploy sequence. The app reads V1 backend URLs from the `connectio-v2` secret scope — no hardcoded URLs in the repo.
+V2 deploys as a Databricks App. See `docs/deployment/databricks-apps.md` for
+the build + deploy sequence. The app reads V1 backend URLs and native
+Databricks configuration from the `connectio-v2` secret scope or app
+environment — no hardcoded URLs, SQL warehouse IDs, PATs, or service-principal
+fallbacks in the repo.
 
 ---
 

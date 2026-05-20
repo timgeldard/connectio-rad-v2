@@ -2,15 +2,19 @@
 
 ## The lifecycle: mock → legacy-api → databricks-api
 
-ConnectIO RAD V2 uses a three-tier adapter hierarchy. Every domain-integration starts at `mock` and advances through `legacy-api` toward `databricks-api` as endpoints are verified and V1 backends are confirmed ready. No tier is skipped.
+ConnectIO RAD V2 uses a three-tier adapter lifecycle. Every domain-integration
+starts at `mock`, may bridge through `legacy-api` for V1 parity, and advances
+toward `databricks-api` as Unity Catalog sources and QuerySpec routes are
+verified. Some native Databricks routes now exist before every legacy V1 route
+is fully verified because the V1 apps are stopped or being retired.
 
 ```
 mock  →  legacy-api  →  databricks-api
   │            │               │
-  │        V1 bridge        Direct SQL/UC
-  │        (FastAPI)        (no proxy)
+  │        V1 bridge        QuerySpec/UC
+  │        (FastAPI)        (FastAPI)
   │
-  └─ always the fallback
+  └─ mock only when explicitly selected or when a legacy adapter intentionally delegates to base fixtures
 ```
 
 ---
@@ -21,7 +25,7 @@ mock  →  legacy-api  →  databricks-api
 |---|---|---|
 | `mock` | V1 endpoint unknown, unavailable, or unverified | Static fixture file |
 | `legacy-api` | V1 endpoint confirmed + browser-tested; V1 backend is authoritative | FastAPI proxy → V1 |
-| `databricks-api` | V1 retired; data migrated to Databricks SQL / Unity Catalog | Direct Databricks query |
+| `databricks-api` | Data is available in Unity Catalog and route/query contract is verified | FastAPI QuerySpec route → Databricks SQL warehouse |
 
 ---
 
@@ -40,14 +44,21 @@ Do not advance to legacy-api based on V1 API documentation alone — field names
 
 ## Advancing from legacy-api to databricks-api
 
-A method may be overridden in the databricks adapter only when:
+A method may be exposed as a native Databricks route only when:
 
-1. **V1 backend retired or scheduled for retirement** — confirmed with the source system team
-2. **Data available in Databricks** — the equivalent data is queryable from Unity Catalog or a Databricks SQL warehouse
-3. **Schema validated** — the Databricks response maps cleanly to the `@connectio/data-contracts` type (same Zod schema as the legacy adapter uses)
-4. **Pilot sign-off** — the workspace that consumes this panel has completed pilot and received sign-off
+1. **Data available in Databricks** — the equivalent data is queryable from Unity Catalog or a Databricks SQL warehouse
+2. **QuerySpec defined** — backend reads go through QuerySpec / QueryExecutor, not SQL embedded in React or route handlers
+3. **Identity preserved** — production reads use the authenticated user's Databricks OAuth identity; no service-principal or PAT fallback
+4. **Schema validated** — the Databricks response maps cleanly to the `@connectio/data-contracts` type and backend Pydantic model
+5. **Error behavior explicit** — no silent fallback to mock or V1 when native execution is unavailable
+6. **Browser verification tracked** — route/UI status is recorded in the deployment verification docs
 
-The databricks-api adapter extends the legacy-api adapter and overrides specific methods. Unimplemented methods fall back to `super` (legacy-api), which in turn falls back to mock if the legacy endpoint is also absent.
+Frontend implementation varies by domain. POH has an explicit
+`ProcessOrderReviewDatabricksApiAdapter`. Traceability, EnvMon, Warehouse, and
+CQ Lab currently call native backend routes through the same FastAPI HTTP layer
+used by legacy adapters, often under `VITE_ADAPTER_MODE=legacy-api` for
+same-origin Databricks Apps compatibility. The source badge and response
+headers are authoritative for the actual data source.
 
 ---
 
@@ -78,24 +89,37 @@ The databricks-api adapter extends the legacy-api adapter and overrides specific
 
 ### databricks-api override
 
-<!-- TODO: Document databricks-api override pattern once the first implementation is written. See ADR-024 (docs/adr/ADR-024-native-databricks-data-access-architecture.md) for the QuerySpec/QueryExecutor architecture, source badge contract, cache tier definitions, and module migration order (POH → Trace → SPC → Quality/Lab → EnvMon → Warehouse). -->
+1. Add a QuerySpec factory and mapper in `apps/api/adapters/<domain>/`.
+2. Add or update the route in `apps/api/routes/<domain>.py`.
+3. Gate the route with `BACKEND_ADAPTER_MODE=databricks-api`.
+4. Require OAuth identity and Databricks config through the shared helpers.
+5. Execute with `run_query(...)`; do not put SQL directly in route handlers.
+6. Return source headers:
+   - `X-Data-Source: databricks-api`
+   - `X-Adapter-Mode: databricks-api`
+   - `X-Query-Name: <domain>.<query>`
+7. Map known errors explicitly: 401, 403, 429, 502, 503, 504.
+8. Add route tests, mapper tests, and frontend adapter tests where applicable.
+9. Browser-verify the API and UI before marking the route verified.
 
 ---
 
-## Fallback chain
+## Fallback rules
 
-The adapter class hierarchy ensures graceful degradation at runtime:
+Legacy adapters may intentionally delegate to mock fixtures for methods that
+are not implemented or for missing optional context. Native Databricks routes
+do not use this fallback pattern.
 
 ```
-DatabricksApiAdapter.getMethod()
-  → if not overridden: LegacyApiAdapter.getMethod()
-       → if not overridden or context missing: MockAdapter.getMethod()
-            → returns fixture data (always succeeds)
+Mock mode          → fixture data, no network calls
+Legacy-api mode    → V1 proxy for overridden methods; base fixtures for non-overridden methods
+Databricks routes  → QuerySpec execution or explicit error; no mock / V1 fallback
 ```
 
 This means:
 - A panel never crashes due to an unimplemented adapter method
-- The UI always shows *something* — mock data with no source badge if the higher tier fails
+- Mock or fallback data must be visibly mock/no-source or explicitly labeled
+- Native failures show honest error states instead of pretending data is live
 - Source badge visibility makes the data origin transparent to users
 
 ---
@@ -126,20 +150,17 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
 
 ---
 
-## Current state (as of 2026-05-16)
+## Current state (as of 2026-05-20)
 
-| Domain | Adapter class | Legacy-api overrides | Remaining on mock |
-|---|---|---|---|
-| Traceability | `Trace2LegacyApiAdapter` | `getBatchHeaderSummary` ¹ | 10 methods |
-| Warehouse | `Warehouse360LegacyApiAdapter` | `getWarehouse360Summary` | 8 methods |
-| Operations (POR) | `ProcessOrderReviewLegacyApiAdapter` | `getProcessOrderHeader` | 9 methods |
-| Operations (plan risk) | none — no legacy adapter yet | — | all 9 methods |
-| Quality | `ConnectedQualityLabLegacyApiAdapter` | `getLabFailures`, `getLabPlants` | 0 methods (all overridden) |
-| SPC | none | — | all 9 methods |
-| Maintenance | none | — | all methods |
-| EnvMon | none | — | all methods |
-
-¹ Browser-verified against a live V1 backend. All other legacy-api overrides are **wired** (proxy route + adapter code exist) but have not been tested end-to-end against a live V1 instance. Do not promote wired methods to "verified" in this table until browser-testing is complete.
+| Domain | Native Databricks status | Remaining mock / legacy surface |
+|---|---|---|
+| Traceability | Trace Graph / lineage route is functional and browser-verified in the shell UI. | Batch-header and mass-balance native routes still need DDL/source verification; some panels remain mock or legacy. |
+| EnvMon | `site-summary` and `swab-results` native routes are functional and consumed by the read-only monitoring screen. | Spatial/floorplan/zoning/heatmap and CAPA are deferred; older mock panels remain outside the native primary path. |
+| POH / Process Order Review | Order header, operations, confirmations, and goods movements are functional native slices. | Related batches, quality context, staging context, and some review surfaces are still mock/pending. |
+| Warehouse 360 | Native route groundwork exists for overview/inbound/outbound/staging/exceptions; overview returned HTTP 200 in UAT. | Inbound/outbound/staging/exceptions need schema/source alignment before verification can be marked complete. |
+| Quality / CQ Lab | Lab plants native route is browser-verified. | Lab failures is blocked by missing source view; batch release decision panels remain simulated unless separately wired. |
+| SPC | Native/legacy adapter scaffolding exists for selected live-source work. | Most SPC monitoring panels remain mock or gated pending UAT/source validation. |
+| Maintenance | No native Databricks path yet. | Maintenance panels remain mock. |
 
 ---
 

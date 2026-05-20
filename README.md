@@ -54,7 +54,7 @@ Each domain-integration has one adapter class per mode:
 ```
 MockAdapter          → returns fixture data (always works, no backend needed)
 LegacyApiAdapter     → extends Mock, overrides verified methods to call FastAPI proxy
-DatabricksApiAdapter → future; calls Databricks SQL / Unity Catalog directly
+DatabricksApiAdapter → native QuerySpec-backed routes through FastAPI
 ```
 
 Active mode is configured at build time via `VITE_ADAPTER_MODE`:
@@ -62,8 +62,25 @@ Active mode is configured at build time via `VITE_ADAPTER_MODE`:
 ```bash
 VITE_ADAPTER_MODE=mock          # default in development
 VITE_ADAPTER_MODE=legacy-api    # uses FastAPI proxy → V1 backends
-VITE_ADAPTER_MODE=databricks-api  # not yet implemented
+VITE_ADAPTER_MODE=databricks-api  # enabled for domains with an explicit frontend Databricks adapter
 ```
+
+The backend has an independent `BACKEND_ADAPTER_MODE`. In Databricks Apps UAT,
+`BACKEND_ADAPTER_MODE=databricks-api` is the primary path for native reads:
+FastAPI routes execute QuerySpec definitions with the authenticated Databricks
+user's OAuth identity. The frontend still talks to the same FastAPI API routes;
+some domain packages expose those native routes from a `legacy-api` frontend
+adapter for same-origin deployment compatibility.
+
+Current native Databricks status:
+
+| Domain | Native Databricks status |
+|---|---|
+| Traceability | Functional for Trace Graph / lineage routes; shell UI browser-verified on 2026-05-18. Batch-header and mass-balance remain DDL/source verification items. |
+| EnvMon | Functional for `GET /api/envmon/site-summary` and `GET /api/envmon/swab-results`; read-only monitoring screen is wired to those routes. Spatial/floorplan/CAPA remain out of scope. |
+| POH / Operations | Functional for order header, order operations, confirmations, and goods movements slices; other process-order review panels still use mock or pending adapters. |
+| Warehouse 360 | Native route groundwork exists for overview/inbound/outbound/staging/exceptions; overview has returned HTTP 200 in UAT, while the remaining routes are partly schema/source blocked. |
+| Quality / CQ Lab | CQ lab plants is browser-verified; CQ lab failures remains blocked by source view availability. |
 
 ### Evidence Panel pattern
 
@@ -72,17 +89,29 @@ Every data panel in the UI is an `EvidencePanel`. Panels declare:
 - `useEvidencePanel()` — manages displayState (loading / ready / stale / error / unauthorized)
 - `source` — amber badge for `legacy-api`, green for `databricks-api`, none for `mock`
 
-### FastAPI proxy
+### FastAPI API layer
 
-`apps/api/` proxies requests from the React frontend to V1 backends. See `apps/api/routes/` for individual verification status. Proxy routes:
+`apps/api/` serves both V1 proxy routes and native Databricks QuerySpec routes.
+V1 proxy routes remain for systems not yet migrated. Native routes must not
+fall back silently to mock or V1 when `BACKEND_ADAPTER_MODE=databricks-api`;
+they return explicit 401/403/429/502/503/504 errors and source headers.
 
-| Route | V1 target | Domain | Status |
+Selected route status:
+
+| Route | Source | Domain | Status |
 |---|---|---|---|
-| `POST /api/trace2/batch-header` | V1 Trace2 batch-header | Traceability | browser-verified |
-| `POST /api/wh360/warehouse-summary` | V1 WH360 summary | Warehouse | wired, not yet verified |
-| `POST /api/por/order-header` | V1 POH order-header | Operations | wired, not yet verified |
-| `GET /api/cq/lab/fails` | V1 CQ lab failures | Quality | wired, not yet verified |
-| `GET /api/cq/lab/plants` | V1 CQ plant list | Quality | wired, not yet verified |
+| `GET /api/trace2/graph` | Databricks `gold_batch_lineage` | Traceability | browser-verified |
+| `GET /api/envmon/site-summary` | Databricks SAP QM gold views | EnvMon | browser-verified API |
+| `GET /api/envmon/swab-results` | Databricks SAP QM gold views | EnvMon | browser-verified API |
+| `POST /api/por/order-header` | V1 proxy or Databricks, mode-gated | Operations | Databricks browser-verified |
+| `GET /api/por/order-operations` | Databricks | Operations | browser-verified |
+| `GET /api/por/order-confirmations` | Databricks | Operations | browser-verified |
+| `GET /api/por/order-goods-movements` | Databricks | Operations | browser-verified |
+| `GET /api/warehouse360/overview` | Databricks WH360 views | Warehouse | UAT HTTP 200 |
+| `GET /api/warehouse360/{inbound,outbound,staging,exceptions}` | Databricks WH360 views | Warehouse | wired; schema/source verification in progress |
+| `GET /api/cq/lab/plants` | Databricks CQ/SAP QM | Quality | browser-verified |
+| `GET /api/cq/lab/fails` | Databricks CQ/SAP QM | Quality | blocked by missing source view |
+| `POST /api/trace2/batch-header` | V1 proxy or Databricks, mode-gated | Traceability | V1 proxy browser-verified; Databricks path pending DDL verification |
 
 ---
 
