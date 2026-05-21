@@ -30,7 +30,7 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | ✅ | ❌ | ❌ | V1 SPC source discovered in `connected_plant_uat.gold` but V2 not yet mapped to it. Blocker is not absent data — it is unmapped V1 source model (material-centric, client-side rule computation, different locked-limits schema). | [SPC Detail](#spc) |
+| **SPC** | ✅ | ❌ | ❌ | V1 SPC source verified in `connected_plant_uat.gold` (PR #65, 2026-05-21); V2 contract alignment to the verified schema completed (`feature/spc-native-contract-alignment`, Slices 1-7, 2026-05-21). Blocker is no longer "unmapped source model" — it is now the decision/governance to wire a native route. V1 legacy bridge remains the recommended short-term path. | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Read-only evidence UX/state model code-ready with fixture coverage. Live source wiring pending. Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
@@ -103,8 +103,13 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Mock/Sandbox Read-Only UAT). V1 source discovered.
-  Databricks verification pack created. Live wiring not yet implemented and not yet claimed.
+* **Status:** High-Fidelity Sandbox (Mock/Sandbox Read-Only UAT). V1 source verified
+  by Databricks CLI (PR #65, 2026-05-21). V2 contract alignment to verified schema
+  completed (`feature/spc-native-contract-alignment`, Slices 1-7, 2026-05-21).
+  Pure mapping helpers and fixtures exist for the verified schema; no native
+  runtime route is wired. V1 legacy bridge remains the recommended short-term
+  path. **No native SPC UAT readiness, production readiness, in-control status,
+  stored signals, verified capability, or approved control limits are claimed.**
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.
@@ -157,7 +162,9 @@ We use the following conservative status classifications:
   * [Rule / Signal Source Verification](../../domain-integrations/spc/docs/spc-rule-signal-source-verification.md) ← **new**
   * [Capability Verification](../../domain-integrations/spc/docs/spc-capability-verification.md) ← **new**
   * [V2 Contract Mapping](../../domain-integrations/spc/docs/spc-v2-contract-mapping.md) ← **new**
-  * [Native Migration Readiness Checklist](../../domain-integrations/spc/docs/spc-native-migration-readiness-checklist.md) ← **new**
+  * [Native Migration Readiness Checklist](../../domain-integrations/spc/docs/spc-native-migration-readiness-checklist.md)
+  * [Native Contract Alignment Audit](../../domain-integrations/spc/docs/spc-native-contract-alignment-audit.md) ← **new (2026-05-21)**
+  * [Native Route Prerequisite Plan](../../domain-integrations/spc/docs/spc-native-route-prerequisite-plan.md) ← **new (2026-05-21)**
 
 ### Process Order History (POH) & Operations
 
@@ -287,14 +294,32 @@ The following list summarizes the critical items blocking live validation or pro
   5. Supplier risk governance pending — live supplier exposure first slice exists (PR #57); `openSupplierActions` and `highestRiskSupplier` remain blocked until QM/risk governance and supplier/batch causality rules are defined (P1).
   6. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
-  1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).
-  2. `SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).
-  3. FastAPI proxy routes in `apps/api/routes/spc.py` exist but are NOT browser-verified — must test against live V1 backend.
-  4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping (see `spc-v1-source-discovery.md`).
-  5. Gold view column names must be verified against actual UAT DDL — run queries in `spc-databricks-source-verification.md`.
-  6. Column name discrepancy in `spc_locked_limits` must be resolved by `DESCRIBE TABLE` (see `spc-control-limit-provenance-verification.md`).
-  7. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified via discovery queries in `golden-spc-candidates.md`.
-  8. Native migration readiness checklist (`spc-native-migration-readiness-checklist.md`) must be completed before any live route is enabled.
+  1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace
+     (`apps/spc/` in ConnectIO-RAD) — required only if we continue down the V1
+     legacy bridge path.
+  2. ~~`SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).~~
+     **Done.** `materialId` is the required parameter on the existing TS interface;
+     `operationId` added to `SPCMonitoringContextSchema` (2026-05-21).
+  3. FastAPI proxy routes in `apps/api/routes/spc.py` exist but are NOT browser-verified —
+     must test against live V1 backend if the V1 legacy bridge path is pursued.
+  4. ~~Gold view column names must be verified against actual UAT DDL~~
+     **Done.** PR #65 verified 22 SPC objects in
+     `connected_plant_uat.gold` via Databricks CLI (2026-05-21);
+     `spc_capability_detail_mv` and `spc_nelson_rule_flags_mv` are NOT FOUND.
+  5. ~~Column name discrepancy in `spc_locked_limits` must be resolved by `DESCRIBE TABLE`~~
+     **Done.** `baseline_from/to`, `locking_note`, `cl/ucl/lcl/ucl_r/lcl_r/sigma_within`
+     confirmed; no `usl/lsl` columns on locked limits (spec limits live on the subgroup view).
+  6. ~~A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified~~
+     **Done.** Three partially-verified candidates recorded in
+     `golden-spc-candidates.md` (Salt @ C037 / pH @ P523 / multi-MIC @ P775).
+  7. ~~Native migration readiness checklist must be completed before any live route is enabled.~~
+     **Updated 2026-05-21.** The minimum chart-data route Go criteria now reflect the
+     verified schema and do not block on the two NOT FOUND MVs; full native readiness
+     still requires signal-calculation and capability governance decisions.
+  8. Native runtime route is NOT wired. Whether to proceed with
+     `POST /api/spc/chart-data` per
+     [`spc-native-route-prerequisite-plan.md`](../../domain-integrations/spc/docs/spc-native-route-prerequisite-plan.md)
+     is a separate decision (Action 6 in `next-action-plan.md`).
 * **Process Order History Blockers:**
   1. Browser-level validation of the 4 api endpoints inside the UI has not been performed.
 * **Warehouse360 Blockers:**

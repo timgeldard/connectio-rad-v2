@@ -83,18 +83,30 @@ This plan defines the recommended next order of work after the post-merge readin
 
 ---
 
-### Action 6 — Run SPC Databricks Verification Pack
+### Action 6 — SPC Native Implementation Decision (post-PR #65 + post-contract-alignment)
 
 | Field | Value |
 |---|---|
-| Owner type | Developer with Databricks access |
-| Databricks access required | Yes — pack contains SQL templates for 7 gold view objects |
-| Business owner required | No |
-| Expected output | All evidence tables in `spc-databricks-source-verification.md` filled in; `golden-spc-candidates.md` updated with confirmed UAT candidates; `spc-native-migration-readiness-checklist.md` items checked off |
-| Blocked by | Databricks access; V1 SPC app URL must be confirmed as accessible in UAT workspace |
-| Risk if skipped | No native SPC implementation can proceed safely; column names, grain, and data model remain unconfirmed |
+| Owner type | Architecture / Kerry QM process owner (governance); Developer (implementation, follow-up) |
+| Databricks access required | Yes — once a route is approved |
+| Business owner required | Yes — for signal-calculation approach (frontend vs backend) and backend capability algorithm governance |
+| Expected output | Decision recorded (proceed with `POST /api/spc/chart-data` minimum route per `spc-native-route-prerequisite-plan.md`, OR defer further). If proceeding: route implementation PR + frontend adapter PR + browser UAT against PR #65 candidates 1 and 2 |
+| Blocked by | Governance decisions on signal calculation location, capability backend calculation, plant-namespace (`P`/`C`) mapping |
+| Risk if skipped | SPC stays on V1 legacy bridge for the foreseeable future. The V1 bridge is documented as not browser-verified (`apps/api/routes/spc.py`); browser-verifying the V1 bridge is a separate task if Action 6 is deferred. |
 
-**Pack:** `domain-integrations/spc/docs/spc-databricks-source-verification.md`
+**Background:** PR #65 verified the SPC schema in Databricks. The
+contract-alignment tranche (`feature/spc-native-contract-alignment`, Slices
+1-7, 2026-05-21) reconciled V2 SPC contracts, fixtures, helper mappings,
+and an implementation plan to that verified schema — but **deliberately
+did not wire any native runtime route**. Action 6 is now a decision /
+implementation gate, not a verification gate.
+
+**Documents:**
+- [`spc-databricks-verification-results-summary.md`](../../domain-integrations/spc/docs/spc-databricks-verification-results-summary.md)
+- [`spc-native-contract-alignment-audit.md`](../../domain-integrations/spc/docs/spc-native-contract-alignment-audit.md)
+- [`spc-v2-contract-mapping.md`](../../domain-integrations/spc/docs/spc-v2-contract-mapping.md) (rewritten 2026-05-21)
+- [`spc-native-route-prerequisite-plan.md`](../../domain-integrations/spc/docs/spc-native-route-prerequisite-plan.md)
+- [`spc-native-migration-readiness-checklist.md`](../../domain-integrations/spc/docs/spc-native-migration-readiness-checklist.md)
 
 ---
 
@@ -161,7 +173,7 @@ This plan defines the recommended next order of work after the post-merge readin
 | 3 | Mass balance direction mapping | No | Optional | Yes | P1 |
 | 4 | BALANCE_QTY semantics | Yes | Yes | No | P1 |
 | 5 | UD lot-selection rule | No | No | Yes | P1 |
-| 6 | SPC Databricks verification pack | Yes | Yes | No | P2 |
+| 6 | SPC native implementation decision (contract alignment done 2026-05-21) | Yes (once approved) | Yes (when approved) | Yes (signal/capability governance) | P2 |
 | 7 | Wire QM UD read-only display | Yes | Yes | No | P2 (after 5) |
 | 8 | Quality broader source pack | Yes | Yes | No | P2 |
 | 9 | Supplier risk governance | No | No (governance) | Yes | P2 |
@@ -172,7 +184,8 @@ This plan defines the recommended next order of work after the post-merge readin
 ## What NOT to Do Next
 
 - Do not add new live Databricks routes before Action 1 and 2 evidence is captured.
-- Do not expand SPC before the verification pack (Action 6) is executed.
+- Do not wire a native SPC Databricks route before Action 6's governance decisions
+  are recorded and the prerequisite plan's go/no-go checklist passes.
 - Do not wire UD batch-level display before the lot-selection rule (Action 5) is confirmed.
 - Do not implement Quality release/reject actions, e-signature, or SAP QM write-back — these are out of scope for the current phase.
 - Do not claim production readiness for any domain until live UAT evidence is captured and reviewed.

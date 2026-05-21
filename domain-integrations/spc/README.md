@@ -19,14 +19,36 @@ This directory houses the SPC domain-integration components, including adapters,
 ## Databricks Verification Pack
 
 - [Databricks Source Verification](./docs/spc-databricks-source-verification.md) — SQL queries and handoff checklist
+- [Databricks Verification Results Summary](./docs/spc-databricks-verification-results-summary.md) — PR #65 results
 - [Data Model Grain Assessment](./docs/spc-data-model-grain-assessment.md) — grain verification queries
 - [Navigation Model Verification](./docs/spc-navigation-model-verification.md) — material→plant→MIC hierarchy
 - [Control Limit Provenance Verification](./docs/spc-control-limit-provenance-verification.md) — locked limits DDL
 - [Rule / Signal Source Verification](./docs/spc-rule-signal-source-verification.md) — frontend vs stored
 - [Capability Verification](./docs/spc-capability-verification.md) — Cp/Cpk/Pp/Ppk source
-- [Golden SPC Candidates](./docs/golden-spc-candidates.md) — discovery template (no verified candidates yet)
-- [V2 Contract Mapping](./docs/spc-v2-contract-mapping.md) — field-by-field mapping template
+- [Golden SPC Candidates](./docs/golden-spc-candidates.md) — PR #65 partially-verified candidates
+- [V2 Contract Mapping](./docs/spc-v2-contract-mapping.md) — field-by-field mapping aligned to verified schema
 - [Native Migration Readiness Checklist](./docs/spc-native-migration-readiness-checklist.md) — go/no-go gate
+
+## Native Contract Alignment (post-PR #65)
+
+After PR #65, the [contract-alignment tranche](./docs/spc-native-contract-alignment-audit.md)
+re-checked every V2 SPC contract field against the verified Databricks schema.
+The result is that V2 contracts, fixtures, helper mappings, and an
+implementation plan are aligned to the verified Databricks schema, but
+**no native runtime route is wired**. The legacy V1 bridge remains the
+recommended short-term path. The following sit on this branch
+(`feature/spc-native-contract-alignment`):
+
+- [Native Contract Alignment Audit](./docs/spc-native-contract-alignment-audit.md) — 25 outdated V2 assumptions reconciled to the verified schema
+- [V2 Contract Mapping (verified-aligned)](./docs/spc-v2-contract-mapping.md) — every V2 SPC field classified against verified columns
+- [Native Route Prerequisite Plan](./docs/spc-native-route-prerequisite-plan.md) — proposed `POST /api/spc/chart-data` shape, SQL, exclusions, and go/no-go checklist
+- `src/fixtures/verified-databricks-spc.ts` — verified Databricks row fixtures (PR #65-derived, not live data)
+- `src/utils/native-databricks-mapping.ts` — pure mapper helpers (`isEligibleSpcProductionRow`, `deriveSubgroupPoint(s)`, `mapLockedLimitRow`, `deriveSpecificationLimits`, `classifySignalSource`, `classifyCapabilitySource`)
+- `src/utils/native-databricks-mapping.test.ts` — 55 mapper tests including type-level + runtime field-name guards
+
+**What this changes for SPC consumers right now: nothing.** No panel, route,
+adapter, or generated artefact relies on the new helpers; they are
+import-only for tests and the future native route.
 
 ## V1 SPC Source Status
 

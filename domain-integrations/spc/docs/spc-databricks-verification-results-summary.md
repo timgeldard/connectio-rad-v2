@@ -244,3 +244,20 @@ All SQL queries executed via Databricks CLI `api post /api/2.0/sql/statements` a
 - No production SPC readiness was claimed
 - No service-principal fallback was added
 - No app-side plant authorization was added
+
+---
+
+## 16. Follow-on: Contract alignment (2026-05-21)
+
+After this verification pack landed, the contract-alignment tranche
+(`feature/spc-native-contract-alignment`, Slices 1-7) reconciled V2 SPC
+contracts, fixtures, helper mappings, and an implementation plan to the
+verified schema. **No native runtime route is wired** by that tranche; the
+V1 legacy bridge remains the recommended short-term path. See:
+
+- [`spc-native-contract-alignment-audit.md`](./spc-native-contract-alignment-audit.md) — 25 outdated V2 assumptions reconciled
+- [`spc-v2-contract-mapping.md`](./spc-v2-contract-mapping.md) — rewritten against verified columns
+- [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md) — proposed `POST /api/spc/chart-data` shape and go/no-go
+- `domain-integrations/spc/src/fixtures/verified-databricks-spc.ts` — PR #65-derived row fixtures
+- `domain-integrations/spc/src/utils/native-databricks-mapping.ts` — pure mapper helpers
+- `domain-integrations/spc/src/utils/native-databricks-mapping.test.ts` — 55 tests including field-name guards
