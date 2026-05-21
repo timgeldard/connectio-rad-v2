@@ -1479,7 +1479,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table data-testid="component-consumption-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={tableHeaderStyle}>Material ID</th>
@@ -1491,7 +1491,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     </thead>
                     <tbody>
                       {componentConsumption.map((component, idx) => (
-                        <tr key={component.materialId} style={tableRowStyle(idx)}>
+                        <tr key={`${component.materialId}::${component.batchId ?? ''}::${component.uom}`} style={tableRowStyle(idx)}>
                           <td style={tableCellStyle}>{component.materialId}</td>
                           <td style={tableCellStyle}>{component.materialDescription || '-'}</td>
                           <td style={tableCellStyle}>
@@ -1528,7 +1528,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table data-testid="produced-output-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={tableHeaderStyle}>Material ID</th>
