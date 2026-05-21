@@ -102,7 +102,7 @@ describe('SPCSignalSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('accepts a signal with ruleCode', () => {
+  it('accepts a signal without ruleCode for legacy source compatibility', () => {
     const result = SPCSignalSchema.safeParse({
       signalId: 'SIG-001',
       characteristicId: 'CHAR-PH-001',
@@ -112,7 +112,27 @@ describe('SPCSignalSchema', () => {
       plantId: 'IE10',
       chartType: 'xbar-r',
       rule: 'Rule 1',
-      ruleCode: 'WE1',
+      severity: 'high',
+      detectedAt: '2024-03-08T05:45:00.000Z',
+      samplePointId: 'SP-001',
+      resultValue: 6.92,
+      recommendedAction: 'Investigate.',
+      status: 'active',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a signal with a null ruleCode for legacy source compatibility', () => {
+    const result = SPCSignalSchema.safeParse({
+      signalId: 'SIG-001',
+      characteristicId: 'CHAR-PH-001',
+      characteristicName: 'pH',
+      materialId: 'MAT-CH-EMMENTAL',
+      batchId: 'CH-240308-0047',
+      plantId: 'IE10',
+      chartType: 'xbar-r',
+      rule: 'Rule 1',
+      ruleCode: null,
       severity: 'high',
       detectedAt: '2024-03-08T05:45:00.000Z',
       samplePointId: 'SP-001',

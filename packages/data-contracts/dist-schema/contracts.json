@@ -6994,7 +6994,21 @@
           "type": "string"
         },
         "ruleCode": {
-          "type": "string"
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "severity": {
           "type": "string",
@@ -7038,7 +7052,6 @@
         "plantId",
         "chartType",
         "rule",
-        "ruleCode",
         "severity",
         "detectedAt",
         "samplePointId",

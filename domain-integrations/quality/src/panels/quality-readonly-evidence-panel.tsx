@@ -23,6 +23,16 @@ export interface QualityReadOnlyEvidencePanelProps {
   readonly request: QualityReadOnlyEvidenceAdapterRequest
 }
 
+function formatStatusLabel(value: string) {
+  return value.replace(/-/g, ' ')
+}
+
+function statusColor(state: string) {
+  return state === 'loaded' || state === 'source-present'
+    ? 'var(--shell-good)'
+    : 'var(--shell-warn)'
+}
+
 export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidencePanelProps) {
   const { data: result, isLoading } = useQualityReadOnlyEvidence(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
@@ -63,7 +73,7 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
             <Metric label="Inspection lots" value={data.summary.inspectionLotCount} />
             <Metric label="MIC results" value={data.summary.micResultCount} />
             <Metric label="CoA-like rows" value={data.summary.coaResultCount} />
-            <Metric label="UD status" value={data.summary.usageDecisionStatus.replace(/-/g, ' ')} />
+            <Metric label="UD status" value={formatStatusLabel(data.summary.usageDecisionStatus)} />
           </div>
 
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10, display: 'grid', gap: 8 }}>
@@ -78,7 +88,7 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
               <div style={eyebrowStyle}>Unavailable evidence</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {data.summary.unavailableEvidence.map((item) => (
-                  <span key={item} style={chipStyle}>{item.replace(/-/g, ' ')}</span>
+                  <span key={item} style={chipStyle}>{formatStatusLabel(item)}</span>
                 ))}
               </div>
             </div>
@@ -115,11 +125,10 @@ function Metric({ label, value }: { label: string; value: number | string }) {
 }
 
 function SectionStatus({ title, state }: { title: string; state: string }) {
-  const color = state === 'loaded' || state === 'source-present' ? '#2E7D32' : '#D97706'
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', fontSize: 12 }}>
       <span style={{ color: 'var(--shell-fg)' }}>{title}</span>
-      <span style={{ color, fontWeight: 700, textTransform: 'capitalize' }}>{state.replace(/-/g, ' ')}</span>
+      <span style={{ color: statusColor(state), fontWeight: 700, textTransform: 'capitalize' }}>{formatStatusLabel(state)}</span>
     </div>
   )
 }
