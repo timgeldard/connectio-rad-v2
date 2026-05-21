@@ -1,7 +1,7 @@
 # Quality Batch Release Production Readiness Checklist
 
 **Domain:** `domain-integrations/quality`
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-21
 **Purpose:** Gate criteria that must be satisfied before the quality batch release cockpit is used for real release decisions or operational coordination.
 
 Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not applicable
@@ -33,7 +33,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 3.1 | Golden test batches and release cases defined | ✅ | Documented in `golden-quality-batches.md` for both mock and hybrid scenarios. |
+| 3.1 | Golden test batches and release cases defined | 🔶 | Mock cases documented in `golden-quality-batches.md`; no verified live Quality UAT candidate found from V1 discovery. Candidate template is in `golden-quality-candidates.md`. |
 | 3.2 | UAT acceptance testing conducted for Lab Board view | ❌ | Backend proxy endpoints wired, but live E2E browser tests are pending staging environment deployment. |
 | 3.3 | Quality release actions validated in SAP QM test environment | ❌ | Release actions are currently read-only simulation. SAP write-back integration is out of scope for Phase 2. |
 
@@ -85,5 +85,9 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |-------|---------|
 | Development / Code Review | ✅ Ready |
 | Internal Mock-Mode Demonstration | ✅ Ready |
-| UAT with Live Backend Data | ❌ Blocked — requires staging deployment, SAP QM write-back verification, and Databricks scope enablement. |
+| UAT with Live Backend Data | ❌ Blocked — requires source-validated read-only inspection/MIC/usage-decision evidence before any live Quality UAT claim. |
 | Production Go-Live | ❌ Blocked — requires UAT sign-off and Databricks security integration. |
+
+## Discovery Update
+
+V2 Quality Batch Release is currently simulation/trust-hardened. A V1 Quality/QM source and functional parity assessment was completed in `quality-v1-source-discovery.md`; it found read-only evidence candidates but no production-suitable release workflow. Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
