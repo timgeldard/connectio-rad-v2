@@ -1,7 +1,7 @@
 # SPC Capability Calculation Verification
 
 **Date:** 2026-05-21
-**Status:** Pending Databricks verification — no capability values confirmed by live query
+**Status:** Verified 2026-05-21 — capability source unavailable; spc_capability_detail_mv NOT FOUND in UAT
 **Catalog target:** `connected_plant_uat.gold`
 
 > **IMPORTANT:** All capability source claims below are derived from V1 source code analysis only.
@@ -174,3 +174,84 @@ Fill in after running queries.
 | Spec limit source for Cp/Cpk identified (usl_spec/lsl_spec vs spc_locked_limits) | not run | — | — | — |
 | MV refresh cycle confirmed (expected: 4h) | not run | — | — | — |
 | Sample window / date range captured | not run | — | — | — |
+
+
+## Evidence Captured 2026-05-21
+
+**Verified by:** tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`)
+**Date:** 2026-05-21
+
+### `spc_capability_detail_mv` — NOT FOUND
+
+`spc_capability_detail_mv` was NOT FOUND in `connected_plant_uat.gold`.
+
+- Migration 013 (`013_create_capability_mv.sql` or similar) has NOT been applied in UAT
+- No Cp/Cpk/Pp/Ppk values are available from Databricks
+- Pattern query `SHOW TABLES LIKE '*capability*'` returned 0 results
+
+### `spc_quality_metrics` METRIC_VIEW — Aggregate Measures Only
+
+`spc_quality_metrics` is present as a METRIC_VIEW (AI/BI Metric View). Confirmed measures via DESCRIBE EXTENDED:
+
+| Measure | Type | Notes |
+|---------|------|-------|
+| `mic_name` | string (dimension) | |
+| `batch_count` | bigint | |
+| `total_samples` | bigint | |
+| `mean_value` | double | |
+| `stddev_overall` | double | |
+| `distinct_spec_count` | bigint | |
+| `distinct_normality_count` | bigint | |
+| `rejected_batches` | bigint | |
+| `accepted_batches` | bigint | |
+| `ooc_rate` | double | |
+| `avg_samples_per_batch` | double | |
+| `eligible_subgroup_count` | bigint | |
+| `avg_subgroup_range` | double | |
+| `avg_n_eligible` | double | |
+| `sigma_within` | double | |
+| `x_bar_ucl` | double | |
+| `x_bar_lcl` | double | |
+| `empirical_p00135` | double | |
+| `empirical_p50` | double | |
+| `empirical_p99865` | double | |
+
+**Key finding: `spc_quality_metrics` does NOT have Cp/Cpk/Pp/Ppk measures.**
+It has `sigma_within`, `mean_value`, `stddev_overall`, and `ooc_rate`, but no process capability indices.
+`SELECT * FROM spc_quality_metrics LIMIT 1` returns empty (Metric View not queryable as regular table).
+
+### Subgroup Data — Capability Calculation Inputs Available
+
+The `spc_quality_metric_subgroup_mv` contains columns that could support backend capability calculation:
+- `sum_value`, `batch_n` — derive subgroup mean
+- `sum_squares`, `sum_value`, `batch_n` — derive within-subgroup sigma
+- `lsl_spec`, `usl_spec` — specification limits
+- `normality_type`, `normality_method`, `normality_signature` — normality assessment
+
+**Capability can be computed by V2 backend from raw subgroup data, but this requires implementation.**
+
+### Classification
+
+**Capability (Cp/Cpk/Pp/Ppk) is UNAVAILABLE from Databricks source in UAT.**
+
+- `spc_capability_detail_mv` missing — migration not applied
+- `spc_quality_metrics` METRIC_VIEW has no Cp/Cpk measures
+- Raw subgroup data is available for on-demand backend calculation
+
+**V2 decision required:**
+1. **Option A:** Compute Cp/Cpk/Pp/Ppk in V2 backend from `spc_quality_metric_subgroup_mv` data — requires implementation
+2. **Option B:** Mark capability as `interpretation: insufficient-data` until migration 013 is applied in production
+3. **Option C:** Omit capability panel initially; revisit when `spc_capability_detail_mv` is deployed
+
+### Updated Capability Evidence Capture
+
+| Check | Status | Finding | Date | Verified By |
+|-------|--------|---------|------|-------------|
+| `spc_capability_detail_mv` exists in catalog | not found | NOT FOUND — migration 013 not applied | 2026-05-21 | tim.geldard@kerry.com |
+| Object type confirmed as MATERIALIZED_VIEW | not found | Object does not exist | 2026-05-21 | tim.geldard@kerry.com |
+| Columns match expected schema (cp, cpk, pp, ppk, sample_count, mean, sigma_within) | not found | Object does not exist | 2026-05-21 | tim.geldard@kerry.com |
+| At least one row with non-NULL cpk | not found | Object does not exist | 2026-05-21 | tim.geldard@kerry.com |
+| Spec limit source for Cp/Cpk identified | verified | usl_spec/lsl_spec in spc_quality_metric_subgroup_v | 2026-05-21 | tim.geldard@kerry.com |
+| MV refresh cycle confirmed | not found | Object does not exist; refresh cycle not applicable | 2026-05-21 | tim.geldard@kerry.com |
+| Sample window / date range captured | not found | Object does not exist | 2026-05-21 | tim.geldard@kerry.com |
+| spc_quality_metrics METRIC_VIEW measures confirmed | verified | 20 measures; no Cp/Cpk; sigma_within present | 2026-05-21 | tim.geldard@kerry.com |

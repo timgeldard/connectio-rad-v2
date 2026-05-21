@@ -1,13 +1,12 @@
 # SPC Control Limit Provenance Verification
 
 **Date:** 2026-05-21
-**Status:** Pending Databricks verification — no limit columns or values confirmed by live query
+**Status:** Partially verified 2026-05-21 — spc_locked_limits schema confirmed; 1 UAT row captured; see Evidence Captured section
 **Catalog target:** `connected_plant_uat.gold`
 
-> **IMPORTANT:** All column names and classifications below are derived from V1 source code
-> analysis only. No live Databricks DDL has been read to confirm them. The provenance matrix
-> below must be filled in by a person with live Databricks SQL Warehouse access running the
-> queries in Section 3.
+> **IMPORTANT:** Column names and classifications below were derived from V1 source code analysis.
+> Live Databricks evidence was captured on 2026-05-21 by tim.geldard@kerry.com.
+> See "## Evidence Captured 2026-05-21" section for verified findings.
 
 ---
 
@@ -257,3 +256,107 @@ Fill in after all queries are run.
 | Chart type distribution captured | not run | — | — | — |
 | Grain check run (duplicate PK check) | not run | — | — | — |
 | V2 contract mapping confirmed complete | not run | — | — | — |
+
+
+## Evidence Captured 2026-05-21
+
+**Verified by:** tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`)
+**Date:** 2026-05-21
+
+### Confirmed Column List for `spc_locked_limits` (19 columns)
+
+All 19 columns confirmed present via DESCRIBE TABLE. Column names match V1 migration-014 expectations exactly.
+
+| Column | Type | Present? | Notes |
+|--------|------|----------|-------|
+| `material_id` | string | Yes | PK dimension |
+| `mic_id` | string | Yes | PK dimension |
+| `plant_id` | string | Yes | PK dimension |
+| `chart_type` | string | Yes | PK dimension; observed: `imr` |
+| `cl` | double | Yes | Centre line; populated |
+| `ucl` | double | Yes | Upper control limit; populated |
+| `lcl` | double | Yes | Lower control limit; populated |
+| `ucl_r` | double | Yes | UCL for range chart; populated |
+| `lcl_r` | double | Yes | LCL for range chart; 0.0 in UAT row |
+| `sigma_within` | double | Yes | Within-subgroup sigma; populated |
+| `baseline_from` | string | Yes | CONFIRMED (not effective_from); empty in UAT row |
+| `baseline_to` | string | Yes | CONFIRMED (not effective_to); empty in UAT row |
+| `locked_by` | string | Yes | Human user identity |
+| `locked_at` | timestamp | Yes | Populated |
+| `operation_id` | string | Yes | Empty in UAT row |
+| `unified_mic_key` | string | Yes | Present (migration 014 applied); empty in UAT row |
+| `mic_origin` | string | Yes | Empty in UAT row |
+| `spec_signature` | string | Yes | Empty in UAT row |
+| `locking_note` | string | Yes | Empty in UAT row |
+
+**Absent columns (V1 early-source expectations not confirmed):**
+- `usl` — NOT PRESENT. Spec limits are stored in `spc_quality_metric_subgroup_v.usl_spec`, not in `spc_locked_limits`.
+- `lsl` — NOT PRESENT. Same as above.
+
+### The Single Locked Limit Row (UAT Test Fixture)
+
+```
+material_id    = 20047111
+mic_id         = 0060
+plant_id       = C037
+chart_type     = imr
+cl             = 3.243357541899438
+ucl            = 5.54117633384574
+lcl            = 0.945538749953136
+ucl_r          = 2.822622221476501
+lcl_r          = 0.0
+sigma_within   = 0.7659395973154339
+baseline_from  = (empty)
+baseline_to    = (empty)
+locked_by      = domhnall.odonovan@kerry.ie
+locked_at      = 2026-04-06T19:06:02.716Z
+operation_id   = (empty)
+unified_mic_key = (empty)
+mic_origin     = (empty)
+spec_signature = (empty)
+locking_note   = (empty)
+```
+
+### Assessment
+
+**Classification: UAT-suitable with caveats**
+
+- 1 row is a UAT test fixture; not production-representative data
+- No `baseline_from`/`baseline_to` populated — effective date filtering not relevant for this row
+- No `spec_signature` populated
+- Limit approval fields (`locking_note`, `mic_origin`) empty
+- `locked_by` = human user (domhnall.odonovan@kerry.ie) — not a service account; suggests this was manually entered in UAT
+- UCL/LCL/CL values are plausible and populated — suitable for chart rendering test
+
+### Key Finding: Spec Limits Not in `spc_locked_limits`
+
+**Specification limits (`lsl_spec`, `usl_spec`) are stored in `spc_quality_metric_subgroup_v`, NOT in `spc_locked_limits`.**
+
+- `spc_locked_limits` contains ONLY control limits (UCL, LCL, CL, UCL_R, LCL_R, sigma_within) and provenance metadata
+- The UAT locked row has `lsl_spec = 0.0` and `usl_spec = 0.0` in the subgroup view (spec limits not populated for this MIC)
+- V2 must query `spc_quality_metric_subgroup_v.lsl_spec` and `usl_spec` for specification limits
+- V2 must NOT look for `usl`/`lsl` columns in `spc_locked_limits`
+
+### Column Name Discrepancy — Resolved
+
+| Field concept | V1 early-source | V1 migration-014 | Live DDL confirmed |
+|---------------|----------------|------------------|--------------------|
+| Lock validity start | `effective_from` | `baseline_from` | `baseline_from` |
+| Lock validity end | `effective_to` | `baseline_to` | `baseline_to` |
+| Provenance note | `provenance` | `locking_note` | `locking_note` |
+| Spec fingerprint | (absent) | `spec_signature` | `spec_signature` |
+| Spec limits | `usl`, `lsl` | (in subgroup view) | NOT in locked_limits |
+
+### Evidence Capture Summary
+
+| Check | Status | Finding | Date | Verified By |
+|-------|--------|---------|------|-------------|
+| `DESCRIBE TABLE spc_locked_limits` run | verified | 19 columns confirmed | 2026-05-21 | tim.geldard@kerry.com |
+| Column name discrepancy resolved (usl/lsl vs spec_signature) | verified | No usl/lsl in locked_limits; spec limits in subgroup view | 2026-05-21 | tim.geldard@kerry.com |
+| Column name discrepancy resolved (effective_from vs baseline_from) | verified | `baseline_from`/`baseline_to` confirmed | 2026-05-21 | tim.geldard@kerry.com |
+| UCL/LCL/CL populated in at least one row | verified | All 5 limit values populated in UAT row | 2026-05-21 | tim.geldard@kerry.com |
+| Spec limits (USL/LSL) source column identified | verified | `usl_spec`/`lsl_spec` in subgroup view only | 2026-05-21 | tim.geldard@kerry.com |
+| Approval state derivation confirmed | verified | `locked_by` = domhnall.odonovan@kerry.ie (human user) | 2026-05-21 | tim.geldard@kerry.com |
+| Chart type distribution captured | verified | 1 row with chart_type = imr | 2026-05-21 | tim.geldard@kerry.com |
+| Grain check run (duplicate PK check) | verified | 1 row total; PK unique | 2026-05-21 | tim.geldard@kerry.com |
+| V2 contract mapping confirmed complete | partially verified | Column mapping complete; V2 schema may need range chart UCL/LCL fields | 2026-05-21 | tim.geldard@kerry.com |

@@ -1,14 +1,14 @@
 # SPC Databricks Source Verification Pack
 
 **Date:** 2026-05-21
-**Status:** Pending Databricks Access — No verification claimed
+**Status:** Verified 2026-05-21 — tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`)
 **Target Catalog:** `connected_plant_uat.gold`
 **Branch:** `claude/prepare-verification-pack-BTs9F`
 
-> **IMPORTANT:** This document contains SQL verification queries only. No Databricks object, column,
-> row count, or result has been verified by the author of this document. All evidence columns in
-> the tables below are blank and must be filled in by a person with live Databricks SQL Warehouse
-> access.
+> **IMPORTANT:** This document contains SQL verification queries AND live evidence captured on
+> 2026-05-21 by tim.geldard@kerry.com using the Databricks CLI against warehouse
+> `e76480b94bea6ed5` (`connected_plant_uat`). Section 9 contains the verified results.
+> Section 3 has been updated to reflect what remains unverified after this evidence session.
 
 ---
 
@@ -110,23 +110,27 @@ confirmed against live DDL.
 
 ## 3. What Is Not Yet Verified
 
-The following items require live Databricks access to confirm. None may be assumed to be true
-without running the queries below.
+The following items required live Databricks access to confirm. Items that have been resolved
+by the 2026-05-21 verification session are marked **resolved**. Items still pending are retained.
 
-| Item | Why Unverified | Blocking? |
-|------|---------------|-----------|
-| Object inventory — which objects actually exist in UAT | Code analysis only; migrations may not all be applied | Yes |
-| Object types — table vs view vs MV vs metric view | Cannot be confirmed without DESCRIBE EXTENDED | Yes |
-| Column names and data types | DDL from migration scripts may differ from deployed DDL | Yes |
-| Column nullability | Not confirmed | Yes |
-| Whether any rows exist | No live query run | Yes |
-| Whether all 20 migrations have been applied | Deployment state unknown | Yes |
-| `spc_quality_metric_subgroup_v` is a view or MV | Type not confirmed live | Yes |
-| `gold_batch_quality_result_v` column names (SPC-relevant) | Not verified from SPC perspective | Yes |
-| Whether UAT has actual SPC measurement data | Cannot confirm without COUNT query | Yes |
-| Whether `spc_capability_detail_mv` contains computed Cpk values | MV may be empty or unrefreshed | Yes |
-| Whether warehouse `e76480b94bea6ed5` is still the correct one | May have changed | Yes |
-| UC/Unity Catalog path `connected_plant_uat.gold` is accessible | Auth/permissions not confirmed | Yes |
+| Item | Why Unverified | Blocking? | Status |
+|------|---------------|-----------|--------|
+| Object inventory — which objects actually exist in UAT | Code analysis only; migrations may not all be applied | Yes | **Resolved 2026-05-21** — 22 objects found; see Section 9.1 |
+| Object types — table vs view vs MV vs metric view | Cannot be confirmed without DESCRIBE EXTENDED | Yes | **Resolved 2026-05-21** — see Section 9.2 |
+| Column names and data types for `spc_quality_metric_subgroup_v` | DDL from migration scripts may differ from deployed DDL | Yes | **Resolved 2026-05-21** — 34 columns confirmed; significant V1 differences; see Section 9.3 |
+| Column names and data types for `spc_locked_limits` | DDL from migration scripts may differ from deployed DDL | Yes | **Resolved 2026-05-21** — 19 columns confirmed; `baseline_from`/`baseline_to` confirmed; no `usl`/`lsl` |
+| Column names for `spc_capability_detail_mv` | Object may not exist | Yes | **Resolved 2026-05-21** — object NOT FOUND; migration not applied |
+| Column names for `spc_nelson_rule_flags_mv` | Object may not exist | Yes | **Resolved 2026-05-21** — object NOT FOUND; migration not applied |
+| Whether any rows exist | No live query run | Yes | **Resolved 2026-05-21** — 73.4M rows in subgroup MV; 1 row in locked_limits; see row counts |
+| Whether all 20 migrations have been applied | Deployment state unknown | Yes | **Partially resolved** — migrations 012 and 013 confirmed NOT applied |
+| `spc_quality_metric_subgroup_v` is a view or MV | Type not confirmed live | Yes | **Resolved 2026-05-21** — VIEW confirmed |
+| `gold_batch_quality_result_v` column names (SPC-relevant) | Not verified from SPC perspective | No | Still pending |
+| Whether UAT has actual SPC measurement data | Cannot confirm without COUNT query | Yes | **Resolved 2026-05-21** — 73,452,925 rows in subgroup MV |
+| Whether `spc_capability_detail_mv` contains computed Cpk values | MV may be empty or unrefreshed | Yes | **Resolved 2026-05-21** — object NOT FOUND; capability unavailable from Databricks |
+| Whether warehouse `e76480b94bea6ed5` is still the correct one | May have changed | Yes | **Resolved 2026-05-21** — confirmed still valid |
+| UC/Unity Catalog path `connected_plant_uat.gold` is accessible | Auth/permissions not confirmed | Yes | **Resolved 2026-05-21** — accessible |
+| `spc_quality_metric_subgroup_v` V1 column names differ from live DDL | V1 expected `result_value`, `sample_id`, `subgroup_mean`, etc. | Yes | **Resolved 2026-05-21** — columns differ significantly; V1 names absent; see Section 9.3 |
+| Grain analysis — exact grain of subgroup MV | Cannot confirm without COUNT query | Yes | **Partially resolved 2026-05-21** — measurement-level grain confirmed; discriminating column unclear; see grain doc |
 
 ---
 
@@ -346,71 +350,152 @@ SELECT COUNT(*) AS row_count FROM connected_plant_uat.gold.spc_capability_detail
 
 ## 9. Evidence Capture Table
 
-Fill in this table as each query is run. All rows start as `not run`.
+Evidence captured 2026-05-21 by tim.geldard@kerry.com via Databricks CLI, warehouse
+`e76480b94bea6ed5` (`connected_plant_uat`).
 
 Status options: `verified` | `not found` | `partially verified` | `blocked` | `unexpected` | `not run`
 
 ### 9.1 Object Inventory Evidence
 
+22 objects found matching `*spc*` in `connected_plant_uat.gold`.
+
 | Check | SQL Run | Expected Evidence | Actual Result | Verified By | Date | Status | Notes |
 |-------|---------|-------------------|---------------|-------------|------|--------|-------|
-| `spc_quality_metric_subgroup_v` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_locked_limits` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_quality_metrics` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_material_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_plant_material_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_characteristic_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_capability_detail_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_nelson_rule_flags_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| `spc_exclusions` exists | SHOW TABLES LIKE '*spc*' | Listed in output | — | — | — | not run | |
-| No signal/alarm table exists | SHOW TABLES LIKE '*signal*' | Empty / confirmed absent | — | — | — | not run | |
-| `gold_batch_quality_result_v` exists | SHOW TABLES LIKE '*quality*' | Listed in output | — | — | — | not run | |
-| `gold_plant` exists | SHOW TABLES LIKE '*plant*' | Listed in output | — | — | — | not run | |
+| `spc_attribute_metric_source_v` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_attribute_quality_metrics` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | AI/BI Metric View |
+| `spc_attribute_subgroup_mv` exists | SHOW TABLES LIKE '*spc*' | Not expected | Present | tim.geldard@kerry.com | 2026-05-21 | unexpected | Not in V1 source inventory |
+| `spc_batch_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_characteristic_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_correlation_source_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_correlation_source_v` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_exclusions` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | 6 rows |
+| `spc_lineage_graph_mv` exists | SHOW TABLES LIKE '*spc*' | Not expected | Present | tim.geldard@kerry.com | 2026-05-21 | unexpected | Not in V1 source inventory |
+| `spc_locked_limits` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | 1 row |
+| `spc_material_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | 138,051 rows |
+| `spc_mic_chart_config` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | 0 rows |
+| `spc_mic_routing_v` exists | SHOW TABLES LIKE '*spc*' | Not expected | Present | tim.geldard@kerry.com | 2026-05-21 | unexpected | Not in V1 source inventory; likely from migration-014 unified_mic_key work |
+| `spc_plant_material_dim_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | 87,336 rows |
+| `spc_process_flow_metrics` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | AI/BI Metric View |
+| `spc_process_flow_source_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_process_flow_source_v` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_quality_metric_subgroup_mv` exists | SHOW TABLES LIKE '*spc*' | Not expected | Present | tim.geldard@kerry.com | 2026-05-21 | unexpected | Not in V1 source inventory; 73,452,925 rows; use instead of view for large queries |
+| `spc_quality_metric_subgroup_v` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_quality_metrics` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | METRIC_VIEW — not row-queryable via SQL warehouse |
+| `spc_query_audit` exists | SHOW TABLES LIKE '*spc*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified |  |
+| `spc_unified_mic_key_v` exists | SHOW TABLES LIKE '*spc*' | Not expected | Present | tim.geldard@kerry.com | 2026-05-21 | unexpected | Not in V1 source inventory; likely from migration-014 unified_mic_key work |
+| `spc_capability_detail_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found | Migration 013 not applied in UAT |
+| `spc_nelson_rule_flags_mv` exists | SHOW TABLES LIKE '*spc*' | Listed in output | NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found | Migration 012 not applied in UAT |
+| No signal table exists | SHOW TABLES LIKE '*signal*' | Empty / confirmed absent | 0 results | tim.geldard@kerry.com | 2026-05-21 | verified | Confirmed absent |
+| No alarm table exists | SHOW TABLES LIKE '*alarm*' | Empty / confirmed absent | 0 results | tim.geldard@kerry.com | 2026-05-21 | verified | Confirmed absent |
+| No rule table exists | SHOW TABLES LIKE '*rule*' | Empty / confirmed absent | 0 results | tim.geldard@kerry.com | 2026-05-21 | verified | Confirmed absent |
+| No violation table exists | SHOW TABLES LIKE '*violation*' | Empty / confirmed absent | 0 results | tim.geldard@kerry.com | 2026-05-21 | verified | Confirmed absent |
+| No capability table exists | SHOW TABLES LIKE '*capability*' | 0 results | 0 results | tim.geldard@kerry.com | 2026-05-21 | verified | Confirmed absent |
+| `gold_batch_quality_result_v` exists | SHOW TABLES LIKE '*quality*' | Listed in output | Present | tim.geldard@kerry.com | 2026-05-21 | verified | Platform object |
+| `gold_plant` exists | SHOW TABLES LIKE '*plant*' | Listed in output | Not queried | — | — | not run |  |
 
 ### 9.2 Object Type Evidence
 
 | Check | SQL Run | Expected Type | Actual Type | Verified By | Date | Status | Notes |
 |-------|---------|---------------|-------------|-------------|------|--------|-------|
-| `spc_quality_metrics` is AI/BI Metric View | DESCRIBE EXTENDED | METRIC_VIEW or similar | — | — | — | not run | |
-| `spc_quality_metric_subgroup_v` is VIEW | DESCRIBE EXTENDED | VIEW | — | — | — | not run | |
-| `spc_locked_limits` is Delta table | DESCRIBE EXTENDED | MANAGED / TABLE | — | — | — | not run | |
-| `spc_material_dim_mv` is MATERIALIZED_VIEW | DESCRIBE EXTENDED | MATERIALIZED_VIEW | — | — | — | not run | |
-| `spc_capability_detail_mv` is MATERIALIZED_VIEW | DESCRIBE EXTENDED | MATERIALIZED_VIEW | — | — | — | not run | |
+| `spc_quality_metrics` is AI/BI Metric View | DESCRIBE EXTENDED | METRIC_VIEW or similar | METRIC_VIEW | tim.geldard@kerry.com | 2026-05-21 | verified | SELECT * returns empty; not row-queryable via SQL warehouse |
+| `spc_quality_metric_subgroup_v` is VIEW | DESCRIBE EXTENDED | VIEW | VIEW | tim.geldard@kerry.com | 2026-05-21 | verified | |
+| `spc_quality_metric_subgroup_mv` type | DESCRIBE EXTENDED | Not expected | MANAGED (Delta; materialized view by convention) | tim.geldard@kerry.com | 2026-05-21 | unexpected | Clustering on material_id, mic_id; 73,452,925 rows; prefer for large queries |
+| `spc_locked_limits` is Delta table | DESCRIBE EXTENDED | MANAGED / TABLE | MANAGED (Delta) | tim.geldard@kerry.com | 2026-05-21 | verified | |
+| `spc_material_dim_mv` is MATERIALIZED_VIEW | DESCRIBE EXTENDED | MATERIALIZED_VIEW | MATERIALIZED_VIEW | tim.geldard@kerry.com | 2026-05-21 | verified | Last Refresh Type: RECOMPUTED |
+| `spc_characteristic_dim_mv` type | DESCRIBE EXTENDED | MATERIALIZED_VIEW | MANAGED (Delta) | tim.geldard@kerry.com | 2026-05-21 | partially verified | Type MANAGED not MATERIALIZED_VIEW; contains expected schema |
+| `spc_capability_detail_mv` is MATERIALIZED_VIEW | DESCRIBE EXTENDED | MATERIALIZED_VIEW | NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found | Object does not exist in UAT |
 
 ### 9.3 Column Verification Evidence
 
-| Object | Column | Expected Type | Present? | Nullable? | Verified By | Date | Status |
-|--------|--------|---------------|----------|-----------|-------------|------|--------|
-| `spc_quality_metric_subgroup_v` | `material_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `plant_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `mic_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `operation_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `batch_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `sample_id` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `result_value` | DOUBLE | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `sample_timestamp` | TIMESTAMP | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `subgroup_mean` | DOUBLE | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `subgroup_range` | DOUBLE | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `subgroup_sd` | DOUBLE | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `unit_of_measure` | STRING | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `usl_spec` | DOUBLE | — | — | — | — | not run |
-| `spc_quality_metric_subgroup_v` | `lsl_spec` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `material_id` | STRING NOT NULL | — | — | — | — | not run |
-| `spc_locked_limits` | `mic_id` | STRING NOT NULL | — | — | — | — | not run |
-| `spc_locked_limits` | `plant_id` | STRING | — | — | — | — | not run |
-| `spc_locked_limits` | `operation_id` | STRING | — | — | — | — | not run |
-| `spc_locked_limits` | `chart_type` | STRING | — | — | — | — | not run |
-| `spc_locked_limits` | `cl` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `ucl` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `lcl` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `ucl_r` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `lcl_r` | DOUBLE | — | — | — | — | not run |
-| `spc_locked_limits` | `locked_by` | STRING | — | — | — | — | not run |
-| `spc_locked_limits` | `locked_at` | TIMESTAMP | — | — | — | — | not run |
-| `spc_capability_detail_mv` | `cp` | DOUBLE | — | — | — | — | not run |
-| `spc_capability_detail_mv` | `cpk` | DOUBLE | — | — | — | — | not run |
-| `spc_capability_detail_mv` | `pp` | DOUBLE | — | — | — | — | not run |
-| `spc_capability_detail_mv` | `ppk` | DOUBLE | — | — | — | — | not run |
+Columns verified via DESCRIBE TABLE / DESCRIBE EXTENDED on 2026-05-21.
+
+#### `spc_quality_metric_subgroup_v` / `spc_quality_metric_subgroup_mv` (identical schema, 34 columns)
+
+> IMPORTANT: Significant differences from V1 column expectations. V1-expected columns
+> `sample_id`, `result_value`, `sample_timestamp`, `subgroup_mean`, `subgroup_range`,
+> `subgroup_sd`, `inspection_lot_id`, `unit_of_measure` are ALL ABSENT from live DDL.
+> The actual schema uses different naming and calculation conventions — see V2 impact column.
+
+| Object | Column | Actual Type | Present? | V2 Impact / Notes | Verified By | Date | Status |
+|--------|--------|-------------|----------|--------------------|-------------|------|--------|
+| `spc_quality_metric_subgroup_v` | `material_id` | string | Yes | Primary navigation key | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `material_name` | string | Yes | New — not in V1 expectations | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_id` | string | Yes | Present as expected | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `first_posting_date` | date | Yes | New — replaces sample_timestamp (start) | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `last_posting_date` | date | Yes | New — replaces sample_timestamp (end) | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_date` | date | Yes | New — primary date for plotting | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_week` | timestamp | Yes | Time aggregation bucket | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_month` | timestamp | Yes | Time aggregation bucket | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `plant_id` | string | Yes | Present as expected | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `plant_name` | string | Yes | New — not in V1 expectations | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `mic_id` | string | Yes | Present as expected | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `operation_id` | string | Yes | Present; values are sequential numbers (00000001 etc.), NOT SAP work centres | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `mic_name` | string | Yes | Present as expected | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `inspection_method` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `value` | double | Yes | V2 MUST use this — replaces absent `result_value` | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_n` | bigint | Yes | Sample count per batch; replaces absent subgroup_mean denominator | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `sum_value` | double | Yes | Sum of values in batch; mean = sum_value / batch_n | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `sum_squares` | double | Yes | Enables SD calculation | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `min_value` | double | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `max_value` | double | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `batch_range` | double | Yes | Replaces absent `subgroup_range` (= max_value - min_value) | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `nominal_target` | double | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `lsl_spec` | double | Yes | Present; spec limit (lower); NOT in spc_locked_limits | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `usl_spec` | double | Yes | Present; spec limit (upper); NOT in spc_locked_limits | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `tolerance_half_width` | double | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `raw_tolerance` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `spec_signature` | string | Yes | New — fingerprint of spec limits | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `any_rejection` | int | Yes | New — 0/1 flag; batch had a rejection result | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `any_acceptance` | int | Yes | New — 0/1 flag; batch had an acceptance result | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `unified_mic_key` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `subgroup_rep` | int | Yes | Row index within batch (0-based); NOT a reliable unique discriminator | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `normality_type` | string | Yes | New — normality assessment type | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `normality_method` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `normality_signature` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `spec_type` | string | Yes | New | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_quality_metric_subgroup_v` | `sample_id` | string | No | V1-expected ABSENT — no direct sample_id in this schema | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `result_value` | double | No | V1-expected ABSENT — replaced by `value` | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `sample_timestamp` | timestamp | No | V1-expected ABSENT — replaced by `batch_date`, `first_posting_date`, `last_posting_date` | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `subgroup_mean` | double | No | V1-expected ABSENT — derive as `sum_value / batch_n` | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `subgroup_range` | double | No | V1-expected ABSENT — replaced by `batch_range` | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `subgroup_sd` | double | No | V1-expected ABSENT — derive from `sum_squares`, `sum_value`, `batch_n` | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `inspection_lot_id` | string | No | V1-expected ABSENT | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_quality_metric_subgroup_v` | `unit_of_measure` | string | No | V1-expected ABSENT — no UoM column in schema | tim.geldard@kerry.com | 2026-05-21 | not found |
+
+#### `spc_locked_limits` (19 columns — matches V1 migration-014 expectations)
+
+| Object | Column | Actual Type | Present? | V2 Impact / Notes | Verified By | Date | Status |
+|--------|--------|-------------|----------|--------------------|-------------|------|--------|
+| `spc_locked_limits` | `material_id` | string | Yes | PK dimension — required in V2 request | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `mic_id` | string | Yes | PK dimension | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `plant_id` | string | Yes | PK dimension | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `chart_type` | string | Yes | PK dimension; observed value: `imr` | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `cl` | double | Yes | Centre line; populated in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `ucl` | double | Yes | Upper control limit; populated | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `lcl` | double | Yes | Lower control limit; populated | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `ucl_r` | double | Yes | UCL for range chart; populated | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `lcl_r` | double | Yes | LCL for range chart; value = 0.0 in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `sigma_within` | double | Yes | Within-subgroup sigma; populated | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `baseline_from` | string | Yes | CONFIRMED name (not effective_from); empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `baseline_to` | string | Yes | CONFIRMED name (not effective_to); empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `locked_by` | string | Yes | Human user identity in UAT: domhnall.odonovan@kerry.ie | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `locked_at` | timestamp | Yes | Populated: 2026-04-06T19:06:02.716Z | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `operation_id` | string | Yes | Present; empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `unified_mic_key` | string | Yes | Present (migration 014 applied); empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `mic_origin` | string | Yes | Present; empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `spec_signature` | string | Yes | Present; empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `locking_note` | string | Yes | Present; empty in UAT row | tim.geldard@kerry.com | 2026-05-21 | verified |
+| `spc_locked_limits` | `usl` | — | No | V1-early-source ABSENT — spec limits are in subgroup view, NOT here | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_locked_limits` | `lsl` | — | No | V1-early-source ABSENT — spec limits are in subgroup view, NOT here | tim.geldard@kerry.com | 2026-05-21 | not found |
+
+#### `spc_capability_detail_mv` (NOT FOUND — migration 013 not applied in UAT)
+
+| Object | Column | Actual Type | Present? | Notes | Verified By | Date | Status |
+|--------|--------|-------------|----------|-------|-------------|------|--------|
+| `spc_capability_detail_mv` | `cp` | — | No | Object NOT FOUND — migration 013 not applied | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_capability_detail_mv` | `cpk` | — | No | Object NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_capability_detail_mv` | `pp` | — | No | Object NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found |
+| `spc_capability_detail_mv` | `ppk` | — | No | Object NOT FOUND | tim.geldard@kerry.com | 2026-05-21 | not found |
 
 ---
 

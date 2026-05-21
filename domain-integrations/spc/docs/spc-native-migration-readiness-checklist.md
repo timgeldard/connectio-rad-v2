@@ -1,7 +1,7 @@
 # SPC Native Migration Readiness Checklist
 
 **Date:** 2026-05-21
-**Status:** All items incomplete — Databricks access required
+**Status:** Object inventory, types, and schemas partially complete — 2026-05-21 evidence session
 **Purpose:** Gate checklist before implementing native V2 SPC Databricks routes
 
 > This checklist must be completed before any V2 native SPC route (either V1 proxy or direct
@@ -47,25 +47,24 @@
 
 ## 3. Columns / Data Types Confirmed
 
-- [ ] **`spc_quality_metric_subgroup_v` columns verified against live DDL**
-  - Must confirm: `material_id`, `plant_id`, `mic_id`, `operation_id`, `batch_id`,
-    `sample_id`, `result_value`, `sample_timestamp`, `subgroup_mean`, `subgroup_range`,
-    `subgroup_sd`, `unit_of_measure`, `usl_spec`, `lsl_spec`
-  - Evidence required: `DESCRIBE TABLE` output with all column names and types
+- [x] **`spc_quality_metric_subgroup_v` columns verified against live DDL — with SCHEMA DIFFERENCES**
+  - 34 columns confirmed 2026-05-21; significant differences from V1 expectations
+  - V1-expected columns ABSENT: `sample_id`, `result_value`, `sample_timestamp`, `subgroup_mean`, `subgroup_range`, `subgroup_sd`, `inspection_lot_id`, `unit_of_measure`
+  - Replacements: `value` (not `result_value`); `batch_date` (not `sample_timestamp`); `sum_value`/`batch_n` for mean; `batch_range` for range
+  - New columns: `material_name`, `plant_name`, `any_rejection`, `any_acceptance`, `normality_type`, `spec_type`, etc.
+  - `usl_spec` and `lsl_spec` ARE present in this view
+  - Evidence: 2026-05-21 Databricks CLI verification; see spc-databricks-source-verification.md Section 9.3
   - Document: [spc-data-model-grain-assessment.md](./spc-data-model-grain-assessment.md)
 
-- [ ] **`spc_locked_limits` columns verified against live DDL**
-  - Must confirm: `material_id`, `mic_id`, `plant_id`, `operation_id`, `chart_type`,
-    `cl`, `ucl`, `lcl`, `ucl_r`, `lcl_r`, `sigma_within`, `locked_by`, `locked_at`
-  - Must resolve: `usl`/`lsl` vs `spec_signature`, `effective_from`/`effective_to` vs
-    `baseline_from`/`baseline_to`, `provenance` vs `locking_note` discrepancy
-  - Evidence required: `DESCRIBE TABLE` output
+- [x] **`spc_locked_limits` columns verified against live DDL — 19 columns confirmed**
+  - All 19 columns confirmed 2026-05-21; matches V1 migration-014 expectations
+  - Column name discrepancy RESOLVED: `baseline_from`/`baseline_to` confirmed (not `effective_from`/`effective_to`); `locking_note` confirmed (not `provenance`)
+  - No `usl`/`lsl` columns — spec limits are in subgroup view, NOT in locked_limits
+  - Evidence: 2026-05-21 Databricks CLI verification; see spc-control-limit-provenance-verification.md
   - Document: [spc-control-limit-provenance-verification.md](./spc-control-limit-provenance-verification.md)
 
-- [ ] **`spc_capability_detail_mv` columns verified**
-  - Must confirm: `material_id`, `plant_id`, `mic_id`, `mic_name`, `cp`, `cpk`, `pp`, `ppk`,
-    `sample_count`, `mean`, `sigma_within`
-  - Evidence required: `DESCRIBE TABLE` output
+- [!] **`spc_capability_detail_mv` columns verified** — BLOCKED: object NOT FOUND in UAT
+  - Finding: migration 013 not applied; all Cp/Cpk/Pp/Ppk columns unavailable
   - Document: [spc-capability-verification.md](./spc-capability-verification.md)
 
 ---
@@ -144,14 +143,12 @@
 
 ## 8. Rule / Signal Source Classified
 
-- [ ] **Absence of signal/alarm storage tables confirmed**
-  - `SHOW TABLES LIKE '*signal*'`, `'*alarm*'`, `'*violation*'` returned no results
-  - Evidence required: query output
+- [x] **Absence of signal/alarm storage tables confirmed**
+  - Finding: 0 objects for *signal*, *alarm*, *rule*, *violation* patterns confirmed 2026-05-21
   - Document: [spc-rule-signal-source-verification.md](./spc-rule-signal-source-verification.md)
 
-- [ ] **`spc_nelson_rule_flags_mv` exists and grain confirmed**
-  - Used for batch-level scorecard colouring ONLY — not real-time signal detection
-  - Evidence required: `DESCRIBE TABLE` and sample rows
+- [!] **`spc_nelson_rule_flags_mv` exists and grain confirmed** — BLOCKED: NOT FOUND in UAT
+  - Finding: migration 012 not applied; batch-level rule flag summaries unavailable from Databricks
 
 - [ ] **V2 signal computation approach decided**
   - Decision: compute signals in V2 frontend like V1 (recommended) OR design new storage
