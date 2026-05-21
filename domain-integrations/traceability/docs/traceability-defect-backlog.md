@@ -112,22 +112,19 @@
 ## P2 — Improves Trust or Usability
 
 ### TRACE-P2-001 — Plant ID not displayed on trace graph nodes
-**Status:** Schema fixed — UI display pending
-**Affected:** `trace-graph-panel.tsx`
-**Evidence:** `TraceNodeSchema` already has `plantId?: z.string().optional()` (confirmed in codebase review 2026-05-20). The Databricks graph mapper populates `plantId` on each node from `gold_batch_lineage` PARENT/CHILD_PLANT_ID. However, `trace-graph-panel.tsx` does not display `plantId` in node labels, tooltips, or detail panels. Cross-plant investigations cannot distinguish which plant produced each upstream/downstream batch from the graph view alone.
-**Risk:** Investigator cannot determine which plant site is the source of a lineage path from the graph.
-**Proposed fix:** Render `plantId` as a secondary label or tooltip on graph nodes.
-**Owner:** Claude
-**Requires UAT:** Yes
+**Status:** Fixed (2026-05-21) — plantId rendered as a third line on the node card itself; already present on selected-node detail
+**Affected:** `trace-graph-panel.tsx` `TraceNodeCard`, selected-node detail
+**Evidence:** `TraceNodeSchema` has `plantId?: z.string().optional()`. The Databricks graph mapper populates it from `gold_batch_lineage` PARENT/CHILD_PLANT_ID. Selected-node detail panel was already showing it. The node card itself now shows it as a small monospaced chip beneath `batchId` for at-a-glance scanning during cross-plant investigations.
+**Fix applied:** `TraceNodeCard` adds a `{node.plantId && <div aria-label="Plant {value}">…}` chip beneath the batch ID line. Selected-node detail row unchanged. Edge-stroke colour map (`LINK_TYPE_COLORS`) moved to `trace-graph-utils.ts`, fixed to match the schema `relationshipType` enum (previously had wrong keys — legend swatch was decoupled from edge stroke), and wired into `mapToFlowEdges` so vendor-receipt / consumed-by / delivered-to are now visually distinguishable. Selected-edge detail now shows both `Link type (mapped)` (from `relationshipType`) and `Link type (raw)` (from `linkType`) when both are present.
+**Requires UAT:** Yes — verify plant chip and per-relationship-type edge colours render on a live Databricks graph
 
 ### TRACE-P2-002 — Data freshness metadata absent
-**Status:** Open
-**Affected:** All adapter results
-**Evidence:** The reference engine attaches `data_freshness_seconds` from Databricks gold view materialisation timestamps. V2 has no equivalent. An investigator cannot tell if the data shown reflects movements from today or last week.
-**Risk:** Stale data presented as current; may affect containment decisions.
-**Proposed fix:** Add `dataFreshnessSeconds?: number` to `AdapterResult` or per-summary type. Surface as a tooltip or footer note.
-**Owner:** Claude
-**Requires UAT:** Yes (requires live Databricks metadata)
+**Status:** Phase 1 fixed (2026-05-21) — `QueriedAtLabel` added to all live panels showing query-fetch time + "source refresh time unavailable" notice. Phase 2 (verified `_updated_at` column from gold views) remains open.
+**Affected:** `BatchHeaderPanel`, `TraceGraphPanel`, `CustomerImpactPanel`, `MaterialSupplierExposurePanel`, `MassBalancePanel` (inline in `mass-balance-view.tsx`)
+**Evidence:** The reference engine attached `data_freshness_seconds` from Databricks gold view materialisation timestamps. V2 has no equivalent column verified yet (see `data-freshness-plan.md` Approach A). Phase 1 was to surface query-fetch time so investigators at least see when the panel data was retrieved, with an explicit statement that source refresh time is not available.
+**Fix applied:** New `QueriedAtLabel` shared component (`components/QueriedAtLabel.tsx`) renders "Queried at HH:MM:SS — source refresh time unavailable" from `AdapterResult.fetchedAt`. Renders nothing when `fetchedAt` is null/undefined. Added to all 5 currently-rendered live panels. Unit-tested for: null/undefined returns null, valid ISO renders HH:MM:SS, malformed ISO falls back to raw, the disclaimer string is preserved verbatim. The previous batch-header inline disclaimer ("Data freshness not available…") was replaced with this shared component.
+**Remaining work:** Phase 2 — confirm a `_updated_at` / `last_updated_timestamp` column on each gold view and surface a real `dataAsOf` value through a future schema extension. Tracked in `data-freshness-plan.md`.
+**Requires UAT:** Yes — confirm the "Queried at" line renders correctly across all panels in the deployed app
 
 ### TRACE-P2-003 — "across 0 countries" shown for confirmed zero-shipment batches
 **Status:** Fixed (PR #24, commit 74f4b5c) for the `InvestigationSummary` cockpit header
@@ -135,10 +132,10 @@
 **Notes:** No further action required.
 
 ### TRACE-P2-004 — Evidence confidence grade thresholds not documented for users
-**Status:** Open
+**Status:** Fixed (2026-05-21) — `ScoringRules` section added to the `EvidenceConfidenceBadge` tooltip
 **Affected:** `EvidenceConfidenceBadge`, `EvidencePackReadiness`
-**Evidence:** Grade thresholds (COMPLETE = 100pts and 0 gaps, PARTIAL ≥ 50, etc.) are not explained to the user. An investigator seeing "Partial (78%)" does not know what 78 means or why it is not COMPLETE.
-**Proposed fix:** Add a tooltip or info-row to `EvidenceConfidenceBadge` explaining the scoring sectors and thresholds.
+**Evidence:** Grade thresholds (COMPLETE = 100pts and 0 gaps, PARTIAL ≥ 50, etc.) were not explained to the user. An investigator seeing "Partial (78%)" did not know what 78 means or why it is not COMPLETE.
+**Fix applied:** New `ScoringRules` sub-component renders inside the existing tooltip (below the description, above the gaps list). Lists each sector with its point weight (Lineage 15 / Customers & deliveries 20 / Mass balance 20 / Quality 15 / CoA 15 / Suppliers 15 = 100) and the grade thresholds (Complete = 100% no gaps · Partial ≥ 50% · Missing < 50% with some data · Not Assessed = 0%). Exported as a named export so unit tests can render it directly without going through the lazy-mounted Radix Tooltip portal. 3 new tests cover sector enumeration, point-value distribution, and threshold copy.
 **Owner:** Gemini / Claude
 **Requires UAT:** No
 

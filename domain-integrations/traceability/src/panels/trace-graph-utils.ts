@@ -195,14 +195,40 @@ export function mapToFlowNodes(
   })
 }
 
+/**
+ * Per-relationshipType edge colour map.
+ *
+ * Keys correspond to the `TraceEdge.relationshipType` enum (component-of /
+ * produced-from / split-from / merged-into / transferred-to / delivered-to /
+ * vendor-receipt / consumed-by). The legend in `trace-graph-panel.tsx` uses
+ * the same map for the colour swatch, so legend and edge stroke stay in sync.
+ *
+ * Default fallback (anything outside the map) is the legacy neutral grey.
+ */
+export const LINK_TYPE_COLORS: Record<string, string> = {
+  'produced-from': '#7C3AED',     // purple — production lineage
+  'consumed-by': '#7C3AED',       // purple — consumption (opposite side of production)
+  'transferred-to': '#0891B2',    // cyan — internal/STO movement
+  'vendor-receipt': '#D97706',    // orange — inbound from external supplier
+  'delivered-to': '#059669',      // green — outbound to customer
+  'split-from': '#6366F1',        // indigo — batch split
+  'merged-into': '#6366F1',       // indigo — batch merge
+  'component-of': '#6B7280',      // grey — legacy/generic
+}
+
+export const DEFAULT_EDGE_COLOR = '#9CA3AF'
+
 export function mapToFlowEdges(graph: TraceGraph): Edge[] {
-  return graph.edges.map((edge: TraceEdge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    label: edge.relationshipType?.replace(/-/g, ' ') ?? '',
-    style: { stroke: '#9CA3AF', strokeWidth: 1.5 },
-    labelStyle: { fontSize: 10, fill: '#6B7280' },
-    labelBgStyle: { fill: 'var(--shell-bg, #ffffff)', fillOpacity: 0.85 },
-  }))
+  return graph.edges.map((edge: TraceEdge) => {
+    const stroke = LINK_TYPE_COLORS[edge.relationshipType ?? ''] ?? DEFAULT_EDGE_COLOR
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      label: edge.relationshipType?.replace(/-/g, ' ') ?? '',
+      style: { stroke, strokeWidth: 1.5 },
+      labelStyle: { fontSize: 10, fill: '#6B7280' },
+      labelBgStyle: { fill: 'var(--shell-bg, #ffffff)', fillOpacity: 0.85 },
+    }
+  })
 }
