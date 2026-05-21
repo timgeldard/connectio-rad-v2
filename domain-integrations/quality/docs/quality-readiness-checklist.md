@@ -1,7 +1,7 @@
 # Quality Batch Release Production Readiness Checklist
 
 **Domain:** `domain-integrations/quality`
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-21 (UX hardening 2026-05-21)
 **Purpose:** Gate criteria that must be satisfied before the quality batch release cockpit is used for real release decisions or operational coordination.
 
 Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not applicable
@@ -31,6 +31,12 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.6 | Quality/SPC MIC boundary documented | ✅ | `quality-spc-shared-mic-evidence.md` separates Quality specification/valuation/usage-decision evidence from SPC control limits, rule signals, and control status. |
 | 2.7 | Read-only evidence adapter skeleton ready | ✅ | `QualityReadOnlyEvidenceAdapter` returns `pending-source-verification` without fetching Databricks or falling back to mock evidence. Route plan is documented in `quality-readonly-evidence-route-plan.md`. |
 | 2.8 | Read-only evidence panel scaffold ready | ✅ | `QualityReadOnlyEvidencePanel` is mounted in the Quality Evidence view and labels the state as source verification pending, not live evidence. |
+| 2.9 | Read-only evidence state model documented | ✅ | `quality-readonly-evidence-state-model.md` defines all 12 evidence states with meanings, allowed copy, prohibited interpretations, and live-wiring gates. **COMPLETE (2026-05-21).** |
+| 2.10 | Usage-decision display helpers implemented | ✅ | `buildUsageDecisionDisplay` in `src/lib/usage-decision-display.ts` produces governed display labels from raw UD codes. Never returns "Released", "Approved", "Cleared", or "Can release". **COMPLETE (2026-05-21).** |
+| 2.11 | Fixture scenario coverage complete | ✅ | 12 named fixtures in `quality-readonly-evidence-mock-data.ts` covering all state model states. All fixtures include source-limitation warnings. None contain prohibited release terms. **COMPLETE (2026-05-21).** |
+| 2.12 | Source-truthfulness test coverage complete | ✅ | Source-truthfulness test suite in `quality-readonly-evidence-panel.test.tsx` covers all fixture scenarios. 196 tests total passing. **COMPLETE (2026-05-21).** |
+| 2.13 | Live Databricks source wiring | ❌ | Route not implemented. Broader quality source verification pack for inspection-lot/MIC/CoA objects remains pending. Lot-selection rule for multiple lots not confirmed (TRACE-P1-012). **PENDING.** |
+| 2.14 | Verified live Quality UAT candidate | ❌ | No verified live Quality UAT candidate identified. **PENDING.** |
 
 ---
 
@@ -51,6 +57,8 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 4.1 | Adapter contract tests cover mock data structures | ✅ | Schema correctness verified using Zod schemas from `@connectio/data-contracts`. |
 | 4.2 | Panel component tests cover query states (loading, ready, error) | ✅ | Existing Vitest suites run and verify basic rendering. |
 | 4.3 | Test coverage meets or exceeds 60% threshold | ✅ | `di-quality` test suites validated locally. |
+| 4.4 | Source-truthfulness test coverage for all fixture states | ✅ | 196 tests pass (2026-05-21). No fixture or helper output produces "Released", "Can release", "Approved", "Cleared", or "Release ready". Panel renders no action buttons. |
+| 4.5 | Usage-decision display helper tests | ✅ | 60+ tests in `usage-decision-display.test.ts` covering all 9 governed codes, null/empty/unknown inputs, and universal prohibited-term invariants. |
 
 ---
 
@@ -90,10 +98,21 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |-------|---------|
 | Development / Code Review | ✅ Ready |
 | Internal Mock-Mode Demonstration | ✅ Ready |
-| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready (broad + QM usage-decision specific); contract-design-ready; adapter-skeleton-ready; panel-scaffold-ready; native route and live data implementation still UAT-pending. QM usage-decision: schema/grain/join keys verified 2026-05-21; code/text semantics governance from QM process owner required before any release-status display (TRACE-P1-012). |
+| Read-Only Evidence Foundation | 🔶 State model documented; usage-decision display helpers complete; 12 fixture scenarios complete; source-truthfulness test coverage complete (196 tests); contract extended with per-lot UD and state fields. UI/UX code-ready. Live Databricks source wiring remains pending — native route, lot-selection rule, and verified UAT candidate all pending. QM usage-decision: schema/grain/join keys verified 2026-05-21; all 9 UD codes governed (2026-05-21). |
 | UAT with Live Backend Data | ❌ Blocked — requires Databricks source verification and source-backed read-only inspection/MIC/usage-decision evidence before any live Quality UAT claim. |
 | Production Go-Live | ❌ Blocked — requires UAT sign-off and Databricks security integration. |
 
 ## Discovery Update
 
-V2 Quality Batch Release is currently simulation/trust-hardened. A V1 Quality/QM source and functional parity assessment was completed in `quality-v1-source-discovery.md`; it found read-only evidence candidates but no production-suitable release workflow. The read-only evidence foundation now includes a Databricks verification pack, source-truthful evidence contracts, and Quality/SPC MIC boundary documentation. Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
+V2 Quality Batch Release is currently simulation/trust-hardened. A V1 Quality/QM source and functional parity assessment was completed in `quality-v1-source-discovery.md`; it found read-only evidence candidates but no production-suitable release workflow. The read-only evidence foundation now includes a Databricks verification pack, source-truthful evidence contracts, Quality/SPC MIC boundary documentation, a full state model, usage-decision display helpers, 12 fixture scenarios, and source-truthfulness test coverage. Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
+
+## Next Steps (required before live UAT)
+
+1. Run broader Quality Databricks source verification pack for inspection-lot/MIC/CoA/deviation objects.
+2. Confirm lot-selection/fan-out rule for multiple inspection lots per batch (TRACE-P1-012 gate).
+3. Implement read-only usage-decision route (FastAPI proxy + adapter).
+4. Implement inspection lot/MIC/CoA-like read-only routes.
+5. Identify at least one verified live Quality UAT candidate (plant/material/batch with confirmed inspection lot data).
+6. Run Quality UAT evidence capture against live Databricks data.
+
+**Quality live UAT remains blocked.** UI/state model code-ready with fixture coverage. Live Databricks source wiring remains pending.

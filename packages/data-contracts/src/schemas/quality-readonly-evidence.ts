@@ -102,6 +102,21 @@ export const QualityInspectionLotEvidenceSchema = z.object({
   startedAt: z.string().datetime().optional().nullable(),
   completedAt: z.string().datetime().optional().nullable(),
   source: QualityEvidenceSourceSchema,
+  /**
+   * Per-lot usage decision evidence fields.
+   *
+   * These are raw source fields from `gold_inspection_usage_decision` joined to
+   * the inspection lot. They are read-only evidence only — they do not represent
+   * a batch-level release decision. Multiple lots per batch each carry their own
+   * usage decision; no aggregation into a "batch decision" is performed.
+   *
+   * PROHIBITED: These fields must not be mapped to "Released", "Approved",
+   * "Cleared", or "Can release" without a governed lot-selection rule.
+   */
+  usageDecisionCode: z.string().optional().nullable(),
+  usageDecisionText: z.string().optional().nullable(),
+  usageDecisionMappingStatus: QualityUsageDecisionMappingStatusSchema.optional().nullable(),
+  usageDecisionCreatedAt: z.string().datetime().optional().nullable(),
 }).strict()
 
 export type QualityInspectionLotEvidence = z.infer<typeof QualityInspectionLotEvidenceSchema>
@@ -203,6 +218,21 @@ export const QualityEvidenceSummarySchema = z.object({
   warnings: z.array(z.string()),
   queriedAt: z.string().datetime(),
   sourceFreshnessStatus: QualitySourceFreshnessStatusSchema,
+  /**
+   * Extended state model fields.
+   *
+   * These carry expressive state-model states (from quality-readonly-evidence-state-model.md)
+   * as strings rather than widening the strict `status` enum. They are optional so
+   * existing adapters and fixtures remain schema-valid without modification.
+   *
+   * PROHIBITED: `evidenceState` must never be set to "released", "approved", "cleared",
+   * or any value implying release authority. Only evidence-oriented states are valid.
+   */
+  evidenceState: z.string().optional(),
+  sourceStatus: z.string().optional(),
+  lotCount: z.number().int().min(0).optional(),
+  multipleLotsWarning: z.string().optional(),
+  missingLotWarning: z.string().optional(),
 }).strict()
 
 export type QualityEvidenceSummary = z.infer<typeof QualityEvidenceSummarySchema>

@@ -33,7 +33,7 @@ We use the following conservative status classifications:
 | **SPC** | ✅ | ❌ | ❌ | V1 SPC source discovered in `connected_plant_uat.gold` but V2 not yet mapped to it. Blocker is not absent data — it is unmapped V1 source model (material-centric, client-side rule computation, different locked-limits schema). | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
-| **Quality Batch Release** | 🔶 | ❌ | ❌ | Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
+| **Quality Batch Release** | 🔶 | ❌ | ❌ | Read-only evidence UX/state model code-ready with fixture coverage. Live source wiring pending. Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
 | **Environmental Monitoring (EnvMon)** | ✅ | 🔶 | ❌ | Databricks/API wired; browser/live UAT evidence should be confirmed from existing migration docs. | [EnvMon Detail](#environmental-monitoring-envmon) |
 | **Maintenance & Reliability** | 🔶 | ❌ | ❌ | No gold views identified; SAP PM data-access contracts not signed. | [Maintenance Detail](#maintenance-and-reliability) |
 | **Production Staging** | 🔶 | ❌ | ❌ | No gold views confirmed; WMS source views not identified. | [Production Staging Detail](#production-staging) |
@@ -204,14 +204,23 @@ We use the following conservative status classifications:
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
   * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
   * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and a pending-verification panel scaffold is mounted in the Quality Evidence view. Native route/live data implementation remains pending source verification.
+  * **Read-only evidence UX hardening complete (2026-05-21):** Evidence state model defined (`quality-readonly-evidence-state-model.md`); usage-decision display helpers implemented (`buildUsageDecisionDisplay`); 12 fixture scenarios covering all state model states; source-truthfulness panel hardened with per-lot usage decision display, MIC/CoA sections, deviation unavailable copy, and source-truthfulness footer; 196 tests passing. Contract extended with per-lot UD fields and state model fields. No live Databricks routes added. Quality read-only evidence UI and source-truthfulness state handling are code-ready with fixture coverage. Live Databricks source wiring remains pending. Quality live UAT remains blocked until verified source routes and candidates are implemented.
   * **QM usage-decision source verified (2026-05-21):** Dedicated verification pack (`qm-usage-decision-source-verification.md`), grain/join assessment (`qm-usage-decision-grain-and-joins.md`), code-semantics and release-boundary rules (`qm-usage-decision-code-semantics.md`), and cross-domain consumption plan (`qm-usage-decision-cross-domain-consumption-plan.md`) added. Source object `gold_inspection_usage_decision` verified via Databricks CLI: schema (13 columns), grain (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`, 0 duplicates in 15.47M rows), inspection-lot join, and 9 distinct raw usage-decision codes (A, AE, AC, R, ACE, RE, A9, RR, '' empty) confirmed. TRACE-P1-012 status = **source/schema/grain/inspection-lot join verified; all 9 UD codes governed (2026-05-21); runtime wiring pending lot-selection rule for multiple lots per batch**. No live runtime wiring added.
   * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
-    * No Databricks adapter or route exists for native read-only Quality evidence.
+    * No Databricks adapter or route exists for native read-only Quality evidence. UI/state model code-ready; live wiring pending.
     * QM usage-decision source verified (2026-05-21); broader Quality Databricks source verification pack (`quality-databricks-source-verification.md`) still pending for inspection-lot/MIC/CoA objects.
+    * Lot-selection rule for multiple inspection lots per batch not confirmed (TRACE-P1-012 gate).
     * No verified live Quality UAT candidate has been identified.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
+  * **Next steps to unblock live UAT:**
+    1. Run broader Quality Databricks source verification pack for inspection-lot/MIC/CoA/deviation objects.
+    2. Confirm lot-selection/fan-out rule for multiple lots per batch (TRACE-P1-012).
+    3. Implement read-only usage-decision route (FastAPI proxy + adapter).
+    4. Implement inspection lot/MIC/CoA-like read-only routes.
+    5. Identify verified Quality UAT candidate.
+    6. Run Quality UAT evidence capture.
 * **Document Registry:**
   * [Quality README](../../domain-integrations/quality/README.md)
   * [Quality V1 Source Discovery](../../domain-integrations/quality/docs/quality-v1-source-discovery.md)
