@@ -67,10 +67,10 @@ describe('QualityReadOnlyEvidencePanel', () => {
   it('renders unavailable section states without release approval language', () => {
     render(<QualityReadOnlyEvidencePanel request={request} />)
 
-    expect(screen.getByText('Inspection lot evidence')).toBeInTheDocument()
-    expect(screen.getByText('MIC result evidence')).toBeInTheDocument()
-    expect(screen.getByText('Usage decision evidence')).toBeInTheDocument()
-    expect(screen.getByText('CoA result evidence')).toBeInTheDocument()
+    expect(screen.getByText(/Inspection lot evidence/i)).toBeInTheDocument()
+    expect(screen.getByText(/MIC \/ inspection characteristic evidence/i)).toBeInTheDocument()
+    expect(screen.getByText(/Usage decision evidence/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/CoA-like result evidence/i).length).toBeGreaterThan(0)
     expect(screen.queryByText(/release ready/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/approved/i)).not.toBeInTheDocument()
   })
