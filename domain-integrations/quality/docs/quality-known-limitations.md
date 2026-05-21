@@ -42,3 +42,11 @@ All interactive forms in the right-rail Actions panel run in simulated mode:
 
 - **No Databricks-API Adapter**: Databricks-API mode is not implemented for the Quality domain. The adapter factory ignores `databricks-api` mode and falls back to legacy-api/mock mode.
 - **No Unity Catalog Grants**: No Unity Catalog schemas, row-level filters, or column security masks have been verified for quality tables.
+
+---
+
+## 5. V1 Source Discovery Findings
+
+A V1 Quality/QM discovery was completed on 2026-05-21. It found usable read-only inspection/MIC/usage-decision/CoA-result evidence in V1 ConnectedQuality, POH, and Trace2 paths, but did not find a governed production batch-release workflow, SAP QM write-back, e-signature, GxP audit trail, or live deviation/nonconformance source.
+
+*Operational Impact*: Missing usage-decision, CoA, or deviation evidence in V2 must not be interpreted as accepted, released, or no issue. The next safe implementation tranche is read-only inspection lot and MIC evidence, not release/reject actions.

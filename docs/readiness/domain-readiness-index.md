@@ -170,12 +170,18 @@ We use the following conservative status classifications:
 * **Summary:**
   * Release decision panels (Summary, Hold/Impact, Deviations, CoA, Decision History) are mock/simulated.
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
+  * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
+  * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
     * No Databricks adapter exists for quality release.
+    * No verified live Quality UAT candidate has been identified.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
 * **Document Registry:**
   * [Quality README](../../domain-integrations/quality/README.md)
+  * [Quality V1 Source Discovery](../../domain-integrations/quality/docs/quality-v1-source-discovery.md)
+  * [Quality V2 Parity Roadmap](../../domain-integrations/quality/docs/quality-v2-parity-roadmap.md)
+  * [Golden Quality Candidates](../../domain-integrations/quality/docs/golden-quality-candidates.md)
   * [Quality Production Readiness Checklist](../../domain-integrations/quality/docs/quality-readiness-checklist.md)
   * [Golden Quality Batches Candidates](../../domain-integrations/quality/docs/golden-quality-batches.md)
   * [Quality Known Limitations](../../domain-integrations/quality/docs/quality-known-limitations.md)
