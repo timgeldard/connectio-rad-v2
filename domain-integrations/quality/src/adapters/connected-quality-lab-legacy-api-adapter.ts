@@ -9,7 +9,7 @@ import type { ConnectedQualityLabAdapterRequest } from './connected-quality-lab-
 
 /**
  * Tier: legacy-api — wired to V1 CQ backend at /api/cq/lab/fails and /api/cq/lab/plants.
- * Not yet browser-verified. Falls back to mock on any error until verified.
+ * Not yet browser-verified.
  */
 export class ConnectedQualityLabLegacyApiAdapter extends ConnectedQualityLabAdapter {
   private readonly baseUrl: string
@@ -87,7 +87,22 @@ export class ConnectedQualityLabLegacyApiAdapter extends ConnectedQualityLabAdap
       })
 
       if (!response.ok) {
-        return super.getLabPlants()
+        const code =
+          response.status === 401
+            ? ('unauthorized' as const)
+            : response.status === 404
+              ? ('not-found' as const)
+              : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'legacy-api',
+        }
       }
 
       const raw = await response.json()
@@ -109,8 +124,14 @@ export class ConnectedQualityLabLegacyApiAdapter extends ConnectedQualityLabAdap
         fetchedAt: new Date().toISOString(),
         source: 'legacy-api',
       }
-    } catch {
-      return super.getLabPlants()
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message, retryable: true },
+        displayState: 'error',
+        source: 'legacy-api',
+      }
     }
   }
 }
