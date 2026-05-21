@@ -98,6 +98,16 @@ export type {
 export { connectedQualityLabAdapterInstance } from './adapters/connected-quality-lab-adapter-factory.js'
 
 export {
+  QualityReadOnlyEvidenceAdapter,
+  qualityReadOnlyEvidenceAdapter,
+} from './adapters/quality-readonly-evidence-adapter.js'
+export type {
+  QualityReadOnlyEvidenceAdapterRequest,
+  QualityReadOnlyEvidenceAdapterOptions,
+  QualityEvidenceNowFn,
+} from './adapters/quality-readonly-evidence-adapter.js'
+
+export {
   useConnectedQualityLabFailures,
   useConnectedQualityLabPlants,
 } from './adapters/connected-quality-lab-queries.js'

@@ -29,6 +29,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.4 | Databricks source verification pack ready | ✅ | `quality-databricks-source-verification.md` provides object inventory, DESCRIBE, grain, usage-decision, MIC/result/specification, CoA-like, deviation, and golden-candidate checks. No verification has been claimed. |
 | 2.5 | Read-only evidence contracts designed | ✅ | `QualityEvidenceRequest`, inspection lot, MIC result, usage decision, CoA-like result, and summary contracts exist in `@connectio/data-contracts`; they do not include release approval or can-release fields. |
 | 2.6 | Quality/SPC MIC boundary documented | ✅ | `quality-spc-shared-mic-evidence.md` separates Quality specification/valuation/usage-decision evidence from SPC control limits, rule signals, and control status. |
+| 2.7 | Read-only evidence adapter skeleton ready | ✅ | `QualityReadOnlyEvidenceAdapter` returns `pending-source-verification` without fetching Databricks or falling back to mock evidence. Route plan is documented in `quality-readonly-evidence-route-plan.md`. |
 
 ---
 
@@ -88,7 +89,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |-------|---------|
 | Development / Code Review | ✅ Ready |
 | Internal Mock-Mode Demonstration | ✅ Ready |
-| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready; contract-design-ready; native implementation still UAT-pending. |
+| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready; contract-design-ready; adapter-skeleton-ready; native route/UI implementation still UAT-pending. |
 | UAT with Live Backend Data | ❌ Blocked — requires Databricks source verification and source-backed read-only inspection/MIC/usage-decision evidence before any live Quality UAT claim. |
 | Production Go-Live | ❌ Blocked — requires UAT sign-off and Databricks security integration. |
 

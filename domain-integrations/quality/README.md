@@ -18,6 +18,7 @@ This directory houses the Quality and Batch Release domain-integration component
   - Source discovery complete.
   - Databricks source verification pack ready; no source has been marked authoritative.
   - Read-only Quality evidence contract design ready in `@connectio/data-contracts`.
+  - Read-only Quality evidence adapter skeleton ready; it returns `pending-source-verification` and does not fetch live data.
   - Quality/SPC shared MIC evidence boundaries documented.
   - Native Databricks Quality route/UI evidence implementation remains UAT-pending.
 - **Data Veracity**: Batch release decision queue, deviation lists, CoA readiness, and overall release recommendations are simulated mock representations. The Connected Quality Lab Board is preserved from V1 via FastAPI proxy but remains pending live browser verification in V2.
