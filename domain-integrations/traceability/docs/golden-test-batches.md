@@ -133,7 +133,60 @@ Passing a unit test or showing data in mock mode does not count as validation.
 
 ---
 
-### Entry 5 — Next validated batch (template)
+### Entry 5 — Multi-supplier batch for supplier exposure UAT (20394026 / 0005587610)
+
+| Field | Value |
+|---|---|
+| **material_id** | `20394026` |
+| **batch_id** | `0005587610` |
+| **plant_id** | _(no plant filter applied to supplier-exposure queries)_ |
+| **why_useful** | Confirmed to have 4 distinct VENDOR_RECEIPT suppliers across US/DE/AE in `gold_batch_lineage` (after the empty-SUPPLIER_ID filter). Use for SE-2 browser UAT — supplier panel should show supplierCount=4, suppliers[] populated, names visible. |
+| **expected_supplier_evidence** | supplierCount=4 (Agropur MSI LLC / Red Arrow Handels GmbH / Red Arrow Handels VP21601 / Millenium Chemical Trading LLC). Top supplier: Agropur MSI LLC (0005033449), US, 1,886,976 KG across 144 receipts. UOM=KG for all. Source 2026-05-21 via Databricks Statement API. |
+| **expected_customer_evidence** | Unknown — requires UAT session |
+| **expected_lineage_direction** | Unknown — requires full UAT session |
+| **expected_downstream_exposure** | Unknown — requires full UAT session |
+| **expected_stock_evidence** | Unknown — requires UAT session |
+| **expected_quality_evidence** | Unknown — requires UAT session (TRACE-P1-012 blocks verified QM evidence) |
+| **expected_coa_evidence** | Unknown — CoA panel is mock-only. |
+| **expected_mass_balance_evidence** | Unknown — requires UAT session |
+| **validation_date** | Partial — supplier exposure slice only (2026-05-21 via Databricks Statement API). Full app-level UAT not yet performed. |
+| **validation_status** | Partial — supplier query confirmed from direct Databricks Statement API. Browser UAT pending. |
+| **source_of_evidence** | Direct Databricks Statement API query, 2026-05-21, connected_plant_uat, warehouse e76480b94bea6ed5. See `supplier-exposure-source-mapping.md`. |
+
+**Additional notes:**
+- Entry 3 (20035129/8000049668) returns only 1 supplier (PQ Silicas UK) — fine for happy-path SE-1 UAT but does not exercise multi-supplier rendering.
+- Use this Entry 5 batch when validating the supplier table renders multiple rows correctly across countries.
+
+---
+
+### Entry 6 — Production history candidate (70948010)
+
+| Field | Value |
+|---|---|
+| **material_id** | `70948010` |
+| **batch_id** | _(production-history queries filter by material only)_ |
+| **plant_id** | _(returns multi-plant: P132, P648, P638)_ |
+| **why_useful** | Highest-volume material in `gold_batch_production_history_v` — 26,196 historical batches between 2022-02-27 and 2025-09-28. Use for PH-2 browser UAT — production history panel should return 24 most-recent batches with quality status distribution. |
+| **expected_production_history_evidence** | totalBatches=24 (LIMIT 24); first batch (2025-09-28) plant=P648 / batch=0011062334 / process_order=007006964801 / qty=31335.789 KG / quality=Pass. Distribution as of 2026-05-21 sample: top 24 batches all Pass. |
+| **expected_customer_evidence** | Unknown — requires UAT session |
+| **expected_supplier_evidence** | Unknown — requires UAT session |
+| **expected_lineage_direction** | Unknown — requires full UAT session |
+| **expected_downstream_exposure** | Unknown — requires full UAT session |
+| **expected_stock_evidence** | Unknown — requires UAT session |
+| **expected_quality_evidence** | quality_status from production-history view is 'Pass'/'Fail' label, NOT the SAP QM release decision (TRACE-P1-012). Do not treat Fail rows as confirmed rejections. |
+| **expected_coa_evidence** | Unknown — CoA panel is mock-only. |
+| **expected_mass_balance_evidence** | Unknown — requires UAT session |
+| **validation_date** | Partial — production history slice only (2026-05-21 via Databricks Statement API). Full app-level UAT not yet performed. |
+| **validation_status** | Partial — production history query confirmed from direct Databricks Statement API. Browser UAT pending. |
+| **source_of_evidence** | Direct Databricks Statement API query, 2026-05-21, connected_plant_uat, warehouse e76480b94bea6ed5. See `production-history-source-mapping.md`. |
+
+**Additional notes:**
+- Entry 3 (20035129) is a raw-input material — production-history correctly returns 0 rows for it. That is the zero-rows happy path for PH-3 UAT.
+- Use this Entry 6 material when validating the production history table renders multiple rows correctly with pass/fail distribution.
+
+---
+
+### Entry 7 — Next validated batch (template)
 
 | Field | Value |
 |---|---|
@@ -158,7 +211,7 @@ Passing a unit test or showing data in mock mode does not count as validation.
 
 To register a new test batch:
 
-1. Copy the template above (Entry 5) and append it to this file as a new numbered entry.
+1. Copy the template above (Entry 7) and append it to this file as a new numbered entry.
 2. Fill in `material_id`, `batch_id`, and `plant_id` from the real SAP records.
 3. Describe why this batch is useful in `why_useful` — the richer the reason, the more useful the register becomes over time.
 4. Leave all "expected" fields as "Unknown — requires UAT validation" until a live session has been completed.

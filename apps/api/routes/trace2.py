@@ -14,18 +14,26 @@ from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
+    Trace2ProductionHistoryRequest,
+    Trace2SupplierExposureRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
     get_customer_delivery_spec,
     get_customer_exposure_spec,
+    get_production_history_spec,
+    get_supplier_exposure_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
+    map_production_history_rows,
+    map_supplier_exposure_rows,
     map_trace_graph,
 )
 from contracts.generated import (
     CustomerExposureSummary,
+    ProductionHistorySummary,
+    SupplierExposureSummary,
     TraceGraph,
 )
 from routes._databricks import (
@@ -345,5 +353,122 @@ async def customer_deliveries(
                 "do not interpret as zero exposure until source coverage is validated."
             ),
         )
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# POST /trace2/supplier-exposure — upstream VENDOR_RECEIPT supplier slice
+# ---------------------------------------------------------------------------
+
+class SupplierExposureBody(BaseModel):
+    material_id: str
+    batch_id: str
+    max_rows: int = 1000
+
+
+@router.post("/trace2/supplier-exposure", response_model=SupplierExposureSummary)
+async def supplier_exposure(
+    body: SupplierExposureBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/supplier-exposure — direct VENDOR_RECEIPT suppliers.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_lineage (LINK_TYPE='VENDOR_RECEIPT') joined to gold_supplier.
+    Single-hop only (direct parents); multi-hop recursive walk is out of scope.
+
+    Empty SUPPLIER_ID values are filtered at SQL — those represent unattributed
+    inputs and are not real third-party suppliers.
+
+    Zero suppliers → HTTP 200 with empty suppliers[] (not 404). A batch may
+    legitimately have no purchased inputs (production-only batch). The panel
+    surfaces zero-supplier state distinctly from an error.
+
+    openSupplierActions and highestRiskSupplier are NOT populated by this slice
+    — a verified QM source is required. See TRACE-P1-012.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="supplier-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 5000)
+
+    request = Trace2SupplierExposureRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_supplier_exposure_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_supplier_exposure_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# POST /trace2/production-history — recent batches for a material
+# ---------------------------------------------------------------------------
+
+class ProductionHistoryBody(BaseModel):
+    material_id: str
+    max_rows: int = 24
+
+
+@router.post("/trace2/production-history", response_model=ProductionHistorySummary)
+async def production_history(
+    body: ProductionHistoryBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/production-history — recent production batches for a material.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_production_history_v keyed on MATERIAL_ID only (no plant
+    filter — V1 showed batches across all plants to support isolated-vs-systemic
+    assessment). Default 24 most-recent batches (V1 parity).
+
+    Zero rows → HTTP 200 with totalBatches=0 and empty rows[]. A material may
+    legitimately have no recent production history (e.g., raw-input material,
+    not manufactured on-site). That state is informative, not an error.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="production-history requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 200)
+
+    request = Trace2ProductionHistoryRequest(
+        material_id=body.material_id,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_production_history_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_production_history_rows(rows, body.material_id)
     set_databricks_response_headers(response, spec)
     return result

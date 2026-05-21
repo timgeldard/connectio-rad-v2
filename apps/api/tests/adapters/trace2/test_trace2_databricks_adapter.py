@@ -6,16 +6,22 @@ from adapters.trace2.trace2_databricks_adapter import (
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
     Trace2MassBalanceRequest,
+    Trace2ProductionHistoryRequest,
+    Trace2SupplierExposureRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
     get_customer_delivery_spec,
     get_customer_exposure_spec,
     get_mass_balance_spec,
+    get_production_history_spec,
+    get_supplier_exposure_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
     map_mass_balance_rows,
+    map_production_history_rows,
+    map_supplier_exposure_rows,
     map_trace_graph,
 )
 from shared.query_service.cache_policy import CacheTier
@@ -1373,3 +1379,317 @@ class TestMapCustomerDeliveryRows:
         result = map_customer_delivery_rows([row])
         assert result is not None
         assert "uom" not in result
+
+
+# ---------------------------------------------------------------------------
+# TestGetSupplierExposureSpec
+# ---------------------------------------------------------------------------
+
+class TestGetSupplierExposureSpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    def _req(self, max_rows: int = 1000) -> Trace2SupplierExposureRequest:
+        return Trace2SupplierExposureRequest("MAT001", "BATCH001", max_rows=max_rows)
+
+    def test_name(self) -> None:
+        assert get_supplier_exposure_spec(self._req()).name == "trace2.get_supplier_exposure"
+
+    def test_endpoint(self) -> None:
+        assert get_supplier_exposure_spec(self._req()).endpoint == "/api/trace2/supplier-exposure"
+
+    def test_source_badge(self) -> None:
+        badge = get_supplier_exposure_spec(self._req()).source_badge
+        assert "gold_batch_lineage" in badge
+        assert "gold_supplier" in badge
+
+    def test_cache_policy_is_per_user(self) -> None:
+        assert get_supplier_exposure_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
+
+    def test_sql_references_both_tables(self) -> None:
+        sql = get_supplier_exposure_spec(self._req()).sql
+        assert "gold_batch_lineage" in sql
+        assert "gold_supplier" in sql
+
+    def test_sql_filters_vendor_receipt_only(self) -> None:
+        assert "VENDOR_RECEIPT" in get_supplier_exposure_spec(self._req()).sql
+
+    def test_sql_filters_empty_supplier_id(self) -> None:
+        """Live data has SUPPLIER_ID='' for unattributed inputs. Must be excluded."""
+        sql = get_supplier_exposure_spec(self._req()).sql
+        assert "SUPPLIER_ID IS NOT NULL" in sql
+        assert "SUPPLIER_ID <> ''" in sql
+
+    def test_sql_groups_by_supplier(self) -> None:
+        sql = get_supplier_exposure_spec(self._req()).sql
+        assert "GROUP BY" in sql
+
+    def test_sql_has_limit(self) -> None:
+        assert "LIMIT :max_rows" in get_supplier_exposure_spec(self._req()).sql
+
+    def test_params(self) -> None:
+        spec = get_supplier_exposure_spec(Trace2SupplierExposureRequest("MAT001", "BATCH001", max_rows=500))
+        assert spec.params["material_id"] == "MAT001"
+        assert spec.params["batch_id"] == "BATCH001"
+        assert spec.params["max_rows"] == 500
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_supplier_exposure_spec(self._req())
+
+
+# ---------------------------------------------------------------------------
+# TestMapSupplierExposureRows
+# ---------------------------------------------------------------------------
+
+def _supplier_row(
+    supplier_id: str = "0005002928",
+    supplier_name: str = "PQ Silicas UK",
+    country_id: str = "GB",
+    country_name: str = "United Kingdom",
+    received_quantity: float = 201300.0,
+    receipt_count: int = 20,
+    upstream_material_count: int = 1,
+    last_receipt_date: str = "2025-06-04",
+    uom: str = "KG",
+) -> dict:
+    return {
+        "supplier_id": supplier_id,
+        "supplier_name": supplier_name,
+        "country_id": country_id,
+        "country_name": country_name,
+        "received_quantity": received_quantity,
+        "receipt_count": receipt_count,
+        "upstream_material_count": upstream_material_count,
+        "last_receipt_date": last_receipt_date,
+        "uom": uom,
+    }
+
+
+class TestMapSupplierExposureRows:
+    def test_empty_rows_returns_zero_supplier_summary(self) -> None:
+        """Empty result is 200-valid: a batch may have no purchased inputs."""
+        result = map_supplier_exposure_rows([])
+        assert result["supplierCount"] == 0
+        assert result["supplierLots"] == 0
+        assert result["upstreamMaterials"] == 0
+        assert result["openSupplierActions"] == 0
+        assert result["suppliers"] == []
+
+    def test_single_supplier_uat_candidate(self) -> None:
+        result = map_supplier_exposure_rows([_supplier_row()])
+        assert result["supplierCount"] == 1
+        assert result["supplierLots"] == 20
+        assert result["upstreamMaterials"] == 1
+        assert len(result["suppliers"]) == 1
+        s = result["suppliers"][0]
+        assert s["supplierId"] == "0005002928"
+        assert s["supplierName"] == "PQ Silicas UK"
+        assert s["countryId"] == "GB"
+        assert s["countryName"] == "United Kingdom"
+        assert s["receivedQuantity"] == 201300.0
+        assert s["batchCount"] == 20
+        assert s["uom"] == "KG"
+        assert s["lastReceiptDate"] == "2025-06-04"
+
+    def test_multi_supplier_aggregates(self) -> None:
+        rows = [
+            _supplier_row(),
+            _supplier_row(supplier_id="0005033449", supplier_name="Agropur MSI, LLC",
+                          country_id="US", country_name="United States",
+                          received_quantity=1886976.0, receipt_count=144, upstream_material_count=1),
+        ]
+        result = map_supplier_exposure_rows(rows)
+        assert result["supplierCount"] == 2
+        assert result["supplierLots"] == 164  # 20 + 144
+        assert result["upstreamMaterials"] == 2  # 1 + 1
+        assert len(result["suppliers"]) == 2
+
+    def test_open_supplier_actions_always_zero(self) -> None:
+        """TRACE-P1-012: no verified QM source. openSupplierActions must remain 0."""
+        result = map_supplier_exposure_rows([_supplier_row()])
+        assert result["openSupplierActions"] == 0
+
+    def test_highest_risk_supplier_absent(self) -> None:
+        """TRACE-P1-012: no verified QM source. highestRiskSupplier must not appear."""
+        result = map_supplier_exposure_rows([_supplier_row()])
+        assert "highestRiskSupplier" not in result
+
+    def test_empty_supplier_id_excluded(self) -> None:
+        """SQL filter should exclude these but the mapper double-checks."""
+        rows = [_supplier_row(supplier_id=""), _supplier_row()]
+        result = map_supplier_exposure_rows(rows)
+        assert result["supplierCount"] == 1
+
+    def test_optional_fields_absent_when_null(self) -> None:
+        row = _supplier_row()
+        for k in ("supplier_name", "country_id", "country_name", "uom", "last_receipt_date"):
+            row[k] = None
+        result = map_supplier_exposure_rows([row])
+        s = result["suppliers"][0]
+        for k in ("supplierName", "countryId", "countryName", "uom", "lastReceiptDate"):
+            assert k not in s
+
+    def test_supplier_id_leading_zeros_preserved(self) -> None:
+        result = map_supplier_exposure_rows([_supplier_row(supplier_id="0000012345")])
+        assert result["suppliers"][0]["supplierId"] == "0000012345"
+
+
+# ---------------------------------------------------------------------------
+# TestGetProductionHistorySpec
+# ---------------------------------------------------------------------------
+
+class TestGetProductionHistorySpec:
+    @pytest.fixture(autouse=True)
+    def _set_trace_catalog(self, monkeypatch):
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    def _req(self, max_rows: int = 24) -> Trace2ProductionHistoryRequest:
+        return Trace2ProductionHistoryRequest("MAT001", max_rows=max_rows)
+
+    def test_name(self) -> None:
+        assert get_production_history_spec(self._req()).name == "trace2.get_production_history"
+
+    def test_endpoint(self) -> None:
+        assert get_production_history_spec(self._req()).endpoint == "/api/trace2/production-history"
+
+    def test_source_badge(self) -> None:
+        assert get_production_history_spec(self._req()).source_badge == "view:gold_batch_production_history_v"
+
+    def test_cache_policy_is_per_user(self) -> None:
+        assert get_production_history_spec(self._req()).cache_policy == CacheTier.PER_USER_60S
+
+    def test_sql_references_view(self) -> None:
+        assert "gold_batch_production_history_v" in get_production_history_spec(self._req()).sql
+
+    def test_sql_filters_material_only_no_plant(self) -> None:
+        """V1 parity: material-only filter — no plant filter."""
+        sql = get_production_history_spec(self._req()).sql
+        assert "MATERIAL_ID = :material_id" in sql
+        assert ":plant_id" not in sql
+        assert "PLANT_ID =" not in sql
+
+    def test_sql_orders_by_posting_date_desc(self) -> None:
+        assert "ORDER BY POSTING_DATE DESC" in get_production_history_spec(self._req()).sql
+
+    def test_sql_has_limit(self) -> None:
+        assert "LIMIT :max_rows" in get_production_history_spec(self._req()).sql
+
+    def test_params(self) -> None:
+        spec = get_production_history_spec(Trace2ProductionHistoryRequest("MAT001", max_rows=50))
+        assert spec.params["material_id"] == "MAT001"
+        assert spec.params["max_rows"] == 50
+
+    def test_default_max_rows_is_24(self) -> None:
+        """V1 parity: most-recent 24 batches by default."""
+        req = Trace2ProductionHistoryRequest("MAT001")
+        assert req.max_rows == 24
+
+    def test_missing_trace_catalog_raises_config_error(self, monkeypatch) -> None:
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+        with pytest.raises(DatabricksConfigError):
+            get_production_history_spec(self._req())
+
+
+# ---------------------------------------------------------------------------
+# TestMapProductionHistoryRows
+# ---------------------------------------------------------------------------
+
+def _ph_row(
+    process_order_id: str = "PO-001",
+    batch_id: str = "B-001",
+    plant_id: str = "P648",
+    material_id: str = "70948010",
+    posting_date: str = "2025-09-28",
+    batch_qty: float = 31335.789,
+    uom: str = "KG",
+    quality_status: str = "Pass",
+) -> dict:
+    return {
+        "process_order_id": process_order_id,
+        "batch_id": batch_id,
+        "plant_id": plant_id,
+        "material_id": material_id,
+        "posting_date": posting_date,
+        "batch_qty": batch_qty,
+        "uom": uom,
+        "quality_status": quality_status,
+    }
+
+
+class TestMapProductionHistoryRows:
+    def test_empty_rows_returns_zero_summary_with_material_id(self) -> None:
+        """Empty result is 200-valid: a material may not be manufactured on-site."""
+        result = map_production_history_rows([], "70948010")
+        assert result["materialId"] == "70948010"
+        assert result["totalBatches"] == 0
+        assert result["passCount"] == 0
+        assert result["failCount"] == 0
+        assert result["unknownCount"] == 0
+        assert result["rows"] == []
+
+    def test_single_pass_row(self) -> None:
+        result = map_production_history_rows([_ph_row()], "70948010")
+        assert result["totalBatches"] == 1
+        assert result["passCount"] == 1
+        assert result["failCount"] == 0
+        assert len(result["rows"]) == 1
+        r = result["rows"][0]
+        assert r["batchId"] == "B-001"
+        assert r["processOrderId"] == "PO-001"
+        assert r["plantId"] == "P648"
+        assert r["materialId"] == "70948010"
+        assert r["postingDate"] == "2025-09-28"
+        assert r["quantity"] == 31335.789
+        assert r["uom"] == "KG"
+        assert r["qualityStatus"] == "pass"
+
+    def test_quality_status_pass_fail_unknown(self) -> None:
+        rows = [
+            _ph_row(quality_status="Pass"),
+            _ph_row(batch_id="B-002", quality_status="Fail"),
+            _ph_row(batch_id="B-003", quality_status="UnexpectedValue"),
+            _ph_row(batch_id="B-004", quality_status=None),
+        ]
+        result = map_production_history_rows(rows, "70948010")
+        assert result["passCount"] == 1
+        assert result["failCount"] == 1
+        assert result["unknownCount"] == 2
+        assert [r["qualityStatus"] for r in result["rows"]] == ["pass", "fail", "unknown", "unknown"]
+
+    def test_quality_status_case_insensitive(self) -> None:
+        rows = [_ph_row(quality_status="pass"), _ph_row(batch_id="B-2", quality_status="FAIL")]
+        result = map_production_history_rows(rows, "70948010")
+        assert result["passCount"] == 1
+        assert result["failCount"] == 1
+
+    def test_material_id_from_argument_when_row_has_none(self) -> None:
+        row = _ph_row()
+        row["material_id"] = None
+        result = map_production_history_rows([row], "FALLBACK_MAT")
+        assert result["materialId"] == "FALLBACK_MAT"
+        assert result["rows"][0]["materialId"] == "FALLBACK_MAT"
+
+    def test_optional_fields_absent_when_null(self) -> None:
+        row = _ph_row()
+        for k in ("process_order_id", "plant_id", "posting_date", "uom"):
+            row[k] = None
+        result = map_production_history_rows([row], "70948010")
+        r = result["rows"][0]
+        for k in ("processOrderId", "plantId", "postingDate", "uom"):
+            assert k not in r
+
+    def test_null_batch_qty_defaults_to_zero(self) -> None:
+        row = _ph_row()
+        row["batch_qty"] = None
+        result = map_production_history_rows([row], "70948010")
+        assert result["rows"][0]["quantity"] == 0.0
+
+    def test_batch_id_leading_zeros_preserved(self) -> None:
+        row = _ph_row(batch_id="0000123456")
+        result = map_production_history_rows([row], "70948010")
+        assert result["rows"][0]["batchId"] == "0000123456"

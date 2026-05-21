@@ -809,6 +809,190 @@ class TestCustomerDeliveriesSuccess:
         assert response.status_code == 200
 
 
+# ---------------------------------------------------------------------------
+# Supplier exposure route tests (POST /api/trace2/supplier-exposure)
+# ---------------------------------------------------------------------------
+
+_SE_URL = "/api/trace2/supplier-exposure"
+
+_SE_VALID_BODY = {
+    "material_id": "20035129",
+    "batch_id": "8000049668",
+}
+
+_FAKE_SUPPLIER_ROW = {
+    "supplier_id": "0005002928",
+    "supplier_name": "PQ Silicas UK",
+    "country_id": "GB",
+    "country_name": "United Kingdom",
+    "received_quantity": 201300.0,
+    "receipt_count": 20,
+    "upstream_material_count": 1,
+    "last_receipt_date": "2025-06-04",
+    "uom": "KG",
+}
+
+
+class TestSupplierExposureWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+
+class TestSupplierExposureSuccess:
+    async def test_200_returns_supplier_summary(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["supplierCount"] == 1
+        assert data["supplierLots"] == 20
+        assert data["upstreamMaterials"] == 1
+        assert data["openSupplierActions"] == 0
+        assert len(data["suppliers"]) == 1
+        assert data["suppliers"][0]["supplierName"] == "PQ Silicas UK"
+        assert data["suppliers"][0]["countryId"] == "GB"
+
+    async def test_zero_suppliers_returns_200_empty_array(self, monkeypatch) -> None:
+        """Zero suppliers is a valid 200 response — a batch may have no purchased inputs."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["supplierCount"] == 0
+        assert data["suppliers"] == []
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        badge = response.headers.get("x-data-source", "")
+        assert "gold_batch_lineage" in badge
+        assert "gold_supplier" in badge
+
+    async def test_open_supplier_actions_is_zero_no_qm_source(self, monkeypatch) -> None:
+        """TRACE-P1-012: no verified QM source in this slice."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.json()["openSupplierActions"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Production history route tests (POST /api/trace2/production-history)
+# ---------------------------------------------------------------------------
+
+_PH_URL = "/api/trace2/production-history"
+
+_PH_VALID_BODY = {
+    "material_id": "70948010",
+}
+
+_FAKE_PH_ROW_PASS = {
+    "process_order_id": "007006964801",
+    "batch_id": "0011062334",
+    "plant_id": "P648",
+    "material_id": "70948010",
+    "posting_date": "2025-09-28",
+    "batch_qty": 31335.789,
+    "uom": "KG",
+    "quality_status": "Pass",
+}
+
+_FAKE_PH_ROW_FAIL = {
+    **_FAKE_PH_ROW_PASS,
+    "batch_id": "0011062335",
+    "quality_status": "Fail",
+}
+
+
+class TestProductionHistoryWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+
+class TestProductionHistorySuccess:
+    async def test_200_returns_production_history(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_PH_ROW_PASS, _FAKE_PH_ROW_FAIL]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["materialId"] == "70948010"
+        assert data["totalBatches"] == 2
+        assert data["passCount"] == 1
+        assert data["failCount"] == 1
+        assert data["unknownCount"] == 0
+        assert len(data["rows"]) == 2
+
+    async def test_zero_rows_returns_200_empty_history(self, monkeypatch) -> None:
+        """Zero rows is a valid 200 — the material may not be manufactured on-site."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["materialId"] == "70948010"
+        assert data["totalBatches"] == 0
+        assert data["rows"] == []
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_PH_ROW_PASS]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=_PH_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        async with _make_client() as client:
+            response = await client.post(_PH_URL, json={}, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_no_plant_id_required(self, monkeypatch) -> None:
+        """V1 parity: material-only filter; plant_id not in request body."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_PH_ROW_PASS]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_PH_ROW_PASS]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert "gold_batch_production_history_v" in response.headers.get("x-data-source", "")
+
+    async def test_max_rows_clamped_to_200(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_PH_VALID_BODY, "max_rows": 9999}
+        with _patch_executor([_FAKE_PH_ROW_PASS]):
+            async with _make_client() as client:
+                response = await client.post(_PH_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+
 class TestTraceGraphArchitectureGuardrails:
     def test_no_sql_select_in_route_module(self) -> None:
         import inspect

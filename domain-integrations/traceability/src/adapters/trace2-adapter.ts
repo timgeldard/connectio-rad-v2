@@ -5,6 +5,7 @@ import type {
   MassBalanceSummary,
   CustomerExposureSummary,
   SupplierExposureSummary,
+  ProductionHistorySummary,
   TraceEvent,
   CoAReleaseStatus,
   TraceRiskSignal,
@@ -19,6 +20,7 @@ import {
   mockMassBalance,
   mockCustomerExposure,
   mockSupplierExposure,
+  mockProductionHistory,
   mockTraceEvents,
   mockCoAReleaseStatus,
   mockRiskSignals,
@@ -185,6 +187,19 @@ export class Trace2Adapter {
   ): Promise<AdapterResult<SupplierExposureSummary>> {
     await this.delay()
     return ok(mockSupplierExposure, this.now)
+  }
+
+  /**
+   * Fetches the production history for a material — recent batches.
+   *
+   * @param request - Investigation and material identifier.
+   * @returns The production history summary, or an error result.
+   */
+  async getProductionHistory(
+    _request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<ProductionHistorySummary>> {
+    await this.delay()
+    return ok(mockProductionHistory, this.now)
   }
 
   /**

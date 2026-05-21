@@ -50,7 +50,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | All existing tests passing on CI | ✅ | TypeScript: 224 tests (di-traceability). Python: 252 tests (adapter + route, 2026-05-20). |
+| 4.1 | All existing tests passing on CI | ✅ | TypeScript: 232 tests (di-traceability, +8 legacy-api adapter tests for supplier + production history). Python: 307 tests (adapter + route, +55 for supplier exposure + production history slices). |
 | 4.2 | Null/unknown data states covered by unit tests | ✅ | `InvestigationSummary.test.tsx` — 4 null-path tests added PR #24. |
 | 4.3 | Evidence confidence scoring edge cases tested | ✅ | `EvidenceConfidence.test.tsx` — COMPLETE / PARTIAL / UNKNOWN cases. |
 | 4.4 | Adapter error states (`ok: false`) tested across all panels | 🔶 | Legacy adapter tested; panel-level `displayState` handling not systematically tested. |

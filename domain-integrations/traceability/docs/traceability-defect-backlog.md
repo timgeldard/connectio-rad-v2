@@ -67,19 +67,28 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-006 — Supplier exposure panel has no live Databricks slice
-**Status:** Open — schema + mock panel exists; `gold_supplier` not in catalog resolver
-**Affected:** `MaterialSupplierExposurePanel`, catalog resolver
-**Evidence:** V1 `/api/supplier-risk` provided a per-supplier table (supplier ID, name, country, received quantity, batch count, quality failure rate) via upstream walk through `gold_batch_lineage` + `gold_supplier` join. V2 `MaterialSupplierExposurePanel` exists with mock data; `gold_supplier` is not in the domain object resolver so no Databricks query can be formed.
-**Risk:** Investigators cannot identify which suppliers contributed input batches to a recalled product without this panel being live.
-**Proposed fix:** Add `gold_supplier` to catalog resolver; implement QuerySpec for upstream VENDOR_RECEIPT aggregation; add quality summary join.
+**Status:** Fixed (2026-05-21) — `POST /api/trace2/supplier-exposure` wired against `gold_batch_lineage` (VENDOR_RECEIPT) ⋈ `gold_supplier`; per-supplier `suppliers[]` array added to `SupplierExposureSummary`
+**Affected:** `MaterialSupplierExposurePanel`, `get_supplier_exposure_spec`, `Trace2LegacyApiAdapter`
+**Evidence:** V1 `/api/supplier-risk` provided a per-supplier table (supplier ID, name, country, received quantity, batch count, quality failure rate) via upstream walk. V2 now has the equivalent for the core fields: supplier ID, name, country, received quantity, receipt count, last-receipt date, UoM. Quality failure rate is intentionally **not** populated — see TRACE-P1-012.
+**Fix applied:** Schema extended with `SupplierDetailSchema` and optional `suppliers` array on `SupplierExposureSummarySchema`. Live query filters `LINK_TYPE='VENDOR_RECEIPT' AND SUPPLIER_ID IS NOT NULL AND SUPPLIER_ID <> ''` (live data includes empty-string supplier IDs for unattributed inputs — excluded). Panel renders supplier detail table. Live validated 2026-05-21: UAT candidate (20035129/8000049668) returns 1 supplier (PQ Silicas UK, GB, 201300 KG); multi-supplier test batch (20394026/0005587610) returns 4 suppliers across US/DE/AE. See `supplier-exposure-source-mapping.md`.
+**Remaining gaps:** Single-hop only (multi-hop recursive supplier walk deferred). `openSupplierActions=0` and `highestRiskSupplier` absent until QM source verified (TRACE-P1-012).
 **Requires UAT:** Yes
 
 ### TRACE-P1-007 — Production history panel missing
-**Status:** Open — no panel implemented
-**Affected:** Investigation cockpit (no panel exists)
-**Evidence:** V1 provided a production history page showing the most recent 24 batches for the same material (process order, plant, manufacture date, quantity, UOM, quality status, yield%). Used to identify whether a quality issue is isolated to one batch or systemic across recent production. V2 has no equivalent panel.
-**Risk:** Investigators cannot assess whether a quality issue is isolated or spans multiple recent batches.
-**Proposed fix:** Build `ProductionHistoryPanel` using `gold_batch_production_history_v` when columns are verified.
+**Status:** Fixed (2026-05-21) — `POST /api/trace2/production-history` wired against `gold_batch_production_history_v`; new `ProductionHistoryPanel` shows recent 24 batches
+**Affected:** Investigation cockpit, `ProductionHistoryPanel`, `get_production_history_spec`, `Trace2LegacyApiAdapter`
+**Evidence:** V1 provided a production history page showing recent batches for the same material. V2 now has the equivalent at material-only filter (no plant filter — V1 parity for isolated-vs-systemic assessment), 24 most-recent by default, ordered POSTING_DATE DESC. 8 columns confirmed in `gold_batch_production_history_v`. Quality status mapped: Pass → 'pass', Fail → 'fail', anything else → 'unknown'.
+**Fix applied:** New `ProductionHistoryRowSchema` + `ProductionHistorySummarySchema` in data-contracts. Live route in FastAPI. Frontend adapter override. New panel with sortable table + amber Fail counter when failCount>0 + dashed disclaimer that the Pass/Fail label is not a release decision. Live validated 2026-05-21: top material (70948010) returns 24 batches all Pass at plants P132/P648/P638; UAT candidate raw-input material (20035129) correctly returns 0 rows. See `production-history-source-mapping.md`.
+**Remaining gaps:** Quality status here is gold view labelling, not SAP QM usage-decision. Full release-decision evidence requires TRACE-P1-012.
+**Requires UAT:** Yes
+
+### TRACE-P1-012 — QM usage-decision source not wired (blocks accurate supplier risk + production history release evidence)
+**Status:** Open — no verified QM source; panels surface conservative values
+**Affected:** `MaterialSupplierExposurePanel` (openSupplierActions, highestRiskSupplier), `ProductionHistoryPanel` (release-decision interpretation), `BatchHeaderPanel` (qualityStatus)
+**Evidence:** Several panels would benefit from joining a verified QM source (e.g., `gold_qm_usage_decision_v` or equivalent). The catalog has `gold_inspection_usage_decision` available (confirmed live 2026-05-21) but its schema, semantics, and join keys are not yet verified for this app's purposes. `gold_batch_production_history_v.quality_status` exposes 'Pass'/'Fail' labels but these are not the SAP QM release decision.
+**Risk:** Investigators may infer release decisions or supplier quality risk from indirect signals (gold view labelling, inspection lots) without a verified mapping to the underlying QM evidence chain.
+**Mitigation in current slices:** Supplier panel `openSupplierActions=0` and `highestRiskSupplier` absent. Production history panel includes a dashed disclaimer that the Pass/Fail label is not a release decision. Batch header `qualityStatus` is already conservative (`pending`/`unknown` only).
+**Proposed fix:** Confirm with the QM team which gold view is the canonical usage-decision source, its join key, and the meaning of its decision codes. Wire a single supplemental QuerySpec; expose verified counts on each affected panel.
 **Requires UAT:** Yes
 
 ### TRACE-P1-001 — Truncation state not surfaced in trace graph UI

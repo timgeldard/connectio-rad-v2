@@ -1,5 +1,17 @@
-import { BatchHeaderSummarySchema, CustomerExposureSummarySchema, ApiError } from '@connectio/data-contracts'
-import type { BatchHeaderSummary, CustomerExposureSummary, TraceGraph } from '@connectio/data-contracts'
+import {
+  BatchHeaderSummarySchema,
+  CustomerExposureSummarySchema,
+  SupplierExposureSummarySchema,
+  ProductionHistorySummarySchema,
+  ApiError,
+} from '@connectio/data-contracts'
+import type {
+  BatchHeaderSummary,
+  CustomerExposureSummary,
+  SupplierExposureSummary,
+  ProductionHistorySummary,
+  TraceGraph,
+} from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
 import type { Trace2AdapterRequest } from './trace2-adapter.js'
@@ -251,6 +263,125 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
           message: `Customer exposure unavailable — do not interpret as zero exposure. (${message})`,
           retryable: true,
         },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — calls POST /api/trace2/supplier-exposure (live VENDOR_RECEIPT + gold_supplier slice).
+   * No mock fallback. No legacy-api fallback. Returns error if required params are missing.
+   * Zero suppliers is a valid 200 response with empty suppliers[].
+   */
+  override async getSupplierExposureSummary(
+    request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<SupplierExposureSummary>> {
+    if (!request.batchId || !request.materialId) {
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'Material and batch are required to evaluate supplier exposure.',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/supplier-exposure`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          material_id: request.materialId,
+          batch_id: request.batchId,
+        }),
+      })
+
+      if (!response.ok) {
+        const code =
+          response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Supplier exposure unavailable. (HTTP ${response.status})`,
+            retryable: response.status >= 500 && response.status !== 503,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const mapped = SupplierExposureSummarySchema.parse(raw)
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message: `Supplier exposure unavailable. (${message})`, retryable: true },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+  }
+
+  /**
+   * Tier: databricks-api — calls POST /api/trace2/production-history (live gold_batch_production_history_v slice).
+   * No mock fallback. No legacy-api fallback. Returns error if required params are missing.
+   * Zero rows is a valid 200 response with empty rows[].
+   */
+  override async getProductionHistory(
+    request: Trace2AdapterRequest,
+  ): Promise<AdapterResult<ProductionHistorySummary>> {
+    if (!request.materialId) {
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'Material is required to evaluate production history.',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/production-history`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ material_id: request.materialId }),
+      })
+
+      if (!response.ok) {
+        const code =
+          response.status === 401 ? ('unauthorized' as const) : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Production history unavailable. (HTTP ${response.status})`,
+            retryable: response.status >= 500 && response.status !== 503,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const mapped = ProductionHistorySummarySchema.parse(raw)
+      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message: `Production history unavailable. (${message})`, retryable: true },
         displayState: 'error',
         source: 'databricks-api',
       }

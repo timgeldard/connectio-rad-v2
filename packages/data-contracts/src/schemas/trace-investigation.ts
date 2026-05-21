@@ -219,15 +219,68 @@ export type CustomerExposureSummary = z.infer<typeof CustomerExposureSummarySche
 // SupplierExposureSummary
 // ---------------------------------------------------------------------------
 
+// Per-supplier detail row for the supplier exposure table.
+// Sourced from gold_batch_lineage (LINK_TYPE='VENDOR_RECEIPT') joined to gold_supplier.
+// Populated by the live first slice from POST /api/trace2/supplier-exposure.
+export const SupplierDetailSchema = z.object({
+  supplierId: z.string(),
+  supplierName: z.string().optional(),
+  countryId: z.string().optional(),
+  countryName: z.string().optional(),
+  receivedQuantity: z.number().min(0),
+  batchCount: z.number().int().min(0),
+  uom: z.string().optional(),
+  lastReceiptDate: z.string().optional(),
+})
+
+export type SupplierDetail = z.infer<typeof SupplierDetailSchema>
+
 export const SupplierExposureSummarySchema = z.object({
   supplierCount: z.number().int().min(0),
   supplierLots: z.number().int().min(0),
   highestRiskSupplier: z.string().optional(),
   upstreamMaterials: z.number().int().min(0),
   openSupplierActions: z.number().int().min(0),
+  // Per-supplier detail rows. Absent when the source does not populate suppliers
+  // (mock or unavailable); empty array when source returned no VENDOR_RECEIPT rows.
+  // openSupplierActions and highestRiskSupplier remain absent in the live slice
+  // until a verified QM source is wired (TRACE-P1-012).
+  suppliers: SupplierDetailSchema.array().readonly().optional(),
 })
 
 export type SupplierExposureSummary = z.infer<typeof SupplierExposureSummarySchema>
+
+// ---------------------------------------------------------------------------
+// ProductionHistory
+// ---------------------------------------------------------------------------
+
+// One row in the production history for a given material.
+// Sourced from gold_batch_production_history_v.
+export const ProductionHistoryRowSchema = z.object({
+  processOrderId: z.string().optional(),
+  batchId: z.string(),
+  plantId: z.string().optional(),
+  materialId: z.string(),
+  postingDate: z.string().optional(),
+  quantity: z.number().min(0),
+  uom: z.string().optional(),
+  // Live values observed in gold_batch_production_history_v are 'Pass' and 'Fail'.
+  // Mapped to 'pass' / 'fail' / 'unknown' (anything else, including null/empty).
+  qualityStatus: z.enum(['pass', 'fail', 'unknown']),
+})
+
+export type ProductionHistoryRow = z.infer<typeof ProductionHistoryRowSchema>
+
+export const ProductionHistorySummarySchema = z.object({
+  materialId: z.string(),
+  totalBatches: z.number().int().min(0),
+  passCount: z.number().int().min(0),
+  failCount: z.number().int().min(0),
+  unknownCount: z.number().int().min(0),
+  rows: ProductionHistoryRowSchema.array().readonly(),
+})
+
+export type ProductionHistorySummary = z.infer<typeof ProductionHistorySummarySchema>
 
 // ---------------------------------------------------------------------------
 // TraceEvent
