@@ -2,9 +2,11 @@
 
 *   [UX Truthfulness Checklist](./ux-truthfulness-checklist.md)
 
-**Date:** 2026-05-20  
+**Date:** 2026-05-21
 **Status:** Living Document  
 **Target Audience:** Product Owners, Architects, and UAT Leads  
+
+> **Data-Layer Completion Audit (2026-05-21):** A full cross-domain map of adapter methods, routes, contracts, source objects, and verification states is now available in [`docs/data-layer/`](../data-layer/README.md). See the [completion inventory](../data-layer/data-layer-completion-inventory.md), [contract-route matrix](../data-layer/contract-route-coverage-matrix.md), [adapter audit](../data-layer/adapter-coverage-audit.md), [source verification coverage](../data-layer/source-verification-coverage.md), and [ranked implementation backlog](../data-layer/data-layer-implementation-backlog.md).
 
 ---
 
@@ -30,7 +32,7 @@ We use the following conservative status classifications:
 | Domain | Mock/demo readiness | Live UAT readiness | Production readiness | Main blocker | Key docs / Navigation |
 |---|---|---|---|---|---|
 | **Traceability** | ✅ | ❌ | ❌ | Live Databricks validation, gold view verification, and UC/OAuth end-to-end evidence. | [Traceability Detail](#traceability) |
-| **SPC** | ✅ | ❌ | ❌ | V1 SPC source verified in `connected_plant_uat.gold` (PR #65, 2026-05-21); V2 contract alignment to the verified schema completed (`feature/spc-native-contract-alignment`, Slices 1-7, 2026-05-21). Blocker is no longer "unmapped source model" — it is now the decision/governance to wire a native route. V1 legacy bridge remains the recommended short-term path. | [SPC Detail](#spc) |
+| **SPC** | ✅ | ❌ | ❌ | V1 SPC source verified in `connected_plant_uat.gold` (PR #65, 2026-05-21); V2 contract alignment to the verified schema completed (PR #67, Slices 1-7, merged 2026-05-21). Blocker is no longer "unmapped source model" — it is now the decision/governance to wire a native route. V1 legacy bridge remains the recommended short-term path. | [SPC Detail](#spc) |
 | **Process Order History (POH)** | 🔶 | 🔶 | ❌ | Browser/live validation of the HTTP/UI layer; date controls implementation. | [Process Order History Detail](#process-order-history-poh--operations) |
 | **Warehouse360** | 🔶 | ❌ | ❌ | Warehouse360 source-view/schema alignment requires live UAT verification. | [Warehouse360 Detail](#warehouse360) |
 | **Quality Batch Release** | 🔶 | ❌ | ❌ | Read-only evidence UX/state model code-ready with fixture coverage. Live source wiring pending. Mock release panels; no live SAP QM usage-decision/write-back/e-signature. | [Quality Detail](#quality-batch-release) |
@@ -105,7 +107,7 @@ We use the following conservative status classifications:
 
 * **Status:** High-Fidelity Sandbox (Mock/Sandbox Read-Only UAT). V1 source verified
   by Databricks CLI (PR #65, 2026-05-21). V2 contract alignment to verified schema
-  completed (`feature/spc-native-contract-alignment`, Slices 1-7, 2026-05-21).
+  completed (PR #67, Slices 1-7, merged 2026-05-21).
   Pure mapping helpers and fixtures exist for the verified schema; no native
   runtime route is wired. V1 legacy bridge remains the recommended short-term
   path. **No native SPC UAT readiness, production readiness, in-control status,

@@ -95,10 +95,10 @@ This plan defines the recommended next order of work after the post-merge readin
 | Risk if skipped | SPC stays on V1 legacy bridge for the foreseeable future. The V1 bridge is documented as not browser-verified (`apps/api/routes/spc.py`); browser-verifying the V1 bridge is a separate task if Action 6 is deferred. |
 
 **Background:** PR #65 verified the SPC schema in Databricks. The
-contract-alignment tranche (`feature/spc-native-contract-alignment`, Slices
-1-7, 2026-05-21) reconciled V2 SPC contracts, fixtures, helper mappings,
-and an implementation plan to that verified schema — but **deliberately
-did not wire any native runtime route**. Action 6 is now a decision /
+contract-alignment tranche (PR #67, Slices 1-7, merged 2026-05-21) reconciled
+V2 SPC contracts, fixtures, helper mappings, and an implementation plan to
+that verified schema — but **deliberately did not wire any native runtime
+route**. Action 6 is now a decision /
 implementation gate, not a verification gate.
 
 **Documents:**
@@ -217,3 +217,9 @@ The following must not be started until their stated gate is passed:
 | Quality | Not yet — no live runtime route wired | Yes for broader source verification | Yes for release/lot-selection | Finalise read-only UD display gate; verify broader sources |
 | SPC | No | Yes | Later — for control-limit/use interpretation | Run SPC verification pack |
 | Warehouse | No | Yes | Possibly | Defer until higher-priority domains unblocked |
+
+---
+
+## Data-Layer Completion Audit
+
+A full cross-domain map of adapter methods, routes, contracts, source objects, and verification states is available in [`docs/data-layer/`](../data-layer/README.md) (audit completed 2026-05-21). The [ranked implementation backlog](../data-layer/data-layer-implementation-backlog.md) replaces the per-action next-steps in this document for data-layer work items.
