@@ -88,7 +88,7 @@ No domain has passed live UAT. No production readiness is claimed.
 |---|---|---|
 | V1 source discovery | `docs-ready` | SPC data confirmed in `connected_plant_uat.gold`; V1 is material-centric, client-side rule computation |
 | Databricks verification pack | `verified` | Executed in PR #65 (2026-05-21); 22 SPC objects inventoried; subgroup MV (~73M rows) and locked_limits (1 UAT row) confirmed; `spc_capability_detail_mv` and `spc_nelson_rule_flags_mv` NOT FOUND |
-| Native contract alignment | `contract-alignment-complete` | Branch `feature/spc-native-contract-alignment` (Slices 1-7): audit + rewritten contract mapping + verified fixtures + pure mapper helpers + 55 mapper tests + native route prerequisite plan + minimal additive `operationId` on `SPCMonitoringContextSchema`. **No native runtime route wired.** V1 legacy bridge remains the recommended short-term path. |
+| Native contract alignment | `contract-alignment-complete` | PR #67 (Slices 1-7, merged 2026-05-21): audit + rewritten contract mapping + verified fixtures + pure mapper helpers + 55 mapper tests + native route prerequisite plan + minimal additive `operationId` on `SPCMonitoringContextSchema`. **No native runtime route wired.** V1 legacy bridge remains the recommended short-term path. |
 | Native V2 chart-data route | `prerequisite-plan-ready` | `POST /api/spc/chart-data` shape documented in `spc-native-route-prerequisite-plan.md`; go/no-go gates not yet met (decision on backend signal calculation, governance for backend capability, plant-namespace mapping); not implemented |
 | FastAPI proxy routes | `source-semantics-pending` | Routes in `apps/api/routes/spc.py` exist but are NOT browser-verified against live V1 backend |
 | Mock cockpit | `docs-ready` | High-fidelity sandbox; source truthfulness banners active; control-limit provenance tracking in UI; mock data unchanged by the contract-alignment tranche |
@@ -241,3 +241,17 @@ These items have verification pack SQL templates ready but no SQL has been run a
 | Quality | Not yet — no live runtime route wired | Yes for broader source verification | Yes for release/lot-selection | Finalise read-only UD display gate; verify broader sources |
 | SPC | No | Yes | Later — for control-limit/use interpretation | Run SPC verification pack |
 | Warehouse | No | Yes | Possibly | Defer until higher-priority domains unblocked |
+
+---
+
+## 12. Data-Layer Completion Audit
+
+A full cross-domain map of adapter methods, routes, contracts, source objects, and verification states is available in [`docs/data-layer/`](../data-layer/README.md) (audit completed 2026-05-21).
+
+| Document | Purpose |
+|---|---|
+| [Completion inventory](../data-layer/data-layer-completion-inventory.md) | 49 capabilities across 9 domains with dual status taxonomy |
+| [Contract-route matrix](../data-layer/contract-route-coverage-matrix.md) | Zod schemas → FastAPI routes → generated Python models |
+| [Adapter coverage audit](../data-layer/adapter-coverage-audit.md) | All adapter methods, fallback risks, source-badge compliance |
+| [Source verification coverage](../data-layer/source-verification-coverage.md) | Master ledger of all source objects and verification dimensions |
+| [Implementation backlog](../data-layer/data-layer-implementation-backlog.md) | 14 ranked work packages with owners and blockers |
