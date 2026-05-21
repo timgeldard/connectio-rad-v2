@@ -59,6 +59,7 @@ class TraceGraphRequest:
 class Trace2MassBalanceRequest:
     material_id: str
     batch_id: str
+    max_rows: int = 5000
 
 
 @dataclass
@@ -486,7 +487,26 @@ def get_mass_balance_spec(request: Trace2MassBalanceRequest) -> QuerySpec:
     Source: gold_batch_mass_balance_v under TRACE_CATALOG / TRACE_SCHEMA (default: "gold").
     Contract: MassBalanceSummarySchema + MassBalanceMovementSchema (packages/data-contracts)
     Cache: PER_USER_60S — movement postings occur throughout the shift.
-    balance_qty is the confirmed running-balance column — maps directly to runningBalance.
+
+    Column verification status (verified live 2026-05-20, connected_plant_uat):
+      - 11 columns confirmed via DESCRIBE TABLE: MATERIAL_ID, BATCH_ID, PLANT_ID,
+        MOVEMENT_TYPE, QUANTITY (signed), UOM, PROCESS_ORDER_ID, POSTING_DATE,
+        ABS_QUANTITY, BALANCE_QTY, MOVEMENT_CATEGORY.
+      - WHERE keys material_id + batch_id confirmed.
+      - SELECT uses lowercase column names; Databricks Statement API returns
+        keys in the same case as the SELECT clause (verified live).
+
+    Known correctness gaps (see traceability-defect-backlog.md):
+      - TRACE-P1-010: MOVEMENT_CATEGORY mapping is incomplete. Live values include
+        "STO Receipt", "STO Transfer", "Other (261)", "Write-Off" — none match
+        _MOVEMENT_CATEGORY_MAP, all fall through to "adjustment". STO Receipt is
+        an incoming movement but is currently treated as output. Pending a
+        verified category-to-direction map. The mapper counts unmapped rows as
+        unresolvedMovements so the panel's warning banner reflects truth.
+      - TRACE-P1-011: BALANCE_QTY returned 0.000 for all 30+ rows of the UAT
+        candidate (20035129 / 8000049668). The view's "balance_qty" column does
+        not appear to be a per-batch running balance. Pending source verification
+        with the data platform team.
 
     Raises DatabricksConfigError if TRACE_CATALOG is not set.
     """
@@ -494,15 +514,15 @@ def get_mass_balance_spec(request: Trace2MassBalanceRequest) -> QuerySpec:
 
     sql = f"""
     SELECT
-        posting_date,      -- confirmed column name
-        movement_type,     -- confirmed column name
-        movement_category, -- confirmed column name
-        abs_quantity,      -- confirmed column name
-        uom,               -- confirmed column name
-        balance_qty        -- confirmed — running balance; maps directly to runningBalance
+        posting_date,
+        movement_type,
+        movement_category,
+        abs_quantity,
+        uom,
+        balance_qty
     FROM {tbl_mass_balance}
-    WHERE material_id = :material_id  -- TODO: verify filter column name
-      AND batch_id = :batch_id         -- TODO: verify filter column name
+    WHERE material_id = :material_id
+      AND batch_id = :batch_id
     ORDER BY posting_date
     LIMIT :max_rows
     """
@@ -512,7 +532,11 @@ def get_mass_balance_spec(request: Trace2MassBalanceRequest) -> QuerySpec:
         module="trace2",
         endpoint="/api/trace2/mass-balance",
         sql=sql,
-        params={"material_id": request.material_id, "batch_id": request.batch_id},
+        params={
+            "material_id": request.material_id,
+            "batch_id": request.batch_id,
+            "max_rows": request.max_rows,
+        },
         cache_policy=CacheTier.PER_USER_60S,
         source_badge="view:gold_batch_mass_balance_v",
         tags=["trace2", "mass-balance"],
@@ -528,8 +552,16 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
       varianceQuantity = input - output
       variancePercent  = variance/input*100 if input > 0 else 0.0
 
-    balance_qty maps directly to runningBalance (confirmed running-balance column).
-    Rows with null balance_qty increment unresolvedMovements; runningBalance defaults to 0.0.
+    unresolvedMovements:
+      - rows with null balance_qty
+      - rows whose movement_category did not match a known mapping in
+        _MOVEMENT_CATEGORY_MAP (live values like "STO Receipt", "STO Transfer",
+        "Other (NNN)", "Write-Off" currently fall through — see TRACE-P1-010).
+      Counts are unioned (a row that fails both still counts once).
+
+    balance_qty is mapped to runningBalance but live evidence shows the column
+    is not a per-batch running tally (see TRACE-P1-011). Treat the field as
+    movement-level snapshot until source semantics are verified.
     """
     if not rows:
         return {
@@ -549,7 +581,8 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
     movements: list[dict] = []
 
     for row in rows:
-        category = _map_movement_category(row.get("movement_category"))
+        raw_category = row.get("movement_category")
+        category = _map_movement_category(raw_category)
         abs_qty = float(row.get("abs_quantity") or 0)
 
         if category == "production":
@@ -560,7 +593,8 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
             delta = -abs_qty
 
         balance_qty = row.get("balance_qty")
-        if balance_qty is None:
+        category_unmapped = _is_unmapped_movement_category(raw_category, category)
+        if balance_qty is None or category_unmapped:
             unresolved += 1
 
         movements.append({
@@ -1223,6 +1257,24 @@ def _map_quality_status(raw: Optional[str]) -> str:
     if text == "fail":
         return "fail"
     return "unknown"
+
+
+def _is_unmapped_movement_category(raw: Optional[str], mapped: str) -> bool:
+    """True when raw was non-null/non-empty but fell through the map to "adjustment".
+
+    A raw value of None or empty string is intentionally not flagged — it means the
+    source provided no category at all, which is a different (and rarer) condition
+    than "we received a category but did not know what to do with it".
+    """
+    if raw is None:
+        return False
+    text = str(raw).strip()
+    if not text:
+        return False
+    if mapped != "adjustment":
+        return False
+    # "adjustment"-like raw values (e.g. "ADJUSTMENT", "Adjustment") are not unmapped.
+    return text.upper() != "ADJUSTMENT"
 
 
 def _map_batch_status(raw: Optional[str]) -> str:

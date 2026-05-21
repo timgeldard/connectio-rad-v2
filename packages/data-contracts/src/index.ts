@@ -301,6 +301,37 @@ export {
   ConnectedQualityLabPlantSchema,
   ConnectedQualityLabPlantsResponseSchema,
 } from './schemas/connected-quality-lab.js'
+
+export type {
+  QualityEvidenceSource,
+  QualityEvidenceStatus,
+  QualityUsageDecisionStatus,
+  QualityUsageDecisionMappingStatus,
+  QualitySourceFreshnessStatus,
+  QualityCoaDocumentStatus,
+  QualityEvidenceRequest,
+  QualityInspectionLotEvidence,
+  QualityMicResultEvidence,
+  QualityUsageDecisionEvidence,
+  QualityCoaResultEvidence,
+  QualityEvidenceSummary,
+  QualityEvidenceResponse,
+} from './schemas/quality-readonly-evidence.js'
+export {
+  QualityEvidenceSourceSchema,
+  QualityEvidenceStatusSchema,
+  QualityUsageDecisionStatusSchema,
+  QualityUsageDecisionMappingStatusSchema,
+  QualitySourceFreshnessStatusSchema,
+  QualityCoaDocumentStatusSchema,
+  QualityEvidenceRequestSchema,
+  QualityInspectionLotEvidenceSchema,
+  QualityMicResultEvidenceSchema,
+  QualityUsageDecisionEvidenceSchema,
+  QualityCoaResultEvidenceSchema,
+  QualityEvidenceSummarySchema,
+  QualityEvidenceResponseSchema,
+} from './schemas/quality-readonly-evidence.js'
 export type {
   OperationsEvidenceAdapterRequest,
   QualityBlockersAdapterRequest,

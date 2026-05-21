@@ -526,6 +526,78 @@ describe('Trace2LegacyApiAdapter.getCustomerExposureSummary', () => {
 })
 
 // ---------------------------------------------------------------------------
+// getMassBalanceSummary tests
+// ---------------------------------------------------------------------------
+
+const MB_RESPONSE_OK = {
+  inputQuantity: 1000.0,
+  outputQuantity: 250.0,
+  varianceQuantity: 750.0,
+  variancePercent: 75.0,
+  uom: 'KG',
+  confidence: 1.0,
+  unresolvedMovements: 0,
+  movements: [],
+}
+
+describe('Trace2LegacyApiAdapter.getMassBalanceSummary', () => {
+  it('calls POST /api/trace2/mass-balance', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, MB_RESPONSE_OK))
+    await adapter.getMassBalanceSummary(fullRequest)
+    const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
+    expect(String(url)).toContain('/api/trace2/mass-balance')
+    expect(opts?.method).toBe('POST')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:true with source=databricks-api on success', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, MB_RESPONSE_OK))
+    const result = await adapter.getMassBalanceSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.inputQuantity).toBe(1000.0)
+    expect(result.data.uom).toBe('KG')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false with not-found and "do not interpret" message on 404', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(404, { detail: 'No mass balance movements returned for this material + batch — do not interpret as a balanced mass balance until source coverage is validated.' }, false),
+    )
+    const result = await adapter.getMassBalanceSummary(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.error.message.toLowerCase()).toContain('do not interpret')
+    expect(result.error.message.toLowerCase()).toContain('balanced')
+    expect(result.displayState).toBe('error')
+    expect(result.source).toBe('databricks-api')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false with unavailable message on 503', async () => {
+    vi.stubGlobal('fetch', mockFetch(503, {}, false))
+    const result = await adapter.getMassBalanceSummary(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.message.toLowerCase()).toContain('do not interpret as balanced')
+    expect(result.source).toBe('databricks-api')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false (not mock) when batchId is missing', async () => {
+    const result = await adapter.getMassBalanceSummary(partialRequest)
+    expect(result.ok).toBe(false)
+    expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // getSupplierExposureSummary tests
 // ---------------------------------------------------------------------------
 

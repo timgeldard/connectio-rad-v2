@@ -99,7 +99,7 @@ export const SPCSignalSchema = z.object({
   plantId: z.string(),
   chartType: ChartTypeSchema,
   rule: z.string(),
-  ruleCode: z.string(),
+  ruleCode: z.string().optional().nullable(),
   severity: SeveritySchema,
   detectedAt: z.string().datetime(),
   samplePointId: z.string(),

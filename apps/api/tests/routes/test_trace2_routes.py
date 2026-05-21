@@ -875,6 +875,13 @@ class TestSupplierExposureSuccess:
                 response = await client.post(_SE_URL, json=_SE_VALID_BODY)
         assert response.status_code == 401
 
+    async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {k: v for k, v in _SE_VALID_BODY.items() if k != "material_id"}
+        async with _make_client() as client:
+            response = await client.post(_SE_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
     async def test_sets_x_data_source_header(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         with _patch_executor([_FAKE_SUPPLIER_ROW]):
@@ -990,6 +997,119 @@ class TestProductionHistorySuccess:
         with _patch_executor([_FAKE_PH_ROW_PASS]):
             async with _make_client() as client:
                 response = await client.post(_PH_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Mass balance route tests (POST /api/trace2/mass-balance)
+# ---------------------------------------------------------------------------
+
+_MB_URL = "/api/trace2/mass-balance"
+
+_MB_VALID_BODY = {
+    "material_id": "20035129",
+    "batch_id": "8000049668",
+}
+
+_FAKE_MB_PRODUCTION_ROW = {
+    "posting_date": "2025-06-04",
+    "movement_type": "101",
+    "movement_category": "Production",
+    "abs_quantity": 1000.0,
+    "uom": "KG",
+    "balance_qty": 0.0,
+}
+
+_FAKE_MB_UNMAPPED_ROW = {
+    "posting_date": "2025-06-11",
+    "movement_type": "261",
+    "movement_category": "Other (261)",
+    "abs_quantity": 6.262,
+    "uom": "KG",
+    "balance_qty": 0.0,
+}
+
+
+class TestMassBalanceWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_mode_is_absent(self, monkeypatch) -> None:
+        monkeypatch.delenv("BACKEND_ADAPTER_MODE", raising=False)
+        async with _make_client() as client:
+            response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+
+class TestMassBalanceSuccess:
+    async def test_200_returns_mass_balance_summary(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["inputQuantity"] == pytest.approx(1000.0)
+        assert data["outputQuantity"] == 0.0
+        assert data["uom"] == "KG"
+        assert data["unresolvedMovements"] == 0
+        assert len(data["movements"]) == 1
+
+    async def test_unmapped_movement_category_counted_as_unresolved(self, monkeypatch) -> None:
+        """Live SAP movement categories surface as unresolved so the panel banner reflects truth."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW, _FAKE_MB_UNMAPPED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["unresolvedMovements"] == 1
+
+    async def test_zero_rows_returns_404_with_no_balance_message(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 404
+        detail = response.json().get("detail", "").lower()
+        assert "do not interpret" in detail and "balanced" in detail
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {k: v for k, v in _MB_VALID_BODY.items() if k != "material_id"}
+        async with _make_client() as client:
+            response = await client.post(_MB_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert "gold_batch_mass_balance_v" in response.headers.get("x-data-source", "")
+
+    async def test_max_rows_clamped_to_10000(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_MB_VALID_BODY, "max_rows": 99999}
+        with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_MB_URL, json=body, headers=_HEADERS_WITH_TOKEN)
         assert response.status_code == 200
 
 

@@ -70,6 +70,19 @@ describe('ProcessOrderReviewWorkspace', () => {
     })
   })
 
+  it('renders the POH assistant pilot view', async () => {
+    render(
+      <Wrapper>
+        <ProcessOrderReviewWorkspace scope={scope} viewId="poh-genie-pilot" />
+      </Wrapper>
+    )
+
+    await waitFor(() => {
+      const panel = document.querySelector('[data-testid="evidence-panel-poh-genie-pilot"]')
+      expect(panel).not.toBeNull()
+    })
+  })
+
   it('renders quality-context view', async () => {
     render(
       <Wrapper>

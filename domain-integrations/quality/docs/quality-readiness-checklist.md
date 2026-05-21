@@ -1,7 +1,7 @@
 # Quality Batch Release Production Readiness Checklist
 
 **Domain:** `domain-integrations/quality`
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-21
 **Purpose:** Gate criteria that must be satisfied before the quality batch release cockpit is used for real release decisions or operational coordination.
 
 Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not applicable
@@ -26,6 +26,11 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.1 | Data source attribution (mock vs. legacy API) returned by all adapters | ✅ | All quality adapters explicitly return `source: 'mock'` on mock paths and `source: 'legacy-api'` on legacy paths. |
 | 2.2 | Data source attribution visible in UI | ✅ | All 9 panels forward the `source` prop from the query hook results to `<EvidencePanel>` to render dynamic source badges. |
 | 2.3 | Freshness policies declared and respected | 🔶 | Freshness policy declared in panel registrations; underlying SAP QM / CoA / usage-decision data freshness is not validated for mock release panels and live freshness is not surfaced. |
+| 2.4 | Databricks source verification pack ready | ✅ | `quality-databricks-source-verification.md` provides object inventory, DESCRIBE, grain, usage-decision, MIC/result/specification, CoA-like, deviation, and golden-candidate checks. No verification has been claimed. |
+| 2.5 | Read-only evidence contracts designed | ✅ | `QualityEvidenceRequest`, inspection lot, MIC result, usage decision, CoA-like result, and summary contracts exist in `@connectio/data-contracts`; they do not include release approval or can-release fields. |
+| 2.6 | Quality/SPC MIC boundary documented | ✅ | `quality-spc-shared-mic-evidence.md` separates Quality specification/valuation/usage-decision evidence from SPC control limits, rule signals, and control status. |
+| 2.7 | Read-only evidence adapter skeleton ready | ✅ | `QualityReadOnlyEvidenceAdapter` returns `pending-source-verification` without fetching Databricks or falling back to mock evidence. Route plan is documented in `quality-readonly-evidence-route-plan.md`. |
+| 2.8 | Read-only evidence panel scaffold ready | ✅ | `QualityReadOnlyEvidencePanel` is mounted in the Quality Evidence view and labels the state as source verification pending, not live evidence. |
 
 ---
 
@@ -33,7 +38,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 3.1 | Golden test batches and release cases defined | ✅ | Documented in `golden-quality-batches.md` for both mock and hybrid scenarios. |
+| 3.1 | Golden test batches and release cases defined | 🔶 | Mock cases documented in `golden-quality-batches.md`; no verified live Quality UAT candidate found from V1 discovery. Candidate template is in `golden-quality-candidates.md`. |
 | 3.2 | UAT acceptance testing conducted for Lab Board view | ❌ | Backend proxy endpoints wired, but live E2E browser tests are pending staging environment deployment. |
 | 3.3 | Quality release actions validated in SAP QM test environment | ❌ | Release actions are currently read-only simulation. SAP write-back integration is out of scope for Phase 2. |
 
@@ -85,5 +90,10 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |-------|---------|
 | Development / Code Review | ✅ Ready |
 | Internal Mock-Mode Demonstration | ✅ Ready |
-| UAT with Live Backend Data | ❌ Blocked — requires staging deployment, SAP QM write-back verification, and Databricks scope enablement. |
+| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready; contract-design-ready; adapter-skeleton-ready; panel-scaffold-ready; native route and live data implementation still UAT-pending. |
+| UAT with Live Backend Data | ❌ Blocked — requires Databricks source verification and source-backed read-only inspection/MIC/usage-decision evidence before any live Quality UAT claim. |
 | Production Go-Live | ❌ Blocked — requires UAT sign-off and Databricks security integration. |
+
+## Discovery Update
+
+V2 Quality Batch Release is currently simulation/trust-hardened. A V1 Quality/QM source and functional parity assessment was completed in `quality-v1-source-discovery.md`; it found read-only evidence candidates but no production-suitable release workflow. The read-only evidence foundation now includes a Databricks verification pack, source-truthful evidence contracts, and Quality/SPC MIC boundary documentation. Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.

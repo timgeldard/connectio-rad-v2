@@ -66,10 +66,21 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
       ],
     },
     {
+      viewId: 'trace-genie-pilot',
+      displayName: 'Trace Assistant Pilot',
+      lifecycle: 'pilot',
+      sortOrder: 2,
+      defaultPanels: [
+        { panelId: 'trace-genie-pilot', defaultVisible: true, defaultOrder: 0 },
+        { panelId: 'trace-graph', defaultVisible: true, defaultOrder: 1 },
+        { panelId: 'batch-header', defaultVisible: true, defaultOrder: 2 },
+      ],
+    },
+    {
       viewId: 'mass-balance',
       displayName: 'Mass Balance',
       lifecycle: 'live',
-      sortOrder: 2,
+      sortOrder: 3,
       defaultPanels: [
         { panelId: 'batch-header', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'trace-graph', defaultVisible: true, defaultOrder: 1 },
@@ -80,7 +91,7 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
       viewId: 'customer-exposure',
       displayName: 'Customer Exposure',
       lifecycle: 'live',
-      sortOrder: 3,
+      sortOrder: 4,
       defaultPanels: [
         { panelId: 'customer-impact', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'trace-graph', defaultVisible: true, defaultOrder: 1 },
@@ -92,7 +103,7 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
       viewId: 'supplier-exposure',
       displayName: 'Supplier Exposure',
       lifecycle: 'live',
-      sortOrder: 4,
+      sortOrder: 5,
       defaultPanels: [
         { panelId: 'material-supplier-exposure', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'trace-graph', defaultVisible: true, defaultOrder: 1 },
@@ -104,7 +115,7 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
       viewId: 'timeline-events',
       displayName: 'Timeline & Events',
       lifecycle: 'live',
-      sortOrder: 5,
+      sortOrder: 6,
       defaultPanels: [
         { panelId: 'event-timeline', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'related-investigations', defaultVisible: true, defaultOrder: 1 },
@@ -116,7 +127,7 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
       viewId: 'recall-readiness',
       displayName: 'Recall Readiness',
       lifecycle: 'live',
-      sortOrder: 6,
+      sortOrder: 7,
       defaultPanels: [
         { panelId: 'risk-signals', defaultVisible: true, defaultOrder: 0 },
         { panelId: 'customer-impact', defaultVisible: true, defaultOrder: 1 },
@@ -129,12 +140,13 @@ export const traceInvestigationRegistration: WorkspaceRegistration = {
   defaultPanels: [
     { panelId: 'batch-header', defaultVisible: true, defaultOrder: 0 },
     { panelId: 'trace-graph', defaultVisible: true, defaultOrder: 1 },
-    { panelId: 'material-supplier-exposure', defaultVisible: true, defaultOrder: 2 },
-    { panelId: 'customer-impact', defaultVisible: true, defaultOrder: 3 },
-    { panelId: 'event-timeline', defaultVisible: true, defaultOrder: 4 },
-    { panelId: 'coa-release-status', defaultVisible: true, defaultOrder: 5 },
-    { panelId: 'related-investigations', defaultVisible: true, defaultOrder: 6 },
-    { panelId: 'risk-signals', defaultVisible: true, defaultOrder: 7 },
+    { panelId: 'trace-genie-pilot', defaultVisible: true, defaultOrder: 2 },
+    { panelId: 'material-supplier-exposure', defaultVisible: true, defaultOrder: 3 },
+    { panelId: 'customer-impact', defaultVisible: true, defaultOrder: 4 },
+    { panelId: 'event-timeline', defaultVisible: true, defaultOrder: 5 },
+    { panelId: 'coa-release-status', defaultVisible: true, defaultOrder: 6 },
+    { panelId: 'related-investigations', defaultVisible: true, defaultOrder: 7 },
+    { panelId: 'risk-signals', defaultVisible: true, defaultOrder: 8 },
   ],
   route: '/quality/trace-investigation',
   personalizationPolicy: {

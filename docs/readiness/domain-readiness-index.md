@@ -40,6 +40,22 @@ We use the following conservative status classifications:
 
 ---
 
+## 3A. Cross-Domain Genie / Natural-Language Analytics
+
+* **Status:** Discovery complete; implementation intentionally deferred.
+* **Summary:**
+  * A repo-wide V1 inventory confirms explicit Genie support in the V1 platform shell, POH, Trace2, and SPC.
+  * V2 now has shipped **deterministic domain-scoped pilot surfaces** for POH and Traceability in `domain-integrations/`, but it still has **no live Databricks Genie runtime** and no shell-wide assistant.
+  * POH is the strongest future parity candidate because V1 preserves a source-controlled semantic pack (`space.yaml`, glossary, rules, joins, expressions, and sample SQL).
+  * The current pilots are intentionally narrow, cite loaded evidence panels, and refuse blocked topics instead of inferring beyond approved scope.
+  * A V2 shell-wide assistant should remain blocked until domain-level packs are validated and source-truthful.
+* **Document Registry:**
+  * [Genie Readiness Index](../migration/genie-readiness-index.md) ← **new**
+  * [V1 Genie Discovery and V2 Parity Roadmap](../migration/v1-genie-discovery-and-v2-parity-roadmap.md) ← **new**
+  * [POH Genie Readiness Pack](../../domain-integrations/operations/docs/poh-genie-readiness-pack.md) ← **new**
+  * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md) ← **new**
+  * [V2 Shell Genie Decision Record](../migration/v2-shell-genie-decision-record.md) ← **new**
+
 ## 4. Domain-by-Domain Detail
 
 ### Traceability
@@ -47,6 +63,7 @@ We use the following conservative status classifications:
 * **Status:** Hybrid (Mock / Databricks API).
 * **Summary:**
   * Has a strong, high-fidelity mock/demo cockpit supporting trace investigation.
+  * A deterministic **Trace Assistant Pilot** now exists as a dedicated workspace view limited to focal batch summary and the currently visible trace graph.
   * Evidence confidence badge logic is fully implemented to display complete, partial, or unknown levels.
   * Resolved the null customer exposure vulnerability (binary severity fallback to `UNKNOWN` instead of defaulting to a false containment/safe state).
   * Edge relationship link types are code-ready, allowing UI to discriminate vendor receipts from internal moves.
@@ -69,6 +86,7 @@ We use the following conservative status classifications:
     * Quality usage decision (`gold_qm_usage_decision_v`) and supplier exposure (`gold_supplier`) slices remain mock-only.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
+  * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md)
   * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
   * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
   * [V1→V2 Functional Parity Matrix](../../domain-integrations/traceability/docs/traceability-v1-v2-functional-parity.md)
@@ -85,34 +103,68 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT). V1 source discovered — live wiring not yet implemented.
+* **Status:** High-Fidelity Sandbox (Mock/Sandbox Read-Only UAT). V1 source discovered.
+  Databricks verification pack created. Live wiring not yet implemented and not yet claimed.
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.
   * Control-limit provenance and approval state tracking integrated into UI and data contracts.
   * Copy SPC UAT Evidence action available for audit logging.
   * Terminology softened (e.g., "No signals returned") to prevent overconfident process control claims.
-  * **V1 Source Discovery completed (2026-05-20):** A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo with Databricks gold views deployed to `connected_plant_uat.gold`. The V2 SPC blocker is NOT absence of Databricks data — it is that V2 has not yet been mapped to the V1 source model. Key misalignments: V1 is material-centric (not plant/work-centre-centric); `spc_quality_metrics` is an AI/BI Metric View (not a signal table); rule violations are computed client-side in V1 (not stored); `spc_locked_limits` has `material_id` as a required PK dimension.
+  * **V1 Source Discovery completed (2026-05-20):** A full V1 SPC application exists at
+    `apps/spc/` in the ConnectIO-RAD V1 monorepo with Databricks gold views deployed to
+    `connected_plant_uat.gold`. The V2 SPC blocker is NOT absence of Databricks data — it is
+    that V2 has not yet been mapped to the V1 source model. Key misalignments: V1 is
+    material-centric (not plant/work-centre-centric); `spc_quality_metrics` is an AI/BI Metric
+    View (not a signal table); rule violations are computed client-side in V1 (not stored);
+    `spc_locked_limits` has `material_id` as a required PK dimension.
+  * **Databricks Verification Pack created (2026-05-21):** SPC data exists in Databricks/V1,
+    but the authoritative V2 app-serving SPC data model is not yet established. Object types,
+    columns, grains, keys, control-limit provenance, rule-signal source, capability calculations,
+    and golden candidates require Databricks verification before native V2 SPC live UAT. A full
+    verification pack (SQL queries, evidence tables, handoff checklist) has been created in
+    `domain-integrations/spc/docs/`. No verification is claimed by this pack — it must be
+    executed by a person with live Databricks access.
+  * **FastAPI proxy routes created:** `apps/api/routes/spc.py` now contains proxy routes for
+    V1 SPC metadata and chart-data endpoints. These routes are NOT browser-verified against a
+    live V1 backend and should not be used until the V1 SPC app URL is confirmed in UAT.
 * **UAT Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace.
   2. `SPCMonitoringAdapterRequest` must be updated to be material-centric (add `materialId` as primary parameter).
-  3. FastAPI proxy routes for V1 SPC endpoints must be implemented in `apps/api/routes/spc.py`.
+  3. FastAPI proxy routes in `apps/api/routes/spc.py` must be browser-verified against live V1 backend.
   4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping.
-  5. Gold view column names must be verified against actual DDL in UAT (`spc_quality_metric_subgroup_v`).
-  6. A confirmed plant/material/MIC UAT candidate with live SPC data must be identified.
+  5. Gold view column names must be verified against actual DDL in UAT — run verification queries
+     from `spc-databricks-source-verification.md`.
+  6. Column name discrepancy in `spc_locked_limits` must be resolved by live DDL check (see
+     `spc-control-limit-provenance-verification.md`).
+  7. A confirmed plant/material/MIC UAT candidate with live SPC data must be identified — use
+     discovery queries in `golden-spc-candidates.md`.
+  8. Native migration readiness checklist (`spc-native-migration-readiness-checklist.md`) must
+     be completed before any live SPC route is enabled.
 * **Document Registry:**
   * [SPC README](../../domain-integrations/spc/README.md)
-  * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md) ← **new**
-  * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md) ← **new**
+  * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md)
+  * [SPC V2 Migration Assessment](../../domain-integrations/spc/docs/spc-v2-migration-assessment.md)
+  * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md)
+  * [SPC Genie Readiness Pack](../../domain-integrations/spc/docs/spc-genie-readiness-pack.md)
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
   * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
   * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
+  * [Databricks Source Verification Pack](../../domain-integrations/spc/docs/spc-databricks-source-verification.md) ← **new**
+  * [Data Model Grain Assessment](../../domain-integrations/spc/docs/spc-data-model-grain-assessment.md) ← **new**
+  * [Navigation Model Verification](../../domain-integrations/spc/docs/spc-navigation-model-verification.md) ← **new**
+  * [Control Limit Provenance Verification](../../domain-integrations/spc/docs/spc-control-limit-provenance-verification.md) ← **new**
+  * [Rule / Signal Source Verification](../../domain-integrations/spc/docs/spc-rule-signal-source-verification.md) ← **new**
+  * [Capability Verification](../../domain-integrations/spc/docs/spc-capability-verification.md) ← **new**
+  * [V2 Contract Mapping](../../domain-integrations/spc/docs/spc-v2-contract-mapping.md) ← **new**
+  * [Native Migration Readiness Checklist](../../domain-integrations/spc/docs/spc-native-migration-readiness-checklist.md) ← **new**
 
 ### Process Order History (POH) & Operations
 
 * **Status:** Databricks/API wired at code or SQL level; browser/live UI validation pending.
 * **Summary:**
   * A read-only Process Order History (POH) cockpit exists.
+  * A deterministic **POH Assistant Pilot** now exists as a dedicated workspace view limited to approved operations, confirmations, goods movements, and conditional header questions.
   * Source truthfulness has been improved; planned filter inputs (such as limit, date range, etc.) are labeled as planned/diagnostic.
   * Golden process-order candidates exist in UAT (e.g., process order `7006965038`).
   * Direct SQL/DDL reads are verified for `getProcessOrderHeader`, `getOrderOperations`, `getOrderConfirmations`, and `getOrderGoodsMovements`.
@@ -124,6 +176,7 @@ We use the following conservative status classifications:
     * Potential module-boundary lint warnings remain on cross-domain type imports from Quality.
 * **Document Registry:**
   * [Operations README](../../domain-integrations/operations/README.md)
+  * [POH Genie Readiness Pack](../../domain-integrations/operations/docs/poh-genie-readiness-pack.md)
   * [Golden Process Orders Candidates](../../domain-integrations/operations/docs/golden-process-orders.md)
   * [POH UAT Readiness Notes](../../domain-integrations/operations/docs/poh-uat-readiness-notes.md)
   * [POH V1 to V2 Functional Parity](../../domain-integrations/operations/docs/poh-v1-v2-functional-parity.md)
@@ -149,12 +202,24 @@ We use the following conservative status classifications:
 * **Summary:**
   * Release decision panels (Summary, Hold/Impact, Deviations, CoA, Decision History) are mock/simulated.
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
+  * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
+  * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and a pending-verification panel scaffold is mounted in the Quality Evidence view. Native route/live data implementation remains pending source verification.
+  * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
-    * No Databricks adapter exists for quality release.
+    * No Databricks adapter or route exists for native read-only Quality evidence.
+    * Databricks source verification pack has not been run against UAT.
+    * No verified live Quality UAT candidate has been identified.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
 * **Document Registry:**
   * [Quality README](../../domain-integrations/quality/README.md)
+  * [Quality V1 Source Discovery](../../domain-integrations/quality/docs/quality-v1-source-discovery.md)
+  * [Quality V2 Parity Roadmap](../../domain-integrations/quality/docs/quality-v2-parity-roadmap.md)
+  * [Quality Databricks Source Verification Pack](../../domain-integrations/quality/docs/quality-databricks-source-verification.md)
+  * [Quality Read-Only Evidence Route Plan](../../domain-integrations/quality/docs/quality-readonly-evidence-route-plan.md)
+  * [Quality Read-Only Evidence Panel Scaffold](../../domain-integrations/quality/docs/quality-readonly-evidence-panel-design.md)
+  * [Quality/SPC Shared MIC Evidence Boundaries](../../domain-integrations/quality/docs/quality-spc-shared-mic-evidence.md)
+  * [Golden Quality Candidates](../../domain-integrations/quality/docs/golden-quality-candidates.md)
   * [Quality Production Readiness Checklist](../../domain-integrations/quality/docs/quality-readiness-checklist.md)
   * [Golden Quality Batches Candidates](../../domain-integrations/quality/docs/golden-quality-batches.md)
   * [Quality Known Limitations](../../domain-integrations/quality/docs/quality-known-limitations.md)
@@ -210,16 +275,21 @@ The following list summarizes the critical items blocking live validation or pro
 * **SPC Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).
   2. `SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).
-  3. FastAPI proxy routes (`apps/api/routes/spc.py`) must be implemented for V1 SPC endpoints.
+  3. FastAPI proxy routes in `apps/api/routes/spc.py` exist but are NOT browser-verified — must test against live V1 backend.
   4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping (see `spc-v1-source-discovery.md`).
-  5. Gold view column names must be verified in `connected_plant_uat.gold.spc_quality_metric_subgroup_v`.
-  6. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified.
+  5. Gold view column names must be verified against actual UAT DDL — run queries in `spc-databricks-source-verification.md`.
+  6. Column name discrepancy in `spc_locked_limits` must be resolved by `DESCRIBE TABLE` (see `spc-control-limit-provenance-verification.md`).
+  7. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified via discovery queries in `golden-spc-candidates.md`.
+  8. Native migration readiness checklist (`spc-native-migration-readiness-checklist.md`) must be completed before any live route is enabled.
 * **Process Order History Blockers:**
   1. Browser-level validation of the 4 api endpoints inside the UI has not been performed.
 * **Warehouse360 Blockers:**
   1. Warehouse360 source-view/schema alignment requires live UAT verification; specific missing columns/views should be confirmed from the warehouse migration audit.
 * **Quality Batch Release Blockers:**
-  1. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented.
+  1. Run Quality Databricks source verification pack and capture source-object/column/grain evidence.
+  2. Identify at least one verified live Quality UAT candidate.
+  3. Implement source-backed read-only inspection lot/MIC evidence before any release-decision work.
+  4. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented before any controlled release workflow.
 
 ---
 

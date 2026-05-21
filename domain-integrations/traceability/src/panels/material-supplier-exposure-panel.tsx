@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { SupplierDetail, SupplierExposureSummary } from '@connectio/data-contracts'
 import { useSupplierExposureSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 /** Static registration record for the Material / Supplier Exposure panel. */
 const registration: EvidencePanelRegistration = {
@@ -129,6 +130,7 @@ export function MaterialSupplierExposurePanel({ request }: MaterialSupplierExpos
               Single-hop suppliers only (direct VENDOR_RECEIPT parents). Quality failure rate and open supplier actions require a verified QM source and are not surfaced (TRACE-P1-012).
             </div>
           )}
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 4 }} />
         </div>
       )}
     </EvidencePanel>

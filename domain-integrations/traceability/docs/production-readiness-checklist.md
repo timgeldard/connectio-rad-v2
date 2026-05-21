@@ -19,6 +19,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 1.5 | Link types on trace graph edges discriminate vendor receipts from internal moves | 🔶 | Code fixed PR #26 (linkType passthrough, expanded relationshipType enum). Live Databricks LINK_TYPE value validation still required before UAT sign-off. |
 | 1.6 | Graph truncation signalled when depth limit is reached | 🔶 | Code fixed: unified truncation banner copy updated; `max_edges_reached` warning now triggers banner alongside `max_depth_reached` and `truncated=true`. Live validation pending (TRACE-P1-001 — code-fixed). |
 | 1.7 | `gold_batch_summary_v` column names verified in live Databricks catalog | ✅ | Verified 2026-05-19 against connected_plant_uat. MANUFACTURE_DATE confirmed; SHELF_LIFE_EXPIRATION_DATE replaces expiry_date; PLANT_ID/BATCH_STATUS/UOM/PROCESS_ORDER_ID not in summary_v (sourced from stock_v and gold_material). TODO markers removed from adapter. See `databricks-column-verification-queries.md`. |
+| 1.8 | `gold_batch_mass_balance_v` column names verified and route live | 🔶 | All 11 columns verified live 2026-05-20 via DESCRIBE TABLE; `POST /api/trace2/mass-balance` route wired; legacy-api adapter override calls it (TRACE-P1-005 fixed). Two correctness defects opened from live data: TRACE-P1-010 (movement category mapping incomplete — STO Receipt/STO Transfer/Other (NNN) fall through to "adjustment"; surfaced as unresolvedMovements), TRACE-P1-011 (BALANCE_QTY always 0 for UAT candidate — runningBalance semantics need source verification). Panel disclaimer warns users not to treat variance as a verified mass-balance result. |
 
 ---
 
@@ -28,8 +29,8 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |---|------|--------|-------|
 | 2.1 | "Missing evidence" clearly labelled and distinguished from "zero exposure" | ✅ | EvidenceConfidenceBadge + UNKNOWN severity path. |
 | 2.2 | Mock data is not presented as live or verified | ✅ | Adapter factory pattern; mock mode explicit. |
-| 2.3 | Evidence confidence scoring sectors documented | 🔶 | Score logic documented in code; user-facing explanation missing (TRACE-P2-004). |
-| 2.4 | Data freshness / staleness surfaced to user | 🔶 | Phase 1 disclaimer added to BatchHeaderPanel: "Data freshness not available — displayed values reflect query time only." Full freshness wiring (Approach A: `_updated_at` column from gold view) requires column verification and a future tranche. Implementation roadmap in `data-freshness-plan.md`. TRACE-P2-002 still open for full resolution. |
+| 2.3 | Evidence confidence scoring sectors documented | ✅ | `ScoringRules` section added to `EvidenceConfidenceBadge` tooltip (2026-05-21): lists each sector with point weight and the grade thresholds. TRACE-P2-004 fixed. |
+| 2.4 | Data freshness / staleness surfaced to user | 🔶 | Phase 1 expanded (2026-05-21): shared `QueriedAtLabel` component shows "Queried at HH:MM:SS — source refresh time unavailable" on BatchHeaderPanel, TraceGraphPanel, CustomerImpactPanel, MaterialSupplierExposurePanel, MassBalancePanel. Phase 2 (verified `_updated_at` column) remains open in `data-freshness-plan.md`. TRACE-P2-002 status updated. |
 | 2.5 | Quality decision source documented and blocked until QM evidence verified | 🔶 | `_derive_quality_status` returns `pending` (QI stock > 0) or `unknown` only. `accepted`/`rejected`/`conditional` require a verified QM usage-decision field (e.g. `gold_qm_usage_decision_v`) that is not in the current query. Tests prove conservative values are enforced. Blocker documented in adapter docstring. Implementation plan in `quality-decision-source-plan.md`. |
 
 ---

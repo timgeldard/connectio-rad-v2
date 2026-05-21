@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { calculateConfidence, EvidenceConfidenceBadge } from './EvidenceConfidence.js'
+import { calculateConfidence, EvidenceConfidenceBadge, ScoringRules } from './EvidenceConfidence.js'
 import type {
   BatchHeaderSummary,
   CustomerExposureSummary,
@@ -162,5 +162,42 @@ describe('EvidenceConfidenceBadge', () => {
     expect(screen.getByText('Evidence Confidence:')).not.toBeNull()
     expect(screen.getByText('100%')).not.toBeNull()
     expect(screen.getByText('(Complete)')).not.toBeNull()
+  })
+
+})
+
+describe('ScoringRules — tooltip-content sub-component', () => {
+  // ScoringRules is rendered inside EvidenceConfidenceBadge's Radix Tooltip,
+  // which is portal-mounted only when the tooltip is open. The component is
+  // tested directly here so coverage doesn't depend on tooltip interaction.
+
+  it('lists every sector with its point weight (must match calculateConfidence)', () => {
+    render(<ScoringRules />)
+    const rules = screen.getByTestId('evidence-confidence-scoring-rules')
+    expect(rules.textContent).toContain('Lineage')
+    expect(rules.textContent).toContain('Customers & deliveries')
+    expect(rules.textContent).toContain('Mass balance')
+    expect(rules.textContent).toContain('Quality status')
+    expect(rules.textContent).toContain('CoA / release')
+    expect(rules.textContent).toContain('Upstream suppliers')
+  })
+
+  it('shows each sector point value (sum to 100)', () => {
+    render(<ScoringRules />)
+    const rules = screen.getByTestId('evidence-confidence-scoring-rules')
+    // 15 + 20 + 20 + 15 + 15 + 15 = 100
+    const text = rules.textContent ?? ''
+    expect(text.match(/15 pts/g)?.length).toBe(4) // lineage + quality + coa + suppliers
+    expect(text.match(/20 pts/g)?.length).toBe(2) // customers + mass balance
+  })
+
+  it('explains the grade thresholds', () => {
+    render(<ScoringRules />)
+    const rules = screen.getByTestId('evidence-confidence-scoring-rules')
+    const text = rules.textContent ?? ''
+    expect(text).toContain('Complete = 100%')
+    expect(text).toContain('Partial ≥ 50%')
+    expect(text).toContain('Missing < 50%')
+    expect(text).toContain('Not Assessed = 0%')
   })
 })

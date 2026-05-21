@@ -16,22 +16,29 @@ from adapters.trace2.trace2_databricks_adapter import (
     Trace2CustomerExposureRequest,
     Trace2ProductionHistoryRequest,
     Trace2SupplierExposureRequest,
+    Trace2MassBalanceRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
     get_customer_delivery_spec,
     get_customer_exposure_spec,
     get_production_history_spec,
     get_supplier_exposure_spec,
+    get_mass_balance_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
     map_production_history_rows,
     map_supplier_exposure_rows,
+    map_mass_balance_rows,
     map_trace_graph,
 )
 from contracts.generated import (
     CustomerExposureSummary,
+    ProductionHistorySummary,
+    SupplierExposureSummary,
+    MassBalanceSummary,
+    MassBalanceSummary,
     ProductionHistorySummary,
     SupplierExposureSummary,
     TraceGraph,
@@ -395,6 +402,7 @@ async def supplier_exposure(
         raise HTTPException(
             status_code=503,
             detail="supplier-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
+            detail="supplier-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
     host, warehouse_id = require_databricks_config()
@@ -470,5 +478,74 @@ async def production_history(
         identity, host, warehouse_id,
     )
     result = map_production_history_rows(rows, body.material_id)
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# POST /trace2/mass-balance — live Databricks mass balance slice
+# ---------------------------------------------------------------------------
+
+class MassBalanceBody(BaseModel):
+    material_id: str
+    batch_id: str
+    max_rows: int = 5000
+
+
+@router.post("/trace2/mass-balance", response_model=MassBalanceSummary)
+async def mass_balance(
+    body: MassBalanceBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/mass-balance — live mass balance summary + movements.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_mass_balance_v keyed on MATERIAL_ID + BATCH_ID.
+    11 columns verified live 2026-05-20 via DESCRIBE TABLE on connected_plant_uat.
+
+    Zero rows → HTTP 404 with "do not interpret as balanced" message. Zero rows
+    must NOT be treated as zero variance or as a clean mass balance result.
+
+    Known correctness gaps (returned data may be partial — see TRACE-P1-010/011):
+      - MOVEMENT_CATEGORY mapping is incomplete; un-mapped rows are counted as
+        unresolvedMovements so the panel's amber banner reflects truth.
+      - BALANCE_QTY appears not to be a per-batch running balance in live data;
+        runningBalance values are passed through as observed.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="mass-balance requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 10000)
+
+    request = Trace2MassBalanceRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_mass_balance_spec(request),
+        identity, host, warehouse_id,
+    )
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No mass balance movements returned for this material + batch — "
+                "do not interpret as a balanced mass balance until source coverage is validated."
+            ),
+        )
+    result = map_mass_balance_rows(rows)
     set_databricks_response_headers(response, spec)
     return result

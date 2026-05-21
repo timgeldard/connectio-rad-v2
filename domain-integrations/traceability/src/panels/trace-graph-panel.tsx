@@ -22,11 +22,14 @@ import {
   NODE_TYPE_LABEL,
   NODE_WIDTH,
   NODE_HEIGHT,
+  LINK_TYPE_COLORS,
+  DEFAULT_EDGE_COLOR,
   mapToFlowNodes,
   mapToFlowEdges,
   filterGraphByDirection,
   type TraceNodeData,
 } from './trace-graph-utils.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'trace-graph',
@@ -85,6 +88,14 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
       {node.batchId && (
         <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2, fontFamily: 'monospace' }}>
           {node.batchId}
+        </div>
+      )}
+      {node.plantId && (
+        <div
+          style={{ fontSize: 9, color: '#9CA3AF', marginTop: 1, fontFamily: 'monospace' }}
+          aria-label={`Plant ${node.plantId}`}
+        >
+          {node.plantId}
         </div>
       )}
       <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
@@ -175,7 +186,8 @@ function SelectedEdgeDetail({ edge, nodes }: { edge: TraceEdge; nodes: TraceNode
       </div>
       <div style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 6 }}>Available evidence from gold_batch_lineage</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-        <Detail label="Link type" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
+        <Detail label="Link type (mapped)" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
+        {edge.linkType && <Detail label="Link type (raw)" value={edge.linkType} />}
         {edge.movementType && <Detail label="Movement type" value={edge.movementType} />}
         {edge.postingDate && <Detail label="Posting date" value={edge.postingDate} />}
         {edge.quantity != null && (
@@ -427,15 +439,12 @@ function DirectionToggle({
 
 // ---------------------------------------------------------------------------
 // Link type legend
+//
+// The colour map is shared with `mapToFlowEdges` (see trace-graph-utils.ts) so
+// the legend swatch and the actual edge stroke stay in sync — fixing a prior
+// drift where the legend used keys (goods-movement, production-order, …) that
+// did not match the schema's relationshipType enum.
 // ---------------------------------------------------------------------------
-
-const LINK_TYPE_COLORS: Record<string, string> = {
-  'goods-movement': '#2563EB',
-  'production-order': '#7C3AED',
-  'purchase-order': '#D97706',
-  'sales-order': '#059669',
-  transfer: '#0891B2',
-}
 
 function LinkTypeLegend({ edges }: { edges: TraceEdge[] }) {
   const types = [...new Set(edges.flatMap(e => e.relationshipType != null ? [e.relationshipType] : []))]
@@ -453,7 +462,7 @@ function LinkTypeLegend({ edges }: { edges: TraceEdge[] }) {
               display: 'inline-block',
               width: 16,
               height: 2,
-              background: LINK_TYPE_COLORS[lt] ?? '#6B7280',
+              background: LINK_TYPE_COLORS[lt] ?? DEFAULT_EDGE_COLOR,
               borderRadius: 1,
               flexShrink: 0,
             }}
@@ -698,6 +707,8 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
             depthReached={graph.depth}
             truncated={!!graph.truncated}
           />
+
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 8 }} />
         </div>
       )}
     </EvidencePanel>

@@ -7,6 +7,7 @@ import { TraceGraphPanel } from '../panels/trace-graph-panel.js'
 import { RiskSignalsPanel } from '../panels/risk-signals-panel.js'
 import { useMassBalanceSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 /** Static registration for the inline mass balance panel. */
 const massBalanceRegistration: EvidencePanelRegistration = {
@@ -120,9 +121,22 @@ function MassBalancePanel({ request }: MassBalancePanelProps) {
               {data.unresolvedMovements} unresolved movement(s) — balance may be incomplete
             </div>
           )}
+          <div
+            style={{
+              padding: '6px 10px',
+              background: 'var(--shell-surface)',
+              border: '1px dashed var(--shell-line)',
+              borderRadius: 4,
+              fontSize: 11,
+              color: 'var(--shell-fg-3)',
+            }}
+          >
+            Movement category mapping is incomplete. Live data includes SAP categories (STO Receipt, STO Transfer, Write-Off, Other (NNN)) that are not yet directionally classified — these are counted as unresolved. Do not treat the variance figure as a verified mass-balance result.
+          </div>
           {data.movements && data.movements.length > 0 && (
             <MovementsTable movements={data.movements} />
           )}
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 4 }} />
         </div>
       )}
     </EvidencePanel>
