@@ -1,9 +1,11 @@
 import type { BatchHeaderSummary, TraceGraph } from '@connectio/data-contracts'
 import type { AdapterSource } from '@connectio/source-adapters'
 import {
+  DECISION_BLOCKED_PATTERNS,
   buildAssistantCitation,
   buildAssistantReply,
   buildBlockedAssistantReply,
+  buildDecisionBlockedAssistantReply,
   buildMockWarning,
   buildUnsupportedAssistantReply,
   type AssistantReply,
@@ -60,6 +62,12 @@ function classifyTraceQuestion(question: string): TraceQuestionClassification {
   const normalized = question.trim().toLowerCase()
   if (normalized.length === 0) return { kind: 'unsupported' }
 
+  // Decision-blocked patterns are checked first — these map to governed QA/SAP/recall
+  // decisions that must never be answered by the evidence assistant.
+  for (const pattern of DECISION_BLOCKED_PATTERNS) {
+    if (pattern.test(normalized)) return { kind: 'blocked', reason: 'decision-blocked' }
+  }
+
   for (const blocked of BLOCKED_KEYWORDS) {
     if (blocked.pattern.test(normalized)) return { kind: 'blocked', reason: blocked.reason }
   }
@@ -114,6 +122,9 @@ export function buildTraceGenieReply(question: string, snapshot: TraceGenieSnaps
   const classified = classifyTraceQuestion(question)
 
   if (classified.kind === 'blocked') {
+    if (classified.reason === 'decision-blocked') {
+      return buildDecisionBlockedAssistantReply()
+    }
     return buildBlockedAssistantReply(
       classified.reason,
       'Approved topics right now: focal batch summary, visible lineage summary, visible graph counts, graph warnings/truncation, and source citations.',

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DECISION_BLOCKED_TEMPLATE } from '@connectio/product-model'
 import { buildPohGenieReply } from './poh-genie-pilot-engine.js'
 import type { PohGenieSnapshot } from './poh-genie-pilot-engine.js'
 
@@ -119,5 +120,70 @@ describe('buildPohGenieReply', () => {
 
     expect(reply.kind).toBe('unsupported')
     expect(reply.text).toContain('could not match')
+  })
+})
+
+describe('buildPohGenieReply — blocked topics (governed decisions)', () => {
+  const DECISION_QUESTIONS = [
+    'Can I close the recall?',
+    'Is customer exposure zero?',
+    'Can I release this batch?',
+    'Is this batch accepted?',
+    'Are all customers identified?',
+    'Is this process in control?',
+    'Can I reject this batch?',
+    'Is the recall contained?',
+    'Is the supplier at fault?',
+    'Post this in SAP',
+    'Is the CoA approved?',
+  ]
+
+  for (const question of DECISION_QUESTIONS) {
+    it(`blocks governed decision question: "${question}"`, () => {
+      const reply = buildPohGenieReply(question, snapshot)
+
+      expect(reply.kind).toBe('blocked')
+      expect(reply.text.length).toBeGreaterThan(0)
+      expect(reply.text).not.toMatch(/\byes\b/i)
+      expect(reply.text).not.toMatch(/\bapproved\b/i)
+      expect(reply.text).not.toMatch(/\bconfirmed\b/i)
+      expect(reply.text).toContain(DECISION_BLOCKED_TEMPLATE)
+    })
+  }
+})
+
+describe('buildPohGenieReply — safe answer requirements', () => {
+  it('approved answers contain source/evidence citations', () => {
+    const reply = buildPohGenieReply(
+      'Show the operations currently returned for this process order.',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).toContain('Citations:')
+    expect(reply.text).toContain('OrderOperationsPanel')
+  })
+
+  it('approved answers contain the evidence assistant caveat', () => {
+    const reply = buildPohGenieReply(
+      'Show the confirmations currently returned for this process order.',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).toContain('No records returned from a source must not be interpreted as absence of exposure')
+  })
+
+  it('approved answers do not claim operational decisions', () => {
+    const reply = buildPohGenieReply(
+      'Show the goods movements currently returned for this process order.',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).not.toMatch(/you can release/i)
+    expect(reply.text).not.toMatch(/batch is approved/i)
+    expect(reply.text).not.toMatch(/recall is closed/i)
+    expect(reply.text).not.toMatch(/exposure is zero/i)
   })
 })
