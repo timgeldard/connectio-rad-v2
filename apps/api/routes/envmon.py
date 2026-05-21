@@ -25,6 +25,7 @@ from adapters.envmon.envmon_databricks_adapter import (
     map_site_summary_rows,
     map_swab_result_rows,
 )
+from contracts.generated import EnvMonSiteSummary
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -35,7 +36,7 @@ from routes._databricks import (
 router = APIRouter()
 
 
-@router.get("/envmon/site-summary")
+@router.get("/envmon/site-summary", response_model=EnvMonSiteSummary)
 async def envmon_site_summary(
     plant_id: str,
     period_start: str,
@@ -44,7 +45,7 @@ async def envmon_site_summary(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+) -> EnvMonSiteSummary:
     """Environmental monitoring site summary KPIs — databricks-api only.
 
     Returns aggregate inspection results for a plant over the given period.

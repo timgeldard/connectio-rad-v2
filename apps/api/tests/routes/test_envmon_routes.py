@@ -387,6 +387,19 @@ class TestEnvMonSiteSummaryDatabricksMode:
 
         assert "user-bearer-token" not in response.text
 
+    async def test_response_model_schema_registered(self) -> None:
+        """OpenAPI schema for site-summary must reference EnvMonSiteSummary — confirms response_model is wired."""
+        async with _make_client() as client:
+            response = await client.get("/openapi.json")
+
+        schema = response.json()
+        path_item = schema["paths"].get("/api/envmon/site-summary", {})
+        get_op = path_item.get("get", {})
+        response_200 = get_op.get("responses", {}).get("200", {})
+        content = response_200.get("content", {})
+        schema_ref = content.get("application/json", {}).get("schema", {})
+        assert "$ref" in schema_ref or schema_ref.get("title") == "EnvMonSiteSummary"
+
 
 # ---------------------------------------------------------------------------
 # Swab results route — shared fixtures

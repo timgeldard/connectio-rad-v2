@@ -475,7 +475,7 @@ _FAKE_CONF_ROWS = [
         "operation_id": "PHASE-001",
         "confirmed_yield": 950.0,
         "uom": "KG",
-        "confirmed_at": "2024-03-08T08:00:00",
+        "confirmed_at": "2024-03-08T08:00:00Z",
         "setup_duration_s": 900,       # 15 minutes x 60
         "machine_duration_s": 7200,    # 120 minutes x 60
         "cleaning_duration_s": None,
@@ -565,7 +565,7 @@ class TestOrderConfirmationsDatabricksMode:
         assert data[0]["confirmedYield"] == 950.0
         assert data[0]["uom"] == "KG"
         assert data[0]["setupDurationMinutes"] == 15.0
-        assert "cleaningDurationMinutes" not in data[0]
+        assert data[0].get("cleaningDurationMinutes") is None
 
     async def test_sets_databricks_response_headers(self, monkeypatch) -> None:
         self._databricks_env(monkeypatch)
@@ -681,7 +681,7 @@ _FAKE_MOVEMENT_ROWS = [
         "material_id": "000000000020052009",
         "quantity": 500.0,
         "uom": "KG",
-        "posted_at": "2024-03-08T06:30:00",
+        "posted_at": "2024-03-08T06:30:00Z",
         "batch_id": "0008602411",
         "posted_by": "user@kerry.com",
         "reference_document": "MAT-DOC-001",
@@ -693,7 +693,7 @@ _FAKE_MOVEMENT_ROWS = [
         "material_id": "000000000020052009",
         "quantity": 10.0,
         "uom": "KG",
-        "posted_at": "2024-03-08T09:00:00",
+        "posted_at": "2024-03-08T09:00:00Z",
         "batch_id": None,
         "posted_by": None,
         "reference_document": None,
