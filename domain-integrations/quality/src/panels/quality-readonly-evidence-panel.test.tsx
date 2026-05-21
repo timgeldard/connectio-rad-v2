@@ -112,6 +112,7 @@ describe('QualityReadOnlyEvidencePanel', () => {
 const PROHIBITED_TERMS = [
   'Released',
   'Can release',
+  'Approved',
   'Cleared',
   'Release ready',
 ]
