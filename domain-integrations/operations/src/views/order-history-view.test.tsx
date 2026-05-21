@@ -674,6 +674,121 @@ describe('OrderHistoryView', () => {
   })
 
   // ============================================================
+  // Source attribution tests (Slice 6)
+  // Verify that POH header and UAT evidence payload correctly
+  // derive source from AdapterResult.source, not hardcoded strings.
+  // ============================================================
+  describe('source attribution — derived from AdapterResult.source', () => {
+    it('shows databricks-api source badge when header query returns source: databricks-api', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+
+      // Source badge derives from query.data.source — must show databricks label
+      expect(screen.getAllByText(/DATABRICKS/i).length).toBeGreaterThan(0)
+      // Must NOT show MOCK as source when source is databricks-api
+      expect(screen.queryByText(/^MOCK$/i)).toBeNull()
+    })
+
+    it('shows mock source badge when header query returns source: mock', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'mock',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+
+      // Source badge must derive from query.data.source — shows mock label, not databricks
+      expect(screen.getAllByText(/MOCK/i).length).toBeGreaterThan(0)
+    })
+
+    it('includes section sources in UAT evidence payload — derived not hardcoded', async () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-PAYLOAD',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: { ok: true, data: [], source: 'databricks-api' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+      vi.mocked(useOrderOperations).mockReturnValue({
+        data: { ok: true, data: [], source: 'mock' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderOperations>)
+      vi.mocked(useOrderConfirmations).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderConfirmations>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-PAYLOAD' }} /></Wrapper>)
+      fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+      await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
+      const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+
+      // Each section source derives from that section's AdapterResult.source
+      expect(payload.sourceSummary.sections.header).toBe('databricks-api')
+      expect(payload.sourceSummary.sections.operations).toBe('mock')
+      expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+      // Unloaded section returns 'unknown', not hardcoded 'databricks-api'
+      expect(payload.sourceSummary.sections.confirmations).toBe('unknown')
+      // Mixed sources produce 'mixed' overall
+      expect(payload.sourceSummary.overall).toBe('mixed')
+    })
+  })
+
+  // ============================================================
   // Component consumption grouping safety regression tests
   // These tests verify that component consumption rows are grouped
   // by material + batch + UOM (not material only), and that
@@ -905,6 +1020,83 @@ describe('OrderHistoryView', () => {
       expect(within(poTable).getAllByText('MAT-FG-Y').length).toBeGreaterThanOrEqual(1)
       // The "no rows" placeholder must NOT appear
       expect(screen.queryByText(/No produced-output rows/i)).toBeNull()
+    })
+  })
+
+  // ============================================================
+  // Source attribution tests
+  // Verifies that the source badge and UAT evidence payload derive
+  // source from AdapterResult.source, not from hardcoded labels.
+  // ============================================================
+  describe('source attribution — derived from AdapterResult.source', () => {
+    function makeHeaderQuery(source: string) {
+      return {
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SOURCE-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-TEST',
+            materialDescription: 'Test Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source,
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>
+    }
+
+    it('shows Databricks source badge when header AdapterResult.source is databricks-api', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('databricks-api'))
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      expect(screen.getAllByText(/Databricks/i).length).toBeGreaterThan(0)
+    })
+
+    it('shows Mock/Sandbox source badge when header AdapterResult.source is mock', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('mock'))
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      expect(screen.getAllByText(/Mock\/Sandbox/i).length).toBeGreaterThan(0)
+    })
+
+    it('UAT evidence payload captures per-section sources and derives mixed overall when sections differ', async () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('databricks-api'))
+      vi.mocked(useOrderOperations).mockReturnValue({
+        data: { ok: true, data: [], source: 'mock' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderOperations>)
+      // confirmations data undefined → getSectionSource returns 'unknown'
+      vi.mocked(useOrderConfirmations).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderConfirmations>)
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: { ok: true, data: [], source: 'databricks-api' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalled()
+      })
+      const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+      expect(payload.sourceSummary.sections.header).toBe('databricks-api')
+      expect(payload.sourceSummary.sections.operations).toBe('mock')
+      expect(payload.sourceSummary.sections.confirmations).toBe('unknown')
+      expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+      expect(payload.sourceSummary.overall).toBe('mixed')
     })
   })
 })
