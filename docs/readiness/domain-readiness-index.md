@@ -203,16 +203,22 @@ We use the following conservative status classifications:
   * Release decision panels (Summary, Hold/Impact, Deviations, CoA, Decision History) are mock/simulated.
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
   * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
+  * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and a pending-verification panel scaffold is mounted in the Quality Evidence view. Native route/live data implementation remains pending source verification.
   * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
-    * No Databricks adapter exists for quality release.
+    * No Databricks adapter or route exists for native read-only Quality evidence.
+    * Databricks source verification pack has not been run against UAT.
     * No verified live Quality UAT candidate has been identified.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
 * **Document Registry:**
   * [Quality README](../../domain-integrations/quality/README.md)
   * [Quality V1 Source Discovery](../../domain-integrations/quality/docs/quality-v1-source-discovery.md)
   * [Quality V2 Parity Roadmap](../../domain-integrations/quality/docs/quality-v2-parity-roadmap.md)
+  * [Quality Databricks Source Verification Pack](../../domain-integrations/quality/docs/quality-databricks-source-verification.md)
+  * [Quality Read-Only Evidence Route Plan](../../domain-integrations/quality/docs/quality-readonly-evidence-route-plan.md)
+  * [Quality Read-Only Evidence Panel Scaffold](../../domain-integrations/quality/docs/quality-readonly-evidence-panel-design.md)
+  * [Quality/SPC Shared MIC Evidence Boundaries](../../domain-integrations/quality/docs/quality-spc-shared-mic-evidence.md)
   * [Golden Quality Candidates](../../domain-integrations/quality/docs/golden-quality-candidates.md)
   * [Quality Production Readiness Checklist](../../domain-integrations/quality/docs/quality-readiness-checklist.md)
   * [Golden Quality Batches Candidates](../../domain-integrations/quality/docs/golden-quality-batches.md)
@@ -280,7 +286,10 @@ The following list summarizes the critical items blocking live validation or pro
 * **Warehouse360 Blockers:**
   1. Warehouse360 source-view/schema alignment requires live UAT verification; specific missing columns/views should be confirmed from the warehouse migration audit.
 * **Quality Batch Release Blockers:**
-  1. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented.
+  1. Run Quality Databricks source verification pack and capture source-object/column/grain evidence.
+  2. Identify at least one verified live Quality UAT candidate.
+  3. Implement source-backed read-only inspection lot/MIC evidence before any release-decision work.
+  4. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented before any controlled release workflow.
 
 ---
 

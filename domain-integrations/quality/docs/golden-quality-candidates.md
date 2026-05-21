@@ -7,6 +7,8 @@ No verified live Quality UAT candidate has been identified from V1 discovery.
 
 The existing V2 mock release cases in `golden-quality-batches.md` remain useful for UI trust-hardening tests only. They must not be treated as live SAP QM or release evidence.
 
+`quality-databricks-source-verification.md` now provides candidate discovery SQL and an evidence capture table. A candidate should move out of `TBD` only after source-object existence, required columns, row grain, usage-decision semantics, and CoA/deviation boundaries are captured from Databricks evidence.
+
 ## Candidate Template
 
 | Field | Value |
@@ -27,6 +29,8 @@ The existing V2 mock release cases in `golden-quality-batches.md` remain useful 
 | validation status | Not identified |
 | evidence captured by | TBD |
 | evidence captured at | TBD |
+| source verification status | Not run |
+| contract coverage | Read-only evidence contracts ready; native source mapping pending |
 
 ## Candidate Evidence Rules
 
