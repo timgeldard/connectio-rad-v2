@@ -82,15 +82,16 @@ No domain has passed live UAT. No production readiness is claimed.
 
 ### 2.4 SPC
 
-**Overall status:** `verification-pack-ready`
+**Overall status:** `contract-alignment-complete` (no native runtime wired)
 
 | Item | Status | Notes |
 |---|---|---|
 | V1 source discovery | `docs-ready` | SPC data confirmed in `connected_plant_uat.gold`; V1 is material-centric, client-side rule computation |
-| Databricks verification pack | `verification-pack-ready` | Full pack in `domain-integrations/spc/docs/`; no SQL has been run against live objects |
-| Native V2 implementation | `live-UAT-pending` | Not started; data model not established; `SPCMonitoringAdapterRequest` not yet material-centric |
+| Databricks verification pack | `verified` | Executed in PR #65 (2026-05-21); 22 SPC objects inventoried; subgroup MV (~73M rows) and locked_limits (1 UAT row) confirmed; `spc_capability_detail_mv` and `spc_nelson_rule_flags_mv` NOT FOUND |
+| Native contract alignment | `contract-alignment-complete` | Branch `feature/spc-native-contract-alignment` (Slices 1-7): audit + rewritten contract mapping + verified fixtures + pure mapper helpers + 55 mapper tests + native route prerequisite plan + minimal additive `operationId` on `SPCMonitoringContextSchema`. **No native runtime route wired.** V1 legacy bridge remains the recommended short-term path. |
+| Native V2 chart-data route | `prerequisite-plan-ready` | `POST /api/spc/chart-data` shape documented in `spc-native-route-prerequisite-plan.md`; go/no-go gates not yet met (decision on backend signal calculation, governance for backend capability, plant-namespace mapping); not implemented |
 | FastAPI proxy routes | `source-semantics-pending` | Routes in `apps/api/routes/spc.py` exist but are NOT browser-verified against live V1 backend |
-| Mock cockpit | `docs-ready` | High-fidelity sandbox; source truthfulness banners active; control-limit provenance tracking in UI |
+| Mock cockpit | `docs-ready` | High-fidelity sandbox; source truthfulness banners active; control-limit provenance tracking in UI; mock data unchanged by the contract-alignment tranche |
 
 ---
 
@@ -178,7 +179,7 @@ These items have verification pack SQL templates ready but no SQL has been run a
 
 | Item | Pack location | Blocking wiring |
 |---|---|---|
-| SPC: all 7 gold view objects | `domain-integrations/spc/docs/spc-databricks-source-verification.md` | All native SPC routes |
+| SPC: contract alignment vs verified schema | `domain-integrations/spc/docs/spc-native-contract-alignment-audit.md` (done 2026-05-21) | Native SPC chart-data route prerequisite plan now exists |
 | Quality: inspection lot object | `domain-integrations/quality/docs/quality-databricks-source-verification.md` | Quality inspection lot display |
 | Quality: MIC result object | Same pack | Quality MIC/result display |
 | Quality: CoA-like result object | Same pack | Quality CoA evidence display |

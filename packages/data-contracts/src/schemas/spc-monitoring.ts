@@ -57,7 +57,13 @@ export const SPCMonitoringContextSchema = z.object({
   materialId: z.string(),
   materialDescription: z.string(),
   batchId: z.string().optional(),
+  // workCentreId remains for legacy-bridge compatibility. The verified SPC
+  // source has no SAP work-centre column; operationId below carries the
+  // verified `operation_id` (sequential inspection-operation identifier).
+  // See domain-integrations/spc/docs/spc-native-contract-alignment-audit.md
+  // items 2.1, 2.2 and spc-v2-contract-mapping.md §5.
   workCentreId: z.string().optional(),
+  operationId: z.string().optional(),
   characteristicId: z.string().optional(),
   chartType: ChartTypeSchema.optional(),
   activeSignals: z.number().int().min(0),

@@ -11,11 +11,29 @@ and golden candidates require Databricks verification before native V2 SPC live 
 
 ## 1. Data Source Gaps
 
-- **Source Not Yet Mapped in V2**: A full V1 SPC application exists at `apps/spc/` in the
-  ConnectIO-RAD V1 repo. It deploys `spc_quality_metric_subgroup_v`, `spc_locked_limits`, and
-  related objects to `connected_plant_uat.gold`. V2 SPC has not yet been mapped to these
-  sources. The Databricks verification pack in `spc-databricks-source-verification.md` provides
-  the SQL queries required to confirm the data model before any wiring is attempted.
+- **Native Contract Alignment Done; No Native Route Wired (2026-05-21)**: After PR #65
+  verified the SPC schema, a follow-up contract-alignment tranche reconciled
+  V2 SPC contracts, fixtures, helper mappings, and an implementation plan to
+  the verified Databricks schema. SPC native contract mapping is now aligned
+  to the verified Databricks schema; the native direct route remains blocked
+  pending final route-implementation decision, grain owner confirmation,
+  signal-calculation approach, and capability strategy. Pure mapping
+  helpers and fixtures exist for the verified schema; **no runtime route is
+  wired** and no V2 panel currently consumes the new helpers. The V1 legacy
+  bridge remains the recommended short-term path. See
+  [`spc-native-contract-alignment-audit.md`](./spc-native-contract-alignment-audit.md),
+  the rewritten [`spc-v2-contract-mapping.md`](./spc-v2-contract-mapping.md),
+  and [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md).
+- **Source Not Yet Mapped to a Native Route in V2**: A full V1 SPC application exists at
+  `apps/spc/` in the ConnectIO-RAD V1 repo. It deploys
+  `spc_quality_metric_subgroup_v` / `_mv`, `spc_locked_limits`, and related
+  objects to `connected_plant_uat.gold`. PR #65 verified those objects but
+  also proved that two expected MVs (`spc_capability_detail_mv` and
+  `spc_nelson_rule_flags_mv`) are NOT FOUND in UAT. V2 has no native route
+  wired against the verified objects yet; the Databricks verification pack
+  in `spc-databricks-source-verification.md` and the contract alignment in
+  `spc-v2-contract-mapping.md` are the prerequisites for any future native
+  wiring.
 - **V2 Data Model Misalignment**: The V1 SPC data model is material-centric
   (`material_id → plant_id → mic_id`). V2's current adapter request uses
   `plantId + workCentreId` as primary scope. This must be reconciled before live wiring.

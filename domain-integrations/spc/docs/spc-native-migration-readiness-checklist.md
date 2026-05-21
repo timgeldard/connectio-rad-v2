@@ -1,8 +1,17 @@
 # SPC Native Migration Readiness Checklist
 
 **Date:** 2026-05-21
-**Status:** Object inventory, types, and schemas partially complete — 2026-05-21 evidence session
+**Status:** Object inventory, types, and schemas verified by PR #65; native contract alignment completed by the contract-alignment tranche (Slices 1-7 of `feature/spc-native-contract-alignment`); native route remains blocked pending the items called out in §15.
 **Purpose:** Gate checklist before implementing native V2 SPC Databricks routes
+
+> **Status note (2026-05-21).** SPC native contract mapping is aligned to
+> the verified Databricks schema (PR #65 + this tranche). Pure mapping
+> helpers and fixtures exist for the verified schema; **no runtime route
+> is wired**. The V1 legacy bridge remains the recommended short-term path.
+> The "Go" criteria below are unchanged — they still gate the wiring.
+> See [`spc-native-contract-alignment-audit.md`](./spc-native-contract-alignment-audit.md),
+> the rewritten [`spc-v2-contract-mapping.md`](./spc-v2-contract-mapping.md),
+> and [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md).
 
 > This checklist must be completed before any V2 native SPC route (either V1 proxy or direct
 > Databricks API) is implemented, enabled, or tested against live data. All items are currently
@@ -186,14 +195,19 @@
 
 ## 11. V2 Contract Mapping Completed
 
-- [ ] **All "pending verification" fields in spc-v2-contract-mapping.md updated** with verified
-  source columns and confidence levels
+- [x] **All "pending verification" fields in spc-v2-contract-mapping.md updated** with verified
+  source columns and source-truthful classifications (directly-sourced / derived /
+  source-unavailable / blocked / legacy-bridge-only / unknown / requires-contract-change /
+  requires-future-native-mapper) — rewritten 2026-05-21 against PR #65
   - Document: [spc-v2-contract-mapping.md](./spc-v2-contract-mapping.md)
+  - Companion: [spc-native-contract-alignment-audit.md](./spc-native-contract-alignment-audit.md)
 
-- [ ] **Chart type rename mapping confirmed** (V1 `imr` → V2 `individuals`, etc.)
+- [x] **Chart type rename mapping confirmed** (V1 `imr` → V2 `individuals`, etc.) — documented
+  in `spc-v2-contract-mapping.md` §2
 
-- [ ] **`SPCAlarmHistoryItem` gap accepted** — acknowledged that no stored alarm history exists
-  in V1, and the panel will remain mock-only or be deferred
+- [x] **`SPCAlarmHistoryItem` gap accepted** — acknowledged that no stored alarm history exists
+  in V1 or in `connected_plant_uat.gold`, and the panel will remain mock-only or be deferred
+  when a native route is wired. Documented in `spc-v2-contract-mapping.md` §12
 
 ---
 
@@ -242,12 +256,38 @@
 - Item 10 (golden candidate) has at least one verified candidate
 - V1 SPC app is confirmed reachable from V2 Databricks Apps environment
 
-### Proceed with V2 SPC native Databricks implementation (Option 2) if:
+### Proceed with V2 SPC native Databricks implementation (Option 2) — **minimum chart-data route** — if:
 
-- ALL items in this checklist are complete
+The minimum native chart-data route (`POST /api/spc/chart-data` per
+[`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md))
+deliberately does NOT depend on the two NOT FOUND MVs. It can proceed when:
+
+- Items 1, 3, 4 (object inventory, columns, grain) are complete (3 and 4 are done for
+  the subgroup MV and locked-limits per PR #65; subgroup grain confirmed as
+  measurement-level)
+- Item 5 (navigation model) is confirmed material-first
+- Item 6 (locked limits) is understood — the single UAT row is documented as
+  `uat-fixture-only` and the route's provenance ceiling is `pending-validation`
+- Item 10 (golden candidate) — PR #65 identified three partially-verified candidates
+- §11 contract mapping is rewritten against the verified schema (done 2026-05-21)
+- Signals: the route ships `signals_source` (calculated-frontend / calculated-backend /
+  not-yet-evaluated / unavailable) without storing signals; rule detection runs
+  separately (today: frontend `calculations.runtime.ts`)
+- Capability: the route ships `capability_source` (unavailable / backend-calculation-required
+  / legacy-bridge / present-from-mv) without returning Cp/Cpk fields; the existing legacy
+  `/api/spc/capability` proxy continues to serve capability until governance authorises
+  a backend calculation
+- All "must NOT be relaxed" items in
+  [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md) §14.3
+  hold
+
+### Proceed with V2 SPC native Databricks implementation (Option 2) — **full** — if:
+
+- All items in this checklist are complete
 - V2 contract mapping is fully resolved (no "pending" or "unknown" confidence values)
 - Signal computation approach is decided and documented in an ADR
-- Capability MV refresh cycle documented and staleness handling designed
+- Capability MV is deployed in UAT OR a backend capability algorithm is authorised by
+  Kerry QM process owner
 - At least one golden candidate has been end-to-end tested
 
 ### Do NOT proceed if any of the following are true:
