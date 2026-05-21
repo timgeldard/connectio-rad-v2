@@ -1,13 +1,13 @@
 # Contract-to-Route Coverage Matrix
 
-> Snapshot: 2026-05-21. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
+> Snapshot: 2026-05-21. Updated 2026-05-21 (backend-contract-enforcement branch) to reflect response_model enforcement on envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
 
 ## Key findings (read first)
 
 1. **6 native Traceability routes use `response_model`** — backend validates the response against the generated Python model before sending. These are the most contract-consistent routes in the repo.
 2. **3 native POH routes use `response_model`** — same standard as Traceability.
 3. **POST /trace2/batch-header uses no `response_model`** — this is a proxy route in mixed mode; the backend doesn't validate the V1 or native response against Pydantic before returning it.
-4. **All EnvMon and Warehouse360 routes have no `response_model`** — backend validation gap; response shape is not enforced against the contract.
+4. **`GET /api/envmon/site-summary` and warehouse360 inbound/outbound/staging/exceptions now have `response_model`** — enforced after backend-contract-enforcement (2026-05-21). `GET /api/envmon/swab-results` and `GET /api/warehouse360/overview` remain unenforced (contract mismatch or mapper shape gap — see plan).
 5. **All SPC, Quality readonly-evidence, and batch-release schemas are ahead of runtime** — contracts exist and Python models are generated, but no live route uses them.
 6. **`SPCMonitoringContextSchema` with `operationId` (added PR #67) is furthest ahead of runtime** — the schema, Python model, and mapping helpers are all updated but no native route has been wired.
 7. **Proxy routes (SPC, CQ Lab, V1 warehouse summary) bypass contract validation** — the backend passes through the V1 JSON unvalidated; the frontend adapter validates the response against the Zod schema.
@@ -125,7 +125,7 @@
 
 | Schema | Domain | Purpose | Frontend consumer | Backend route | Gen. Python model | Runtime mode | Validation location | Source object(s) | Status | Gap / next action |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `EnvMonSiteSummarySchema` | EnvMon | Site summary (zones, positives, compliance rate) | EnvMonAdapter / SiteSummaryPanel | `GET /api/envmon/site-summary` | Yes — `EnvMonSiteSummary` | databricks-api | frontend only (no `response_model` on route) | `gold_inspection_lot` (filter INSPECTION_TYPE IN ('14','Z14')) | route-wired-no-backend-validation | Add `response_model=EnvMonSiteSummary` to route; browser-verify |
+| `EnvMonSiteSummarySchema` | EnvMon | Site summary (zones, positives, compliance rate) | EnvMonAdapter / SiteSummaryPanel | `GET /api/envmon/site-summary` | Yes — `EnvMonSiteSummary` | databricks-api | **both** (frontend Zod + `response_model=EnvMonSiteSummary`) | `gold_inspection_lot` (filter INSPECTION_TYPE IN ('14','Z14')) | **complete-contract-binding** | browser-verify against live UAT environment |
 | `EnvMonSwabResultSchema` | EnvMon | Swab result items | EnvMonAdapter / SwabResultsPanel | `GET /api/envmon/swab-results` | Yes — `EnvMonSwabResult` | databricks-api | frontend only (no `response_model` on route) | `gold_batch_quality_result_v` | route-wired-no-backend-validation | Add `response_model`; browser-verify |
 | `EnvMonZoneSchema` | EnvMon | Monitoring zone | EnvMonAdapter (mock) | None | Yes — `EnvMonZone` | mock | n/a | — | mock-only-no-route | Python model unused |
 | `EnvMonAlertSchema` | EnvMon | Environmental alert | EnvMonAdapter (mock) | None | Yes — `EnvMonAlert` | mock | n/a | — | mock-only-no-route | Python model unused |
@@ -139,10 +139,10 @@
 | Schema | Domain | Purpose | Frontend consumer | Backend route | Gen. Python model | Runtime mode | Validation location | Source object(s) | Status | Gap / next action |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `Warehouse360OverviewSchema` | Warehouse | Overview KPIs | Warehouse360Adapter / OverviewPanel | `GET /api/warehouse360/overview` | Yes — `Warehouse360Overview` | databricks-api | frontend only (no `response_model`) | Not identified | route-wired-no-backend-validation | Add `response_model`; identify source objects; run Warehouse schema alignment |
-| `Warehouse360InboundItemSchema` | Warehouse | Inbound items | Warehouse360Adapter / InboundPanel | `GET /api/warehouse360/inbound` | Yes — `Warehouse360InboundItem` | databricks-api | frontend only | Not identified | route-wired-no-backend-validation | Same as overview |
-| `Warehouse360OutboundItemSchema` | Warehouse | Outbound items | Warehouse360Adapter / OutboundPanel | `GET /api/warehouse360/outbound` | Yes — `Warehouse360OutboundItem` | databricks-api | frontend only | Not identified | route-wired-no-backend-validation | Same |
-| `Warehouse360StagingItemSchema` | Warehouse | Staging items | Warehouse360Adapter / StagingPanel | `GET /api/warehouse360/staging` | Yes — `Warehouse360StagingItem` | databricks-api | frontend only | Not identified | route-wired-no-backend-validation | Same |
-| `Warehouse360ExceptionItemSchema` | Warehouse | Exception items | Warehouse360Adapter / ExceptionsPanel | `GET /api/warehouse360/exceptions` | Yes — `Warehouse360ExceptionItem` | databricks-api | frontend only | Not identified | route-wired-no-backend-validation | Same |
+| `Warehouse360InboundItemSchema` | Warehouse | Inbound items | Warehouse360Adapter / InboundPanel | `GET /api/warehouse360/inbound` | Yes — `Warehouse360InboundItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360InboundItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Source objects not yet DDL-verified; browser-verify against live UAT |
+| `Warehouse360OutboundItemSchema` | Warehouse | Outbound items | Warehouse360Adapter / OutboundPanel | `GET /api/warehouse360/outbound` | Yes — `Warehouse360OutboundItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360OutboundItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Same |
+| `Warehouse360StagingItemSchema` | Warehouse | Staging items | Warehouse360Adapter / StagingPanel | `GET /api/warehouse360/staging` | Yes — `Warehouse360StagingItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360StagingItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Same |
+| `Warehouse360ExceptionItemSchema` | Warehouse | Exception items | Warehouse360Adapter / ExceptionsPanel | `GET /api/warehouse360/exceptions` | Yes — `Warehouse360ExceptionItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360ExceptionItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Same |
 | `Warehouse360SummarySchema` | Warehouse | V1-parity summary | Warehouse360LegacyApiAdapter | `POST /api/wh360/warehouse-summary` | Yes — `Warehouse360Summary` | legacy-api (proxy; unverified; fallback to mock) | proxy-passthrough | V1 WH360 backend | route-wired-proxy-unverified | Browser-verify; add `response_model` |
 | `StockOverviewSchema`, `OpenHoldItemSchema`, `GoodsMovementEventSchema`, `ReplenishmentNeedSchema`, `LocationCapacitySchema`, `NearExpiryBatchSchema`, `WarehouseReconciliationExceptionSchema` | Warehouse | Various warehouse panels | Warehouse360Adapter (mock) | None | Yes (all) | mock | n/a | Not identified | mock-only-no-route | Python models unused |
 
@@ -172,17 +172,18 @@
 
 ### Routes without `response_model` (backend validation gap)
 
-| Route | Domain | Gap |
-|---|---|---|
-| `POST /api/trace2/batch-header` | Traceability | Proxy mode doesn't validate against `BatchHeaderSummary`; native path also lacks `response_model` |
-| `POST /api/por/order-header` | POH | No `response_model`; proxy + native both unvalidated on response |
-| `GET /api/envmon/site-summary` | EnvMon | No `response_model=EnvMonSiteSummary` |
-| `GET /api/envmon/swab-results` | EnvMon | No `response_model=EnvMonSwabResult` |
-| `GET /api/warehouse360/overview` + 4 sub-routes | Warehouse | No `response_model` on any of the 5 native routes |
-| `POST /api/wh360/warehouse-summary` | Warehouse | V1 proxy; no `response_model` |
-| `GET /api/cq/lab/fails` | Quality (CQ Lab) | V1 proxy; no `response_model` |
-| `GET /api/cq/lab/plants` | Quality (CQ Lab) | V1 proxy; no `response_model` |
-| `GET/POST /api/spc/*` | SPC | All 5 V1 proxy routes; no `response_model`; V1 shape differs from V2 Zod schema |
+Updated 2026-05-21: envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions are now enforced. See `backend-contract-enforcement-plan.md` for skip reasoning on remaining routes.
+
+| Route | Domain | Gap | Blocker |
+|---|---|---|---|
+| `POST /api/trace2/batch-header` | Traceability | Dual-mode proxy; `response_model` applies to both paths; V1 shape unverified | Browser-verify V1 path |
+| `POST /api/por/order-header` | POH | Dual-mode proxy; mapper also adds `inspectionLotId` not in model | Fix mapper AND browser-verify V1 path |
+| `GET /api/envmon/swab-results` | EnvMon | Mapper returns 20+ expanded fields; contract requires `zoneId`/`zoneName`/`testType`/`organism`/`sampleDate` (no source) | Align mapper to contract |
+| `GET /api/warehouse360/overview` | Warehouse | Mapper returns V1-style keys (`ordersTotal`, `trsOpen`, etc.) — completely different from `Warehouse360Overview` | Rewrite mapper to contract shape |
+| `POST /api/wh360/warehouse-summary` | Warehouse | V1 proxy; response shape not browser-verified | Browser-verify V1 proxy |
+| `GET /api/cq/lab/fails` | Quality (CQ Lab) | Always V1 proxy passthrough; response shape not browser-verified | Browser-verify V1 proxy |
+| `GET /api/cq/lab/plants` | Quality (CQ Lab) | Dual-mode; `response_model` applies to both proxy and native branch | Browser-verify V1 path |
+| `GET/POST /api/spc/*` | SPC | All V1 proxy routes; V1 shape differs from V2 Zod schema | Verify V1 shapes; native route prerequisite plan gating |
 
 ### Generated Python models with no live route
 

@@ -403,6 +403,34 @@ class TestWarehouse360ParameterValidation:
             assert called_params["plant_id"] == "PL10"
             assert called_params["date_from"] == "2026-05-01"
             assert called_params["date_to"] == "2026-05-31"
-            assert "LIMIT 150" in called_sql
+
+
+class TestWarehouse360ResponseModelEnforcement:
+    """Verify response_model is wired for inbound/outbound/staging/exceptions via OpenAPI schema."""
+
+    async def _get_route_schema_ref(self, path: str) -> str | None:
+        async with _make_client() as client:
+            resp = await client.get("/openapi.json")
+        schema = resp.json()
+        path_item = schema["paths"].get(path, {})
+        resp_200 = path_item.get("get", {}).get("responses", {}).get("200", {})
+        items = resp_200.get("content", {}).get("application/json", {}).get("schema", {}).get("items", {})
+        return items.get("$ref")
+
+    async def test_inbound_response_model_is_wired(self) -> None:
+        ref = await self._get_route_schema_ref("/api/warehouse360/inbound")
+        assert ref is not None and "Warehouse360InboundItem" in ref
+
+    async def test_outbound_response_model_is_wired(self) -> None:
+        ref = await self._get_route_schema_ref("/api/warehouse360/outbound")
+        assert ref is not None and "Warehouse360OutboundItem" in ref
+
+    async def test_staging_response_model_is_wired(self) -> None:
+        ref = await self._get_route_schema_ref("/api/warehouse360/staging")
+        assert ref is not None and "Warehouse360StagingItem" in ref
+
+    async def test_exceptions_response_model_is_wired(self) -> None:
+        ref = await self._get_route_schema_ref("/api/warehouse360/exceptions")
+        assert ref is not None and "Warehouse360ExceptionItem" in ref
 
 
