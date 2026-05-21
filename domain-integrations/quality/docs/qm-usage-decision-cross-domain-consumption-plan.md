@@ -139,12 +139,12 @@ Before any domain wires live usage-decision evidence:
 
 | Gate | Status | Notes |
 |---|---|---|
-| Source object verified (DESCRIBE evidence) | not run | See `qm-usage-decision-source-verification.md` §13 |
-| Column names confirmed (not assumed) | not run | |
-| Grain verified (≤1 row per lot or documented exceptions) | not run | See `qm-usage-decision-grain-and-joins.md` |
-| Join key to material/batch confirmed | not run | |
-| Raw code/text distribution captured | not run | See `qm-usage-decision-code-semantics.md` §5 |
-| Governed code mapping confirmed by QM process owner | not done | Blocked until §3 governance checkpoint complete |
+| Source object verified (DESCRIBE evidence) | **verified** | `connected_plant_uat.gold.gold_inspection_usage_decision`, 2026-05-21 — see `qm-usage-decision-source-verification.md` §13 |
+| Column names confirmed (not assumed) | **verified** | 13 columns — see `qm-usage-decision-source-verification.md` §4 |
+| Grain verified (≤1 row per lot or documented exceptions) | **verified** | Grain = `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)`; multiple rows per lot are historical — see `qm-usage-decision-grain-and-joins.md` |
+| Join key to material/batch confirmed | **verified** | Two-hop via `gold_inspection_lot`; fan-out risk documented in `qm-usage-decision-grain-and-joins.md` §7 |
+| Raw code/text distribution captured | **verified** | 9 code variants observed — see `qm-usage-decision-code-semantics.md` §2 |
+| Governed code mapping confirmed by QM process owner | **partial** | 8 of 9 codes confirmed 2026-05-21 (tim.geldard@kerry.com); empty-string semantics still pending |
 | No release/reject actions in scope | confirmed | Permanent constraint |
 | No SAP QM write-back in scope | confirmed | Permanent constraint |
 | No service-principal fallback introduced | confirmed | Per Databricks security rules |
@@ -156,3 +156,4 @@ Before any domain wires live usage-decision evidence:
 | Date | Change | Author |
 |---|---|---|
 | 2026-05-21 | Initial plan created | Claude / AI agent |
+| 2026-05-21 | §4 readiness gates updated to reflect verified source and partial code-mapping governance | Claude / AI agent |
