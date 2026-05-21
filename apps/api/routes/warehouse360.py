@@ -33,6 +33,12 @@ from adapters.warehouse360.warehouse360_databricks_adapter import (
     map_warehouse_staging_rows,
     map_warehouse_exceptions_rows,
 )
+from contracts.generated import (
+    Warehouse360InboundItem,
+    Warehouse360OutboundItem,
+    Warehouse360StagingItem,
+    Warehouse360ExceptionItem,
+)
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -140,7 +146,7 @@ async def warehouse_overview(
     return map_warehouse_overview_rows(rows, req)
 
 
-@router.get("/warehouse360/inbound")
+@router.get("/warehouse360/inbound", response_model=list[Warehouse360InboundItem])
 async def warehouse_inbound(
     warehouse_id: str,
     response: Response,
@@ -151,7 +157,7 @@ async def warehouse_inbound(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> list[dict]:
+) -> list[Warehouse360InboundItem]:
     """Get inbound PO/STO details — databricks-api only.
 
     No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
@@ -193,7 +199,7 @@ async def warehouse_inbound(
     return map_warehouse_inbound_rows(rows)
 
 
-@router.get("/warehouse360/outbound")
+@router.get("/warehouse360/outbound", response_model=list[Warehouse360OutboundItem])
 async def warehouse_outbound(
     warehouse_id: str,
     response: Response,
@@ -204,7 +210,7 @@ async def warehouse_outbound(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> list[dict]:
+) -> list[Warehouse360OutboundItem]:
     """Get outbound delivery details — databricks-api only.
 
     No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
@@ -246,7 +252,7 @@ async def warehouse_outbound(
     return map_warehouse_outbound_rows(rows)
 
 
-@router.get("/warehouse360/staging")
+@router.get("/warehouse360/staging", response_model=list[Warehouse360StagingItem])
 async def warehouse_staging(
     warehouse_id: str,
     response: Response,
@@ -257,7 +263,7 @@ async def warehouse_staging(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> list[dict]:
+) -> list[Warehouse360StagingItem]:
     """Get production staging details — databricks-api only.
 
     No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
@@ -299,7 +305,7 @@ async def warehouse_staging(
     return map_warehouse_staging_rows(rows)
 
 
-@router.get("/warehouse360/exceptions")
+@router.get("/warehouse360/exceptions", response_model=list[Warehouse360ExceptionItem])
 async def warehouse_exceptions(
     warehouse_id: str,
     response: Response,
@@ -310,7 +316,7 @@ async def warehouse_exceptions(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> list[dict]:
+) -> list[Warehouse360ExceptionItem]:
     """Get IM/WM reconciliation exceptions — databricks-api only.
 
     No V1 endpoint exists for this data. Returns 503 if BACKEND_ADAPTER_MODE
