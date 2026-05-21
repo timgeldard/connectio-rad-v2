@@ -288,7 +288,7 @@ Key findings:
 - The combination `(material_id, plant_id, mic_id, operation_id, batch_id)` is NOT unique — same batch has multiple measurement rows (one per individual sample within the batch)
 - `batch_n` = total number of samples in the batch (same value on all rows for that batch)
 - `value` = individual measurement value
-- `subgroup_rep` = row index within batch (0-based); observed values 0, 0, 0, 0, 1 for a batch_n=5 — NOT a reliable unique discriminator
+- `subgroup_rep` = meaning unclear; observed values 0, 0, 0, 0, 1 for a batch_n=5 (inconsistent with a 0-based row index, which would yield 0–4); may be a repetition flag or non-unique counter — NOT a reliable unique discriminator
 - `P999` is a sentinel/aggregate plant ID with blank `material_id` — large volume of rows; not real production material data
 - **Grain confidence: medium** — data is measurement-level but the discriminating column for individual observations is not formally documented in the schema
 

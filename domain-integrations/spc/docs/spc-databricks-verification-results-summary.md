@@ -83,7 +83,7 @@ No signal, alarm, rule, or violation tables exist in `connected_plant_uat.gold`.
 | `subgroup_range` | NOT present | `batch_range` |
 | `subgroup_sd` | NOT present | derive from `sum_squares` |
 | `inspection_lot_id` | NOT present | not in this view |
-| `unit_of_measure` | NOT present as such | `normality_type`, `normality_method` are new |
+| `unit_of_measure` | NOT present — no physical UOM column found | absent; `normality_type`/`normality_method` are statistical distribution metadata (not UOM) |
 
 **New columns not in V1 expectations:** `batch_n` (sample count per batch), `sum_value`, `sum_squares`, `min_value`, `max_value`, `batch_range`, `any_rejection`, `any_acceptance`, `unified_mic_key`, `subgroup_rep`, `normality_type`, `normality_method`, `normality_signature`, `spec_type`, `nominal_target`, `tolerance_half_width`, `raw_tolerance`, `spec_signature`, `material_name`, `plant_name`, `mic_name`.
 

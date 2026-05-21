@@ -224,7 +224,7 @@ Evidence captured 2026-05-21 by tim.geldard@kerry.com via Databricks CLI, wareho
 | Validated By | tim.geldard@kerry.com |
 | Validation Date | 2026-05-21 |
 | Validation Status | partially-verified |
-| Notes | Only locked limit in UAT. Spec limits absent (lsl_spec=usl_spec=0). Good for chart rendering test with locked limits. Sample values 2.01–2.68 (salt %, plausible for food product). |
+| Notes | Only locked limit in UAT. Spec limits absent (lsl_spec=usl_spec=0). Good for chart rendering test with locked limits. Sample values 2.01–2.68 (salt %, plausible for food product). **Data age caveat:** last data point 2025-09-19 is ~244 days before verification date (2026-05-21), exceeding the 180-day currency threshold defined in §4. Use for chart rendering and limit validation only; do not treat as current production data. |
 
 ---
 
