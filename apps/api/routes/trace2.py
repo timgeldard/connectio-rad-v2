@@ -402,7 +402,6 @@ async def supplier_exposure(
         raise HTTPException(
             status_code=503,
             detail="supplier-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
-            detail="supplier-exposure requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
     host, warehouse_id = require_databricks_config()
