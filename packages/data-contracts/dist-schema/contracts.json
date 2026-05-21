@@ -7097,6 +7097,9 @@
         "workCentreId": {
           "type": "string"
         },
+        "operationId": {
+          "type": "string"
+        },
         "characteristicId": {
           "type": "string"
         },
