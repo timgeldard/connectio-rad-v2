@@ -1,13 +1,12 @@
 # SPC Data Model Grain Assessment
 
 **Date:** 2026-05-21
-**Status:** Pending Databricks verification — no grain has been confirmed by live query
+**Status:** Partially verified 2026-05-21 — grain confirmed for primary objects; see Evidence Captured section
 **Catalog target:** `connected_plant_uat.gold`
 
-> **IMPORTANT:** All grain candidates below are derived from V1 source code analysis only.
-> No live Databricks query has been executed to confirm or deny any grain claim.
-> The evidence and conclusion columns in all tables below must be filled in by a person
-> with live Databricks SQL Warehouse access.
+> **IMPORTANT:** All grain candidates below were derived from V1 source code analysis.
+> Live Databricks evidence was captured on 2026-05-21 by tim.geldard@kerry.com.
+> See "## Evidence Captured 2026-05-21" section below for verified grain conclusions.
 
 ---
 
@@ -239,17 +238,15 @@ HAVING COUNT(*) > 1;
 
 ## 3. Grain Conclusion Table
 
-Fill in this table after running the grain check queries above.
-
 | Object | Candidate Grain | Evidence Query | Result | Grain Confidence | V2 Impact |
 |--------|----------------|----------------|--------|-----------------|-----------|
-| `spc_quality_metric_subgroup_v` | `(material_id, plant_id, mic_id, operation_id, batch_id, sample_id)` | HAVING COUNT(*) > 1 on composite key | — not run — | unknown | V2 ControlChartPoint mapping depends on this. If subgroup_mean already computed, no re-aggregation needed. |
-| `spc_locked_limits` | `(material_id, mic_id, plant_id, operation_id, chart_type)` per effective period | HAVING COUNT(*) > 1 on PK | — not run — | unknown | V2 must filter by effective date if multiple rows per MIC exist. |
-| `spc_capability_detail_mv` | `(material_id, plant_id, mic_id)` most recent | HAVING COUNT(*) > 1 | — not run — | unknown | V2 expects one row per characteristic. If multiple, take MAX or latest. |
-| `spc_material_dim_mv` | `material_id` | HAVING COUNT(*) > 1 | — not run — | unknown | Navigation layer — one row per material expected. |
-| `spc_plant_material_dim_mv` | `(plant_id, material_id)` | HAVING COUNT(*) > 1 | — not run — | unknown | Navigation layer — must be unique per plant+material. |
-| `spc_characteristic_dim_mv` | `(material_id, plant_id, mic_id)` | HAVING COUNT(*) > 1 | — not run — | unknown | MIC list — must be unique per material+plant+mic. |
-| `spc_nelson_rule_flags_mv` | `(material_id, plant_id, mic_id, batch_id)` | HAVING COUNT(*) > 1 | — not run — | unknown | Batch-level rule flag summaries for scorecard colouring only. |
+| `spc_quality_metric_subgroup_v` / `spc_quality_metric_subgroup_mv` | Measurement-level: one row per individual quality measurement within a batch | Grain analysis 2026-05-21 | `(material_id, plant_id, mic_id, operation_id, batch_id)` is NOT unique; multiple rows per batch (one per measurement); `batch_n` = sample count; `value` = individual measurement; `subgroup_rep` is NOT a reliable discriminator; `P999` is a sentinel plant with blank material_id | medium | V2 must NOT assume pre-aggregated subgroup statistics. `subgroup_mean` must be derived as `sum_value / batch_n`; `subgroup_range` is `batch_range`. One point per batch for chart rendering requires aggregation or use of MV-level aggregates. |
+| `spc_locked_limits` | `(material_id, mic_id, plant_id, operation_id, chart_type)` | HAVING COUNT(*) > 1 on PK | 1 row total in UAT; PK unique confirmed | high | No filtering by effective date needed for current UAT data. Single row per MIC. |
+| `spc_capability_detail_mv` | `(material_id, plant_id, mic_id)` most recent | HAVING COUNT(*) > 1 | Object NOT FOUND in UAT — migration 013 not applied | N/A | Capability grain cannot be confirmed; object absent. See capability verification doc. |
+| `spc_material_dim_mv` | `material_id` | HAVING COUNT(*) > 1 | 138,051 rows confirmed | high | Navigation layer. Grain matches expectation. |
+| `spc_plant_material_dim_mv` | `(plant_id, material_id)` | HAVING COUNT(*) > 1 | 87,336 rows confirmed | high | Navigation layer. |
+| `spc_characteristic_dim_mv` | `(material_id, plant_id, mic_id)` | HAVING COUNT(*) > 1 | 3,017,410 rows confirmed | high | MIC list navigation. Schema confirmed. |
+| `spc_nelson_rule_flags_mv` | `(material_id, plant_id, mic_id, batch_id)` | HAVING COUNT(*) > 1 | Object NOT FOUND in UAT — migration 012 not applied | N/A | Object absent; batch-level rule flag summaries unavailable from Databricks. |
 
 Grain confidence levels: `high` | `medium` | `low` | `unknown`
 
@@ -277,3 +274,60 @@ Grain confidence levels: `high` | `medium` | `low` | `unknown`
 - **Verified grain:** — pending —
 - **Values populated?** — pending —
 - **V2 recommendation:** — pending —
+
+## 5. Evidence Captured 2026-05-21
+
+**Verified by:** tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`)
+**Date:** 2026-05-21
+
+### 5.1 `spc_quality_metric_subgroup_mv` — Grain Conclusion
+
+**Conclusion:** Measurement-level grain. One row per individual quality measurement within a batch.
+
+Key findings:
+- The combination `(material_id, plant_id, mic_id, operation_id, batch_id)` is NOT unique — same batch has multiple measurement rows (one per individual sample within the batch)
+- `batch_n` = total number of samples in the batch (same value on all rows for that batch)
+- `value` = individual measurement value
+- `subgroup_rep` = row index within batch (0-based); observed values 0, 0, 0, 0, 1 for a batch_n=5 — NOT a reliable unique discriminator
+- `P999` is a sentinel/aggregate plant ID with blank `material_id` — large volume of rows; not real production material data
+- **Grain confidence: medium** — data is measurement-level but the discriminating column for individual observations is not formally documented in the schema
+
+**V2 recommendation:**
+- For control chart rendering: group by `(material_id, plant_id, mic_id, operation_id, batch_id)` and use `sum_value / batch_n` as the subgroup mean, `batch_range` as the range
+- Do NOT attempt to plot individual `value` rows as separate chart points without understanding the batch aggregation
+- Use `spc_quality_metric_subgroup_mv` (not the view) for queries due to volume (73,452,925 rows)
+- Filter out sentinel plant `P999` and blank `material_id` rows
+
+### 5.2 `spc_locked_limits` — Grain Conclusion
+
+**Conclusion:** Grain is `(material_id, mic_id, plant_id, operation_id, chart_type)` — confirmed unique (1 row in UAT).
+
+Key findings:
+- 1 row total in UAT (UAT test fixture, not production-representative)
+- PK combination confirmed unique
+- `baseline_from` / `baseline_to` are empty in the UAT row — no effective date filtering needed in current UAT data
+- No duplicate limit sets per MIC
+- **Grain confidence: high** — per V1 source analysis plus live evidence
+
+**V2 recommendation:**
+- Query is straightforward: single row per `(material_id, mic_id, plant_id, operation_id, chart_type)`
+- No effective-date filtering required in current UAT, but V2 should be designed to handle it if future rows have `baseline_from`/`baseline_to` set
+
+### 5.3 `spc_capability_detail_mv` — Not Available
+
+Object NOT FOUND in `connected_plant_uat.gold`. Migration 013 not applied in UAT.
+Grain cannot be assessed. See spc-capability-verification.md for full classification.
+
+### 5.4 Row Counts Confirmed (2026-05-21)
+
+| Object | Row Count | Notes |
+|--------|-----------|-------|
+| `spc_quality_metric_subgroup_mv` | 73,452,925 | Includes sentinel P999 rows |
+| `spc_quality_metric_subgroup_v` | timed out (large view) | Use MV instead |
+| `spc_locked_limits` | 1 | UAT test fixture |
+| `spc_characteristic_dim_mv` | 3,017,410 | |
+| `spc_material_dim_mv` | 138,051 | |
+| `spc_plant_material_dim_mv` | 87,336 | |
+| `spc_batch_dim_mv` | 2,164,058 | |
+| `spc_exclusions` | 6 | |
+| `spc_mic_chart_config` | 0 | |

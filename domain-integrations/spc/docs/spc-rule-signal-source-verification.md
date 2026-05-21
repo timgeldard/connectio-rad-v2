@@ -1,8 +1,7 @@
 # SPC Rule / Signal Source Verification
 
 **Date:** 2026-05-21
-**Status:** Classification partially established from V1 source code analysis.
-Databricks verification still required for stored objects.
+**Status:** Verified 2026-05-21 — no signal/alarm/rule/violation tables found; spc_nelson_rule_flags_mv NOT FOUND; rule violations confirmed client-side
 **Catalog target:** `connected_plant_uat.gold`
 
 > **IMPORTANT:** The signal source classification below is based on reading V1 source code only.
@@ -198,3 +197,62 @@ Fill in after running discovery queries.
 | `spc_nelson_rule_flags_mv` column schema confirmed | not run | — | — | — |
 | Rule flag grain confirmed `(material_id, plant_id, mic_id, batch_id)` | not run | — | — | — |
 | No new signal/violation tables found | not run | — | — | — |
+
+
+## Evidence Captured 2026-05-21
+
+**Verified by:** tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`)
+**Date:** 2026-05-21
+
+### Signal/Alarm/Rule/Violation Table Discovery
+
+All pattern queries returned 0 results:
+
+| Query Pattern | Result | Confirmed Absent? |
+|---------------|--------|-------------------|
+| `SHOW TABLES LIKE '*signal*'` | 0 objects | Yes |
+| `SHOW TABLES LIKE '*alarm*'` | 0 objects | Yes |
+| `SHOW TABLES LIKE '*rule*'` | 0 objects | Yes |
+| `SHOW TABLES LIKE '*violation*'` | 0 objects | Yes |
+
+**Conclusion: No signal, alarm, rule, or violation storage tables exist in `connected_plant_uat.gold`.**
+
+### `spc_nelson_rule_flags_mv` — NOT FOUND
+
+`spc_nelson_rule_flags_mv` was NOT FOUND in `connected_plant_uat.gold`.
+
+- Migration 012 (`012_create_spc_nelson_rule_flags_mv.sql`) has NOT been applied in UAT
+- Batch-level rule flag summaries are therefore unavailable from Databricks
+- The V2 scorecard colouring feature based on this MV cannot use a live data source
+
+### `spc_exclusions` — Present (6 rows)
+
+`spc_exclusions` IS present with 6 rows. This table stores data exclusion records (points excluded from control chart calculations) and is NOT a signal store.
+
+Schema confirmed:
+`event_id`, `material_id`, `mic_id`, `mic_name`, `plant_id`, `stratify_all`, `chart_type`,
+`date_from`, `date_to`, `rule_set`, `justification`, `action`, `excluded_count`,
+`excluded_points_json`, `before_limits_json`, `after_limits_json`, `user_id`, `event_ts`,
+`stratify_by`, `operation_id`
+
+### V2 Signal Architecture — Confirmed
+
+From V2 codebase analysis:
+- V2 has WECO/Nelson detection functions in `domain-integrations/spc/src/utils/calculations.runtime.test.ts` (imported from calculations module)
+- V2 signal adapter (`spc-signals-adapter.ts`) is mock-only (Phase 1 stub)
+- Rule violations are computed client-side — this matches V1 architecture
+
+**Classification: Rule violations calculated client-side (V2 frontend/adapter layer). No stored signal source in Databricks.**
+
+### Updated Evidence Capture Table
+
+| Check | Status | Finding | Date | Verified By |
+|-------|--------|---------|------|-------------|
+| Signal/alarm tables absent in UAT catalog | verified | 0 objects for *signal*, *alarm*, *rule*, *violation* | 2026-05-21 | tim.geldard@kerry.com |
+| `spc_quality_metrics` confirmed as Metric View (not signal table) | verified | METRIC_VIEW confirmed; SELECT * returns empty | 2026-05-21 | tim.geldard@kerry.com |
+| `spc_nelson_rule_flags_mv` exists and has rows | not found | Object NOT FOUND — migration 012 not applied | 2026-05-21 | tim.geldard@kerry.com |
+| `spc_nelson_rule_flags_mv` column schema confirmed | not found | Object NOT FOUND | 2026-05-21 | tim.geldard@kerry.com |
+| Rule flag grain confirmed | not found | Object NOT FOUND; grain cannot be assessed | 2026-05-21 | tim.geldard@kerry.com |
+| No new signal/violation tables found | verified | 0 results for all signal/rule/violation patterns | 2026-05-21 | tim.geldard@kerry.com |
+| `spc_exclusions` exists and has rows | verified | 6 rows confirmed | 2026-05-21 | tim.geldard@kerry.com |
+| V2 signal computation approach confirmed | verified | Client-side WECO/Nelson in V2 codebase; spc-signals-adapter is mock-only | 2026-05-21 | tim.geldard@kerry.com |

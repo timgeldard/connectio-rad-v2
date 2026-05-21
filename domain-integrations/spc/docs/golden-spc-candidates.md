@@ -1,8 +1,8 @@
 # Golden SPC Candidates — UAT Data Register
 
 **Date updated:** 2026-05-21
-**Status:** No verified live SPC UAT candidate has been identified from V1 discovery.
-Databricks SQL access required to identify and confirm candidates.
+**Status:** 2 primary candidates + 1 multi-MIC candidate found 2026-05-21 via Databricks CLI.
+All partially verified — see Section 5.
 **UAT Target Catalog:** `connected_plant_uat.gold`
 
 > **IMPORTANT:** No candidate values (material IDs, plant IDs, MIC IDs) have been invented,
@@ -17,7 +17,7 @@ Databricks SQL access required to identify and confirm candidates.
 | Item | Status |
 |------|--------|
 | V1 source objects discovered | Complete (code analysis only) |
-| Confirmed candidates in UAT | None — Databricks access required |
+| Confirmed candidates in UAT | 3 found 2026-05-21 (partially verified) — see Section 5 |
 | Candidate discovery queries ready | Yes — see Section 2 |
 | Evidence template ready | Yes — see Section 3 |
 | Validation checklist ready | Yes — see Section 4 |
@@ -194,8 +194,90 @@ Before marking a candidate as `confirmed`, the following must all be true:
 
 ## 5. Verified UAT Candidates
 
-No candidates confirmed yet. Populate this section during the implementation/UAT phase once
-Databricks SQL query access is established and discovery queries have been run.
+Evidence captured 2026-05-21 by tim.geldard@kerry.com via Databricks CLI, warehouse `e76480b94bea6ed5` (`connected_plant_uat`).
+
+---
+
+### Candidate 1 — Primary (has locked limits, 271 data points)
+
+| Field | Value |
+|-------|-------|
+| Material ID | 20047111 |
+| Material Name | (not retrieved; query `spc_material_dim_mv` for name) |
+| Plant ID | C037 |
+| Plant Name | (SAP plant code; name not confirmed) |
+| MIC ID | 0060 |
+| MIC Name | Salt (Rapid Analyser) |
+| Operation ID | 00000001 |
+| Chart Type (from locked_limits) | imr |
+| Date From | (not confirmed; data up to 2025-09-19) |
+| Date To | 2025-09-19 (approximate last data point) |
+| Expected Batch Count | 271 |
+| Expected Sample Count | 271 (one measurement row per batch for this MIC) |
+| Limit Source | locked_limits_exist |
+| Locked Limits | cl=3.243357541899438, ucl=5.54117633384574, lcl=0.945538749953136 (imr chart) |
+| lsl_spec | 0.0 (not populated for this MIC) |
+| usl_spec | 0.0 (not populated for this MIC) |
+| Expected Signal Count | not verified; run rule engine against chart data |
+| Expected Capability (Cpk) | not available (spc_capability_detail_mv absent) |
+| Source Objects | `spc_quality_metric_subgroup_mv`, `spc_locked_limits` |
+| Validated By | tim.geldard@kerry.com |
+| Validation Date | 2026-05-21 |
+| Validation Status | partially-verified |
+| Notes | Only locked limit in UAT. Spec limits absent (lsl_spec=usl_spec=0). Good for chart rendering test with locked limits. Sample values 2.01–2.68 (salt %, plausible for food product). |
+
+---
+
+### Candidate 2 — Data-rich (no locked limits, 60,673 data points)
+
+| Field | Value |
+|-------|-------|
+| Material ID | 20642328 |
+| Material Name | OATLY-SBUX BARISTA 12X946ML |
+| Plant ID | P523 |
+| Plant Name | Ste. Claire [MFG] |
+| MIC ID | 0010 |
+| MIC Name | pH |
+| Operation ID | 00000004 |
+| Chart Type | not locked; derive from subgroup size (imr if n=1) |
+| Date From | not confirmed |
+| Date To | not confirmed |
+| Expected Batch Count | 60,673 |
+| Expected Sample Count | 60,673 (approximate) |
+| Limit Source | live_only (no locked limits for this material) |
+| lsl_spec | 7.2 |
+| usl_spec | 7.8 |
+| Expected Signal Count | not verified |
+| Expected Capability (Cpk) | not available (spc_capability_detail_mv absent) |
+| Source Objects | `spc_quality_metric_subgroup_mv` |
+| Validated By | tim.geldard@kerry.com |
+| Validation Date | 2026-05-21 |
+| Validation Status | partially-verified |
+| Notes | Rich data volume (60,673 batch data points). Spec limits present (pH 7.2–7.8). No locked limits. Good for live-limits chart test. |
+
+---
+
+### Candidate 3 — Multi-MIC (no locked limits, 5 MICs with 42,094 data points each)
+
+| Field | Value |
+|-------|-------|
+| Material ID | 20372893 |
+| Material Name | (not confirmed; query `spc_material_dim_mv`) |
+| Plant ID | P775 |
+| Plant Name | (SPC-internal P-prefix code; name not confirmed) |
+| MIC IDs | 0030, 0040, 0050, 0060, 0070 |
+| MIC Names | (not confirmed; query `spc_characteristic_dim_mv`) |
+| Operation ID | 00000001 |
+| Chart Type | not locked; derive from subgroup size |
+| Expected Batch Count | 42,094 per MIC |
+| Limit Source | live_only (no locked limits for any MIC in this combination) |
+| lsl_spec / usl_spec | not confirmed |
+| Expected Capability (Cpk) | not available |
+| Source Objects | `spc_quality_metric_subgroup_mv` |
+| Validated By | tim.geldard@kerry.com |
+| Validation Date | 2026-05-21 |
+| Validation Status | partially-verified |
+| Notes | Good multi-characteristic candidate with 5 MICs. No locked limits. Useful for multi-panel testing. |
 
 ---
 
