@@ -63,7 +63,7 @@ export function TraceQueryForm({
   const suggestion = buildSuggestion(materialId)
 
   function buildRequest(): Trace2AdapterRequest {
-    return { investigationId: '', materialId, batchId, plantId, direction, maxDepth, maxEdges }
+    return { investigationId: '', materialId: materialId.trim(), batchId: batchId.trim(), plantId: plantId.trim(), direction, maxDepth, maxEdges }
   }
 
   function handleSubmit(e: React.FormEvent) {
