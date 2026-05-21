@@ -1,25 +1,28 @@
 # QM Usage-Decision Source — Grain and Join Assessment
 
-**Status:** SQL templates ready — not run; all grain and join cells are unverified
+**Status:** grain verified 2026-05-21; join to inspection_lot verified; two-hop join to batch confirmed; leading-zero and counter-string edge cases pending
 **Created:** 2026-05-21
+**Verified by:** tim.geldard@kerry.com, 2026-05-21 (Databricks CLI, warehouse `connected_plant_uat` / `e76480b94bea6ed5`)
 **Related:** `qm-usage-decision-source-verification.md`, `quality-databricks-source-verification.md`
 
-This document defines the grain hypotheses and join assessment for the QM usage-decision source. No grain or join claim is made here — every cell must be populated from live Databricks evidence before any domain uses this source.
+This document defines the grain hypotheses and join assessment for the QM usage-decision source.
 
 ---
 
 ## 1. Grain Hypotheses
 
-The grain of the usage-decision source is unknown. The following hypotheses must be tested in the order listed, using the SQL templates in §2.
-
 | Hypothesis | Description | Status | Notes |
 |---|---|---|---|
-| One row per inspection lot | Each inspection lot has exactly one usage-decision row (current-state) | not verified | Most likely for a SAP QM current-state view |
-| One row per inspection lot + operation | Multiple UD rows per lot, one per operation | not verified | Possible if lot has multiple operations |
-| One row per material + batch + plant | UD source is batch-centric, not lot-centric | not verified | Possible for batch-quality-lot views |
-| One row per process order + batch | UD linked through process order, not inspection lot | not verified | Less likely for standalone UD view |
-| Historical rows per decision/version | Multiple rows per lot, one per decision version/timestamp | not verified | Possible if source is audit-style |
-| Unknown | Grain is not determinable from available evidence | assumed until run | Default until evidence populated |
+| One row per inspection lot | Each inspection lot has exactly one usage-decision row (current-state) | **refuted** | Multiple rows per lot confirmed. Lots with up to 6 rows observed. |
+| One row per inspection lot + operation | Multiple UD rows per lot, one per operation | **refuted** | USAGE_DECISION_COUNTER discriminates rows, not operation. No operation column in UD table. |
+| One row per material + batch + plant | UD source is batch-centric, not lot-centric | **not applicable** | UD table has no MATERIAL_ID/BATCH_ID/PLANT_ID columns. Grain is inspection-lot-centric. |
+| One row per process order + batch | UD linked through process order, not inspection lot | **not applicable** | UD table has no PROCESS_ORDER_ID column. Join through gold_inspection_lot. |
+| Historical rows per decision/version | Multiple rows per lot, one per decision version/timestamp | **confirmed** | Grain is (INSPECTION_LOT_ID, USAGE_DECISION_COUNTER). USAGE_DECISION_COUNTER is blank for first decision, then '1', '2', '3'... Max observed counter = 5. |
+| Unknown | Grain is not determinable from available evidence | resolved | Grain is confirmed as (INSPECTION_LOT_ID, USAGE_DECISION_COUNTER). |
+
+**Confirmed grain:** `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)` — unique composite key with 0 duplicate rows in 15,473,693 total rows.
+
+**Query note for latest UD per lot:** USAGE_DECISION_COUNTER is a STRING column. Blank = first decision; subsequent values are '1', '2', '3', etc. Ordering by string value is safe for single-digit counters only. For any adapter query that selects the "current" usage decision, use `CAST(NULLIF(USAGE_DECISION_COUNTER, '') AS INT)` or equivalent — do not use `MAX(USAGE_DECISION_COUNTER)` on the raw string.
 
 ---
 
@@ -93,16 +96,16 @@ FROM connected_plant_uat.gold.<verified_usage_decision_object>;
 
 ## 3. Plant Handling
 
-SAP QM inspection lots are plant-scoped. The following plant behaviours must be checked:
+SAP QM inspection lots are plant-scoped. Verification results (2026-05-21):
 
-| Question | Expected | Actual | Verified? |
+| Question | Expected | Actual (2026-05-21) | Verified? |
 |---|---|---|---|
-| Does the source contain a `PLANT_ID` or equivalent column? | Yes | TBD | not run |
-| Is plant required for a unique key (material + batch + plant = one row)? | Likely yes | TBD | not run |
-| Does the source return rows across multiple plants for the same material/batch? | Possible | TBD | not run |
-| Is plant preserved in leading-zero format (e.g. `C061`, `P132`)? | Yes | TBD | not run |
+| Does the source contain a `PLANT_ID` or equivalent column? | Yes | No — PLANT_ID not in `gold_inspection_usage_decision`. It is in `gold_inspection_lot`. | verified |
+| Is plant required for a unique key (material + batch + plant = one row)? | Likely yes | Not applicable — UD has no material/batch/plant columns. Key is (lot_id, counter). | verified |
+| Does the source return rows across multiple plants for the same material/batch? | Possible | Via inspection_lot join: lots can be plant-specific. Some lots not batch-linked (MATERIAL_ID null). | verified |
+| Is plant preserved in leading-zero format (e.g. `C061`, `P132`)? | Yes | UAT candidate: plant C061 confirmed via lot join. | verified for UAT candidate |
 
-If no plant column exists, the join to traceability (which is plant-aware) may produce fan-out or ambiguity. Document the actual result.
+**Key finding:** PLANT_ID is not in the UD table itself. It must be obtained by joining to `gold_inspection_lot.PLANT_ID`. Any adapter query that needs plant filtering must join to the lot table first.
 
 ---
 
@@ -110,28 +113,28 @@ If no plant column exists, the join to traceability (which is plant-aware) may p
 
 SAP IDs commonly contain leading zeros in storage (`000000000020052009`, `0008602411`). The Databricks gold views may or may not strip them.
 
-| ID Type | V1 Format | Traceability UAT Candidate | Verified Preservation? |
+| ID Type | V1 Format | Verified UAT Format | Verified? |
 |---|---|---|---|
-| Material ID | 18-char with leading zeros | `000000000020052009` | not run |
-| Batch ID | 10-char with leading zeros | `0008602411` | not run |
-| Inspection Lot ID | Typically 10-12 chars | TBD | not run |
-| Plant ID | 4-char alphanumeric | `C061` | not run |
+| Material ID | 18-char with leading zeros | **Unpadded** — `gold_inspection_lot.MATERIAL_ID` = `20052009` for UAT candidate | verified for UAT candidate |
+| Batch ID | 10-char with leading zeros | **Padded** — `gold_inspection_lot.BATCH_ID` = `0008602411` (10-char) for UAT candidate | verified for UAT candidate |
+| Inspection Lot ID | Typically 10-12 chars | `030005059533` (12-char) for UAT candidate | verified for UAT candidate |
+| Plant ID | 4-char alphanumeric | `C061` — confirmed | verified |
 
-Before any join is wired, verify that the ID format in the usage-decision source matches the format used in `gold_batch_stock_v` (which confirmed `MATERIAL_ID` + `BATCH_ID` as the join keys for the batch header query).
+**Cross-object note:** `gold_batch_lineage.material_id` was also observed as unpadded in prior traceability verification. Cross-object leading-zero consistency across ALL materials and plants has not been formally tested — only the UAT candidate was checked. Verify before asserting a universal join pattern.
+
+**Join safety:** For the UAT candidate, `gold_inspection_lot.MATERIAL_ID = '20052009'` joins correctly to Traceability usage of `material_id = '20052009'`. Do not assume the batch header join uses padded material IDs.
 
 ---
 
 ## 5. Join Assessment Table
 
-All joins below are unverified. "Verified?" must be populated from Databricks evidence before any domain uses this source.
-
-| Target Domain | Required Join | Candidate Columns (from V1) | Verified? | Risk | Recommendation |
+| Target Domain | Required Join | Verified Join Path | Verified? | Risk | Recommendation |
 |---|---|---|---|---|---|
-| Quality Evidence | inspection lot / material / batch / plant | `INSPECTION_LOT_ID`, `MATERIAL_ID`, `BATCH_ID`, `PLANT_ID` | not run | Fan-out if grain > 1 row per lot | Verify grain first; join on `INSPECTION_LOT_ID` if available |
-| Traceability Batch Header | material + batch + plant | `MATERIAL_ID`, `BATCH_ID`, `PLANT_ID` | not run | Multi-plant ambiguity if plant absent | Require plant filter; LEFT JOIN preserving header rows |
-| Traceability Supplier Exposure | supplier receipt lineage to batch quality evidence | UD not a direct supplier join; requires batch → lot → UD path | not run | Cannot derive supplier risk from UD alone | Supplier risk rules must be separately governed; UD is evidence only |
-| Traceability Production History | process order / material / batch / plant | `MATERIAL_ID`, `BATCH_ID`, or `PROCESS_ORDER_ID` | not run | `quality_status` from production history is not UD; must remain distinct | Show UD evidence separately; do not replace `quality_status` with UD code |
-| POH | process order / inspection lot | `PROCESS_ORDER_ID` or `INSPECTION_LOT_ID` | not run | PO–lot join path exists in V1 (via `vw_gold_inspection_lot`) | Verify PO→lot→UD path before wiring |
+| Quality Evidence | inspection lot / material / batch / plant | UD.INSPECTION_LOT_ID → gold_inspection_lot.INSPECTION_LOT_ID → MATERIAL_ID/BATCH_ID/PLANT_ID | **verified** | Some lots not batch-linked (MATERIAL_ID null) | LEFT JOIN; filter out non-batch-linked lots for batch display |
+| Traceability Batch Header | material + batch + plant | Two-hop: UD → inspection_lot → batch | **partially verified** | Fan-out if multiple lots per batch (each with a UD) | Determine which lot is authoritative per batch before wiring |
+| Traceability Supplier Exposure | supplier receipt lineage to batch quality evidence | UD not a direct supplier join; batch → lot → UD path via inspection_lot | **not run** | Cannot derive supplier risk from UD alone | Supplier risk rules must be separately governed; UD is evidence only |
+| Traceability Production History | process order / material / batch / plant | gold_inspection_lot.PROCESS_ORDER_ID exists — PO→lot→UD path possible | **not run** | `quality_status` from production history is not UD; must remain distinct | Show UD evidence separately; do not replace `quality_status` with UD code |
+| POH | process order / inspection lot | gold_inspection_lot.PROCESS_ORDER_ID confirmed; PO→lot→UD chain unverified end-to-end | **not run** | PO may have multiple inspection lots | Verify PO→lot→UD path before wiring |
 | SPC | MIC/result/spec context — not release status | Not applicable — UD is not SPC control status | n/a | Risk of conflation: UD ≠ control status | Do not use UD in SPC context |
 
 ---
@@ -139,55 +142,67 @@ All joins below are unverified. "Verified?" must be populated from Databricks ev
 ## 6. Join Verification SQL Templates
 
 ```sql
--- Verify join to inspection lot source (run only if inspection lot object is verified)
+-- Verify join to inspection lot source
 SELECT
   ud.inspection_lot_id,
   ud.usage_decision_code,
   il.MATERIAL_ID AS lot_material,
   il.BATCH_ID AS lot_batch,
   il.PLANT_ID AS lot_plant,
-  il.PROCESS_ORDER_ID AS lot_po
-FROM connected_plant_uat.gold.<verified_usage_decision_object> ud
-LEFT JOIN connected_plant_uat.gold.<verified_inspection_lot_object> il
+  il.PROCESS_ORDER_ID AS lot_po,
+  il.USAGE_DECISION_LONG_TEXT
+FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
+LEFT JOIN connected_plant_uat.gold.gold_inspection_lot il
   ON il.INSPECTION_LOT_ID = ud.inspection_lot_id
 WHERE ud.inspection_lot_id IS NOT NULL
 LIMIT 50;
 
--- Verify join to batch header (run only if material_id + batch_id are confirmed as join keys)
+-- Verify join to batch header (via inspection_lot)
 SELECT
-  ud.material_id,
-  ud.batch_id,
-  ud.plant_id,
+  il.MATERIAL_ID,
+  il.BATCH_ID,
+  il.PLANT_ID,
   ud.inspection_lot_id,
   ud.usage_decision_code,
-  s.PLANT_ID AS stock_plant,
   s.UNRESTRICTED,
   s.BLOCKED,
   s.QUALITY_INSPECTION
-FROM connected_plant_uat.gold.<verified_usage_decision_object> ud
+FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
+JOIN connected_plant_uat.gold.gold_inspection_lot il
+  ON il.INSPECTION_LOT_ID = ud.inspection_lot_id
 LEFT JOIN connected_plant_uat.gold.gold_batch_stock_v s
-  ON s.MATERIAL_ID = ud.material_id
- AND s.BATCH_ID = ud.batch_id
- AND s.PLANT_ID = ud.plant_id
-WHERE ud.material_id IS NOT NULL
-  AND ud.batch_id IS NOT NULL
+  ON s.MATERIAL_ID = il.MATERIAL_ID
+ AND s.BATCH_ID = il.BATCH_ID
+ AND s.PLANT_ID = il.PLANT_ID
+WHERE il.MATERIAL_ID IS NOT NULL
+  AND il.BATCH_ID IS NOT NULL
 LIMIT 50;
 
 -- Verify join for UAT traceability candidate
--- Reference candidate: MATERIAL_ID=000000000020052009, BATCH_ID=0008602411, PLANT_ID=C061
-SELECT *
-FROM connected_plant_uat.gold.<verified_usage_decision_object>
-WHERE material_id IN ('000000000020052009', '20052009')
-  AND batch_id IN ('0008602411', '8602411')
+SELECT
+  ud.inspection_lot_id,
+  ud.usage_decision_code,
+  ud.valuation_code,
+  ud.usage_decision_counter,
+  ud.usage_decision_created_date,
+  il.MATERIAL_ID,
+  il.BATCH_ID,
+  il.PLANT_ID,
+  il.USAGE_DECISION_LONG_TEXT
+FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
+JOIN connected_plant_uat.gold.gold_inspection_lot il
+  ON il.INSPECTION_LOT_ID = ud.inspection_lot_id
+WHERE il.MATERIAL_ID IN ('000000000020052009', '20052009')
+  AND il.BATCH_ID IN ('0008602411', '8602411')
 LIMIT 25;
 
 -- Check for POH join path (process order → inspection lot → usage decision)
--- Run only if process_order_id column exists on usage decision or inspection lot object
 SELECT
-  ud.*,
+  ud.inspection_lot_id,
+  ud.usage_decision_code,
   il.PROCESS_ORDER_ID
-FROM connected_plant_uat.gold.<verified_usage_decision_object> ud
-JOIN connected_plant_uat.gold.<verified_inspection_lot_object> il
+FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
+JOIN connected_plant_uat.gold.gold_inspection_lot il
   ON il.INSPECTION_LOT_ID = ud.inspection_lot_id
 WHERE il.PROCESS_ORDER_ID = '7006965038'  -- Golden POH candidate
 LIMIT 25;
@@ -197,29 +212,27 @@ LIMIT 25;
 
 ## 7. Fan-Out Risk Assessment
 
-A join produces fan-out when the usage-decision source has more than one row per inspection lot or per material/batch combination. Fan-out corrupts aggregate queries (sum of quantities, etc.) and must be resolved before wiring any adapter.
-
-| Risk | Description | How to Detect | Mitigation |
+| Risk | Description | Observed Status | Mitigation |
 |---|---|---|---|
-| Multiple UD rows per inspection lot (historical) | Source stores one row per decision version | Grain check H5 above | Use latest row only (ORDER BY decision date DESC, LIMIT 1 per lot) |
-| Multiple inspection lots per batch | A batch may have more than one inspection lot | Join and count distinct lot IDs per batch | Decide which lot is authoritative; or surface all |
-| Multiple operations per lot | UD is per-operation, not per-lot | Grain check H2 above | Aggregate or select specific operation |
-| Null inspection lot ID | UD row exists but cannot be joined to a lot | Null key check above | Exclude null-lot rows or handle separately |
+| Multiple UD rows per inspection lot (historical) | Source stores one row per decision version | **Confirmed** — max 6 rows per lot observed | Use latest row: `ORDER BY CAST(NULLIF(USAGE_DECISION_COUNTER,'') AS INT) DESC NULLS LAST LIMIT 1` per lot |
+| Multiple inspection lots per batch | A batch may have more than one inspection lot | Not checked — possible for multi-operation orders | Decide which lot is authoritative; or surface all; do not silently aggregate |
+| Non-batch-linked lots | Some lots have no MATERIAL_ID/BATCH_ID after join | **Confirmed** — lot 140000004071 has PLANT_ID=P790 but no material/batch | Exclude null-material/batch rows from batch-header display |
+| Null inspection lot ID | UD row exists but cannot be joined to a lot | **Not found** — 0 null lot IDs in 15.47M rows | No action required |
 
 ---
 
-## 8. Summary Table (to be populated)
+## 8. Summary Table
 
 | Item | Verified? | Result | Date |
 |---|---|---|---|
-| Object name confirmed | not run | TBD | TBD |
-| Object type (table/view/other) | not run | TBD | TBD |
-| Column names captured | not run | TBD | TBD |
-| Grain: one row per inspection lot | not run | TBD | TBD |
-| Grain: historical or current-state | not run | TBD | TBD |
-| Plant column present | not run | TBD | TBD |
-| Join to material/batch confirmed | not run | TBD | TBD |
-| Join to inspection lot confirmed | not run | TBD | TBD |
-| Join to process order confirmed | not run | TBD | TBD |
-| Leading-zero format documented | not run | TBD | TBD |
-| Fan-out risk assessed | not run | TBD | TBD |
+| Object name confirmed | verified | `gold_inspection_usage_decision` | 2026-05-21 |
+| Object type (table/view/other) | verified | Delta table (DESCRIBE confirmed; SHOW CREATE not run) | 2026-05-21 |
+| Column names captured | verified | 13 columns — see §4 of `qm-usage-decision-source-verification.md` | 2026-05-21 |
+| Grain: unique per (lot_id, counter) | verified | 0 duplicates on composite key | 2026-05-21 |
+| Grain: historical or current-state | verified | Historical — multiple rows per lot; blank counter = first, then '1','2',... | 2026-05-21 |
+| Plant column present in UD table | verified | No — PLANT_ID not in UD table; obtained via gold_inspection_lot join | 2026-05-21 |
+| Join to inspection_lot confirmed | verified | Works; returns MATERIAL_ID/BATCH_ID/PLANT_ID/USAGE_DECISION_LONG_TEXT | 2026-05-21 |
+| Join to batch header (via lot) confirmed | partially verified | Two-hop join reachable; fan-out from multiple lots per batch not yet assessed | 2026-05-21 |
+| Join to process order confirmed | not run | gold_inspection_lot.PROCESS_ORDER_ID column exists; end-to-end PO→lot→UD not verified | — |
+| Leading-zero format documented | verified for UAT candidate | Material unpadded (20052009); batch padded (0008602411); lot 12-char; plant 4-char | 2026-05-21 |
+| Fan-out risk assessed | partially assessed | Multiple UD rows per lot confirmed (historical); multiple lots per batch not yet checked | 2026-05-21 |
