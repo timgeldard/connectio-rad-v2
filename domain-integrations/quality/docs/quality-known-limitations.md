@@ -48,9 +48,12 @@ All interactive forms in the right-rail Actions panel run in simulated mode:
 
 ## 5. Read-Only Evidence Foundation
 
-- **Contracts Ready, Routes Not Live**: Read-only Quality evidence contracts exist for requests, inspection lots, MIC results, usage decisions, CoA-like result evidence, and evidence summaries. They are designed for source-truthful native implementation, but no native Quality evidence route has been wired in this slice.
-- **No Release Semantics**: The contracts intentionally omit `releaseApproved`, `canRelease`, release/reject actions, and official CoA document approval. Usage decision fields remain source evidence only until governed mapping exists.
+- **UI/State Model Code-Ready (2026-05-21)**: The read-only evidence state model is defined in `quality-readonly-evidence-state-model.md`. Usage-decision display helpers are implemented in `src/lib/usage-decision-display.ts`. 12 fixture scenarios cover all state model states. Source-truthfulness test coverage is complete (196 tests). The panel is hardened with per-state copy, inspection lot rows, per-lot usage decision display, MIC/CoA sections, and deviation unavailable warnings.
+- **Contracts Extended**: `QualityInspectionLotEvidenceSchema` now supports per-lot usage decision fields (`usageDecisionCode`, `usageDecisionText`, `usageDecisionMappingStatus`, `usageDecisionCreatedAt`). The summary schema supports `evidenceState`, `sourceStatus`, `lotCount`, `multipleLotsWarning`, and `missingLotWarning`. No release-authority fields were added.
+- **Routes Not Live**: No native Quality evidence route has been wired. Live Databricks source wiring remains pending.
+- **No Release Semantics**: The contracts intentionally omit `releaseApproved`, `canRelease`, release/reject actions, and official CoA document approval. Usage decision fields remain source evidence only. No output ever contains "Released", "Can release", "Approved", "Cleared", or "Release ready".
 - **SPC Boundary**: Quality MIC/result/specification evidence may help future SPC source mapping, but Quality specification limits are not SPC control limits, MIC valuation is not a Western Electric/Nelson signal, and usage decision is not SPC control status.
+- **Live UAT Blocked**: Quality read-only evidence UI and source-truthfulness state handling are code-ready with fixture coverage. Live Databricks source wiring remains pending. Quality live UAT remains blocked until verified source routes and candidates are implemented.
 
 ---
 
