@@ -63,7 +63,14 @@ This document catalogs known quality release cases and inspection lots for use i
 * **Validation Type**: Hybrid Legacy API
 * **Validation Date**: 2026-05-19
 * **Source Views Used**:
-  * `vw_cq_lab_failures`
-  * `vw_cq_lab_plants`
+  * V1 route `GET /api/cq/lab/fails`
+  * V1 route `GET /api/cq/lab/plants`
+  * V1 DAL references `vw_gold_inspection_result`, `vw_gold_process_order`, `vw_gold_process_order_plan`, `vw_gold_process_order_material`, `vw_gold_inspection_usage_decision`, `vw_gold_inspection_specification`, `vw_gold_material`, and `gold_plant`.
 * **Browser E2E Status**: Pending
 * **Who/What Validated It**: Engineering team via FastAPI integration tests.
+
+---
+
+## Live Quality Candidate Status
+
+No verified live Quality UAT candidate has been identified from V1 discovery. The mock release cases above remain UI trust-hardening fixtures only; they are not source-backed SAP QM release candidates. Use `golden-quality-candidates.md` for the live candidate template and future evidence capture.

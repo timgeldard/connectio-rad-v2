@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { BatchHeaderSummary } from '@connectio/data-contracts'
 import { useBatchHeaderSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 /** Static registration record for the Batch Header panel. */
 const registration: EvidencePanelRegistration = {
@@ -110,9 +111,7 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
               )}
             </div>
           )}
-          <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginTop: 4 }}>
-            Data freshness not available — values were retrieved at query time, but the underlying Databricks refresh time is not yet shown.
-          </div>
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 4 }} />
         </div>
       )}
     </EvidencePanel>

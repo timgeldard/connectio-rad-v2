@@ -135,7 +135,7 @@ SQL_WAREHOUSE_ID=<warehouse-id>
 | EnvMon | `GET /api/envmon/site-summary`, `GET /api/envmon/swab-results` | Functional native API routes; read-only UI consumes them. Spatial/floorplan/CAPA are deferred. |
 | POH / Process Order Review | order header, order operations, confirmations, goods movements | Functional native slices; browser verification recorded for these routes. Remaining review panels are still mock or pending native adapters. |
 | Warehouse 360 | overview, inbound, outbound, staging, exceptions | Native route groundwork wired. Overview has returned HTTP 200 in UAT; other routes are partly schema/source blocked and require follow-up DDL alignment. |
-| Quality / CQ Lab | lab plants, lab failures | Lab plants browser-verified; lab failures blocked by source view availability. |
+| Quality / CQ Lab | lab plants, lab failures | CQ Lab has legacy/native discovery evidence from V1 ConnectedQuality. V2 Quality release panels remain mock/simulated; no native Quality release Databricks adapter exists yet. V1 discovery found read-only MIC/usage-decision/CoA-result candidates, but no governed release workflow. |
 
 ---
 

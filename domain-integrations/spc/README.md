@@ -13,21 +13,62 @@ This directory houses the SPC domain-integration components, including adapters,
 - [SPC UAT Acceptance Script](./docs/spc-uat-acceptance-script.md)
 - [SPC Known Limitations](./docs/spc-known-limitations.md)
 - [SPC Readiness & Hardening Notes](../../docs/migration/spc-readiness-and-hardening-notes.md)
+- [V1 Genie Discovery and V2 Parity Roadmap](../../docs/migration/v1-genie-discovery-and-v2-parity-roadmap.md)
+- [SPC Genie Readiness Pack](./docs/spc-genie-readiness-pack.md)
+
+## Databricks Verification Pack
+
+- [Databricks Source Verification](./docs/spc-databricks-source-verification.md) — SQL queries and handoff checklist
+- [Data Model Grain Assessment](./docs/spc-data-model-grain-assessment.md) — grain verification queries
+- [Navigation Model Verification](./docs/spc-navigation-model-verification.md) — material→plant→MIC hierarchy
+- [Control Limit Provenance Verification](./docs/spc-control-limit-provenance-verification.md) — locked limits DDL
+- [Rule / Signal Source Verification](./docs/spc-rule-signal-source-verification.md) — frontend vs stored
+- [Capability Verification](./docs/spc-capability-verification.md) — Cp/Cpk/Pp/Ppk source
+- [Golden SPC Candidates](./docs/golden-spc-candidates.md) — discovery template (no verified candidates yet)
+- [V2 Contract Mapping](./docs/spc-v2-contract-mapping.md) — field-by-field mapping template
+- [Native Migration Readiness Checklist](./docs/spc-native-migration-readiness-checklist.md) — go/no-go gate
 
 ## V1 SPC Source Status
 
-A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo. It deploys gold-layer objects to `connected_plant_uat.gold` and has a live FastAPI backend. Existing V1 SPC data may already exist in Databricks, but the V2 SPC domain has not yet been mapped to that source.
+A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo. It deploys
+gold-layer objects to `connected_plant_uat.gold` and has a live FastAPI backend. SPC data exists
+in Databricks per V1 migration scripts, but the authoritative V2 app-serving SPC data model is
+not yet established.
 
-Current V2 target views, control-limit source, rule semantics, and contract mappings require discovery and verification before live SPC UAT. Current V2 SPC remains mock/sandbox until the V1 Databricks source mapping is verified and native V2 routes/mappers are implemented.
+Object types, columns, grains, keys, control-limit provenance, rule-signal source, capability
+calculations, and golden candidates require Databricks verification before native V2 SPC live
+UAT. Specifically:
 
-See [SPC V1 Source Discovery](./docs/spc-v1-source-discovery.md) for the full finding.
+- V2 has not yet been mapped to the V1 source model
+- V1 is material-centric (not plant/work-centre-centric) — V2 navigation model must change
+- `spc_quality_metrics` is a Databricks AI/BI Metric View, not a signal table
+- Rule violations are computed client-side in V1 frontend — no stored signal table exists
+- `spc_locked_limits` primary key requires `material_id` as a required PK dimension
+- Locked-limit column names have a documented discrepancy that requires DDL verification
+
+Current V2 SPC remains mock/sandbox until the V1 Databricks source mapping is verified and
+native V2 routes/mappers are implemented.
+
+See [SPC V1 Source Discovery](./docs/spc-v1-source-discovery.md) for the full V1 analysis.
+See [SPC Databricks Source Verification](./docs/spc-databricks-source-verification.md) for the
+Databricks verification pack (SQL queries, evidence tables, handoff checklist).
 
 ## Integration Gates & Out-of-Scope Items
 
-1. **V1 Proxy Routes**: `SPCMonitoringLegacyApiAdapter` exists but is not wired. V1 SPC FastAPI endpoints are known (see source discovery doc) but V2 proxy routes in `apps/api/routes/spc.py` do not yet exist.
-2. **Navigation Model**: V2's `SPCMonitoringAdapterRequest` is plant/work-centre-centric. V1 is material-centric. This must be reconciled before any wiring.
-3. **Adapter Factory**: A factory pattern is implemented to support `mock`, `legacy-api`, and `databricks-api` modes; the latter two currently return unavailable status.
-4. **Evidence Completeness**: Section-level completeness summaries are visible in the Chart Overview view.
+1. **V1 Proxy Routes**: `SPCMonitoringLegacyApiAdapter` exists but is not wired. V2 proxy routes
+   in `apps/api/routes/spc.py` now exist (added in 2026-05), but are not yet browser-verified
+   against a live V1 backend. The V1 SPC app URL in UAT must be confirmed before these routes
+   can be tested end-to-end.
+2. **Navigation Model**: V2's `SPCMonitoringAdapterRequest` is plant/work-centre-centric. V1 is
+   material-centric. This must be reconciled before any wiring.
+3. **Adapter Factory**: A factory pattern is implemented to support `mock`, `legacy-api`, and
+   `databricks-api` modes; the latter two currently return unavailable status.
+4. **Evidence Completeness**: Section-level completeness summaries are visible in the Chart
+   Overview view.
+5. **Databricks Verification**: Object types, columns, grain, navigation model, control-limit
+   provenance, rule/signal source, capability source, and golden candidates all require
+   Databricks verification before any live route is enabled. See
+   [Native Migration Readiness Checklist](./docs/spc-native-migration-readiness-checklist.md).
 
 ## Remaining Production Readiness Milestones
 

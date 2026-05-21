@@ -48,7 +48,8 @@ pnpm nx typecheck di-traceability
 | `docs/uat-validation-ledger.md` | Live UAT run history |
 | `docs/traceability-defect-backlog.md` | Classified defect register |
 | `docs/production-readiness-checklist.md` | Gates before production use |
+| `docs/traceability-genie-readiness-pack.md` | First approved Traceability Genie question pack and blocked scope |
 
 ## Status
 
-Phase 1 — mock data only. No live Databricks or legacy-api connection has been browser-verified. See `docs/production-readiness-checklist.md` for open gates.
+Hybrid readiness. `BatchHeaderPanel` has a browser-verified `legacy-api` path, and `TraceGraphPanel` has a browser-verified native `databricks-api` path. Several other trace panels remain mock-only or are still blocked on DDL/source verification. A new **Trace Assistant Pilot** view now provides a deterministic, domain-scoped assistant surface limited to focal batch and visible graph evidence. See `docs/production-readiness-checklist.md` and `docs/traceability-genie-readiness-pack.md` for the current gates.

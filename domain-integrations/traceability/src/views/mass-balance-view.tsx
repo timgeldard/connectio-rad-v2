@@ -7,6 +7,7 @@ import { TraceGraphPanel } from '../panels/trace-graph-panel.js'
 import { RiskSignalsPanel } from '../panels/risk-signals-panel.js'
 import { useMassBalanceSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 /** Static registration for the inline mass balance panel. */
 const massBalanceRegistration: EvidencePanelRegistration = {
@@ -135,6 +136,7 @@ function MassBalancePanel({ request }: MassBalancePanelProps) {
           {data.movements && data.movements.length > 0 && (
             <MovementsTable movements={data.movements} />
           )}
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 4 }} />
         </div>
       )}
     </EvidencePanel>

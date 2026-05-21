@@ -1,8 +1,10 @@
 import { QualityResultsPanel } from '../panels/quality-results-panel.js'
 import { CoAReadinessPanel } from '../panels/coa-readiness-panel.js'
+import { QualityReadOnlyEvidencePanel } from '../panels/quality-readonly-evidence-panel.js'
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { CoAReleaseStatusPanel, RiskSignalsPanel } from '@connectio/di-traceability'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
+import type { QualityReadOnlyEvidenceAdapterRequest } from '../adapters/quality-readonly-evidence-adapter.js'
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import type { Trace2AdapterRequest } from '@connectio/di-traceability'
 
@@ -12,6 +14,8 @@ export interface QualityEvidenceViewProps {
   readonly qualityRequest: QualityReleaseAdapterRequest
   /** Adapter request context for cross-domain traceability panels. */
   readonly traceRequest: Trace2AdapterRequest
+  /** Adapter request context for read-only Quality evidence. */
+  readonly readOnlyEvidenceRequest?: QualityReadOnlyEvidenceAdapterRequest
 }
 
 /**
@@ -24,7 +28,12 @@ export interface QualityEvidenceViewProps {
  * a complete analytical picture of quality disposition without leaving the
  * release workspace.
  */
-export function QualityEvidenceView({ qualityRequest, traceRequest }: QualityEvidenceViewProps) {
+export function QualityEvidenceView({ qualityRequest, traceRequest, readOnlyEvidenceRequest }: QualityEvidenceViewProps) {
+  const evidenceRequest = readOnlyEvidenceRequest ?? {
+    plantId: qualityRequest.plantId,
+    batchId: qualityRequest.batchId,
+  }
+
   return (
     <div
       style={{
@@ -35,6 +44,7 @@ export function QualityEvidenceView({ qualityRequest, traceRequest }: QualityEvi
         alignItems: 'start',
       }}
     >
+      <QualityReadOnlyEvidencePanel request={evidenceRequest} />
       <QualityResultsPanel request={qualityRequest} />
       <CoAReadinessPanel request={qualityRequest} />
       <CoAReleaseStatusPanel request={traceRequest} />

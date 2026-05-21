@@ -965,7 +965,9 @@
             "p-chart",
             "np-chart",
             "c-chart",
-            "u-chart"
+            "u-chart",
+            "ewma",
+            "cusum"
           ]
         },
         "characteristicId": {
@@ -1060,6 +1062,17 @@
             "pending-validation",
             "unavailable"
           ]
+        },
+        "lockedLimits": {
+          "type": "boolean"
+        },
+        "lockedFrom": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lockedTo": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
@@ -3002,7 +3015,9 @@
             "p-chart",
             "np-chart",
             "c-chart",
-            "u-chart"
+            "u-chart",
+            "ewma",
+            "cusum"
           ]
         },
         "batchCount": {
@@ -4299,6 +4314,1740 @@
       ],
       "additionalProperties": false
     },
+    "QualityCoaDocumentStatus": {
+      "type": "string",
+      "enum": [
+        "unavailable",
+        "unknown"
+      ]
+    },
+    "QualityCoaResultEvidence": {
+      "type": "object",
+      "properties": {
+        "micCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "micName": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targetValue": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "toleranceRange": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actualResult": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultStatus": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withinSpec": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deviationFromTarget": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api",
+            "unavailable",
+            "unknown"
+          ]
+        },
+        "documentStatus": {
+          "type": "string",
+          "enum": [
+            "unavailable",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "documentStatus"
+      ],
+      "additionalProperties": false
+    },
+    "QualityEvidenceRequest": {
+      "type": "object",
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "inspectionLotId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "dateFrom": {
+          "type": "string",
+          "format": "date"
+        },
+        "dateTo": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QualityEvidenceResponse": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "object",
+          "properties": {
+            "plantId": {
+              "type": "string"
+            },
+            "materialId": {
+              "type": "string"
+            },
+            "batchId": {
+              "type": "string"
+            },
+            "inspectionLotId": {
+              "type": "string"
+            },
+            "processOrderId": {
+              "type": "string"
+            },
+            "dateFrom": {
+              "type": "string",
+              "format": "date"
+            },
+            "dateTo": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "additionalProperties": false
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "mock",
+                "legacy-api",
+                "databricks-api",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "loaded",
+                "no-records",
+                "unavailable",
+                "error",
+                "mock",
+                "pending-source-verification",
+                "not-requested"
+              ]
+            },
+            "inspectionLotCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "micResultCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "usageDecisionStatus": {
+              "type": "string",
+              "enum": [
+                "source-present",
+                "not-found",
+                "source-unverified",
+                "unavailable",
+                "error",
+                "not-requested"
+              ]
+            },
+            "coaResultCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unavailableEvidence": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "queriedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceFreshnessStatus": {
+              "type": "string",
+              "enum": [
+                "fresh",
+                "stale",
+                "unknown",
+                "unavailable",
+                "not-verified"
+              ]
+            }
+          },
+          "required": [
+            "source",
+            "status",
+            "inspectionLotCount",
+            "micResultCount",
+            "usageDecisionStatus",
+            "coaResultCount",
+            "unavailableEvidence",
+            "warnings",
+            "queriedAt",
+            "sourceFreshnessStatus"
+          ],
+          "additionalProperties": false
+        },
+        "inspectionLots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "inspectionLotId": {
+                "type": "string"
+              },
+              "inspectionType": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "inspectionLotStatus": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "materialId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "batchId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "plantId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "processOrderId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "startedAt": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "completedAt": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
+              }
+            },
+            "required": [
+              "inspectionLotId",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "micResults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "micId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "micCode": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "micName": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "characteristicId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultValue": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultText": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultUnit": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lowerSpecificationLimit": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "upperSpecificationLimit": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "targetValue": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "toleranceText": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "valuationCode": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "valuationText": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultStatus": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "warning",
+                  "pending",
+                  "unknown",
+                  "not-evaluated"
+                ]
+              },
+              "sampleId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sampleDate": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultDate": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "method": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
+              }
+            },
+            "required": [
+              "resultStatus",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "usageDecision": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "usageDecisionCode": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "usageDecisionText": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "valuationCode": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "qualityScore": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "not": {}
+                            },
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source": {
+                      "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
+                    },
+                    "mappingStatus": {
+                      "type": "string",
+                      "enum": [
+                        "source-only",
+                        "verified",
+                        "unverified",
+                        "unavailable",
+                        "not-mapped"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "mappingStatus"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coaResults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "micCode": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "micName": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "targetValue": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "toleranceRange": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "actualResult": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resultStatus": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "withinSpec": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "deviationFromTarget": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
+              },
+              "documentStatus": {
+                "type": "string",
+                "enum": [
+                  "unavailable",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "source",
+              "documentStatus"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "request",
+        "summary",
+        "inspectionLots",
+        "micResults",
+        "coaResults"
+      ],
+      "additionalProperties": false
+    },
+    "QualityEvidenceSource": {
+      "type": "string",
+      "enum": [
+        "mock",
+        "legacy-api",
+        "databricks-api",
+        "unavailable",
+        "unknown"
+      ]
+    },
+    "QualityEvidenceStatus": {
+      "type": "string",
+      "enum": [
+        "loaded",
+        "no-records",
+        "unavailable",
+        "error",
+        "mock",
+        "pending-source-verification",
+        "not-requested"
+      ]
+    },
+    "QualityEvidenceSummary": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api",
+            "unavailable",
+            "unknown"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "loaded",
+            "no-records",
+            "unavailable",
+            "error",
+            "mock",
+            "pending-source-verification",
+            "not-requested"
+          ]
+        },
+        "inspectionLotCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "micResultCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "usageDecisionStatus": {
+          "type": "string",
+          "enum": [
+            "source-present",
+            "not-found",
+            "source-unverified",
+            "unavailable",
+            "error",
+            "not-requested"
+          ]
+        },
+        "coaResultCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailableEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "queriedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceFreshnessStatus": {
+          "type": "string",
+          "enum": [
+            "fresh",
+            "stale",
+            "unknown",
+            "unavailable",
+            "not-verified"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "status",
+        "inspectionLotCount",
+        "micResultCount",
+        "usageDecisionStatus",
+        "coaResultCount",
+        "unavailableEvidence",
+        "warnings",
+        "queriedAt",
+        "sourceFreshnessStatus"
+      ],
+      "additionalProperties": false
+    },
+    "QualityInspectionLotEvidence": {
+      "type": "object",
+      "properties": {
+        "inspectionLotId": {
+          "type": "string"
+        },
+        "inspectionType": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inspectionLotStatus": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materialId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "batchId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plantId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processOrderId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "startedAt": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completedAt": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api",
+            "unavailable",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "inspectionLotId",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "QualityMicResultEvidence": {
+      "type": "object",
+      "properties": {
+        "micId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "micCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "micName": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "characteristicId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultValue": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultText": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultUnit": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lowerSpecificationLimit": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upperSpecificationLimit": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targetValue": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "toleranceText": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valuationCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valuationText": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "warning",
+            "pending",
+            "unknown",
+            "not-evaluated"
+          ]
+        },
+        "sampleId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sampleDate": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resultDate": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api",
+            "unavailable",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "resultStatus",
+        "source"
+      ],
+      "additionalProperties": false
+    },
     "QualityResultsSummary": {
       "type": "object",
       "properties": {
@@ -4423,6 +6172,170 @@
         "openRetestCount"
       ],
       "additionalProperties": false
+    },
+    "QualitySourceFreshnessStatus": {
+      "type": "string",
+      "enum": [
+        "fresh",
+        "stale",
+        "unknown",
+        "unavailable",
+        "not-verified"
+      ]
+    },
+    "QualityUsageDecisionEvidence": {
+      "type": "object",
+      "properties": {
+        "usageDecisionCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usageDecisionText": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valuationCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "qualityScore": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdBy": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "mock",
+            "legacy-api",
+            "databricks-api",
+            "unavailable",
+            "unknown"
+          ]
+        },
+        "mappingStatus": {
+          "type": "string",
+          "enum": [
+            "source-only",
+            "verified",
+            "unverified",
+            "unavailable",
+            "not-mapped"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "mappingStatus"
+      ],
+      "additionalProperties": false
+    },
+    "QualityUsageDecisionMappingStatus": {
+      "type": "string",
+      "enum": [
+        "source-only",
+        "verified",
+        "unverified",
+        "unavailable",
+        "not-mapped"
+      ]
+    },
+    "QualityUsageDecisionStatus": {
+      "type": "string",
+      "enum": [
+        "source-present",
+        "not-found",
+        "source-unverified",
+        "unavailable",
+        "error",
+        "not-requested"
+      ]
     },
     "RelatedBatchContext": {
       "type": "object",
@@ -4899,7 +6812,9 @@
             "p-chart",
             "np-chart",
             "c-chart",
-            "u-chart"
+            "u-chart",
+            "ewma",
+            "cusum"
           ]
         },
         "activeSignals": {
@@ -5070,14 +6985,30 @@
             "p-chart",
             "np-chart",
             "c-chart",
-            "u-chart"
+            "u-chart",
+            "ewma",
+            "cusum"
           ]
         },
         "rule": {
           "type": "string"
         },
         "ruleCode": {
-          "type": "string"
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "severity": {
           "type": "string",
