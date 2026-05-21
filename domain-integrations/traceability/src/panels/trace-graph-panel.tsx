@@ -4,6 +4,8 @@ import {
   ReactFlow,
   Background,
   Controls,
+  Handle,
+  Position,
   useNodesState,
   useEdgesState,
   type NodeProps,
@@ -69,9 +71,12 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
         boxSizing: 'border-box',
         boxShadow: isRoot ? `0 0 0 3px ${border}40` : undefined,
         cursor: 'pointer',
+        position: 'relative',
       }}
       aria-label={`${node.materialDescription}${node.type ? ` — ${node.type}` : ''}`}
     >
+      <Handle type="target" position={Position.Top} style={{ background: border, width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: border, width: 8, height: 8 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
         <span style={{ fontSize: 9, fontWeight: 600, color: textColor, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
           {node.type ? (NODE_TYPE_LABEL[node.type] ?? node.type) : undefined}
