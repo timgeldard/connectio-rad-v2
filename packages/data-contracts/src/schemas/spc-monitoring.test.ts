@@ -91,6 +91,7 @@ describe('SPCSignalSchema', () => {
       plantId: 'IE10',
       chartType: 'xbar-r',
       rule: 'Rule 1',
+      ruleCode: 'WE1',
       severity: 'high',
       detectedAt: '2024-03-08T05:45:00.000Z',
       samplePointId: 'SP-001',
