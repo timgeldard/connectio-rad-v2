@@ -48,6 +48,9 @@ export type { TraceGeniePilotPanelProps } from './panels/trace-genie-pilot-panel
 export { MaterialSupplierExposurePanel } from './panels/material-supplier-exposure-panel.js'
 export type { MaterialSupplierExposurePanelProps } from './panels/material-supplier-exposure-panel.js'
 
+export { ProductionHistoryPanel } from './panels/production-history-panel.js'
+export type { ProductionHistoryPanelProps } from './panels/production-history-panel.js'
+
 export { CustomerImpactPanel } from './panels/customer-impact-panel.js'
 export type { CustomerImpactPanelProps } from './panels/customer-impact-panel.js'
 
@@ -84,6 +87,7 @@ export {
   useMassBalanceSummary,
   useCustomerExposureSummary,
   useSupplierExposureSummary,
+  useProductionHistory,
   useTraceEvents,
   useCoAReleaseStatus,
   useRiskSignals,

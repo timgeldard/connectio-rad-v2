@@ -2441,6 +2441,21 @@ class StockZone(BaseModel):
     hold_percent: float = Field(..., alias='holdPercent', ge=0.0, le=100.0)
 
 
+class SupplierDetail(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    supplier_id: str = Field(..., alias='supplierId')
+    supplier_name: str | None = Field(None, alias='supplierName')
+    country_id: str | None = Field(None, alias='countryId')
+    country_name: str | None = Field(None, alias='countryName')
+    received_quantity: float = Field(..., alias='receivedQuantity', ge=0.0)
+    batch_count: int = Field(..., alias='batchCount', ge=0)
+    uom: str | None = None
+    last_receipt_date: str | None = Field(None, alias='lastReceiptDate')
+
+
 class SupplierExposureSummary(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -2451,6 +2466,35 @@ class SupplierExposureSummary(BaseModel):
     highest_risk_supplier: str | None = Field(None, alias='highestRiskSupplier')
     upstream_materials: int = Field(..., alias='upstreamMaterials', ge=0)
     open_supplier_actions: int = Field(..., alias='openSupplierActions', ge=0)
+    suppliers: list[SupplierDetail] | None = None
+
+
+class ProductionHistoryRow(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    process_order_id: str | None = Field(None, alias='processOrderId')
+    batch_id: str = Field(..., alias='batchId')
+    plant_id: str | None = Field(None, alias='plantId')
+    material_id: str = Field(..., alias='materialId')
+    posting_date: str | None = Field(None, alias='postingDate')
+    quantity: float = Field(..., ge=0.0)
+    uom: str | None = None
+    quality_status: Literal['pass', 'fail', 'unknown'] = Field(..., alias='qualityStatus')
+
+
+class ProductionHistorySummary(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    material_id: str = Field(..., alias='materialId')
+    total_batches: int = Field(..., alias='totalBatches', ge=0)
+    pass_count: int = Field(..., alias='passCount', ge=0)
+    fail_count: int = Field(..., alias='failCount', ge=0)
+    unknown_count: int = Field(..., alias='unknownCount', ge=0)
+    rows: list[ProductionHistoryRow]
 
 
 class TraceEdge(BaseModel):

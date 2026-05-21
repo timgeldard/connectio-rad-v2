@@ -63,6 +63,19 @@ class Trace2MassBalanceRequest:
 
 
 @dataclass
+class Trace2SupplierExposureRequest:
+    material_id: str
+    batch_id: str
+    max_rows: int = 1000
+
+
+@dataclass
+class Trace2ProductionHistoryRequest:
+    material_id: str
+    max_rows: int = 24   # V1 parity: most-recent 24 batches
+
+
+@dataclass
 class Trace2CustomerExposureRequest:
     material_id: str
     batch_id: str
@@ -877,6 +890,235 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Slice 6 — getSupplierExposureSummary (gold_batch_lineage VENDOR_RECEIPT + gold_supplier)
+# ---------------------------------------------------------------------------
+
+def get_supplier_exposure_spec(request: Trace2SupplierExposureRequest) -> QuerySpec:
+    """Return a QuerySpec for getSupplierExposureSummary — V1-parity supplier slice.
+
+    Source: single-hop upstream VENDOR_RECEIPT walk from gold_batch_lineage joined
+    to gold_supplier on SUPPLIER_ID. Returns one row per distinct supplier with
+    aggregated quantity, receipt count, last-receipt date, and uom.
+
+    Empty-string SUPPLIER_ID handling: lineage rows where SUPPLIER_ID is NULL or
+    empty string ('') are filtered at SQL. Live data on 2026-05-20 showed 9 of 10
+    direct-parent VENDOR_RECEIPT rows for the UAT candidate had SUPPLIER_ID = ''.
+    These represent unattributed inputs (intra-company transfers, missing data)
+    and are not real third-party suppliers; they are excluded by design.
+
+    Multi-hop walks are out of scope for this first slice. The query returns
+    direct-parent VENDOR_RECEIPT suppliers only. Multi-hop is a separate concern
+    (would need a recursive CTE; not in scope here).
+
+    openSupplierActions and highestRiskSupplier are NOT populated — a verified
+    QM source is required. See TRACE-P1-012.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
+    """
+    tbl_lineage = resolve_domain_object("trace2", "gold_batch_lineage")
+    tbl_supplier = resolve_domain_object("trace2", "gold_supplier")
+
+    sql = f"""
+    SELECT
+        l.SUPPLIER_ID            AS supplier_id,
+        s.SUPPLIER_NAME          AS supplier_name,
+        s.COUNTRY_ID             AS country_id,
+        s.COUNTRY_NAME           AS country_name,
+        SUM(l.QUANTITY)          AS received_quantity,
+        COUNT(*)                 AS receipt_count,
+        COUNT(DISTINCT l.PARENT_MATERIAL_ID) AS upstream_material_count,
+        MAX(l.POSTING_DATE)      AS last_receipt_date,
+        MAX(l.BASE_UNIT_OF_MEASURE) AS uom
+    FROM {tbl_lineage} l
+    LEFT JOIN {tbl_supplier} s ON l.SUPPLIER_ID = s.SUPPLIER_ID
+    WHERE l.CHILD_MATERIAL_ID = :material_id
+      AND l.CHILD_BATCH_ID    = :batch_id
+      AND l.LINK_TYPE         = 'VENDOR_RECEIPT'
+      AND l.SUPPLIER_ID IS NOT NULL
+      AND l.SUPPLIER_ID <> ''
+    GROUP BY l.SUPPLIER_ID, s.SUPPLIER_NAME, s.COUNTRY_ID, s.COUNTRY_NAME
+    ORDER BY received_quantity DESC
+    LIMIT :max_rows
+    """
+
+    return QuerySpec(
+        name="trace2.get_supplier_exposure",
+        module="trace2",
+        endpoint="/api/trace2/supplier-exposure",
+        sql=sql,
+        params={
+            "material_id": request.material_id,
+            "batch_id": request.batch_id,
+            "max_rows": request.max_rows,
+        },
+        cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:gold_batch_lineage+gold_supplier",
+        tags=["trace2", "supplier-exposure", "vendor-receipt"],
+    )
+
+
+def map_supplier_exposure_rows(rows: list[dict]) -> dict:
+    """Map aggregated supplier rows to SupplierExposureSummarySchema shape.
+
+    Empty rows → returns a zero-supplier summary (not None). Distinct from the
+    customer-exposure 404 pattern: a batch with zero direct VENDOR_RECEIPT
+    suppliers may genuinely be a production-only batch with no purchased inputs.
+    The panel surfaces zero-supplier state explicitly.
+
+    Mapped fields:
+      supplierCount     = number of distinct suppliers in the result rows
+      supplierLots      = total receipt count across suppliers (proxy for "lots received")
+      upstreamMaterials = sum of distinct upstream material counts across suppliers
+      openSupplierActions = 0 (no QM source)  -- TRACE-P1-012
+      highestRiskSupplier = absent (no QM source)
+      suppliers          = per-supplier detail array
+
+    receivedQuantity is summed per supplier in SQL; uom is taken from MAX(BASE_UNIT_OF_MEASURE)
+    which assumes a supplier's receipts share a UoM. Mixed-UoM cases are rare for a
+    given material/batch input; not handled in this slice.
+    """
+    suppliers: list[dict] = []
+    total_lots = 0
+    total_upstream_materials = 0
+
+    for row in rows:
+        supplier_id = row.get("supplier_id") or ""
+        if not supplier_id:
+            continue
+        received_quantity = float(row.get("received_quantity") or 0)
+        receipt_count = int(row.get("receipt_count") or 0)
+        upstream_material_count = int(row.get("upstream_material_count") or 0)
+        total_lots += receipt_count
+        total_upstream_materials += upstream_material_count
+        detail: dict = {
+            "supplierId": str(supplier_id),
+            "receivedQuantity": received_quantity,
+            "batchCount": receipt_count,
+        }
+        if row.get("supplier_name") is not None:
+            detail["supplierName"] = str(row["supplier_name"])
+        if row.get("country_id") is not None:
+            detail["countryId"] = str(row["country_id"])
+        if row.get("country_name") is not None:
+            detail["countryName"] = str(row["country_name"])
+        if row.get("uom") is not None:
+            detail["uom"] = str(row["uom"])
+        if row.get("last_receipt_date") is not None:
+            detail["lastReceiptDate"] = str(row["last_receipt_date"])
+        suppliers.append(detail)
+
+    return {
+        "supplierCount": len(suppliers),
+        "supplierLots": total_lots,
+        "upstreamMaterials": total_upstream_materials,
+        "openSupplierActions": 0,   # TRACE-P1-012: no verified QM source
+        "suppliers": suppliers,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Slice 7 — getProductionHistory (gold_batch_production_history_v)
+# ---------------------------------------------------------------------------
+
+def get_production_history_spec(request: Trace2ProductionHistoryRequest) -> QuerySpec:
+    """Return a QuerySpec for getProductionHistory — V1-parity recent batches for a material.
+
+    Source: gold_batch_production_history_v (8 columns verified live 2026-05-20).
+    Filter: MATERIAL_ID only (no plant filter — V1 showed recent batches across all
+    plants for the material to support "isolated vs systemic" assessment).
+
+    Order: most-recent POSTING_DATE first. Default limit: 24 (V1 parity).
+
+    quality_status values in live data: 'Pass' / 'Fail' (no NULLs observed). The
+    mapper maps 'Pass' → 'pass', 'Fail' → 'fail', anything else → 'unknown'.
+
+    Raises DatabricksConfigError if TRACE_CATALOG is not set.
+    """
+    tbl = resolve_domain_object("trace2", "gold_batch_production_history_v")
+    sql = f"""
+    SELECT
+        PROCESS_ORDER_ID  AS process_order_id,
+        BATCH_ID          AS batch_id,
+        PLANT_ID          AS plant_id,
+        MATERIAL_ID       AS material_id,
+        POSTING_DATE      AS posting_date,
+        BATCH_QTY         AS batch_qty,
+        UOM               AS uom,
+        quality_status    AS quality_status
+    FROM {tbl}
+    WHERE MATERIAL_ID = :material_id
+      AND BATCH_ID IS NOT NULL
+    ORDER BY POSTING_DATE DESC, BATCH_ID DESC
+    LIMIT :max_rows
+    """
+    return QuerySpec(
+        name="trace2.get_production_history",
+        module="trace2",
+        endpoint="/api/trace2/production-history",
+        sql=sql,
+        params={
+            "material_id": request.material_id,
+            "max_rows": request.max_rows,
+        },
+        cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:gold_batch_production_history_v",
+        tags=["trace2", "production-history"],
+    )
+
+
+def map_production_history_rows(rows: list[dict], material_id: str) -> dict:
+    """Map gold_batch_production_history_v rows to ProductionHistorySummarySchema shape.
+
+    Zero rows → returns a summary with totalBatches=0 and empty rows[]. The
+    route still returns 200 (not 404): a material may legitimately have no
+    recent production history (e.g., it's a raw-input material, not a
+    manufactured product) and that information is informative.
+
+    quality_status mapping: 'Pass' → 'pass', 'Fail' → 'fail',
+    anything else (including null/empty) → 'unknown'.
+    """
+    mapped_rows: list[dict] = []
+    pass_count = 0
+    fail_count = 0
+    unknown_count = 0
+
+    for row in rows:
+        raw_quality = row.get("quality_status")
+        quality = _map_quality_status(raw_quality)
+        if quality == "pass":
+            pass_count += 1
+        elif quality == "fail":
+            fail_count += 1
+        else:
+            unknown_count += 1
+
+        mapped_row: dict = {
+            "batchId": str(row.get("batch_id") or ""),
+            "materialId": str(row.get("material_id") or material_id),
+            "quantity": float(row.get("batch_qty") or 0),
+            "qualityStatus": quality,
+        }
+        if row.get("process_order_id") is not None:
+            mapped_row["processOrderId"] = str(row["process_order_id"])
+        if row.get("plant_id") is not None:
+            mapped_row["plantId"] = str(row["plant_id"])
+        if row.get("posting_date") is not None:
+            mapped_row["postingDate"] = str(row["posting_date"])
+        if row.get("uom") is not None:
+            mapped_row["uom"] = str(row["uom"])
+        mapped_rows.append(mapped_row)
+
+    return {
+        "materialId": material_id,
+        "totalBatches": len(mapped_rows),
+        "passCount": pass_count,
+        "failCount": fail_count,
+        "unknownCount": unknown_count,
+        "rows": mapped_rows,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
 
@@ -999,6 +1241,22 @@ def _map_link_type(raw: Optional[str]) -> str:
 
 def _map_movement_category(raw: Optional[str]) -> str:
     return _MOVEMENT_CATEGORY_MAP.get((raw or "").upper().strip(), "adjustment")
+
+
+def _map_quality_status(raw: Optional[str]) -> str:
+    """Map gold_batch_production_history_v.quality_status to the contract enum.
+
+    Live values observed 2026-05-20: 'Pass' (1.96M rows), 'Fail' (296k rows).
+    Anything else (including null and empty string) maps to 'unknown'.
+    """
+    if raw is None:
+        return "unknown"
+    text = str(raw).strip().lower()
+    if text == "pass":
+        return "pass"
+    if text == "fail":
+        return "fail"
+    return "unknown"
 
 
 def _is_unmapped_movement_category(raw: Optional[str], mapped: str) -> bool:

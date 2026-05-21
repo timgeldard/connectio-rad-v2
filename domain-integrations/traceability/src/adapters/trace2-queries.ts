@@ -6,6 +6,7 @@ import type {
   MassBalanceSummary,
   CustomerExposureSummary,
   SupplierExposureSummary,
+  ProductionHistorySummary,
   TraceEvent,
   CoAReleaseStatus,
   TraceRiskSignal,
@@ -85,6 +86,15 @@ export function useSupplierExposureSummary(request: Trace2AdapterRequest, option
   return useQuery<AdapterResult<SupplierExposureSummary>>({
     queryKey: traceKey("getSupplierExposureSummary", request),
     queryFn: async () => { try { return await trace2Adapter.getSupplierExposureSummary(request) } catch (e) { return toAdapterError<SupplierExposureSummary>(e) } },
+    staleTime: TRACE_STALE_TIME_MS,
+    enabled: options.enabled ?? true,
+  })
+}
+
+export function useProductionHistory(request: Trace2AdapterRequest, options: QueryHookOptions = {}) {
+  return useQuery<AdapterResult<ProductionHistorySummary>>({
+    queryKey: traceKey("getProductionHistory", request),
+    queryFn: async () => { try { return await trace2Adapter.getProductionHistory(request) } catch (e) { return toAdapterError<ProductionHistorySummary>(e) } },
     staleTime: TRACE_STALE_TIME_MS,
     enabled: options.enabled ?? true,
   })

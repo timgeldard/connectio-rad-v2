@@ -596,3 +596,144 @@ describe('Trace2LegacyApiAdapter.getMassBalanceSummary', () => {
     expect(result.source).toBe('databricks-api')
   })
 })
+
+// ---------------------------------------------------------------------------
+// getSupplierExposureSummary tests
+// ---------------------------------------------------------------------------
+
+const SE_RESPONSE_OK = {
+  supplierCount: 1,
+  supplierLots: 20,
+  upstreamMaterials: 1,
+  openSupplierActions: 0,
+  suppliers: [
+    {
+      supplierId: '0005002928',
+      supplierName: 'PQ Silicas UK',
+      countryId: 'GB',
+      countryName: 'United Kingdom',
+      receivedQuantity: 201300,
+      batchCount: 20,
+      uom: 'KG',
+      lastReceiptDate: '2025-06-04',
+    },
+  ],
+}
+
+describe('Trace2LegacyApiAdapter.getSupplierExposureSummary', () => {
+  it('calls POST /api/trace2/supplier-exposure', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, SE_RESPONSE_OK))
+    await adapter.getSupplierExposureSummary(fullRequest)
+    const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
+    expect(String(url)).toContain('/api/trace2/supplier-exposure')
+    expect(opts?.method).toBe('POST')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:true with source=databricks-api on success', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, SE_RESPONSE_OK))
+    const result = await adapter.getSupplierExposureSummary(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.supplierCount).toBe(1)
+    expect(result.data.suppliers?.[0].supplierName).toBe('PQ Silicas UK')
+    expect(result.data.openSupplierActions).toBe(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false with unavailable message on 503', async () => {
+    vi.stubGlobal('fetch', mockFetch(503, {}, false))
+    const result = await adapter.getSupplierExposureSummary(fullRequest)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.source).toBe('databricks-api')
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false (not mock) when batchId is missing', async () => {
+    const result = await adapter.getSupplierExposureSummary(partialRequest)
+    expect(result.ok).toBe(false)
+    expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getProductionHistory tests
+// ---------------------------------------------------------------------------
+
+const PH_RESPONSE_OK = {
+  materialId: '70948010',
+  totalBatches: 2,
+  passCount: 1,
+  failCount: 1,
+  unknownCount: 0,
+  rows: [
+    {
+      processOrderId: '007006964801',
+      batchId: '0011062334',
+      plantId: 'P648',
+      materialId: '70948010',
+      postingDate: '2025-09-28',
+      quantity: 31335.789,
+      uom: 'KG',
+      qualityStatus: 'pass' as const,
+    },
+    {
+      processOrderId: '007006964537',
+      batchId: '0011059723',
+      plantId: 'P132',
+      materialId: '70948010',
+      postingDate: '2025-09-28',
+      quantity: 50804.613,
+      uom: 'KG',
+      qualityStatus: 'fail' as const,
+    },
+  ],
+}
+
+describe('Trace2LegacyApiAdapter.getProductionHistory', () => {
+  it('calls POST /api/trace2/production-history', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, PH_RESPONSE_OK))
+    await adapter.getProductionHistory(fullRequest)
+    const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
+    expect(String(url)).toContain('/api/trace2/production-history')
+    expect(opts?.method).toBe('POST')
+    vi.unstubAllGlobals()
+  })
+
+  it('only sends material_id in body (no plant filter)', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, PH_RESPONSE_OK))
+    await adapter.getProductionHistory(fullRequest)
+    const [, opts] = vi.mocked(global.fetch).mock.calls[0]
+    const body = JSON.parse(String(opts?.body))
+    expect(body.material_id).toBe('100023847')
+    expect(body.plant_id).toBeUndefined()
+    expect(body.batch_id).toBeUndefined()
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:true with source=databricks-api on success', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, PH_RESPONSE_OK))
+    const result = await adapter.getProductionHistory(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.totalBatches).toBe(2)
+    expect(result.data.passCount).toBe(1)
+    expect(result.data.failCount).toBe(1)
+    vi.unstubAllGlobals()
+  })
+
+  it('returns ok:false (not mock) when materialId is missing', async () => {
+    const result = await adapter.getProductionHistory(partialRequest)
+    expect(result.ok).toBe(false)
+    expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
+  })
+})

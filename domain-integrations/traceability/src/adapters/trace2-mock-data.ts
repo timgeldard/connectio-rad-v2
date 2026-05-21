@@ -5,6 +5,7 @@ import type {
   MassBalanceSummary,
   CustomerExposureSummary,
   SupplierExposureSummary,
+  ProductionHistorySummary,
   TraceEvent,
   CoAReleaseStatus,
   TraceRiskSignal,
@@ -287,6 +288,46 @@ export const mockSupplierExposure: SupplierExposureSummary = {
   highestRiskSupplier: 'Golden Vale Dairy Co-op',
   upstreamMaterials: 3,
   openSupplierActions: 1,
+}
+
+export const mockProductionHistory: ProductionHistorySummary = {
+  materialId: '100023847',
+  totalBatches: 3,
+  passCount: 2,
+  failCount: 1,
+  unknownCount: 0,
+  rows: [
+    {
+      processOrderId: 'PO-240310-1190',
+      batchId: 'CH-240310-0048',
+      plantId: 'IE10',
+      materialId: '100023847',
+      postingDate: '2024-03-10',
+      quantity: 2350,
+      uom: 'KG',
+      qualityStatus: 'pass',
+    },
+    {
+      processOrderId: 'PO-240308-1189',
+      batchId: 'CH-240308-0047',
+      plantId: 'IE10',
+      materialId: '100023847',
+      postingDate: '2024-03-08',
+      quantity: 2400,
+      uom: 'KG',
+      qualityStatus: 'fail',
+    },
+    {
+      processOrderId: 'PO-240306-1187',
+      batchId: 'CH-240306-0045',
+      plantId: 'IE10',
+      materialId: '100023847',
+      postingDate: '2024-03-06',
+      quantity: 2380,
+      uom: 'KG',
+      qualityStatus: 'pass',
+    },
+  ],
 }
 
 export const mockTraceEvents: TraceEvent[] = [
