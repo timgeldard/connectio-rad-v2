@@ -4169,6 +4169,126 @@
       ],
       "additionalProperties": false
     },
+    "ProductionHistoryRow": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "postingDate": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "qualityStatus": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "batchId",
+        "materialId",
+        "quantity",
+        "qualityStatus"
+      ],
+      "additionalProperties": false
+    },
+    "ProductionHistorySummary": {
+      "type": "object",
+      "properties": {
+        "materialId": {
+          "type": "string"
+        },
+        "totalBatches": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknownCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "processOrderId": {
+                "type": "string"
+              },
+              "batchId": {
+                "type": "string"
+              },
+              "plantId": {
+                "type": "string"
+              },
+              "materialId": {
+                "type": "string"
+              },
+              "postingDate": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "uom": {
+                "type": "string"
+              },
+              "qualityStatus": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "batchId",
+              "materialId",
+              "quantity",
+              "qualityStatus"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "materialId",
+        "totalBatches",
+        "passCount",
+        "failCount",
+        "unknownCount",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
     "ProductionStagingContext": {
       "type": "object",
       "properties": {
@@ -4618,6 +4738,22 @@
                 "unavailable",
                 "not-verified"
               ]
+            },
+            "evidenceState": {
+              "type": "string"
+            },
+            "sourceStatus": {
+              "type": "string"
+            },
+            "lotCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "multipleLotsWarning": {
+              "type": "string"
+            },
+            "missingLotWarning": {
+              "type": "string"
             }
           },
           "required": [
@@ -4800,6 +4936,82 @@
               },
               "source": {
                 "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
+              },
+              "usageDecisionCode": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usageDecisionText": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usageDecisionMappingStatus": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "source-only",
+                          "verified",
+                          "unverified",
+                          "unavailable",
+                          "not-mapped"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usageDecisionCreatedAt": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -5244,14 +5456,7 @@
                       "$ref": "#/definitions/QualityEvidenceResponse/properties/summary/properties/source"
                     },
                     "mappingStatus": {
-                      "type": "string",
-                      "enum": [
-                        "source-only",
-                        "verified",
-                        "unverified",
-                        "unavailable",
-                        "not-mapped"
-                      ]
+                      "$ref": "#/definitions/QualityEvidenceResponse/properties/inspectionLots/items/properties/usageDecisionMappingStatus/anyOf/0/anyOf/1"
                     }
                   },
                   "required": [
@@ -5531,6 +5736,22 @@
             "unavailable",
             "not-verified"
           ]
+        },
+        "evidenceState": {
+          "type": "string"
+        },
+        "sourceStatus": {
+          "type": "string"
+        },
+        "lotCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "multipleLotsWarning": {
+          "type": "string"
+        },
+        "missingLotWarning": {
+          "type": "string"
         }
       },
       "required": [
@@ -5717,6 +5938,82 @@
             "databricks-api",
             "unavailable",
             "unknown"
+          ]
+        },
+        "usageDecisionCode": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usageDecisionText": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usageDecisionMappingStatus": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "source-only",
+                    "verified",
+                    "unverified",
+                    "unavailable",
+                    "not-mapped"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usageDecisionCreatedAt": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -8128,6 +8425,43 @@
       ],
       "additionalProperties": false
     },
+    "SupplierDetail": {
+      "type": "object",
+      "properties": {
+        "supplierId": {
+          "type": "string"
+        },
+        "supplierName": {
+          "type": "string"
+        },
+        "countryId": {
+          "type": "string"
+        },
+        "countryName": {
+          "type": "string"
+        },
+        "receivedQuantity": {
+          "type": "number",
+          "minimum": 0
+        },
+        "batchCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uom": {
+          "type": "string"
+        },
+        "lastReceiptDate": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "supplierId",
+        "receivedQuantity",
+        "batchCount"
+      ],
+      "additionalProperties": false
+    },
     "SupplierExposureSummary": {
       "type": "object",
       "properties": {
@@ -8149,6 +8483,46 @@
         "openSupplierActions": {
           "type": "integer",
           "minimum": 0
+        },
+        "suppliers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "supplierId": {
+                "type": "string"
+              },
+              "supplierName": {
+                "type": "string"
+              },
+              "countryId": {
+                "type": "string"
+              },
+              "countryName": {
+                "type": "string"
+              },
+              "receivedQuantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "batchCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "uom": {
+                "type": "string"
+              },
+              "lastReceiptDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "supplierId",
+              "receivedQuantity",
+              "batchCount"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
