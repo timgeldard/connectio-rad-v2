@@ -424,7 +424,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
   }, [goodsMovements])
 
   const componentConsumption = useMemo(() => {
-    const byMaterial = new Map<string, ComponentConsumptionRow>()
+    const byMaterialBatchUom = new Map<string, ComponentConsumptionRow>()
 
     goodsMovements.forEach(movement => {
       if (movement.movementType !== '261' && movement.movementType !== '262') {
@@ -436,31 +436,30 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         return
       }
 
-      const existing = byMaterial.get(movement.materialId)
+      const batchKey = movement.batchId ?? ''
+      const key = `${movement.materialId}::${batchKey}::${normalized.uom}`
       const sign = movement.movementType === '262' ? -1 : 1
+      const existing = byMaterialBatchUom.get(key)
+
       if (existing) {
         existing.totalQuantity += sign * normalized.quantity
         existing.sourceMovementCount += 1
-        if (!existing.batchId && movement.movementType === '261') {
-          existing.batchId = movement.batchId
-        }
         return
       }
 
-      byMaterial.set(movement.materialId, {
+      byMaterialBatchUom.set(key, {
         materialId: movement.materialId,
         materialDescription: movement.materialDescription,
-        batchId: movement.movementType === '261' ? movement.batchId : undefined,
+        batchId: movement.batchId,
         totalQuantity: sign * normalized.quantity,
         uom: normalized.uom,
         sourceMovementCount: 1,
       })
     })
 
-    return [...byMaterial.values()]
+    return [...byMaterialBatchUom.values()]
       .map(row => ({ ...row, totalQuantity: Number(row.totalQuantity.toFixed(6)) }))
-      .filter(row => row.totalQuantity > 0)
-      .sort((a, b) => a.materialId.localeCompare(b.materialId))
+      .sort((a, b) => a.materialId.localeCompare(b.materialId) || (a.batchId ?? '').localeCompare(b.batchId ?? ''))
   }, [goodsMovements])
 
   const producedOutput = useMemo(() => {
@@ -511,7 +510,6 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         movementTypes: [...row.movementTypes].sort(),
         netQuantity: Number(row.netQuantity.toFixed(6)),
       }))
-      .filter(row => row.netQuantity > 0)
       .sort((a, b) => a.materialId.localeCompare(b.materialId) || (a.batchId || '').localeCompare(b.batchId || ''))
   }, [goodsMovements])
 
@@ -1481,7 +1479,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table data-testid="component-consumption-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={tableHeaderStyle}>Material ID</th>
@@ -1493,7 +1491,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                     </thead>
                     <tbody>
                       {componentConsumption.map((component, idx) => (
-                        <tr key={component.materialId} style={tableRowStyle(idx)}>
+                        <tr key={`${component.materialId}::${component.batchId ?? ''}::${component.uom}`} style={tableRowStyle(idx)}>
                           <td style={tableCellStyle}>{component.materialId}</td>
                           <td style={tableCellStyle}>{component.materialDescription || '-'}</td>
                           <td style={tableCellStyle}>
@@ -1530,7 +1528,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table data-testid="produced-output-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={tableHeaderStyle}>Material ID</th>

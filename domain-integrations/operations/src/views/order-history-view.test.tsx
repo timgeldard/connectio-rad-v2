@@ -4,7 +4,7 @@ expect.extend(matchers)
 
 import '@testing-library/jest-dom/vitest'
 // @vitest-environment jsdom
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { OrderHistoryView } from './order-history-view.js'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -671,5 +671,432 @@ describe('OrderHistoryView', () => {
     // Verify explanatory copy
     expect(screen.getAllByText(/Planned filter — not applied to database queries/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Wired to Header query only/i)[0]).toBeInTheDocument()
+  })
+
+  // ============================================================
+  // Source attribution tests (Slice 6)
+  // Verify that POH header and UAT evidence payload correctly
+  // derive source from AdapterResult.source, not hardcoded strings.
+  // ============================================================
+  describe('source attribution — derived from AdapterResult.source', () => {
+    it('shows databricks-api source badge when header query returns source: databricks-api', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+
+      // Source badge derives from query.data.source — must show databricks label
+      expect(screen.getAllByText(/DATABRICKS/i).length).toBeGreaterThan(0)
+      // Must NOT show MOCK as source when source is databricks-api
+      expect(screen.queryByText(/^MOCK$/i)).toBeNull()
+    })
+
+    it('shows mock source badge when header query returns source: mock', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'mock',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+
+      // Source badge must derive from query.data.source — shows mock label, not databricks
+      expect(screen.getAllByText(/MOCK/i).length).toBeGreaterThan(0)
+    })
+
+    it('includes section sources in UAT evidence payload — derived not hardcoded', async () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SRC-PAYLOAD',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-001',
+            materialDescription: 'Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: { ok: true, data: [], source: 'databricks-api' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+      vi.mocked(useOrderOperations).mockReturnValue({
+        data: { ok: true, data: [], source: 'mock' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderOperations>)
+      vi.mocked(useOrderConfirmations).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderConfirmations>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-PAYLOAD' }} /></Wrapper>)
+      fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+      await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
+      const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+
+      // Each section source derives from that section's AdapterResult.source
+      expect(payload.sourceSummary.sections.header).toBe('databricks-api')
+      expect(payload.sourceSummary.sections.operations).toBe('mock')
+      expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+      // Unloaded section returns 'unknown', not hardcoded 'databricks-api'
+      expect(payload.sourceSummary.sections.confirmations).toBe('unknown')
+      // Mixed sources produce 'mixed' overall
+      expect(payload.sourceSummary.overall).toBe('mixed')
+    })
+  })
+
+  // ============================================================
+  // Component consumption grouping safety regression tests
+  // These tests verify that component consumption rows are grouped
+  // by material + batch + UOM (not material only), and that
+  // zero/negative net rows are not silently filtered out.
+  // No Databricks connection is required — all data is mocked.
+  // ============================================================
+  describe('component consumption grouping — material + batch + uom safety rules', () => {
+    function setupBaseHeader() {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-GROUPING',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-FG',
+            materialDescription: 'Finished Good',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+    }
+
+    // TC-1: Same material + same batch + same UOM → quantities aggregate into one row
+    it('TC-1: same material + same batch + same UOM aggregates quantities into one row', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // One row only — material appears once in the consumption table
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBe(1)
+      // Aggregate of 10 + 5 = 15 KG
+      expect(within(ccTable).getByText('15 KG')).toBeInTheDocument()
+    })
+
+    // TC-2: Same material + different batches → rows remain separate
+    it('TC-2: same material with different batches produces separate rows', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-002', quantity: 8, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Both batch IDs visible in the consumption table — not collapsed into one row
+      expect(within(ccTable).getAllByText('B-001').length).toBeGreaterThanOrEqual(1)
+      expect(within(ccTable).getAllByText('B-002').length).toBeGreaterThanOrEqual(1)
+      // Both rows present in the table — material appears twice
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBe(2)
+      // Individual quantities preserved in the consumption table
+      expect(within(ccTable).getByText('10 KG')).toBeInTheDocument()
+      expect(within(ccTable).getByText('8 KG')).toBeInTheDocument()
+    })
+
+    // TC-3: Same material + same batch + different UOM → rows remain separate
+    it('TC-3: same material + same batch with different UOM produces separate rows', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'L', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Each UOM visible as its own row in the consumption table — not summed across UOMs
+      expect(within(ccTable).getByText('10 KG')).toBeInTheDocument()
+      expect(within(ccTable).getByText('5 L')).toBeInTheDocument()
+      // Two rows — material appears twice
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBe(2)
+    })
+
+    // TC-4: Same material with missing batch and known batch → rows remain separate
+    it('TC-4: missing batch and known batch for same material produce separate rows', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: undefined, quantity: 6, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Known batch row visible in consumption table
+      expect(within(ccTable).getAllByText('B-001').length).toBeGreaterThanOrEqual(1)
+      expect(within(ccTable).getByText('10 KG')).toBeInTheDocument()
+      // Missing-batch row visible with placeholder — not merged with known batch
+      expect(within(ccTable).getByText('not returned')).toBeInTheDocument()
+      expect(within(ccTable).getByText('6 KG')).toBeInTheDocument()
+      // Two rows total
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBe(2)
+    })
+
+    // TC-5: Negative net quantity (over-reversal) row remains visible
+    it('TC-5: negative net quantity row (over-reversal) is not filtered out', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 3, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '262', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 7, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Net = 3 - 7 = -4. Row must remain visible in the consumption table.
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBeGreaterThanOrEqual(1)
+      expect(within(ccTable).getByText(/-4 KG/)).toBeInTheDocument()
+      // The "no rows" placeholder must NOT appear
+      expect(screen.queryByText(/No net component consumption rows/i)).toBeNull()
+    })
+
+    // TC-6: Zero net quantity (full reversal) row remains visible
+    it('TC-6: zero net quantity row (full reversal) is not filtered out', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '262', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Net = 0. Row must still be visible — a full reversal is evidence, not absence.
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBeGreaterThanOrEqual(1)
+      // The "no rows" placeholder must NOT appear
+      expect(screen.queryByText(/No net component consumption rows/i)).toBeNull()
+    })
+
+    // TC-7: Material description is not the grouping key
+    it('TC-7: shared material description does not cause rows to merge — batch is the key', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
+            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-002', quantity: 8, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const ccTable = screen.getByTestId('component-consumption-table')
+      // Both batches present in the consumption table despite identical description
+      expect(within(ccTable).getAllByText('B-001').length).toBeGreaterThanOrEqual(1)
+      expect(within(ccTable).getAllByText('B-002').length).toBeGreaterThanOrEqual(1)
+      // Two rows — material appears twice
+      expect(within(ccTable).getAllByText('MAT-RM-A').length).toBe(2)
+    })
+
+    // TC-8: Produced output full reversal — zero net row is not filtered out
+    it('TC-8: produced output zero net quantity (full reversal) is not filtered out', () => {
+      setupBaseHeader()
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            { movementId: 'GM-1', movementType: '101', direction: 'output', materialId: 'MAT-FG-Y', materialDescription: 'Finished Good Y', batchId: 'FG-001', quantity: 1000, uom: 'KG', postedAt: '2026-01-01T00:00:00Z', referenceDocument: '4900000001' },
+            { movementId: 'GM-2', movementType: '102', direction: 'output', materialId: 'MAT-FG-Y', materialDescription: 'Finished Good Y', batchId: 'FG-001', quantity: 1000, uom: 'KG', postedAt: '2026-01-01T01:00:00Z', referenceDocument: '4900000002' },
+          ],
+          source: 'databricks-api',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+
+      const poTable = screen.getByTestId('produced-output-table')
+      // Net = 0. Row must remain visible — a full reversal is evidence, not absence.
+      expect(within(poTable).getAllByText('MAT-FG-Y').length).toBeGreaterThanOrEqual(1)
+      // The "no rows" placeholder must NOT appear
+      expect(screen.queryByText(/No produced-output rows/i)).toBeNull()
+    })
+  })
+
+  // ============================================================
+  // Source attribution tests
+  // Verifies that the source badge and UAT evidence payload derive
+  // source from AdapterResult.source, not from hardcoded labels.
+  // ============================================================
+  describe('source attribution — derived from AdapterResult.source', () => {
+    function makeHeaderQuery(source: string) {
+      return {
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-SOURCE-TEST',
+            orderType: 'process-order' as const,
+            materialId: 'MAT-TEST',
+            materialDescription: 'Test Material',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed' as const,
+          },
+          source,
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>
+    }
+
+    it('shows Databricks source badge when header AdapterResult.source is databricks-api', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('databricks-api'))
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      expect(screen.getAllByText(/Databricks/i).length).toBeGreaterThan(0)
+    })
+
+    it('shows Mock/Sandbox source badge when header AdapterResult.source is mock', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('mock'))
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      expect(screen.getAllByText(/Mock\/Sandbox/i).length).toBeGreaterThan(0)
+    })
+
+    it('UAT evidence payload captures per-section sources and derives mixed overall when sections differ', async () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('databricks-api'))
+      vi.mocked(useOrderOperations).mockReturnValue({
+        data: { ok: true, data: [], source: 'mock' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderOperations>)
+      // confirmations data undefined → getSectionSource returns 'unknown'
+      vi.mocked(useOrderConfirmations).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderConfirmations>)
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: { ok: true, data: [], source: 'databricks-api' },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+
+      fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
+
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalled()
+      })
+      const payload = JSON.parse(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0])
+      expect(payload.sourceSummary.sections.header).toBe('databricks-api')
+      expect(payload.sourceSummary.sections.operations).toBe('mock')
+      expect(payload.sourceSummary.sections.confirmations).toBe('unknown')
+      expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
+      expect(payload.sourceSummary.overall).toBe('mixed')
+    })
   })
 })
