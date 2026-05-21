@@ -83,7 +83,7 @@ We use the following conservative status classifications:
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
     * `gold_batch_delivery_v` WHERE key columns (MATERIAL_ID/BATCH_ID) pending DESCRIBE TABLE — run CD-1 scenario in DEF-TRACE-006.
     * LINK_TYPE='DELIVERY' edge population requires live UAT validation before depth-aware severity is trustworthy.
-    * Quality usage decision (`gold_qm_usage_decision_v`) and supplier exposure (`gold_supplier`) slices remain mock-only.
+    * Quality usage decision (`gold_inspection_usage_decision`) source/schema/grain/inspection-lot join verified (2026-05-21); runtime slice remains mock-only pending QM process-owner code-mapping governance. Supplier exposure (`gold_supplier`) slice remains mock-only.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
   * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md)
@@ -204,11 +204,12 @@ We use the following conservative status classifications:
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
   * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
   * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and a pending-verification panel scaffold is mounted in the Quality Evidence view. Native route/live data implementation remains pending source verification.
+  * **QM usage-decision source verified (2026-05-21):** Dedicated verification pack (`qm-usage-decision-source-verification.md`), grain/join assessment (`qm-usage-decision-grain-and-joins.md`), code-semantics and release-boundary rules (`qm-usage-decision-code-semantics.md`), and cross-domain consumption plan (`qm-usage-decision-cross-domain-consumption-plan.md`) added. Source object `gold_inspection_usage_decision` verified via Databricks CLI: schema (13 columns), grain (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`, 0 duplicates in 15.47M rows), inspection-lot join, and 9 distinct raw usage-decision codes (A, AE, AC, R, ACE, RE, A9, RR, '' empty) confirmed. TRACE-P1-012 status = **source/schema/grain/inspection-lot join verified; release-status code mapping governance pending**. No live runtime wiring added.
   * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
     * No Databricks adapter or route exists for native read-only Quality evidence.
-    * Databricks source verification pack has not been run against UAT.
+    * QM usage-decision source verified (2026-05-21); broader Quality Databricks source verification pack (`quality-databricks-source-verification.md`) still pending for inspection-lot/MIC/CoA objects.
     * No verified live Quality UAT candidate has been identified.
     * Production release decisions are blocked until SAP QM integration and GxP e-signature compliance are designed.
 * **Document Registry:**
@@ -216,6 +217,10 @@ We use the following conservative status classifications:
   * [Quality V1 Source Discovery](../../domain-integrations/quality/docs/quality-v1-source-discovery.md)
   * [Quality V2 Parity Roadmap](../../domain-integrations/quality/docs/quality-v2-parity-roadmap.md)
   * [Quality Databricks Source Verification Pack](../../domain-integrations/quality/docs/quality-databricks-source-verification.md)
+  * [QM Usage-Decision Source Verification Pack](../../domain-integrations/quality/docs/qm-usage-decision-source-verification.md) ← **new**
+  * [QM Usage-Decision Grain and Join Assessment](../../domain-integrations/quality/docs/qm-usage-decision-grain-and-joins.md) ← **new**
+  * [QM Usage-Decision Code Semantics and Release Boundaries](../../domain-integrations/quality/docs/qm-usage-decision-code-semantics.md) ← **new**
+  * [QM Usage-Decision Cross-Domain Consumption Plan](../../domain-integrations/quality/docs/qm-usage-decision-cross-domain-consumption-plan.md) ← **new**
   * [Quality Read-Only Evidence Route Plan](../../domain-integrations/quality/docs/quality-readonly-evidence-route-plan.md)
   * [Quality Read-Only Evidence Panel Scaffold](../../domain-integrations/quality/docs/quality-readonly-evidence-panel-design.md)
   * [Quality/SPC Shared MIC Evidence Boundaries](../../domain-integrations/quality/docs/quality-spc-shared-mic-evidence.md)
@@ -269,7 +274,7 @@ The following list summarizes the critical items blocking live validation or pro
   1. Live Databricks UAT validation has not occurred.
   2. `gold_batch_mass_balance_v` WHERE filter column names unverified (TODO markers remain in SQL) — blocks mass balance live route.
   3. `gold_batch_delivery_v` column names unverified — blocks `countries` and `blockedDeliveries` fields in customer exposure slice. Lineage-only first slice now implemented but LINK_TYPE='DELIVERY' edge population requires live validation (P0-003).
-  4. `gold_qm_usage_decision_v` (or equivalent) not yet identified — blocks quality usage decision (P0).
+  4. `gold_inspection_usage_decision` source/schema/grain/inspection-lot join verified (2026-05-21) — runtime wiring still blocked pending QM process-owner confirmation of code-to-release-status mapping (TRACE-P1-012).
   5. `gold_supplier` not in catalog resolver — blocks supplier exposure live slice (P1).
   6. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
@@ -286,10 +291,12 @@ The following list summarizes the critical items blocking live validation or pro
 * **Warehouse360 Blockers:**
   1. Warehouse360 source-view/schema alignment requires live UAT verification; specific missing columns/views should be confirmed from the warehouse migration audit.
 * **Quality Batch Release Blockers:**
-  1. Run Quality Databricks source verification pack and capture source-object/column/grain evidence.
-  2. Identify at least one verified live Quality UAT candidate.
-  3. Implement source-backed read-only inspection lot/MIC evidence before any release-decision work.
-  4. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented before any controlled release workflow.
+  1. ~~Run Quality Databricks source verification packs~~ **Done (2026-05-21):** `gold_inspection_usage_decision` schema (13 cols), grain, and inspection-lot join verified via Databricks CLI. Broader quality source verification pack (`quality-databricks-source-verification.md`) remains pending for inspection-lot/MIC/CoA objects.
+  2. ~~Verify QM usage-decision source~~ **Done (2026-05-21):** Source object, schema, grain (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`), and inspection-lot join confirmed. Remaining block: code-to-release-status mapping governance from Kerry Quality/QM process owner (TRACE-P1-012).
+  3. Identify at least one verified live Quality UAT candidate.
+  4. Implement source-backed read-only inspection lot/MIC evidence before any release-decision work.
+  5. SAP QM write-back and GxP e-signature mechanisms must be designed and implemented before any controlled release workflow.
+  6. Governed SAP QM usage-decision code mapping must be confirmed by Kerry Quality/QM process owner before any accepted/released/rejected display is added.
 
 ---
 
