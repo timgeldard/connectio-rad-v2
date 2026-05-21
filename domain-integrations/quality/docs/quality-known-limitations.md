@@ -42,10 +42,19 @@ All interactive forms in the right-rail Actions panel run in simulated mode:
 
 - **No Databricks-API Adapter**: Databricks-API mode is not implemented for the Quality domain. The adapter factory ignores `databricks-api` mode and falls back to legacy-api/mock mode.
 - **No Unity Catalog Grants**: No Unity Catalog schemas, row-level filters, or column security masks have been verified for quality tables.
+- **Verification Pack Ready, Not Run**: `quality-databricks-source-verification.md` now defines the Databricks checks needed for inspection lot, MIC result, specification, usage decision, CoA-like result, deviation/notification discovery, and golden candidate discovery. The pack does not claim any current UAT object is present or authoritative.
 
 ---
 
-## 5. V1 Source Discovery Findings
+## 5. Read-Only Evidence Foundation
+
+- **Contracts Ready, Routes Not Live**: Read-only Quality evidence contracts exist for requests, inspection lots, MIC results, usage decisions, CoA-like result evidence, and evidence summaries. They are designed for source-truthful native implementation, but no native Quality evidence route has been wired in this slice.
+- **No Release Semantics**: The contracts intentionally omit `releaseApproved`, `canRelease`, release/reject actions, and official CoA document approval. Usage decision fields remain source evidence only until governed mapping exists.
+- **SPC Boundary**: Quality MIC/result/specification evidence may help future SPC source mapping, but Quality specification limits are not SPC control limits, MIC valuation is not a Western Electric/Nelson signal, and usage decision is not SPC control status.
+
+---
+
+## 6. V1 Source Discovery Findings
 
 A V1 Quality/QM discovery was completed on 2026-05-21. It found usable read-only inspection/MIC/usage-decision/CoA-result evidence in V1 ConnectedQuality, POH, and Trace2 paths, but did not find a governed production batch-release workflow, SAP QM write-back, e-signature, GxP audit trail, or live deviation/nonconformance source.
 
