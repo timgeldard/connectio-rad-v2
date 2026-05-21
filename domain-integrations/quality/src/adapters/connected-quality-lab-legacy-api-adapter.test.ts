@@ -101,14 +101,47 @@ describe('ConnectedQualityLabLegacyApiAdapter', () => {
     if (result.ok) expect(result.source).toBe('legacy-api')
   })
 
-  it('falls back to mock on network error for getLabPlants', async () => {
+  it('returns error result on network error for getLabPlants', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network failure')))
     const adapter = new ConnectedQualityLabLegacyApiAdapter('')
     const result = await adapter.getLabPlants()
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.source).toBe('mock')
-      expect(result.data.plants.length).toBeGreaterThan(0)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.code).toBe('unknown')
+      expect(result.error.message).toContain('network failure')
+      expect(result.error.retryable).toBe(true)
+    }
+  })
+
+  it('returns error result on HTTP 500 for getLabPlants', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('Internal Server Error', { status: 500 })),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabPlants()
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.code).toBe('network')
+      expect(result.error.message).toContain('Proxy returned 500')
+      expect(result.error.retryable).toBe(true)
+    }
+  })
+
+  it('returns error result on HTTP 401 for getLabPlants', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response('Unauthorized', { status: 401 })),
+    )
+    const adapter = new ConnectedQualityLabLegacyApiAdapter('')
+    const result = await adapter.getLabPlants()
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.source).toBe('legacy-api')
+      expect(result.error.code).toBe('unauthorized')
+      expect(result.error.message).toContain('Proxy returned 401')
     }
   })
 
