@@ -103,29 +103,61 @@ We use the following conservative status classifications:
 
 ### SPC
 
-* **Status:** High-Fidelity Sandbox (Code-Ready for Mock/Sandbox Read-Only UAT). V1 source discovered — live wiring not yet implemented.
+* **Status:** High-Fidelity Sandbox (Mock/Sandbox Read-Only UAT). V1 source discovered.
+  Databricks verification pack created. Live wiring not yet implemented and not yet claimed.
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.
   * Control-limit provenance and approval state tracking integrated into UI and data contracts.
   * Copy SPC UAT Evidence action available for audit logging.
   * Terminology softened (e.g., "No signals returned") to prevent overconfident process control claims.
-  * **V1 Source Discovery completed (2026-05-20):** A full V1 SPC application exists at `apps/spc/` in the ConnectIO-RAD V1 monorepo with Databricks gold views deployed to `connected_plant_uat.gold`. The V2 SPC blocker is NOT absence of Databricks data — it is that V2 has not yet been mapped to the V1 source model. Key misalignments: V1 is material-centric (not plant/work-centre-centric); `spc_quality_metrics` is an AI/BI Metric View (not a signal table); rule violations are computed client-side in V1 (not stored); `spc_locked_limits` has `material_id` as a required PK dimension.
+  * **V1 Source Discovery completed (2026-05-20):** A full V1 SPC application exists at
+    `apps/spc/` in the ConnectIO-RAD V1 monorepo with Databricks gold views deployed to
+    `connected_plant_uat.gold`. The V2 SPC blocker is NOT absence of Databricks data — it is
+    that V2 has not yet been mapped to the V1 source model. Key misalignments: V1 is
+    material-centric (not plant/work-centre-centric); `spc_quality_metrics` is an AI/BI Metric
+    View (not a signal table); rule violations are computed client-side in V1 (not stored);
+    `spc_locked_limits` has `material_id` as a required PK dimension.
+  * **Databricks Verification Pack created (2026-05-21):** SPC data exists in Databricks/V1,
+    but the authoritative V2 app-serving SPC data model is not yet established. Object types,
+    columns, grains, keys, control-limit provenance, rule-signal source, capability calculations,
+    and golden candidates require Databricks verification before native V2 SPC live UAT. A full
+    verification pack (SQL queries, evidence tables, handoff checklist) has been created in
+    `domain-integrations/spc/docs/`. No verification is claimed by this pack — it must be
+    executed by a person with live Databricks access.
+  * **FastAPI proxy routes created:** `apps/api/routes/spc.py` now contains proxy routes for
+    V1 SPC metadata and chart-data endpoints. These routes are NOT browser-verified against a
+    live V1 backend and should not be used until the V1 SPC app URL is confirmed in UAT.
 * **UAT Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace.
   2. `SPCMonitoringAdapterRequest` must be updated to be material-centric (add `materialId` as primary parameter).
-  3. FastAPI proxy routes for V1 SPC endpoints must be implemented in `apps/api/routes/spc.py`.
+  3. FastAPI proxy routes in `apps/api/routes/spc.py` must be browser-verified against live V1 backend.
   4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping.
-  5. Gold view column names must be verified against actual DDL in UAT (`spc_quality_metric_subgroup_v`).
-  6. A confirmed plant/material/MIC UAT candidate with live SPC data must be identified.
+  5. Gold view column names must be verified against actual DDL in UAT — run verification queries
+     from `spc-databricks-source-verification.md`.
+  6. Column name discrepancy in `spc_locked_limits` must be resolved by live DDL check (see
+     `spc-control-limit-provenance-verification.md`).
+  7. A confirmed plant/material/MIC UAT candidate with live SPC data must be identified — use
+     discovery queries in `golden-spc-candidates.md`.
+  8. Native migration readiness checklist (`spc-native-migration-readiness-checklist.md`) must
+     be completed before any live SPC route is enabled.
 * **Document Registry:**
   * [SPC README](../../domain-integrations/spc/README.md)
-  * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md) ← **new**
-  * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md) ← **new**
-  * [SPC Genie Readiness Pack](../../domain-integrations/spc/docs/spc-genie-readiness-pack.md) ← **new**
+  * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md)
+  * [SPC V2 Migration Assessment](../../domain-integrations/spc/docs/spc-v2-migration-assessment.md)
+  * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md)
+  * [SPC Genie Readiness Pack](../../domain-integrations/spc/docs/spc-genie-readiness-pack.md)
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
   * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
   * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
+  * [Databricks Source Verification Pack](../../domain-integrations/spc/docs/spc-databricks-source-verification.md) ← **new**
+  * [Data Model Grain Assessment](../../domain-integrations/spc/docs/spc-data-model-grain-assessment.md) ← **new**
+  * [Navigation Model Verification](../../domain-integrations/spc/docs/spc-navigation-model-verification.md) ← **new**
+  * [Control Limit Provenance Verification](../../domain-integrations/spc/docs/spc-control-limit-provenance-verification.md) ← **new**
+  * [Rule / Signal Source Verification](../../domain-integrations/spc/docs/spc-rule-signal-source-verification.md) ← **new**
+  * [Capability Verification](../../domain-integrations/spc/docs/spc-capability-verification.md) ← **new**
+  * [V2 Contract Mapping](../../domain-integrations/spc/docs/spc-v2-contract-mapping.md) ← **new**
+  * [Native Migration Readiness Checklist](../../domain-integrations/spc/docs/spc-native-migration-readiness-checklist.md) ← **new**
 
 ### Process Order History (POH) & Operations
 
@@ -231,10 +263,12 @@ The following list summarizes the critical items blocking live validation or pro
 * **SPC Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).
   2. `SPCMonitoringAdapterRequest` must add `materialId` as primary entry-point parameter (V1 is material-centric).
-  3. FastAPI proxy routes (`apps/api/routes/spc.py`) must be implemented for V1 SPC endpoints.
+  3. FastAPI proxy routes in `apps/api/routes/spc.py` exist but are NOT browser-verified — must test against live V1 backend.
   4. `SPCMonitoringLegacyApiAdapter` must be implemented with correct V1 field mapping (see `spc-v1-source-discovery.md`).
-  5. Gold view column names must be verified in `connected_plant_uat.gold.spc_quality_metric_subgroup_v`.
-  6. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified.
+  5. Gold view column names must be verified against actual UAT DDL — run queries in `spc-databricks-source-verification.md`.
+  6. Column name discrepancy in `spc_locked_limits` must be resolved by `DESCRIBE TABLE` (see `spc-control-limit-provenance-verification.md`).
+  7. A UAT candidate plant/material/MIC combination with confirmed SPC data must be identified via discovery queries in `golden-spc-candidates.md`.
+  8. Native migration readiness checklist (`spc-native-migration-readiness-checklist.md`) must be completed before any live route is enabled.
 * **Process Order History Blockers:**
   1. Browser-level validation of the 4 api endpoints inside the UI has not been performed.
 * **Warehouse360 Blockers:**
