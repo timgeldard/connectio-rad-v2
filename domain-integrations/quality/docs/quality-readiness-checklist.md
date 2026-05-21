@@ -26,7 +26,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 | 2.1 | Data source attribution (mock vs. legacy API) returned by all adapters | ✅ | All quality adapters explicitly return `source: 'mock'` on mock paths and `source: 'legacy-api'` on legacy paths. |
 | 2.2 | Data source attribution visible in UI | ✅ | All 9 panels forward the `source` prop from the query hook results to `<EvidencePanel>` to render dynamic source badges. |
 | 2.3 | Freshness policies declared and respected | 🔶 | Freshness policy declared in panel registrations; underlying SAP QM / CoA / usage-decision data freshness is not validated for mock release panels and live freshness is not surfaced. |
-| 2.4 | Databricks source verification pack ready | ✅ | `quality-databricks-source-verification.md` provides object inventory, DESCRIBE, grain, usage-decision, MIC/result/specification, CoA-like, deviation, and golden-candidate checks. No verification has been claimed. |
+| 2.4 | Databricks source verification pack ready | ✅ | `quality-databricks-source-verification.md` provides the broad object inventory, DESCRIBE, grain, usage-decision, MIC/result/specification, CoA-like, deviation, and golden-candidate checks. A dedicated QM usage-decision verification pack (`qm-usage-decision-source-verification.md`) adds usage-decision-specific grain, join-key, code-semantics, and cross-domain consumption plans. No verification has been claimed — all evidence cells are `not run`. |
 | 2.5 | Read-only evidence contracts designed | ✅ | `QualityEvidenceRequest`, inspection lot, MIC result, usage decision, CoA-like result, and summary contracts exist in `@connectio/data-contracts`; they do not include release approval or can-release fields. |
 | 2.6 | Quality/SPC MIC boundary documented | ✅ | `quality-spc-shared-mic-evidence.md` separates Quality specification/valuation/usage-decision evidence from SPC control limits, rule signals, and control status. |
 | 2.7 | Read-only evidence adapter skeleton ready | ✅ | `QualityReadOnlyEvidenceAdapter` returns `pending-source-verification` without fetching Databricks or falling back to mock evidence. Route plan is documented in `quality-readonly-evidence-route-plan.md`. |
@@ -90,7 +90,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |-------|---------|
 | Development / Code Review | ✅ Ready |
 | Internal Mock-Mode Demonstration | ✅ Ready |
-| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready; contract-design-ready; adapter-skeleton-ready; panel-scaffold-ready; native route and live data implementation still UAT-pending. |
+| Read-Only Evidence Foundation | 🔶 Source-discovery-complete; verification-pack-ready (broad + QM usage-decision specific); contract-design-ready; adapter-skeleton-ready; panel-scaffold-ready; native route and live data implementation still UAT-pending. QM usage-decision: object located in catalog, schema/grain/join keys not yet verified (TRACE-P1-012). |
 | UAT with Live Backend Data | ❌ Blocked — requires Databricks source verification and source-backed read-only inspection/MIC/usage-decision evidence before any live Quality UAT claim. |
 | Production Go-Live | ❌ Blocked — requires UAT sign-off and Databricks security integration. |
 

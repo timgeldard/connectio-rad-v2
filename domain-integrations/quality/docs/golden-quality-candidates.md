@@ -7,7 +7,9 @@ No verified live Quality UAT candidate has been identified from V1 discovery.
 
 The existing V2 mock release cases in `golden-quality-batches.md` remain useful for UI trust-hardening tests only. They must not be treated as live SAP QM or release evidence.
 
-`quality-databricks-source-verification.md` now provides candidate discovery SQL and an evidence capture table. A candidate should move out of `TBD` only after source-object existence, required columns, row grain, usage-decision semantics, and CoA/deviation boundaries are captured from Databricks evidence.
+`quality-databricks-source-verification.md` provides the broad candidate discovery SQL and evidence capture table. `qm-usage-decision-source-verification.md` provides the dedicated QM usage-decision verification pack. A candidate should move out of `TBD` only after source-object existence, required columns, row grain, usage-decision semantics, and CoA/deviation boundaries are captured from Databricks evidence.
+
+For usage-decision candidates specifically: the object `gold_inspection_usage_decision` is located in the catalog (TRACE-P1-012, 2026-05-21) but schema, grain, join keys, and code semantics are not yet verified. No usage-decision candidate can be confirmed until the evidence table in `qm-usage-decision-source-verification.md` §13 is populated.
 
 ## Candidate Template
 

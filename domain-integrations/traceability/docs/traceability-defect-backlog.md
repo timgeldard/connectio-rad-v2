@@ -101,12 +101,13 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-012 — QM usage-decision source not wired (blocks accurate supplier risk + production history release evidence)
-**Status:** Open — no verified QM source; panels surface conservative values
+**Status:** Open — verification pack ready; no SQL has been run; panels remain conservative
 **Affected:** `MaterialSupplierExposurePanel` (openSupplierActions, highestRiskSupplier), `ProductionHistoryPanel` (release-decision interpretation), `BatchHeaderPanel` (qualityStatus)
 **Evidence:** Several panels would benefit from joining a verified QM source (e.g., `gold_qm_usage_decision_v` or equivalent). The catalog has `gold_inspection_usage_decision` available (confirmed live 2026-05-21) but its schema, semantics, and join keys are not yet verified for this app's purposes. `gold_batch_production_history_v.quality_status` exposes 'Pass'/'Fail' labels but these are not the SAP QM release decision.
 **Risk:** Investigators may infer release decisions or supplier quality risk from indirect signals (gold view labelling, inspection lots) without a verified mapping to the underlying QM evidence chain.
 **Mitigation in current slices:** Supplier panel `openSupplierActions=0` and `highestRiskSupplier` absent. Production history panel includes a dashed disclaimer that the Pass/Fail label is not a release decision. Batch header `qualityStatus` is already conservative (`pending`/`unknown` only).
-**Proposed fix:** Confirm with the QM team which gold view is the canonical usage-decision source, its join key, and the meaning of its decision codes. Wire a single supplemental QuerySpec; expose verified counts on each affected panel.
+**Proposed fix:** Run the verification queries in `domain-integrations/quality/docs/qm-usage-decision-source-verification.md` against `connected_plant_uat.gold`. Populate the evidence table. Once object, schema, grain, join keys, and code semantics are verified, wire a single supplemental QuerySpec and expose verified display fields on each affected panel.
+**Verification docs:** `qm-usage-decision-source-verification.md`, `qm-usage-decision-grain-and-joins.md`, `qm-usage-decision-code-semantics.md`, `qm-usage-decision-cross-domain-consumption-plan.md`
 **Requires UAT:** Yes
 
 ### TRACE-P1-001 — Truncation state not surfaced in trace graph UI

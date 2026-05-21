@@ -42,7 +42,7 @@ All interactive forms in the right-rail Actions panel run in simulated mode:
 
 - **No Databricks-API Adapter**: Databricks-API mode is not implemented for the Quality domain. The adapter factory ignores `databricks-api` mode and falls back to legacy-api/mock mode.
 - **No Unity Catalog Grants**: No Unity Catalog schemas, row-level filters, or column security masks have been verified for quality tables.
-- **Verification Pack Ready, Not Run**: `quality-databricks-source-verification.md` now defines the Databricks checks needed for inspection lot, MIC result, specification, usage decision, CoA-like result, deviation/notification discovery, and golden candidate discovery. The pack does not claim any current UAT object is present or authoritative.
+- **Verification Pack Ready, Not Run**: `quality-databricks-source-verification.md` defines the broad Databricks checks needed for inspection lot, MIC result, specification, usage decision, CoA-like result, deviation/notification discovery, and golden candidate discovery. A dedicated QM usage-decision pack (`qm-usage-decision-source-verification.md`) adds usage-decision-specific object discovery, DESCRIBE templates, grain verification, join-key verification, code/text semantics queries, and an evidence table. Neither pack claims any current UAT object is present or authoritative — all checks are `not run`.
 
 ---
 
