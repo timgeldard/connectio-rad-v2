@@ -165,6 +165,9 @@ See `docs/deployment/databricks-apps.md` for Databricks Apps deployment.
 |---|---|
 | Architecture overview | `docs/architecture/overview.md` |
 | Adapter modes (mock / legacy-api / databricks-api) | `docs/adapters/mock-legacy-databricks-modes.md` |
+| Genie readiness index | `docs/migration/genie-readiness-index.md` |
+| V1 Genie discovery and V2 parity roadmap | `docs/migration/v1-genie-discovery-and-v2-parity-roadmap.md` |
+| V2 shell Genie decision record | `docs/migration/v2-shell-genie-decision-record.md` |
 | Adapter migration strategy | `docs/adapters/adapter-migration-strategy.md` |
 | Data / semantic model | `docs/data/semantic-model-overview.md` |
 | V1 → V2 functionality preservation | `docs/migration/v1-to-v2-functionality-preservation.md` |

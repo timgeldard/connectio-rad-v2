@@ -42,6 +42,9 @@ export type { BatchHeaderPanelProps } from './panels/batch-header-panel.js'
 export { TraceGraphPanel } from './panels/trace-graph-panel.js'
 export type { TraceGraphPanelProps } from './panels/trace-graph-panel.js'
 
+export { TraceGeniePilotPanel } from './panels/trace-genie-pilot-panel.js'
+export type { TraceGeniePilotPanelProps } from './panels/trace-genie-pilot-panel.js'
+
 export { MaterialSupplierExposurePanel } from './panels/material-supplier-exposure-panel.js'
 export type { MaterialSupplierExposurePanelProps } from './panels/material-supplier-exposure-panel.js'
 
@@ -66,6 +69,10 @@ export type { TraceExposureForReleasePanelProps } from './panels/trace-exposure-
 // Forms
 export { TraceQueryForm } from './forms/trace-query-form.js'
 export type { TraceQueryFormProps } from './forms/trace-query-form.js'
+
+// Views
+export { TraceGeniePilotView } from './views/trace-genie-pilot-view.js'
+export type { TraceGeniePilotViewProps } from './views/trace-genie-pilot-view.js'
 
 // Adapter and queries
 export { Trace2Adapter, trace2Adapter } from './adapters/trace2-adapter.js'

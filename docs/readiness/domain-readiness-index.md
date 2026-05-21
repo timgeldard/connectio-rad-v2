@@ -40,6 +40,22 @@ We use the following conservative status classifications:
 
 ---
 
+## 3A. Cross-Domain Genie / Natural-Language Analytics
+
+* **Status:** Discovery complete; implementation intentionally deferred.
+* **Summary:**
+  * A repo-wide V1 inventory confirms explicit Genie support in the V1 platform shell, POH, Trace2, and SPC.
+  * V2 now has shipped **deterministic domain-scoped pilot surfaces** for POH and Traceability in `domain-integrations/`, but it still has **no live Databricks Genie runtime** and no shell-wide assistant.
+  * POH is the strongest future parity candidate because V1 preserves a source-controlled semantic pack (`space.yaml`, glossary, rules, joins, expressions, and sample SQL).
+  * The current pilots are intentionally narrow, cite loaded evidence panels, and refuse blocked topics instead of inferring beyond approved scope.
+  * A V2 shell-wide assistant should remain blocked until domain-level packs are validated and source-truthful.
+* **Document Registry:**
+  * [Genie Readiness Index](../migration/genie-readiness-index.md) ← **new**
+  * [V1 Genie Discovery and V2 Parity Roadmap](../migration/v1-genie-discovery-and-v2-parity-roadmap.md) ← **new**
+  * [POH Genie Readiness Pack](../../domain-integrations/operations/docs/poh-genie-readiness-pack.md) ← **new**
+  * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md) ← **new**
+  * [V2 Shell Genie Decision Record](../migration/v2-shell-genie-decision-record.md) ← **new**
+
 ## 4. Domain-by-Domain Detail
 
 ### Traceability
@@ -47,6 +63,7 @@ We use the following conservative status classifications:
 * **Status:** Hybrid (Mock / Databricks API).
 * **Summary:**
   * Has a strong, high-fidelity mock/demo cockpit supporting trace investigation.
+  * A deterministic **Trace Assistant Pilot** now exists as a dedicated workspace view limited to focal batch summary and the currently visible trace graph.
   * Evidence confidence badge logic is fully implemented to display complete, partial, or unknown levels.
   * Resolved the null customer exposure vulnerability (binary severity fallback to `UNKNOWN` instead of defaulting to a false containment/safe state).
   * Edge relationship link types are code-ready, allowing UI to discriminate vendor receipts from internal moves.
@@ -69,6 +86,7 @@ We use the following conservative status classifications:
     * Quality usage decision (`gold_qm_usage_decision_v`) and supplier exposure (`gold_supplier`) slices remain mock-only.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
+  * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md)
   * [Defect Backlog](../../domain-integrations/traceability/docs/traceability-defect-backlog.md)
   * [UAT Validation Ledger](../../domain-integrations/traceability/docs/uat-validation-ledger.md)
   * [V1→V2 Functional Parity Matrix](../../domain-integrations/traceability/docs/traceability-v1-v2-functional-parity.md)
@@ -104,6 +122,7 @@ We use the following conservative status classifications:
   * [SPC README](../../domain-integrations/spc/README.md)
   * [SPC V1 Source Discovery](../../domain-integrations/spc/docs/spc-v1-source-discovery.md) ← **new**
   * [Golden SPC Candidates](../../domain-integrations/spc/docs/golden-spc-candidates.md) ← **new**
+  * [SPC Genie Readiness Pack](../../domain-integrations/spc/docs/spc-genie-readiness-pack.md) ← **new**
   * [SPC Readiness & Hardening Notes](../migration/spc-readiness-and-hardening-notes.md)
   * [SPC UAT Acceptance Script](../../domain-integrations/spc/docs/spc-uat-acceptance-script.md)
   * [SPC Known Limitations](../../domain-integrations/spc/docs/spc-known-limitations.md)
@@ -113,6 +132,7 @@ We use the following conservative status classifications:
 * **Status:** Databricks/API wired at code or SQL level; browser/live UI validation pending.
 * **Summary:**
   * A read-only Process Order History (POH) cockpit exists.
+  * A deterministic **POH Assistant Pilot** now exists as a dedicated workspace view limited to approved operations, confirmations, goods movements, and conditional header questions.
   * Source truthfulness has been improved; planned filter inputs (such as limit, date range, etc.) are labeled as planned/diagnostic.
   * Golden process-order candidates exist in UAT (e.g., process order `7006965038`).
   * Direct SQL/DDL reads are verified for `getProcessOrderHeader`, `getOrderOperations`, `getOrderConfirmations`, and `getOrderGoodsMovements`.
@@ -124,6 +144,7 @@ We use the following conservative status classifications:
     * Potential module-boundary lint warnings remain on cross-domain type imports from Quality.
 * **Document Registry:**
   * [Operations README](../../domain-integrations/operations/README.md)
+  * [POH Genie Readiness Pack](../../domain-integrations/operations/docs/poh-genie-readiness-pack.md)
   * [Golden Process Orders Candidates](../../domain-integrations/operations/docs/golden-process-orders.md)
   * [POH UAT Readiness Notes](../../domain-integrations/operations/docs/poh-uat-readiness-notes.md)
   * [POH V1 to V2 Functional Parity](../../domain-integrations/operations/docs/poh-v1-v2-functional-parity.md)
