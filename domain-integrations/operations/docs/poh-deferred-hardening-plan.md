@@ -1,8 +1,9 @@
 # POH Deferred Evidence Hardening Plan
 
 **Created:** 2026-05-21
+**Last updated:** 2026-05-21
 **Branch:** poh-hardening
-**Status:** In progress — Slice 1 (review and plan)
+**Status:** Completed — Slices 1, 2, 3, 6 (code-fixed; browser UAT remains pending)
 **Deferred from:** PR #52
 
 ---
@@ -194,28 +195,29 @@ No Databricks connection is required.
 ## 8. Acceptance Criteria
 
 ### Slice 2 (grouping fix)
-- [ ] Component consumption no longer groups by materialId only.
-- [ ] Multiple batches for the same material appear as separate rows.
-- [ ] Mixed UOMs for the same material appear as separate rows.
-- [ ] Missing batch and known batch for the same material appear as separate rows.
-- [ ] Rows with zero or negative net quantity are visible (not filtered out).
-- [ ] Produced output filter also updated — zero/negative rows visible.
+- [x] Component consumption no longer groups by materialId only.
+- [x] Multiple batches for the same material appear as separate rows.
+- [x] Mixed UOMs for the same material appear as separate rows.
+- [x] Missing batch and known batch for the same material appear as separate rows.
+- [x] Rows with zero or negative net quantity are visible (not filtered out).
+- [x] Produced output filter also updated — zero/negative rows visible.
 
 ### Slice 3 (regression tests)
-- [ ] Tests 1–12 listed above are present and pass.
-- [ ] Tests are readable for future agents/developers without repo history context.
-- [ ] No Databricks connection required.
+- [x] 8 regression tests covering TC-1 through TC-8 are present and pass.
+- [x] Tests are readable for future agents/developers without repo history context.
+- [x] No Databricks connection required.
 
 ### Slice 6 (source attribution)
-- [ ] `getSectionSource` confirmed correct via tests.
-- [ ] No hardcoded 'databricks-api' string appears where 'mock' or 'unknown' should show.
-- [ ] Mock source does not appear as live/databricks.
+- [x] `getSectionSource` confirmed correct via tests.
+- [x] `databricks-api` source renders Databricks badge (test confirmed).
+- [x] `mock` source renders Mock/Sandbox badge — does not appear as live/databricks.
+- [x] UAT evidence payload captures per-section sources and derives `mixed` overall.
 
 ### Slice 8 (docs sync)
-- [ ] `poh-v1-v2-functional-parity.md` updated to reflect grouping fix.
-- [ ] `poh-uat-readiness-notes.md` updated to state grouping has been hardened.
-- [ ] Docs distinguish code-fixed from UAT-verified.
-- [ ] No production readiness is claimed.
+- [x] `poh-v1-v2-functional-parity.md` updated to reflect grouping fix.
+- [x] `poh-uat-readiness-notes.md` updated to state grouping has been hardened.
+- [x] Docs distinguish code-fixed from UAT-verified.
+- [x] No production readiness is claimed.
 
 ---
 

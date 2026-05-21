@@ -1,6 +1,6 @@
 # POH V1 to V2 Functional Parity
 
-**Last updated:** 2026-05-20
+**Last updated:** 2026-05-21
 **V1 repo inspected:** `https://github.com/timgeldard/ConnectIO-RAD`
 **V2 repo inspected:** `https://github.com/timgeldard/connectio-rad-v2`
 
@@ -147,8 +147,18 @@ Implemented behaviour:
 - Subtracts 262 reversal quantities from 261 quantities.
 - Excludes EA rows.
 - Normalises G to KG.
-- Keeps representative batch from the first 261 row where available.
+- Groups by material, batch, and normalised UOM (hardened 2026-05-21 — see note below).
 - Adds `componentMaterials` to the Copy UAT Evidence counts.
+
+> **Hardening note (2026-05-21, branch poh-hardening):** The initial implementation
+> grouped by `materialId` only, keeping only the first batch encountered. This was
+> incorrect: multiple batches for the same material, or the same material in different
+> UOMs, were collapsed into a single row. The grouping key is now
+> `materialId :: batchId :: normalised UOM`, matching the produced-output grouping
+> already in place. The post-aggregation filter that silently dropped zero and
+> negative net rows was also removed from both component consumption and produced
+> output. Regression tests (TC-1 through TC-8) were added. No Databricks columns
+> were invented and no UOM conversions were added.
 
 Follow-on implemented slice: **produced output evidence derived from returned
 goods movements**.
