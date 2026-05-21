@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DECISION_BLOCKED_TEMPLATE } from '@connectio/product-model'
 import { buildTraceGenieReply } from './trace-genie-pilot-engine.js'
 import type { TraceGenieSnapshot } from './trace-genie-pilot-engine.js'
 
@@ -63,5 +64,70 @@ describe('buildTraceGenieReply', () => {
 
     expect(reply.kind).toBe('unsupported')
     expect(reply.text).toContain('could not match')
+  })
+})
+
+describe('buildTraceGenieReply — blocked topics (governed decisions)', () => {
+  const DECISION_QUESTIONS = [
+    'Can I close the recall?',
+    'Is customer exposure zero?',
+    'Can I release this batch?',
+    'Is this batch accepted?',
+    'Are all customers identified?',
+    'Is this process in control?',
+    'Can I reject this batch?',
+    'Is the recall contained?',
+    'Is the supplier at fault?',
+    'Post this in SAP',
+    'Is the CoA approved?',
+  ]
+
+  for (const question of DECISION_QUESTIONS) {
+    it(`blocks governed decision question: "${question}"`, () => {
+      const reply = buildTraceGenieReply(question, snapshot)
+
+      expect(reply.kind).toBe('blocked')
+      expect(reply.text.length).toBeGreaterThan(0)
+      expect(reply.text).not.toMatch(/\byes\b/i)
+      expect(reply.text).not.toMatch(/\bapproved\b/i)
+      expect(reply.text).not.toMatch(/\bconfirmed\b/i)
+      expect(reply.text).toContain(DECISION_BLOCKED_TEMPLATE)
+    })
+  }
+})
+
+describe('buildTraceGenieReply — safe answer requirements', () => {
+  it('approved answers contain source/evidence citations', () => {
+    const reply = buildTraceGenieReply(
+      'Summarize the focal batch currently loaded in the batch header.',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).toContain('Citations:')
+    expect(reply.text).toContain('BatchHeaderPanel')
+  })
+
+  it('approved answers contain the evidence assistant caveat', () => {
+    const reply = buildTraceGenieReply(
+      'Is the current graph truncated, and are there any graph warnings visible?',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).toContain('No records returned from a source must not be interpreted as absence of exposure')
+  })
+
+  it('approved answers do not claim operational decisions', () => {
+    const reply = buildTraceGenieReply(
+      'Which upstream and downstream nodes are currently visible in the graph?',
+      snapshot,
+    )
+
+    expect(reply.kind).toBe('approved')
+    expect(reply.text).not.toMatch(/you can release/i)
+    expect(reply.text).not.toMatch(/batch is approved/i)
+    expect(reply.text).not.toMatch(/recall is closed/i)
+    expect(reply.text).not.toMatch(/exposure is zero/i)
   })
 })

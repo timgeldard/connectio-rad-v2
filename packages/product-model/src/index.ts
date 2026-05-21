@@ -38,9 +38,13 @@ export {
 } from './helpers/lifecycle.js'
 export type { AssistantReplyKind, AssistantReply, AssistantReplyOptions } from './helpers/assistant-pilot.js'
 export {
+  DECISION_BLOCKED_TEMPLATE,
+  EVIDENCE_ASSISTANT_CAVEAT,
+  DECISION_BLOCKED_PATTERNS,
   buildAssistantCitation,
   buildAssistantReply,
   buildBlockedAssistantReply,
+  buildDecisionBlockedAssistantReply,
   buildUnsupportedAssistantReply,
   buildMockWarning,
 } from './helpers/assistant-pilot.js'

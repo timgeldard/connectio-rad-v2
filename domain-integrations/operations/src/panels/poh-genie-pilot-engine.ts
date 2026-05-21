@@ -6,9 +6,11 @@ import type {
 } from '@connectio/data-contracts'
 import type { AdapterSource } from '@connectio/source-adapters'
 import {
+  DECISION_BLOCKED_PATTERNS,
   buildAssistantCitation,
   buildAssistantReply,
   buildBlockedAssistantReply,
+  buildDecisionBlockedAssistantReply,
   buildMockWarning,
   buildUnsupportedAssistantReply,
   type AssistantReply,
@@ -79,6 +81,14 @@ const BLOCKED_KEYWORDS: Array<{ readonly pattern: RegExp; readonly reason: strin
 function classifyQuestion(question: string): QuestionClassification {
   const normalized = question.trim().toLowerCase()
   if (normalized.length === 0) return { kind: 'unsupported' }
+
+  // Decision-blocked patterns are checked first — these map to governed QA/SAP/recall
+  // decisions that must never be answered by the evidence assistant.
+  for (const pattern of DECISION_BLOCKED_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return { kind: 'blocked', reason: 'decision-blocked' }
+    }
+  }
 
   for (const blocked of BLOCKED_KEYWORDS) {
     if (blocked.pattern.test(normalized)) {
@@ -245,6 +255,9 @@ export function buildPohGenieReply(question: string, snapshot: PohGenieSnapshot)
   const classified = classifyQuestion(question)
 
   if (classified.kind === 'blocked') {
+    if (classified.reason === 'decision-blocked') {
+      return buildDecisionBlockedAssistantReply()
+    }
     return buildBlockedAssistantReply(
       classified.reason,
       'Approved topics right now: operations, confirmations, goods movements, or a combined summary of the currently loaded POH evidence.',
