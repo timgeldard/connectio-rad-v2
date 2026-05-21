@@ -144,7 +144,7 @@ Before any domain wires live usage-decision evidence:
 | Grain verified (≤1 row per lot or documented exceptions) | **verified** | Grain = `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)`; multiple rows per lot are historical — see `qm-usage-decision-grain-and-joins.md` |
 | Join key to material/batch confirmed | **verified** | Two-hop via `gold_inspection_lot`; fan-out risk documented in `qm-usage-decision-grain-and-joins.md` §7 |
 | Raw code/text distribution captured | **verified** | 9 code variants observed — see `qm-usage-decision-code-semantics.md` §2 |
-| Governed code mapping confirmed by QM process owner | **partial** | 8 of 9 codes confirmed 2026-05-21 (tim.geldard@kerry.com); empty-string semantics still pending |
+| Governed code mapping confirmed by QM process owner | **confirmed** | All 9 codes confirmed 2026-05-21 (tim.geldard@kerry.com); empty string = lot open, stock in QI, no decision taken |
 | No release/reject actions in scope | confirmed | Permanent constraint |
 | No SAP QM write-back in scope | confirmed | Permanent constraint |
 | No service-principal fallback introduced | confirmed | Per Databricks security rules |

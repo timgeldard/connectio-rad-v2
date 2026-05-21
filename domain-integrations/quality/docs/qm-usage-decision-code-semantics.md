@@ -1,6 +1,6 @@
 # QM Usage-Decision Code Semantics and Release-Status Boundaries
 
-**Status:** codes captured 2026-05-21; governed mapping confirmed 2026-05-21 for 8 of 9 codes (A, AE, AC, R, ACE, RE, A9, RR); empty-string code (269 rows) semantics still pending; V2 may display governed labels additive to source code for the 8 confirmed codes
+**Status:** codes captured 2026-05-21; governed mapping confirmed 2026-05-21 for all 9 observed codes including empty string; V2 may display governed labels additive to source code
 **Created:** 2026-05-21
 **Evidence captured via:** Databricks CLI using user-authorised workspace access, 2026-05-21 (code distribution from `connected_plant_uat.gold.gold_inspection_usage_decision`)
 **Related:** `qm-usage-decision-source-verification.md`, `quality-decision-source-plan.md`
@@ -21,7 +21,7 @@ Missing usage-decision data must not be interpreted as accepted or released.
 
 **Status: codes captured 2026-05-21 from live `connected_plant_uat.gold.gold_inspection_usage_decision` (15,473,693 rows).**
 
-Governed mapping confirmed 2026-05-21 (tim.geldard@kerry.com) for 8 of 9 observed codes. Empty-string code semantics remain pending — do not add a status label for empty-string rows until confirmed.
+Governed mapping confirmed 2026-05-21 (tim.geldard@kerry.com) for all 9 observed codes.
 
 | Source Code | Row Count | % of Total | V2 Display Label | Release Meaning | Confidence | Governance Required |
 |---|---:|---:|---|---|---|---|
@@ -33,7 +33,7 @@ Governed mapping confirmed 2026-05-21 (tim.geldard@kerry.com) for 8 of 9 observe
 | `RE` | 29,366 | 0.2% | "Rejected (variant / EM)" | Rejected — variant / EM | governed | No — confirmed 2026-05-21 |
 | `A9` | 6,178 | 0.0% | "Accepted — batch restricted" | Accepted but batch restricted | governed | No — confirmed 2026-05-21 |
 | `RR` | 2,725 | 0.0% | "Rejected — batch restricted globally" | Rejected + batch restricted globally | governed | No — confirmed 2026-05-21 |
-| `''` (empty string) | 269 | 0.0% | "No usage decision code recorded" | not mapped | codes observed | Yes — empty-string semantics pending |
+| `''` (empty string) | 269 | 0.0% | "Pending — lot open, stock in QI, no decision taken" | Inspection lot still open; stock in QI; no decision taken; no business effect yet | governed | No — confirmed 2026-05-21 |
 
 **Observed valuation codes (same source):**
 
@@ -73,7 +73,7 @@ When displaying usage-decision evidence in V2:
 |---|---|---|
 | Code is one of 8 governed codes (A, AE, AC, R, ACE, RE, A9, RR) — no lot text | Show source code verbatim; add governed label from §2 table; e.g. "Usage decision (source): A — Accepted" | Do not omit the source code; do not substitute the governed label for the verbatim code |
 | Code is one of 8 governed codes — lot long text available | Show code + text verbatim; add governed label; e.g. "Usage decision (source): A — Accepted · [long text]" | Do not suppress the source long text; governed label is additive only |
-| Usage-decision code is empty string (269 rows) | Show "No usage decision code recorded" | Do not show "Accepted", "Passed", "No issues", or "Compliant" — empty-string semantics are pending |
+| Usage-decision code is empty string (269 rows) | Show "Pending — lot open, stock in QI, no decision taken" | Do not show "Accepted", "Passed", "No issues", "Compliant", or "Released" |
 | Usage-decision data absent (lot has no row in UD table) | Show "No usage decision recorded" or "Evidence unavailable" | Do not show "Accepted", "Passed", "No issues", or "Compliant" |
 | Multiple inspection lots for a batch (each with a UD) | Show evidence for each lot; do not aggregate into a single "batch decision" | Do not synthesise a "batch release decision" from individual lot decisions without governance |
 | quality_status is "Pass" | "Pass/Fail label from production history source" | Do not display as "Released", "Accepted", or "QM decision: Pass" |
@@ -156,13 +156,13 @@ The following mapping rules apply to any display slice that references usage-dec
 Before any usage-decision code mapping is added to V2:
 
 - [x] The Kerry Quality or QM process owner has confirmed the code-to-release-status mapping in writing. *(tim.geldard@kerry.com, 2026-05-21)*
-- [~] The mapping covers **all 9 codes**: A, AE, AC, R, ACE, RE, A9, RR confirmed; `''` (empty string) semantics still pending.
+- [x] The mapping covers **all 9 codes**: A, AE, AC, R, ACE, RE, A9, RR, and `''` (empty string = lot open, stock in QI, no decision). *(2026-05-21)*
 - [x] The mapping is recorded in this document in §2 with confidence = `governed` and a governance reference.
 - [ ] The V2 display wording is reviewed against the SAP QM spec for consistency. *(pending)*
 - [x] Absent/null usage-decision behaviour is explicitly defined. *(§4 display wording rules)*
 - [x] The suffix semantics (E = variant/EM, C = concession, 9 = batch restricted) are explicitly addressed. *(§2 note)*
 
-**Remaining gate:** empty-string code semantics must be confirmed before any status label is shown for the 269 empty-string rows. V2 must continue to display "No usage decision code recorded" for those rows until confirmed.
+**Remaining gate:** V2 display wording review against the SAP QM spec for consistency (optional hardening; not a blocker for read-only evidence display).
 
 ---
 
@@ -171,7 +171,7 @@ Before any usage-decision code mapping is added to V2:
 | Priority | Item | Notes |
 |---|---|---|
 | ~~P0~~ | ~~Obtain governed code mapping from Kerry Quality/QM process owner~~ | **Done 2026-05-21** — 8 of 9 codes confirmed (tim.geldard@kerry.com) |
-| P0 | Confirm empty-string code semantics with QM process owner | 269 rows have empty `USAGE_DECISION_CODE` — no status label permitted until confirmed |
+| ~~P0~~ | ~~Confirm empty-string code semantics with QM process owner~~ | **Done 2026-05-21** — lot still open; stock in QI; no decision taken; no business effect yet |
 | ~~P1~~ | ~~Confirm suffix semantics: E (AE, RE), C (AC, ACE), 9 (A9), RR~~ | **Done 2026-05-21** — E = variant/EM; C = concession; 9 = batch restricted; RR = rejected globally |
 | P1 | Review `VALUATION_CODE` semantics with QM process owner | A and R observed; are they an independent axis from UD code or derived? |
 | P2 | Confirm `QUALITY_SCORE` meaning and safe display threshold | Do not use as release proxy |
