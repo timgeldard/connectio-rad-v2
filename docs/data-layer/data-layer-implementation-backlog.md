@@ -47,7 +47,7 @@ Items 5–10 require a combination of governance decisions and engineering work.
 
 ---
 
-## Rank 3 — CQ Lab: Fix critical `getLabPlants()` silent mock fallback
+## Rank 3 — CQ Lab: Fix critical `getLabPlants()` silent mock fallback *(completed 2026-05-21 on feature/data-layer-completion-audit)*
 
 | Field | Value |
 |---|---|
@@ -217,20 +217,21 @@ Items 5–10 require a combination of governance decisions and engineering work.
 
 ---
 
-## Rank 13 — Add `response_model` to routes missing backend validation
+## Rank 13 — Add `response_model` to routes missing backend validation *(partially complete 2026-05-21)*
 
 | Field | Value |
 |---|---|
 | **Domain** | Cross-domain |
-| **Work package** | Add `response_model` declarations to routes that are missing backend validation: `/api/trace2/batch-header`, `/api/por/order-header`, `/api/envmon/site-summary`, `/api/envmon/swab-results`, and optionally the 5 `/api/warehouse360/*` routes and 2 `/api/cq/lab/*` routes |
+| **Work package** | Add `response_model` declarations to routes that are missing backend validation. See `docs/data-layer/backend-contract-enforcement-plan.md` for full decision table. |
 | **Why it matters** | Without `response_model`, FastAPI does not validate the response shape before sending. If a source object changes (column rename, type change), the API silently returns malformed data. Backend validation is a safety net. |
-| **Depends on** | Low — standalone code change per route |
+| **Status** | **Partially complete (2026-05-21, branch `feature/backend-contract-enforcement`).** Enforced: `GET /envmon/site-summary` (EnvMonSiteSummary), `GET /warehouse360/{inbound,outbound,staging,exceptions}` (4 models). Skipped with documented reasons: `/trace2/batch-header` (proxy-passthrough), `/por/order-header` (proxy-passthrough + mapper mismatch), `/envmon/swab-results` (contract mismatch), `/warehouse360/overview` (mapper shape mismatch), `/cq/lab/fails` (proxy-passthrough), `/cq/lab/plants` (proxy-passthrough). |
+| **Remaining work** | Fix mapper for `/por/order-header` (remove `inspectionLotId`); align mapper for `/envmon/swab-results`; rewrite `/warehouse360/overview` mapper to contract shape; browser-verify V1 proxy paths before enforcing `/trace2/batch-header`, `/cq/lab/*` |
 | **Databricks SQL required?** | No |
 | **Business governance required?** | No |
-| **Runtime code required?** | Yes — small changes per route file |
-| **Expected files / routes / contracts** | `apps/api/routes/trace2.py`, `process_order.py`, `envmon.py`, `warehouse360.py`, `connected_quality_lab.py` | 
-| **Acceptance criteria** | Each route declaration includes `response_model=<PythonModel>`; import statements updated; existing tests still pass |
-| **Risk if skipped** | Silent data shape mismatches undetected; contract drift between Zod and Python undetected |
+| **Runtime code required?** | Yes — mapper fixes per route |
+| **Expected files / routes / contracts** | `apps/api/adapters/poh/poh_databricks_adapter.py`, `apps/api/adapters/envmon/envmon_databricks_adapter.py`, `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` |
+| **Acceptance criteria** | All remaining routes enforced; all route tests pass; no silent contract drift possible |
+| **Risk if skipped** | Silent data shape mismatches undetected for remaining 6 routes; contract drift between Zod and Python undetected |
 
 ---
 
