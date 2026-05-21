@@ -2,7 +2,7 @@
 
 **Status:** grain verified 2026-05-21; join to inspection_lot verified; two-hop join to batch confirmed; leading-zero and counter-string edge cases pending
 **Created:** 2026-05-21
-**Verified by:** tim.geldard@kerry.com, 2026-05-21 (Databricks CLI, warehouse `connected_plant_uat` / `e76480b94bea6ed5`)
+**Evidence captured via:** Databricks CLI using user-authorised workspace access, 2026-05-21 (warehouse `connected_plant_uat` / `e76480b94bea6ed5`)
 **Related:** `qm-usage-decision-source-verification.md`, `quality-databricks-source-verification.md`
 
 This document defines the grain hypotheses and join assessment for the QM usage-decision source.
@@ -212,12 +212,15 @@ LIMIT 25;
 
 ## 7. Fan-Out Risk Assessment
 
-| Risk | Description | Observed Status | Mitigation |
+**Implementation gate:** Before wiring usage-decision evidence to batch-level panels, verify whether a material + batch + plant can have multiple inspection lots, each with its own usage-decision history. If multiple lots exist, do not collapse to one batch decision — either surface lot-level evidence or require a governed rule for selecting the authoritative lot. Do not synthesise a "batch release status" from multiple lot decisions. Supplier risk must remain blocked until supplier/batch causality and risk rules are separately governed.
+
+| Fan-out Risk | Why it matters | Observed Status | Required Decision Before Wiring |
 |---|---|---|---|
-| Multiple UD rows per inspection lot (historical) | Source stores one row per decision version | **Confirmed** — max 6 rows per lot observed | Use latest row: `ORDER BY CAST(NULLIF(USAGE_DECISION_COUNTER,'') AS INT) DESC NULLS LAST LIMIT 1` per lot |
-| Multiple inspection lots per batch | A batch may have more than one inspection lot | Not checked — possible for multi-operation orders | Decide which lot is authoritative; or surface all; do not silently aggregate |
-| Non-batch-linked lots | Some lots have no MATERIAL_ID/BATCH_ID after join | **Confirmed** — lot 140000004071 has PLANT_ID=P790 but no material/batch | Exclude null-material/batch rows from batch-header display |
+| Multiple UD rows per inspection lot (historical) | Historical decisions exist — naïve SELECT returns all rows | **Confirmed** — max 6 rows per lot observed | Select latest row per lot using verified counter/date logic (see §9 SQL template) |
+| Multiple inspection lots per material/batch/plant | Batch may have several inspection outcomes | Not yet checked — possible for multi-operation orders | Surface lot-level evidence or obtain governed selection rule; do not silently aggregate |
+| Non-batch-linked inspection lots | Not all lots join to material/batch | **Confirmed** — lot 140000004071 has PLANT_ID=P790 but no material/batch | Exclude null-material/batch rows from batch-header display or show separately |
 | Null inspection lot ID | UD row exists but cannot be joined to a lot | **Not found** — 0 null lot IDs in 15.47M rows | No action required |
+| Multiple batches per process order | POH may have several batch/lot paths | Not yet checked | Keep evidence at lot/batch level; do not roll up to order level |
 
 ---
 
@@ -236,3 +239,36 @@ LIMIT 25;
 | Join to process order confirmed | not run | gold_inspection_lot.PROCESS_ORDER_ID column exists; end-to-end PO→lot→UD not verified | — |
 | Leading-zero format documented | verified for UAT candidate | Material unpadded (20052009); batch padded (0008602411); lot 12-char; plant 4-char | 2026-05-21 |
 | Fan-out risk assessed | partially assessed | Multiple UD rows per lot confirmed (historical); multiple lots per batch not yet checked | 2026-05-21 |
+
+---
+
+## 9. Proposed Latest-Usage-Decision SQL Template
+
+**Status: proposed implementation template — requires validation before use in any adapter or route.**
+
+This pattern selects the latest usage-decision row per inspection lot using a safe counter cast. It is not yet wired in any V2 adapter.
+
+```sql
+WITH usage_decision_ranked AS (
+  SELECT
+    ud.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY ud.INSPECTION_LOT_ID
+      ORDER BY
+        COALESCE(CAST(NULLIF(ud.USAGE_DECISION_COUNTER, '') AS INT), 0) DESC,
+        ud.USAGE_DECISION_CREATED_DATE DESC,
+        ud.USAGE_DECISION_UPDATED_TIME DESC
+    ) AS rn
+  FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
+)
+SELECT *
+FROM usage_decision_ranked
+WHERE rn = 1;
+```
+
+**Caveats before production use:**
+
+- Validate behaviour if `USAGE_DECISION_COUNTER` ever exceeds 9 — the max observed is 5 (single digit). String ordering is safe for single-digit counters only; if counters can reach two digits, `CAST(NULLIF(..., '') AS INT)` is the safe path (already used above), but the ordering semantics must be confirmed.
+- Validate blank counter semantics with the QM/data owner. Blank is treated as 0 (first decision); confirm this is correct before relying on the ordering for any authoritative "current decision" display.
+- Do not use `MAX(USAGE_DECISION_COUNTER)` on the raw string column — string MAX breaks at counter '10' vs '9'.
+- If `USAGE_DECISION_CREATED_DATE` or `USAGE_DECISION_UPDATED_TIME` semantics conflict with counter order (e.g., a later date but lower counter), escalate before implementation rather than choosing a tiebreak silently.

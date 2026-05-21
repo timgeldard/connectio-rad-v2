@@ -9,7 +9,7 @@ The existing V2 mock release cases in `golden-quality-batches.md` remain useful 
 
 `quality-databricks-source-verification.md` provides the broad candidate discovery SQL and evidence capture table. `qm-usage-decision-source-verification.md` provides the dedicated QM usage-decision verification pack. A candidate should move out of `TBD` only after source-object existence, required columns, row grain, usage-decision semantics, and CoA/deviation boundaries are captured from Databricks evidence.
 
-For usage-decision candidates specifically: the object `gold_inspection_usage_decision` is located in the catalog (TRACE-P1-012, 2026-05-21) but schema, grain, join keys, and code semantics are not yet verified. No usage-decision candidate can be confirmed until the evidence table in `qm-usage-decision-source-verification.md` §13 is populated.
+For usage-decision candidates specifically: `gold_inspection_usage_decision` schema (13 columns), grain (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`), and inspection-lot join were verified via Databricks CLI on 2026-05-21 (TRACE-P1-012). The UAT traceability candidate (material 20052009, batch 0008602411, plant C061) confirmed a usage-decision row (lot 030005059533, code=A, date=2024-08-27). A usage-decision candidate may be confirmed once code-to-release-status meaning is governed by the Kerry Quality/QM process owner. Raw codes must not be mapped to accepted/released/rejected until then.
 
 ## Candidate Template
 

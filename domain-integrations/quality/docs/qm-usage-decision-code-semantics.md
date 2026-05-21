@@ -2,7 +2,7 @@
 
 **Status:** codes captured 2026-05-21 — raw values observed; no governed mapping yet; QM process owner governance required before any accepted/released/rejected display
 **Created:** 2026-05-21
-**Verified by:** tim.geldard@kerry.com, 2026-05-21 (code distribution from `connected_plant_uat.gold.gold_inspection_usage_decision`)
+**Evidence captured via:** Databricks CLI using user-authorised workspace access, 2026-05-21 (code distribution from `connected_plant_uat.gold.gold_inspection_usage_decision`)
 **Related:** `qm-usage-decision-source-verification.md`, `quality-decision-source-plan.md`
 
 This document defines what can and cannot be inferred from usage-decision codes and texts, and establishes the hard boundaries between QM usage decision and other quality-related concepts.

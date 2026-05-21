@@ -1,6 +1,6 @@
 # QM Usage-Decision — Cross-Domain Consumption Plan
 
-**Status:** plan only — no live source is wired; all domain rules are conservative pending verification
+**Status:** source verified 2026-05-21; no live wiring added; domain rules remain conservative pending QM process-owner code-mapping governance (TRACE-P1-012)
 **Created:** 2026-05-21
 **Related:** `qm-usage-decision-source-verification.md`, `qm-usage-decision-code-semantics.md`, `qm-usage-decision-grain-and-joins.md`
 
@@ -14,7 +14,7 @@ This document defines how each V2 domain may consume usage-decision evidence onc
 2. Missing usage-decision evidence must not be interpreted as accepted, released, or no issue.
 3. Usage-decision code/text is displayed verbatim from source. V2 does not remap codes to release-status labels without a governed mapping confirmed by the Kerry Quality/QM process owner.
 4. Usage-decision is not SPC control status, batch stock status, CoA document approval, or production history quality_status.
-5. These rules apply until the source is verified (see `qm-usage-decision-source-verification.md` §14 Go criteria).
+5. Source object, schema, grain, and inspection-lot join are now verified (2026-05-21, see `qm-usage-decision-source-verification.md` §14). The remaining gate before any domain wiring is code-to-release-status mapping governance from the Kerry Quality/QM process owner.
 
 ---
 
