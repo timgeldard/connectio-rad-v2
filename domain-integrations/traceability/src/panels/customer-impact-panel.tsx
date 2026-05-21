@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { CustomerExposureSummary } from '@connectio/data-contracts'
 import { useCustomerExposureSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
 
 /** Static registration record for the Customer Impact panel. */
 const registration: EvidencePanelRegistration = {
@@ -121,6 +122,7 @@ export function CustomerImpactPanel({ request }: CustomerImpactPanelProps) {
                 : `Indirect exposure detected (min depth ${data.maxExposureDepth}).`}
             </div>
           )}
+          <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 4 }} />
         </div>
       )}
     </EvidencePanel>

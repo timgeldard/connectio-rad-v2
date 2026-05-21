@@ -160,6 +160,54 @@ export function calculateConfidence({
   return { grade, score, gaps, details }
 }
 
+/**
+ * Inline scoring-rule explanation rendered inside the EvidenceConfidenceBadge
+ * tooltip. Documents the sector weights and the grade thresholds so a user
+ * seeing a partial score can reason about why.
+ *
+ * Values must stay in sync with calculateConfidence() above.
+ *
+ * Exported so it can be tested directly without going through the lazy-mounted
+ * Radix Tooltip portal.
+ */
+export function ScoringRules() {
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        paddingTop: 8,
+        borderTop: '1px dashed var(--shell-line, #DAD9C9)',
+      }}
+      data-testid="evidence-confidence-scoring-rules"
+    >
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: 11,
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+          color: 'var(--shell-fg-2, #4A5C45)',
+          marginBottom: 4,
+        }}
+      >
+        How this is scored
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, lineHeight: 1.5 }}>
+        <li>Lineage — 15 pts</li>
+        <li>Customers & deliveries — 20 pts</li>
+        <li>Mass balance — 20 pts</li>
+        <li>Quality status — 15 pts</li>
+        <li>CoA / release — 15 pts</li>
+        <li>Upstream suppliers — 15 pts</li>
+      </ul>
+      <div style={{ fontSize: 11, marginTop: 6 }}>
+        <span style={{ fontWeight: 600 }}>Grades:</span>{' '}
+        Complete = 100% with no gaps · Partial ≥ 50% · Missing &lt; 50% with some data · Not Assessed = 0%
+      </div>
+    </div>
+  )
+}
+
 export interface EvidenceConfidenceBadgeProps {
   readonly result: ConfidenceResult
   readonly style?: React.CSSProperties
@@ -249,9 +297,10 @@ export function EvidenceConfidenceBadge({ result, style }: EvidenceConfidenceBad
           <div style={{ fontWeight: 600, marginBottom: 4, color: config.color }}>
             {config.label} ({result.score}%)
           </div>
-          <div style={{ marginBottom: result.gaps.length > 0 ? 8 : 0 }}>{config.desc}</div>
+          <div style={{ marginBottom: 8 }}>{config.desc}</div>
+          <ScoringRules />
           {result.gaps.length > 0 && (
-            <div>
+            <div style={{ marginTop: 8 }}>
               <div style={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--shell-fg-2, #4A5C45)', marginBottom: 4 }}>
                 Identified Gaps:
               </div>

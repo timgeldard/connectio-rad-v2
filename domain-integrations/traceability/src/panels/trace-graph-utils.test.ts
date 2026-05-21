@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { bfsLayout, mapToFlowNodes, mapToFlowEdges, filterGraphByDirection, H_SPACING, NODE_WIDTH } from './trace-graph-utils.js'
+import {
+  bfsLayout,
+  mapToFlowNodes,
+  mapToFlowEdges,
+  filterGraphByDirection,
+  H_SPACING,
+  NODE_WIDTH,
+  LINK_TYPE_COLORS,
+  DEFAULT_EDGE_COLOR,
+} from './trace-graph-utils.js'
 import type { TraceGraph } from '@connectio/data-contracts'
 
 // ---------------------------------------------------------------------------
@@ -227,5 +236,36 @@ describe('mapToFlowEdges', () => {
     const edges = mapToFlowEdges(graph)
     const e1 = edges.find(e => e.id === 'e1')
     expect(e1?.label).toBe('component of')
+  })
+
+  it('strokes per relationshipType from LINK_TYPE_COLORS', () => {
+    const edges = mapToFlowEdges(graph)
+    const componentOfEdge = edges.find(e => e.id === 'e1')!
+    const producedFromEdge = edges.find(e => e.id === 'e2')!
+    const deliveredToEdge = edges.find(e => e.id === 'e3')!
+    expect((componentOfEdge.style as Record<string, unknown>).stroke).toBe(LINK_TYPE_COLORS['component-of'])
+    expect((producedFromEdge.style as Record<string, unknown>).stroke).toBe(LINK_TYPE_COLORS['produced-from'])
+    expect((deliveredToEdge.style as Record<string, unknown>).stroke).toBe(LINK_TYPE_COLORS['delivered-to'])
+  })
+
+  it('falls back to the default colour when relationshipType is unknown or absent', () => {
+    const graphWithUnknown: TraceGraph = {
+      ...graph,
+      edges: [
+        // No relationshipType
+        { id: 'e-unknown', source: 'up1', target: 'root', quantity: 1, uom: 'KG' },
+        // Off-enum value cast to any to verify the fallback (defensive — should
+        // never happen via the Zod-parsed schema but the mapper is conservative).
+        { id: 'e-offmap', source: 'up1', target: 'root', relationshipType: 'totally-made-up' as unknown as TraceGraph['edges'][number]['relationshipType'], quantity: 1, uom: 'KG' },
+      ],
+    }
+    const edges = mapToFlowEdges(graphWithUnknown)
+    expect((edges[0].style as Record<string, unknown>).stroke).toBe(DEFAULT_EDGE_COLOR)
+    expect((edges[1].style as Record<string, unknown>).stroke).toBe(DEFAULT_EDGE_COLOR)
+  })
+
+  it('covers vendor-receipt and consumed-by in LINK_TYPE_COLORS (TRACE-P0-002 enum)', () => {
+    expect(LINK_TYPE_COLORS['vendor-receipt']).toBeDefined()
+    expect(LINK_TYPE_COLORS['consumed-by']).toBeDefined()
   })
 })

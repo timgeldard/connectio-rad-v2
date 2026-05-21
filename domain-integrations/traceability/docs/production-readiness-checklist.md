@@ -28,8 +28,8 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 |---|------|--------|-------|
 | 2.1 | "Missing evidence" clearly labelled and distinguished from "zero exposure" | ✅ | EvidenceConfidenceBadge + UNKNOWN severity path. |
 | 2.2 | Mock data is not presented as live or verified | ✅ | Adapter factory pattern; mock mode explicit. |
-| 2.3 | Evidence confidence scoring sectors documented | 🔶 | Score logic documented in code; user-facing explanation missing (TRACE-P2-004). |
-| 2.4 | Data freshness / staleness surfaced to user | 🔶 | Phase 1 disclaimer added to BatchHeaderPanel: "Data freshness not available — displayed values reflect query time only." Full freshness wiring (Approach A: `_updated_at` column from gold view) requires column verification and a future tranche. Implementation roadmap in `data-freshness-plan.md`. TRACE-P2-002 still open for full resolution. |
+| 2.3 | Evidence confidence scoring sectors documented | ✅ | `ScoringRules` section added to `EvidenceConfidenceBadge` tooltip (2026-05-21): lists each sector with point weight and the grade thresholds. TRACE-P2-004 fixed. |
+| 2.4 | Data freshness / staleness surfaced to user | 🔶 | Phase 1 expanded (2026-05-21): shared `QueriedAtLabel` component shows "Queried at HH:MM:SS — source refresh time unavailable" on BatchHeaderPanel, TraceGraphPanel, CustomerImpactPanel, MaterialSupplierExposurePanel, MassBalancePanel. Phase 2 (verified `_updated_at` column) remains open in `data-freshness-plan.md`. TRACE-P2-002 status updated. |
 | 2.5 | Quality decision source documented and blocked until QM evidence verified | 🔶 | `_derive_quality_status` returns `pending` (QI stock > 0) or `unknown` only. `accepted`/`rejected`/`conditional` require a verified QM usage-decision field (e.g. `gold_qm_usage_decision_v`) that is not in the current query. Tests prove conservative values are enforced. Blocker documented in adapter docstring. Implementation plan in `quality-decision-source-plan.md`. |
 
 ---
@@ -50,7 +50,7 @@ Status key: ✅ Done · 🔶 Partial / in progress · ❌ Not done · ⬜ Not ap
 
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | All existing tests passing on CI | ✅ | TypeScript: 224 tests (di-traceability). Python: 252 tests (adapter + route, 2026-05-20). |
+| 4.1 | All existing tests passing on CI | ✅ | TypeScript: 250 tests (di-traceability, +14 for QueriedAtLabel, ScoringRules, per-link-type edge stroke, raw linkType in edge detail). Python: 252 tests (unchanged in this PR — graph/freshness/confidence work is UI-only). |
 | 4.2 | Null/unknown data states covered by unit tests | ✅ | `InvestigationSummary.test.tsx` — 4 null-path tests added PR #24. |
 | 4.3 | Evidence confidence scoring edge cases tested | ✅ | `EvidenceConfidence.test.tsx` — COMPLETE / PARTIAL / UNKNOWN cases. |
 | 4.4 | Adapter error states (`ok: false`) tested across all panels | 🔶 | Legacy adapter tested; panel-level `displayState` handling not systematically tested. |
