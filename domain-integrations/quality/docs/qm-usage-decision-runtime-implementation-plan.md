@@ -30,7 +30,7 @@ All of the following must be true before any implementation starts:
 | Schema confirmed (13 columns) | Done — verified 2026-05-21 |
 | Grain confirmed (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`) | Done — verified 2026-05-21 |
 | Inspection-lot join confirmed | Done — verified 2026-05-21 |
-| All 9 UD codes governed | Done — confirmed 2026-05-21 |
+| All 9 UD codes governed | Done — confirmed by Kerry Quality/QM process owner (tim.geldard@kerry.com) 2026-05-21. Supports read-only display labels only. Does not authorise release/reject actions, SAP QM write-back, e-signature, or batch-level release decisions. |
 | Fan-out: multiple UD rows per lot — latest-row logic defined | Done — SQL template in `qm-usage-decision-grain-and-joins.md` §9 |
 | Fan-out: multiple lots per batch — selection rule confirmed | **Not done** — this is the remaining gate before batch-level display |
 | No service-principal fallback | Required — user OAuth only |
@@ -142,6 +142,8 @@ Always show the source UD code verbatim first. The governed label is additive.
 | `RR` | Rejected — batch restricted globally | Rejected + batch restricted globally |
 | `''` (empty string) | Pending — lot open, stock in QI | Inspection lot still open; no decision taken |
 | absent / null lot | "No inspection lot found for this batch" | Not a decision; source gap |
+
+**Important:** "Accepted" and "Rejected" in the table above are governed source usage-decision labels only — they are not release authorisations or app decisions. They reflect the SAP QM inspection team's recorded outcome for the inspection lot. V2 does not make release decisions.
 
 **Prohibited display:** "Released", "Approved", "Can Release", "Cleared" — none of these may be derived from UD evidence.
 

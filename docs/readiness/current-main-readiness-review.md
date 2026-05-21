@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-Main is now in a strong documentation and code-foundation state across Traceability and POH. Quality/QM has progressed from "discovery only" to "source verified with governed code mapping." SPC has a complete verification pack but no native implementation. Warehouse and Quality release remain blocked for live UAT.
+Main is now in a strong documentation and code-foundation state across Traceability and POH. Quality/QM has progressed from discovery-only to technically verified usage-decision source documentation and read-only implementation planning. Broader Quality evidence remains verification-pending, no live runtime route is wired, and release decisions remain blocked. SPC has a complete verification pack but no native implementation. Warehouse and Quality release remain blocked for live UAT.
 
 The next phase is **evidence capture in a deployed environment**, not further feature expansion. Two domains are ready for controlled UAT evidence runs (Traceability, POH). Two domains have actionable validation packs that require Databricks access (SPC, mass balance semantics). One domain (Quality read-only evidence) has its source verified and code mapping confirmed but no live runtime route yet.
 
@@ -29,7 +29,7 @@ No domain has passed live UAT. No production readiness is claimed.
 | Trace graph | `browser-UAT-pending` | Native route functional and browser-verified as of 2026-05-18 in shell UI |
 | Customer exposure (lineage-first) | `browser-UAT-pending` | Route wired; LINK_TYPE='DELIVERY' value not live-confirmed (DEF-TRACE-005) |
 | Customer deliveries (V1-parity) | `browser-UAT-pending` | `gold_batch_delivery_v` 17 columns confirmed live 2026-05-20 (CD-1/CD-2/CD-3 done); CD-4 through CD-6 require browser UAT |
-| Supplier exposure | `source-semantics-pending` | `gold_supplier` not in catalog resolver; slice mock-only; live wiring blocked |
+| Supplier exposure | `browser-UAT-pending` | Live first slice from `gold_batch_lineage` + `gold_supplier` (PR #57); per-supplier rows available where supplier attribution exists. Browser UAT pending. `openSupplierActions` unavailable; `highestRiskSupplier` absent — supplier risk governance pending. Not a supplier corrective-action list. |
 | Production history | `browser-UAT-pending` | Native route and mapper exist; source from `gold_batch_production_history_v` |
 | Mass balance | `source-semantics-pending` | Route live; 11 columns confirmed; MOVEMENT_CATEGORY mapping incomplete (TRACE-P1-010); BALANCE_QTY semantics unverified (TRACE-P1-011); panel shows caveats |
 | Quality status (batch header) | `source-semantics-pending` | UD source/schema/grain verified; 9 codes governed (2026-05-21); runtime wiring still not implemented; `qualityStatus` shows `unknown`/`pending` from stock proxy only |
@@ -167,7 +167,7 @@ Neither PR introduced new live Databricks routes, new Zod schema fields, or chan
 | Mass balance direction mapping (TRACE-P1-010) | MOVEMENT_CATEGORY values (STO Receipt, STO Transfer, Other (261), Other (321), Write-Off, etc.) have no confirmed directional meaning | Data platform / business owner to provide direction map |
 | BALANCE_QTY semantics (TRACE-P1-011) | Column always 0 in UAT spot check; unclear if it is a precomputed balance, placeholder, or different source | Data platform team to clarify semantics |
 | LINK_TYPE='DELIVERY' live value | Inferred from V1 source; not confirmed against live Databricks query | Run CE-4 scenario in UAT |
-| Supplier exposure source (`gold_supplier`) | Not in catalog resolver | Data platform to confirm object name and grants |
+| Supplier risk governance | `openSupplierActions` and `highestRiskSupplier` remain blocked until QM/risk governance and supplier/batch causality rules are defined. Live first slice exists (PR #57) but risk fields are not wired. | Define supplier risk rules with data platform and QM process owner |
 | Quality release workflow | No governed SAP QM write-back, e-signature, GxP workflow exists | Permanent constraint — out of scope |
 
 ---
@@ -205,7 +205,7 @@ These items have verification pack SQL templates ready but no SQL has been run a
 | Item | Reason | Status |
 |---|---|---|
 | SAP QM release/reject write-back | No governed GxP workflow; no e-signature | Permanent — out of phase scope |
-| Quality `accepted`/`released`/`rejected` display labels | UD codes are now governed — BUT lot-selection rule still needed before batch-level display | Blocked pending selection rule |
+| Quality governed UD display labels (batch-level) | UD codes are governed for read-only display labels only — BUT lot-selection rule still needed before batch-level display. "Accepted"/"Rejected" are governed source labels only, not release authorisations or app decisions. | Blocked pending lot-selection rule |
 | SPC native Databricks routes | Verification pack not yet run; data model not established | Blocked until pack executed |
 | Warehouse expansion | Source validation still pending | Deferred |
 | Shell-wide Genie/assistant | Domain packs not yet live-validated | Blocked |
@@ -218,13 +218,25 @@ These items have verification pack SQL templates ready but no SQL has been run a
 
 | Priority | Action | Owner type | Databricks required | Business owner required |
 |---|---|---|---|---|
-| 1 | Run Traceability UAT evidence runbook against deployed app | QA / developer with UAT access | Yes | No (initially) |
-| 2 | Run POH UAT evidence runbook against deployed app | QA / developer with UAT access | Yes | No (initially) |
+| 1 | Run Traceability UAT evidence runbook against deployed app | QA / developer with UAT access | No (direct SQL); deployed app in `databricks-api` mode required | No (initially) |
+| 2 | Run POH UAT evidence runbook against deployed app | QA / developer with UAT access | No (direct SQL); deployed app in `databricks-api` mode required | No (initially) |
 | 3 | Resolve TRACE-P1-010 (movement category directions) with data-platform owner | Data platform / business | No (governance) | Yes |
 | 4 | Resolve TRACE-P1-011 (BALANCE_QTY semantics) with data-platform owner | Data platform | No (governance) | Yes |
 | 5 | Confirm lot-selection rule for QM UD batch-level display | Kerry QM process owner | No (governance) | Yes |
 | 6 | Run SPC Databricks verification pack against live objects | Developer with Databricks access | Yes | No |
 | 7 | Wire QM UD read-only display (after lot-selection rule confirmed) | Developer | Yes | No |
 | 8 | Run Quality broader source verification pack (inspection-lot, MIC, CoA) | Developer with Databricks access | Yes | No |
-| 9 | Confirm `gold_supplier` object and grants for supplier exposure | Data platform | Yes | No |
+| 9 | Confirm supplier risk governance rules | Data platform / QM process owner | No (governance) | Yes |
 | 10 | Warehouse source schema alignment | Developer with Databricks access | Yes | No |
+
+---
+
+## 11. Merge Checkpoint
+
+| Area | Safe for controlled UAT? | Direct Databricks SQL required? | Business governance required? | Next action |
+|---|---|---|---|---|
+| Traceability | Yes — with mass-balance caveats | No for browser UAT; Yes for semantic validation | Yes for mass-balance direction and QM lot-selection | Run UAT evidence runbook |
+| POH | Yes | No for browser UAT | No initially | Run POH UAT runbook |
+| Quality | Not yet — no live runtime route wired | Yes for broader source verification | Yes for release/lot-selection | Finalise read-only UD display gate; verify broader sources |
+| SPC | No | Yes | Later — for control-limit/use interpretation | Run SPC verification pack |
+| Warehouse | No | Yes | Possibly | Defer until higher-priority domains unblocked |

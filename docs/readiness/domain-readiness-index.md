@@ -83,7 +83,7 @@ We use the following conservative status classifications:
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
     * `gold_batch_delivery_v` WHERE key columns (MATERIAL_ID/BATCH_ID) pending DESCRIBE TABLE — run CD-1 scenario in DEF-TRACE-006.
     * LINK_TYPE='DELIVERY' edge population requires live UAT validation before depth-aware severity is trustworthy.
-    * Quality usage decision (`gold_inspection_usage_decision`) source/schema/grain/inspection-lot join verified (2026-05-21); all 9 UD codes governed (2026-05-21); runtime slice still mock-only — wiring blocked pending lot-selection rule for multiple lots per batch. Supplier exposure (`gold_supplier`) slice remains mock-only.
+    * Quality usage decision (`gold_inspection_usage_decision`) source/schema/grain/inspection-lot join verified (2026-05-21); all 9 UD codes governed (2026-05-21); runtime slice still mock-only — wiring blocked pending lot-selection rule for multiple lots per batch. Supplier exposure has a live first slice from `gold_batch_lineage` + `gold_supplier` (PR #57); per-supplier rows available where supplier attribution exists. Browser UAT pending. Supplier risk fields (`openSupplierActions`, `highestRiskSupplier`) remain blocked pending QM/risk governance and supplier/batch causality rule definition.
 * **Document Registry:**
   * [Production Readiness Checklist](../../domain-integrations/traceability/docs/production-readiness-checklist.md)
   * [Traceability Genie Readiness Pack](../../domain-integrations/traceability/docs/traceability-genie-readiness-pack.md)
@@ -275,7 +275,7 @@ The following list summarizes the critical items blocking live validation or pro
   2. `gold_batch_mass_balance_v` WHERE filter column names unverified (TODO markers remain in SQL) — blocks mass balance live route.
   3. `gold_batch_delivery_v` column names unverified — blocks `countries` and `blockedDeliveries` fields in customer exposure slice. Lineage-only first slice now implemented but LINK_TYPE='DELIVERY' edge population requires live validation (P0-003).
   4. `gold_inspection_usage_decision` source/schema/grain/inspection-lot join verified (2026-05-21); all 9 UD codes governed (2026-05-21) — runtime wiring still blocked pending lot-selection rule for multiple lots per batch (TRACE-P1-012).
-  5. `gold_supplier` not in catalog resolver — blocks supplier exposure live slice (P1).
+  5. Supplier risk governance pending — live supplier exposure first slice exists (PR #57); `openSupplierActions` and `highestRiskSupplier` remain blocked until QM/risk governance and supplier/batch causality rules are defined (P1).
   6. OAuth token forwarding validation in the deployed environment.
 * **SPC Blockers:**
   1. V1 SPC app URL must be confirmed as accessible in UAT Databricks workspace (`apps/spc/` in ConnectIO-RAD).

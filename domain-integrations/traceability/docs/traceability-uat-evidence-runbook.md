@@ -19,6 +19,8 @@ This runbook is executable by a tester without needing repo history or Databrick
 - [ ] Confirm screenshots or screen recording is permitted in your environment.
 - [ ] Note tester identity (alias or ticket reference — no full name or email address).
 
+**Access requirements:** Direct Databricks SQL access is **not required** for this browser UAT. You need access to the deployed app in `databricks-api` mode and must be authenticated via your AAD/OAuth identity. The app connects to Databricks on your behalf using your OAuth token.
+
 ---
 
 ## Environment Record
@@ -129,7 +131,7 @@ Screenshot required: customer deliveries panel.
 | Source attribution | Record source badge / label shown | | |
 | `openSupplierActions` | Shows 0 with disclaimer or "unavailable" — never implies no risk | | |
 
-Note: supplier exposure (`gold_supplier`) is currently mock-only. Record whatever is shown and the source badge.
+Note: Supplier exposure has a live first slice (PR #57) from `gold_batch_lineage` + `gold_supplier`. Record the source badge and per-supplier rows if shown. `openSupplierActions` must show 0 with disclaimer or "unavailable" — this risk field remains blocked pending governance. Supplier exposure is not a supplier corrective-action list and does not imply supplier fault.
 
 ---
 
@@ -159,6 +161,8 @@ Screenshot required: production history panel.
 | Category mapping caveat visible | Amber warning banner for incomplete MOVEMENT_CATEGORY mapping must be visible (TRACE-P1-010) | | |
 | BALANCE_QTY caveat visible | Disclaimer that balance figure is not a verified mass-balance result must be visible (TRACE-P1-011) | | |
 | Panel does NOT show verified balance | Confirm no text claims mass balance is verified | | |
+
+**Important:** Mass-balance panel must retain caveats while TRACE-P1-010 and TRACE-P1-011 remain open. Passing UAT does not mean mass balance is semantically approved — it confirms only that the panel loads and shows the correct caveat banners.
 
 Screenshot required: mass balance panel showing caveat banner.
 
@@ -209,6 +213,29 @@ Payload must include: `adapterMode`, `sourceConfidence`, `warnings`, and section
 | Quality status unknown does not imply accepted | Warning note visible when `qualityStatus = unknown` | No warning; or "accepted" / "released" shown |
 | No panel implies recall closure | No text reads "Contained", "Cleared", "Released", "Approved" without source evidence | Any of those terms shown without source attribution |
 | Source not shown as mock when live | All panels have non-mock source badge | Any panel shows mock badge in deployed `databricks-api` mode |
+
+---
+
+## Evidence Capture Template
+
+Copy and fill in before closing the session:
+
+```
+Tester:
+Date/time:
+Environment URL:
+Commit SHA / deployment version:
+Adapter mode:
+Input values (material_id / batch_id / plant_id):
+Screenshots captured (list panels):
+Copy evidence payload captured: Yes / No
+Observed source badges (list per panel):
+Observed warnings:
+Unexpected errors:
+Pass/fail (overall):
+Defects raised:
+Notes:
+```
 
 ---
 

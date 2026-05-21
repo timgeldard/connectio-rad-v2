@@ -17,6 +17,8 @@ This runbook is executable by a tester without needing repo history or Databrick
 - [ ] Note tester identity (alias or ticket reference — no full name or email address).
 - [ ] Confirm the UAT candidate button or form accepts `7006965038 / C113`.
 
+**Access requirements:** Direct Databricks SQL access is **not required** for this browser UAT. You need access to the deployed app in `databricks-api` mode and must be authenticated via your AAD/OAuth identity. The app connects to Databricks on your behalf using your OAuth token.
+
 ---
 
 ## Environment Record
@@ -117,6 +119,8 @@ Screenshot required: goods movements section.
 | Negative net rows visible | Rows with netQuantity < 0 (over-reversals) are visible | | |
 | No BOM/reservation coverage claim | Panel must NOT imply this covers all components | | |
 
+**Important:** Component consumption must show material + batch + UOM grouping. Mixed UOM quantities must not be summed. Multiple batches must remain visible as separate rows. Zero/negative net rows must not disappear.
+
 Screenshot required: component consumption section showing material + batch + UOM columns.
 
 ---
@@ -181,6 +185,29 @@ Payload must include: `adapterMode`, section source summary, section completenes
 | No-record sections show explicit message | "No records returned" / "Pending" message | Silent empty section or zero count |
 | No section implies confirmed absence | No "No operations" / "No confirmations" claim | Any claim of complete absence |
 | Source not shown as mock when live | All sections non-mock in deployed `databricks-api` mode | Any mock badge in live mode |
+
+---
+
+## Evidence Capture Template
+
+Copy and fill in before closing the session:
+
+```
+Tester:
+Date/time:
+Environment URL:
+Commit SHA / deployment version:
+Adapter mode:
+Input values (processOrderId / plantId):
+Screenshots captured (list sections):
+Copy evidence payload captured: Yes / No
+Observed source badges (list per section):
+Observed warnings:
+Unexpected errors:
+Pass/fail (overall):
+Defects raised:
+Notes:
+```
 
 ---
 

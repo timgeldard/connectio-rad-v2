@@ -15,7 +15,7 @@ This plan defines the recommended next order of work after the post-merge readin
 | Field | Value |
 |---|---|
 | Owner type | QA / developer with deployed UAT environment access |
-| Databricks access required | Yes — deployed app must run in `databricks-api` mode |
+| Direct Databricks SQL access required | No. Deployed app in `databricks-api` mode required: Yes. Tester must have access to the deployed UAT app and be authenticated via AAD/OAuth. |
 | Business owner required | No (initially) — purely technical evidence capture |
 | Expected output | Filled-in `traceability-uat-evidence-runbook.md`; UAT run table row in `uat-validation-ledger.md`; screenshots per panel |
 | Blocked by | Deployed Databricks Apps environment with OAuth and `databricks-api` adapter mode |
@@ -31,7 +31,7 @@ This plan defines the recommended next order of work after the post-merge readin
 | Field | Value |
 |---|---|
 | Owner type | QA / developer with deployed UAT environment access |
-| Databricks access required | Yes — all 4 POH routes require native Databricks execution |
+| Direct Databricks SQL access required | No. Deployed app in `databricks-api` mode required: Yes. Tester must have access to the deployed UAT app and be authenticated via AAD/OAuth. |
 | Business owner required | No (initially) |
 | Expected output | Filled-in `poh-uat-evidence-runbook.md`; screenshots per section; component consumption rows captured showing material + batch + UOM |
 | Blocked by | Deployed environment; confirmed `databricks-api` adapter mode for POH |
@@ -126,16 +126,16 @@ This plan defines the recommended next order of work after the post-merge readin
 
 ---
 
-### Action 9 — Confirm `gold_supplier` Object and Grants for Supplier Exposure
+### Action 9 — Confirm Supplier Risk Governance Rules
 
 | Field | Value |
 |---|---|
-| Owner type | Data platform engineer |
-| Databricks access required | Yes — catalog resolver check |
-| Business owner required | No |
-| Expected output | Object name confirmed; Unity Catalog grant confirmed; supplier exposure live slice can be planned |
-| Blocked by | Data platform availability |
-| Risk if skipped | Supplier exposure remains mock-only indefinitely |
+| Owner type | Data platform engineer / QM process owner |
+| Direct Databricks SQL access required | No for governance decision. Databricks access may be needed later to quantify supplier fan-out. |
+| Business owner required | Yes — risk rules and supplier/batch causality must be confirmed before populating risk fields |
+| Expected output | Governed rules for `openSupplierActions` and `highestRiskSupplier` defined; supplier risk field wiring can be planned |
+| Blocked by | QM/risk governance; supplier/batch causality rule definition |
+| Risk if skipped | `openSupplierActions` and `highestRiskSupplier` remain blocked indefinitely. Live first slice exists (PR #57) but risk fields cannot be wired without defined rules. |
 
 ---
 
@@ -156,15 +156,15 @@ This plan defines the recommended next order of work after the post-merge readin
 
 | # | Action | Dev task | Databricks needed | Business owner needed | Priority |
 |---|---|---|---|---|---|
-| 1 | Traceability UAT runbook | Yes | Yes | No | P0 |
-| 2 | POH UAT runbook | Yes | Yes | No | P0 |
+| 1 | Traceability UAT runbook | Yes | App access only (no direct SQL) | No | P0 |
+| 2 | POH UAT runbook | Yes | App access only (no direct SQL) | No | P0 |
 | 3 | Mass balance direction mapping | No | Optional | Yes | P1 |
 | 4 | BALANCE_QTY semantics | Yes | Yes | No | P1 |
 | 5 | UD lot-selection rule | No | No | Yes | P1 |
 | 6 | SPC Databricks verification pack | Yes | Yes | No | P2 |
 | 7 | Wire QM UD read-only display | Yes | Yes | No | P2 (after 5) |
 | 8 | Quality broader source pack | Yes | Yes | No | P2 |
-| 9 | `gold_supplier` grants | No | Yes | No | P2 |
+| 9 | Supplier risk governance | No | No (governance) | Yes | P2 |
 | 10 | Warehouse schema alignment | Yes | Yes | No | P3 |
 
 ---
@@ -176,3 +176,31 @@ This plan defines the recommended next order of work after the post-merge readin
 - Do not wire UD batch-level display before the lot-selection rule (Action 5) is confirmed.
 - Do not implement Quality release/reject actions, e-signature, or SAP QM write-back — these are out of scope for the current phase.
 - Do not claim production readiness for any domain until live UAT evidence is captured and reviewed.
+
+---
+
+## Do Not Start Yet
+
+The following must not be started until their stated gate is passed:
+
+- **Do not start native SPC Databricks routes** until the SPC verification pack (Action 6) is run and all 7 gold view objects are confirmed.
+- **Do not start Quality release workflow.** No SAP QM write-back, release/reject actions, e-signature, or GxP approval flow — permanent constraint in this phase.
+- **Do not add release/reject/approve/can-release UI.** These imply release authority and must not be introduced.
+- **Do not remove mass-balance caveats** (TRACE-P1-010, TRACE-P1-011 banners) until MOVEMENT_CATEGORY direction is confirmed by data-platform/business owner and BALANCE_QTY semantics are verified.
+- **Do not map MOVEMENT_CATEGORY direction** without business/data-platform validation (Action 3).
+- **Do not use BALANCE_QTY as a running balance** until source semantics are confirmed (Action 4).
+- **Do not expand Warehouse** until source validation catches up (Action 10 is P3 — defer until P0–P2 complete).
+- **Do not make Genie shell-wide or decision-authoritative** until domain-level packs are live-validated and source-truthful.
+- **Do not show mock/unavailable data as live.** Any panel not backed by a confirmed live route must retain its mock/unavailable label.
+
+---
+
+## Merge Checkpoint
+
+| Area | Safe for controlled UAT? | Direct Databricks SQL required? | Business governance required? | Next action |
+|---|---|---|---|---|
+| Traceability | Yes — with mass-balance caveats | No for browser UAT; Yes for semantic validation | Yes for mass-balance direction and QM lot-selection | Run UAT evidence runbook |
+| POH | Yes | No for browser UAT | No initially | Run POH UAT runbook |
+| Quality | Not yet — no live runtime route wired | Yes for broader source verification | Yes for release/lot-selection | Finalise read-only UD display gate; verify broader sources |
+| SPC | No | Yes | Later — for control-limit/use interpretation | Run SPC verification pack |
+| Warehouse | No | Yes | Possibly | Defer until higher-priority domains unblocked |
