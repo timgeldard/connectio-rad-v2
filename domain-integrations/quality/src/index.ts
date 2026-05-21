@@ -107,6 +107,11 @@ export type {
   QualityEvidenceNowFn,
 } from './adapters/quality-readonly-evidence-adapter.js'
 
+export { useQualityReadOnlyEvidence } from './adapters/quality-readonly-evidence-queries.js'
+
+export { QualityReadOnlyEvidencePanel } from './panels/quality-readonly-evidence-panel.js'
+export type { QualityReadOnlyEvidencePanelProps } from './panels/quality-readonly-evidence-panel.js'
+
 export {
   useConnectedQualityLabFailures,
   useConnectedQualityLabPlants,

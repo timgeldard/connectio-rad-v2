@@ -171,7 +171,7 @@ We use the following conservative status classifications:
   * Release decision panels (Summary, Hold/Impact, Deviations, CoA, Decision History) are mock/simulated.
   * Connected Quality Lab Board is wired to a legacy API proxy (browser verification is pending).
   * **V1 source discovery completed (2026-05-21):** V1 has real read-only inspection/MIC/usage-decision/CoA-result evidence across ConnectedQuality, POH, and Trace2, but no governed production batch-release workflow, e-signature, SAP QM write-back, or live deviation workflow was proven.
-  * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and Quality/SPC shared MIC boundaries are documented. Native route/UI implementation remains pending source verification.
+  * **Read-only evidence foundation started (2026-05-21):** Databricks source verification pack is ready, read-only Quality evidence contracts are in data-contracts, an unavailable adapter skeleton exists, and a pending-verification panel scaffold is mounted in the Quality Evidence view. Native route/live data implementation remains pending source verification.
   * Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
   * Release actions are simulated-only; no SAP QM write-back or e-signatures/audit trails are implemented.
   * **UAT Blockers:**
@@ -185,6 +185,7 @@ We use the following conservative status classifications:
   * [Quality V2 Parity Roadmap](../../domain-integrations/quality/docs/quality-v2-parity-roadmap.md)
   * [Quality Databricks Source Verification Pack](../../domain-integrations/quality/docs/quality-databricks-source-verification.md)
   * [Quality Read-Only Evidence Route Plan](../../domain-integrations/quality/docs/quality-readonly-evidence-route-plan.md)
+  * [Quality Read-Only Evidence Panel Scaffold](../../domain-integrations/quality/docs/quality-readonly-evidence-panel-design.md)
   * [Quality/SPC Shared MIC Evidence Boundaries](../../domain-integrations/quality/docs/quality-spc-shared-mic-evidence.md)
   * [Golden Quality Candidates](../../domain-integrations/quality/docs/golden-quality-candidates.md)
   * [Quality Production Readiness Checklist](../../domain-integrations/quality/docs/quality-readiness-checklist.md)
