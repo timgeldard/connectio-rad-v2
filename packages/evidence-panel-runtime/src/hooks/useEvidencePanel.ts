@@ -84,7 +84,7 @@ export function useEvidencePanel({
     // Only re-run when the refresh timestamp or policy changes.
     // displayState is intentionally excluded to avoid re-scheduling the timer
     // on state transitions unrelated to freshness.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [lastRefreshedAt, staleAfterSeconds])
 
   return { displayState, markStale, markReady, markError }

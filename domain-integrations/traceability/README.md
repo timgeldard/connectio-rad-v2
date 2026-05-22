@@ -40,16 +40,16 @@ pnpm nx typecheck di-traceability
 
 ## Key docs
 
-| Doc | Purpose |
-|-----|---------|
-| `docs/mb56-parity-review.md` | Gap analysis vs. reference SQL engine |
-| `docs/uat-acceptance-script.md` | 10 UAT scenarios for QA / food-safety users |
-| `docs/golden-test-batches.md` | Register of known test batches |
-| `docs/uat-validation-ledger.md` | Live UAT run history |
-| `docs/traceability-defect-backlog.md` | Classified defect register |
-| `docs/production-readiness-checklist.md` | Gates before production use |
+| Doc                                         | Purpose                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| `docs/mb56-parity-review.md`                | Gap analysis vs. reference SQL engine                             |
+| `docs/uat-acceptance-script.md`             | 10 UAT scenarios for QA / food-safety users                       |
+| `docs/golden-test-batches.md`               | Register of known test batches                                    |
+| `docs/uat-validation-ledger.md`             | Live UAT run history                                              |
+| `docs/traceability-defect-backlog.md`       | Classified defect register                                        |
+| `docs/production-readiness-checklist.md`    | Gates before production use                                       |
 | `docs/traceability-genie-readiness-pack.md` | First approved Traceability Genie question pack and blocked scope |
 
 ## Status
 
-Hybrid readiness. `BatchHeaderPanel` has a browser-verified `legacy-api` path, and `TraceGraphPanel` has a browser-verified native `databricks-api` path. Several other trace panels remain mock-only or are still blocked on DDL/source verification. A new **Trace Assistant Pilot** view now provides a deterministic, domain-scoped assistant surface limited to focal batch and visible graph evidence. See `docs/production-readiness-checklist.md` and `docs/traceability-genie-readiness-pack.md` for the current gates.
+Hybrid readiness. `BatchHeaderPanel` has a browser-verified `legacy-api` path, and `TraceGraphPanel` has a browser-verified native `databricks-api` path. Trace App routes (`recall-readiness`, `supplier-batches`, `batch-quality-passport`, `mass-balance-ledger`, `investigation-timeline`, `holds-ledger`) exist as code-fixed but browser-UAT-pending read-only evidence routes. Several other trace panels remain mock-only or are still blocked on DDL/source verification. A new **Trace Assistant Pilot** view now provides a deterministic, domain-scoped assistant surface limited to focal batch and visible graph evidence. See `docs/production-readiness-checklist.md` and `docs/traceability-genie-readiness-pack.md` for the current gates.

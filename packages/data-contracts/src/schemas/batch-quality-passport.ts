@@ -52,13 +52,13 @@ export type PassportIdentity = z.infer<typeof PassportIdentitySchema>
  * - `confidenceSource` is fixed at `application-heuristic` while the score is
  *   client-derived; it transitions to `governed` only when a backed QM
  *   calculation is authorised.
- * - `overallStatus` is also derived from the same heuristic — treat as a
+ * - `heuristicQualityStatus` is also derived from the same heuristic — treat as a
  *   *summary indicator*, not a release decision.
  */
 export const PassportQualitySchema = z.object({
   heuristicQualityConfidence: z.number().min(0).max(100),
   confidenceSource: z.enum(['application-heuristic', 'governed']),
-  overallStatus: z.enum(['accepted', 'conditional', 'rejected']),
+  heuristicQualityStatus: z.enum(['accepted', 'conditional', 'rejected']),
   notes: z.array(z.string()),
   coa: z.array(QualityCharacteristicSchema),
 })

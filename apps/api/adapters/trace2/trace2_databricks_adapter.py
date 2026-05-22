@@ -1684,7 +1684,7 @@ def map_supplier_batch_view(
             # CoA reference is not on gold_batch_lineage — left null.
             "coa": None,
             # Risk is server-derived from supplier history once that view exists.
-            "risk": "low",
+            "risk": "unknown",
         })
 
     sibling_batches: list[dict] = []
@@ -2568,18 +2568,6 @@ def build_batch_quality_passport(
             "decisionType": "usage-decision-recorded",
             "recordedAt": str(latest_accept.get("date") or ""),
         })
-    usage_decision_evidence.append({
-        "role": "Release decision",
-        "decisionBy": "—",
-        "decisionType": "none",
-        "recordedAt": "",
-    })
-    usage_decision_evidence.append({
-        "role": "Group QA",
-        "decisionBy": "—",
-        "decisionType": "none",
-        "recordedAt": "",
-    })
 
     # daysToExpiry: compute from identity.expiryDate vs today
     from datetime import datetime, timezone
@@ -2610,7 +2598,7 @@ def build_batch_quality_passport(
             # naming and the `confidenceSource` tag.
             "heuristicQualityConfidence": confidence,
             "confidenceSource": "application-heuristic",
-            "overallStatus": overall_status,
+            "heuristicQualityStatus": overall_status,
             "notes": notes,
             "coa": coa,
         },
