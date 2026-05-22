@@ -12,30 +12,59 @@ from pydantic import BaseModel, field_validator
 
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
+    Trace2BatchQualityPassportRequest,
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
+    Trace2HoldsLedgerRequest,
+    Trace2InvestigationTimelineRequest,
+    Trace2MassBalanceLedgerRequest,
     Trace2ProductionHistoryRequest,
+    Trace2RecallReadinessRequest,
+    Trace2SupplierBatchViewRequest,
     Trace2SupplierExposureRequest,
     Trace2MassBalanceRequest,
     TraceGraphRequest,
+    build_batch_quality_passport,
     get_batch_header_summary_spec,
+    get_batch_quality_passport_balance_spec,
+    get_batch_quality_passport_coa_spec,
+    get_batch_quality_passport_lots_spec,
+    get_batch_quality_passport_partial_spec,
+    get_batch_quality_passport_summary_spec,
     get_customer_delivery_spec,
     get_customer_exposure_spec,
+    get_holds_ledger_spec,
+    get_investigation_timeline_spec,
+    get_mass_balance_ledger_spec,
     get_production_history_spec,
+    get_recall_readiness_spec,
+    get_supplier_consumed_lots_spec,
     get_supplier_exposure_spec,
+    get_supplier_sibling_batches_spec,
     get_mass_balance_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
+    map_holds_ledger_rows,
+    map_investigation_timeline_rows,
+    map_mass_balance_ledger_rows,
     map_production_history_rows,
+    map_recall_readiness_rows,
+    map_supplier_batch_view,
     map_supplier_exposure_rows,
     map_mass_balance_rows,
     map_trace_graph,
 )
 from contracts.generated import (
+    BatchQualityPassport,
     CustomerExposureSummary,
+    HoldsLedger,
+    InvestigationTimeline,
+    MassBalanceLedger,
     ProductionHistorySummary,
+    RecallReadiness,
+    SupplierBatchView,
     SupplierExposureSummary,
     MassBalanceSummary,
     MassBalanceSummary,
@@ -546,5 +575,378 @@ async def mass_balance(
             ),
         )
     result = map_mass_balance_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/recall-readiness
+# ---------------------------------------------------------------------------
+
+class RecallReadinessBody(BaseModel):
+    material_id: str
+    batch_id: str
+    max_rows: int = 10000
+
+
+@router.post("/trace2/recall-readiness", response_model=RecallReadiness)
+async def recall_readiness(
+    body: RecallReadinessBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/recall-readiness — cross-plant exposure aggregation.
+
+    Only available in databricks-api mode. No legacy-api fallback. No mock fallback.
+    Source: gold_batch_delivery_v aggregated by country with per-delivery detail.
+    No plant filter — recall coverage must span all plants.
+
+    Zero rows → HTTP 404. Zero rows must NOT be interpreted as zero exposure.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="recall-readiness requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 50000)
+    request = Trace2RecallReadinessRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        max_rows=max_rows,
+    )
+
+    rows, spec = await run_query(
+        lambda: get_recall_readiness_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_recall_readiness_rows(rows)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No customer delivery records returned from current source — "
+                "do not interpret as zero exposure until source coverage is validated."
+            ),
+        )
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/supplier-batches
+# ---------------------------------------------------------------------------
+
+class SupplierBatchesBody(BaseModel):
+    material_id: str
+    batch_id: str
+    max_rows: int = 5000
+
+
+@router.post("/trace2/supplier-batches", response_model=SupplierBatchView)
+async def supplier_batches(
+    body: SupplierBatchesBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/supplier-batches — consumed vendor lots + cross-plant siblings.
+
+    Two-query slice:
+      1) consumed_lots — VENDOR_RECEIPT edges where CHILD is the active batch
+      2) sibling_batches — other batches that consumed any of the same vendor lots
+
+    Plant is intentionally NOT filtered on the siblings query — cross-plant
+    ripple risk is the whole point.
+
+    No fallback. Empty result is a valid 200 response (an empty consumedLots
+    list means the batch has no vendor receipts in the lineage view).
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="supplier-batches requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    max_rows = min(max(body.max_rows, 1), 10000)
+    request = Trace2SupplierBatchViewRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        max_rows=max_rows,
+    )
+
+    consumed_rows, consumed_spec = await run_query(
+        lambda: get_supplier_consumed_lots_spec(request),
+        identity, host, warehouse_id,
+    )
+
+    vendor_batches = sorted({
+        str(r.get("vendor_batch") or "")
+        for r in consumed_rows
+        if r.get("vendor_batch")
+    })
+
+    sibling_rows, _ = await run_query(
+        lambda: get_supplier_sibling_batches_spec(request, vendor_batches),
+        identity, host, warehouse_id,
+    )
+
+    result = map_supplier_batch_view(consumed_rows, sibling_rows)
+    # Use the consumed-lots spec for response headers (it carries the primary
+    # source-badge `view:gold_batch_lineage`).
+    set_databricks_response_headers(response, consumed_spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/batch-quality-passport (PARTIAL)
+# ---------------------------------------------------------------------------
+
+class BatchQualityPassportBody(BaseModel):
+    material_id: str
+    batch_id: str
+    plant_id: str = ""
+
+
+@router.post("/trace2/batch-quality-passport", response_model=BatchQualityPassport)
+async def batch_quality_passport(
+    body: BatchQualityPassportBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/batch-quality-passport — full real-data passport.
+
+    Fans out across 5 source queries (identity JOIN, CoA results, lot history,
+    quality summary KPIs, mass-balance variance) and assembles a complete
+    BatchQualityPassport response. Identity 404s if the batch is not found in
+    primary sources (same semantics as batch-header).
+
+    The 7 response sections are populated as follows:
+      - identity / stock / production → gold_batch_stock_v + summary_v +
+        material + plant + production_history_v
+      - quality.coa                   → gold_batch_quality_result_v
+      - quality.confidence / notes    → derived from failed_mic_count + warns
+      - lotHistory                    → gold_batch_quality_lot_v
+      - massBalance.variance / note   → gold_batch_mass_balance_v aggregates
+      - signoff                       → derived from latest accepted lot's CREATED_BY
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="batch-quality-passport requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+
+    request = Trace2BatchQualityPassportRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        plant_id=body.plant_id,
+    )
+
+    identity_rows, spec = await run_query(
+        lambda: get_batch_quality_passport_partial_spec(request),
+        identity, host, warehouse_id,
+    )
+
+    coa_rows, _ = await run_query(
+        lambda: get_batch_quality_passport_coa_spec(request),
+        identity, host, warehouse_id,
+    )
+    lot_rows, _ = await run_query(
+        lambda: get_batch_quality_passport_lots_spec(request),
+        identity, host, warehouse_id,
+    )
+    summary_rows, _ = await run_query(
+        lambda: get_batch_quality_passport_summary_spec(request),
+        identity, host, warehouse_id,
+    )
+    balance_rows, _ = await run_query(
+        lambda: get_batch_quality_passport_balance_spec(request),
+        identity, host, warehouse_id,
+    )
+
+    result = build_batch_quality_passport(
+        identity_rows, coa_rows, lot_rows, summary_rows, balance_rows,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/mass-balance-ledger
+# ---------------------------------------------------------------------------
+
+class MassBalanceLedgerBody(BaseModel):
+    material_id: str
+    batch_id: str
+    plant_id: str = ""
+    max_rows: int = 5000
+
+
+@router.post("/trace2/mass-balance-ledger", response_model=MassBalanceLedger)
+async def mass_balance_ledger(
+    body: MassBalanceLedgerBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/mass-balance-ledger — MSEG-style movement ledger.
+
+    Source: gold_batch_mass_balance_v ordered by POSTING_DATE. KPIs computed
+    by bucketing MOVEMENT_TYPE into {101, 261, 601, 701}. Zero rows → 404.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="mass-balance-ledger requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+    max_rows = min(max(body.max_rows, 1), 20000)
+    request = Trace2MassBalanceLedgerRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        plant_id=body.plant_id,
+        max_rows=max_rows,
+    )
+    rows, spec = await run_query(
+        lambda: get_mass_balance_ledger_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_mass_balance_ledger_rows(rows)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No movement records found for this batch.",
+        )
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/investigation-timeline
+# ---------------------------------------------------------------------------
+
+class InvestigationTimelineBody(BaseModel):
+    material_id: str
+    batch_id: str
+    plant_id: str = ""
+    max_rows: int = 1000
+
+
+@router.post("/trace2/investigation-timeline", response_model=InvestigationTimeline)
+async def investigation_timeline(
+    body: InvestigationTimelineBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/investigation-timeline — UNION timeline.
+
+    Sources: gold_batch_mass_balance_v + gold_batch_quality_lot_v +
+    gold_batch_delivery_v. Returns a single chronological event list. Empty
+    is valid (the batch may have no inspections or dispatches yet).
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="investigation-timeline requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+    max_rows = min(max(body.max_rows, 1), 5000)
+    request = Trace2InvestigationTimelineRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        plant_id=body.plant_id,
+        max_rows=max_rows,
+    )
+    rows, spec = await run_query(
+        lambda: get_investigation_timeline_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_investigation_timeline_rows(rows)
+    set_databricks_response_headers(response, spec)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Trace App slice — POST /trace2/holds-ledger
+# ---------------------------------------------------------------------------
+
+class HoldsLedgerBody(BaseModel):
+    material_id: str
+    batch_id: str
+    plant_id: str = ""
+    max_rows: int = 500
+
+
+@router.post("/trace2/holds-ledger", response_model=HoldsLedger)
+async def holds_ledger(
+    body: HoldsLedgerBody,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/holds-ledger — synthesised holds view.
+
+    Sources: gold_batch_stock_v (current qty-by-reason rollup) + LEFT JOIN
+    gold_batch_quality_lot_v (active = no usage decision; resolved = decision
+    present). Zero rows → 404. Empty active/resolved lists are valid.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="holds-ledger requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+    max_rows = min(max(body.max_rows, 1), 2000)
+    request = Trace2HoldsLedgerRequest(
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+        plant_id=body.plant_id,
+        max_rows=max_rows,
+    )
+    rows, spec = await run_query(
+        lambda: get_holds_ledger_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_holds_ledger_rows(rows)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Batch not found")
     set_databricks_response_headers(response, spec)
     return result
