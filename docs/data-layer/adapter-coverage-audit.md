@@ -118,7 +118,7 @@ None of the 3 overridden methods have been browser-verified against a live V1 SP
 
 | Method | Override tier | Backend route | Fallback behaviour | Source badge | Error/no-record | Tests | Risk | Next action |
 |---|---|---|---|---|---|---|---|---|
-| `getQualityEvidence()` | unavailable-state (explicit) | None | Returns `{ status: 'pending-source-verification', ... source: 'databricks-api' }` | `databricks-api` (source set even for unavailable state) | N/A — always returns unavailable state | 196 source-truthfulness tests (PR #66) | **NONE** — correctly labelled | Wire live route after lot-selection rule confirmed |
+| `getQualityEvidence()` | unavailable-state (explicit skeleton route) | `POST /api/quality/read-only-evidence` | Returns `{ ok: true, data: { summary: { status: 'pending-source-verification' ... } } }` from API | `databricks-api` (API returns unavailable) | N/A — always returns unavailable state | Route and adapter tests; 196 source-truthfulness tests | **NONE** — correctly labelled | Wire live route after lot-selection rule confirmed |
 
 ---
 

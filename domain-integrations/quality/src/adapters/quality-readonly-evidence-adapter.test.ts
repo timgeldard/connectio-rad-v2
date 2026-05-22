@@ -5,8 +5,8 @@ import { QualityReadOnlyEvidenceAdapter } from './quality-readonly-evidence-adap
 const fixedNow = () => '2026-05-21T09:15:00.000Z'
 
 describe('QualityReadOnlyEvidenceAdapter', () => {
-  it('returns an explicit pending-source-verification response in databricks-api mode', async () => {
-    const adapter = new QualityReadOnlyEvidenceAdapter({ now: fixedNow })
+  it('returns an explicit pending-source-verification response in mock mode', async () => {
+    const adapter = new QualityReadOnlyEvidenceAdapter({ now: fixedNow, source: 'mock' })
 
     const result = await adapter.getQualityEvidence({
       plantId: 'C113',
@@ -21,9 +21,9 @@ describe('QualityReadOnlyEvidenceAdapter', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    expect(result.source).toBe('databricks-api')
+    expect(result.source).toBe('mock')
     expect(result.fetchedAt).toBe(fixedNow())
-    expect(result.data.summary.source).toBe('databricks-api')
+    expect(result.data.summary.source).toBe('mock')
     expect(result.data.summary.status).toBe('pending-source-verification')
     expect(result.data.summary.sourceFreshnessStatus).toBe('not-verified')
     expect(result.data.summary.usageDecisionStatus).toBe('source-unverified')
@@ -38,7 +38,7 @@ describe('QualityReadOnlyEvidenceAdapter', () => {
   })
 
   it('does not return mock evidence or release-decision fields', async () => {
-    const adapter = new QualityReadOnlyEvidenceAdapter({ now: fixedNow })
+    const adapter = new QualityReadOnlyEvidenceAdapter({ now: fixedNow, source: 'databricks-api' })
     const result = await adapter.getQualityEvidence({ batchId: '0008602411' })
 
     expect(result.ok).toBe(true)

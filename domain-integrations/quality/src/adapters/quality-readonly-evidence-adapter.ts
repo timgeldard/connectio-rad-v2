@@ -12,7 +12,7 @@ const defaultNow: QualityEvidenceNowFn = () => new Date().toISOString()
 
 export interface QualityReadOnlyEvidenceAdapterOptions {
   readonly now?: QualityEvidenceNowFn
-  readonly source?: Extract<AdapterSource, 'databricks-api'>
+  readonly source?: Exclude<AdapterSource, 'mixed'>
 }
 
 /**
@@ -25,7 +25,7 @@ export interface QualityReadOnlyEvidenceAdapterOptions {
  */
 export class QualityReadOnlyEvidenceAdapter {
   private readonly now: QualityEvidenceNowFn
-  private readonly source: Extract<AdapterSource, 'databricks-api'>
+  private readonly source: Exclude<AdapterSource, 'mixed'>
 
   constructor(options: QualityReadOnlyEvidenceAdapterOptions = {}) {
     this.now = options.now ?? defaultNow
@@ -74,5 +74,4 @@ export class QualityReadOnlyEvidenceAdapter {
     }
   }
 }
-
-export const qualityReadOnlyEvidenceAdapter = new QualityReadOnlyEvidenceAdapter()
+// Removed singleton export, see factory

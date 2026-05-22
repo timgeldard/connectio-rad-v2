@@ -14,6 +14,7 @@ from routes.spc import router as spc_router
 from routes.trace2 import router as trace2_router
 from routes.warehouse360 import router as warehouse360_router
 from routes.workspaces import router as workspaces_router
+from routes.quality import router as quality_router
 
 app = FastAPI(title="ConnectIO API", version="0.1.0")
 
@@ -35,6 +36,7 @@ app.include_router(process_order_router, prefix="/api")
 app.include_router(connected_quality_lab_router, prefix="/api")
 app.include_router(envmon_router, prefix="/api")
 app.include_router(spc_router, prefix="/api")
+app.include_router(quality_router, prefix="/api")
 
 # Serve the React bundle as static files when deployed to Databricks Apps.
 # The static/ directory is absent in local development (Vite serves the frontend directly).

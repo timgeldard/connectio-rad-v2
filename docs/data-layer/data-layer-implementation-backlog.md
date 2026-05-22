@@ -103,13 +103,11 @@ Items 5–10 require a combination of governance decisions and engineering work.
 | Field | Value |
 |---|---|
 | **Domain** | Quality, Traceability |
-| **Work package** | Implement `POST /api/quality/usage-decision` native Databricks route; wire `QualityReadOnlyEvidenceAdapter` to return real data; display per-lot UD table in Quality Evidence view |
-| **Why it matters** | The source is fully verified (`gold_inspection_usage_decision`), the Zod contracts are complete, the display helpers are tested (60+ unit tests), and the Python model exists. This is the next-most-ready live implementation after POH and Traceability. |
-| **Depends on** | Rank 5 (lot-selection rule confirmed); Unity Catalog grants for `gold_inspection_usage_decision` + `gold_inspection_lot`; SQL template for latest-UD-per-lot query |
-| **Databricks SQL required?** | Yes — route execution |
-| **Business governance required?** | Governance gate already cleared (Rank 5) |
-| **Runtime code required?** | Yes |
-| **Expected files / routes / contracts** | `apps/api/routes/quality.py` (new route); `domain-integrations/quality/src/adapters/quality-readonly-evidence-adapter.ts` (add live fetch); add `response_model=QualityEvidenceResponse` to route; tests for live path |
+| **Work package** | Replace `POST /api/quality/read-only-evidence` unavailable skeleton with verified QM UD query; update `QualityReadOnlyEvidenceApiAdapter` to map live rows; display per-lot UD table in Quality Evidence view |
+| **Why it matters** | The API skeleton and contracts are in place, but they return an explicit unavailable state. Replacing the skeleton body with the verified UD query completes the vertical slice. |
+| **Prerequisites** | Rank 5 (QM UD lot-selection rule confirmed) |
+| **Effort** | Medium (backend query + frontend mapping) |
+| **Expected files / routes / contracts** | `apps/api/routes/quality.py` (update route body); `domain-integrations/quality/src/adapters/quality-readonly-evidence-api-adapter.ts` (update to expect live data); tests for live path |
 | **Acceptance criteria** | Route returns real per-lot UD data; frontend displays governed UD labels (never "Released"/"Approved"); source badge shows `databricks-api`; unavailable state shown if no lots found; test coverage for success + no-record + error paths |
 | **Risk if skipped** | UD evidence remains mock/unavailable; Quality panel stays in `pending-source-verification` state indefinitely |
 
