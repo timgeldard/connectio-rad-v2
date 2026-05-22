@@ -20,9 +20,9 @@ export {
 export type {
   EnvMonAdapterRequest,
   EnvMonAdapterOptions,
-  EnvMonNativeSwabResult,
   EnvMonNativeSwabStatus,
 } from './adapters/envmon-adapter.js'
+export type { EnvMonNativeSwabResult } from '@connectio/data-contracts'
 
 // Query hooks
 export {

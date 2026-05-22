@@ -1,13 +1,13 @@
 # Contract-to-Route Coverage Matrix
 
-> Snapshot: 2026-05-21. Updated 2026-05-21 (backend-contract-enforcement branch) to reflect response_model enforcement on envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
+> Snapshot: 2026-05-22. Updated 2026-05-22 (envmon-swab-contract-alignment branch) to reflect `EnvMonNativeSwabResultSchema` promotion and `response_model` enforcement on `GET /api/envmon/swab-results`. Previously updated 2026-05-21 (backend-contract-enforcement branch) for envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
 
 ## Key findings (read first)
 
 1. **6 native Traceability routes use `response_model`** — backend validates the response against the generated Python model before sending. These are the most contract-consistent routes in the repo.
 2. **3 native POH routes use `response_model`** — same standard as Traceability.
 3. **POST /trace2/batch-header uses no `response_model`** — this is a proxy route in mixed mode; the backend doesn't validate the V1 or native response against Pydantic before returning it.
-4. **`GET /api/envmon/site-summary` and warehouse360 inbound/outbound/staging/exceptions now have `response_model`** — enforced after backend-contract-enforcement (2026-05-21). `GET /api/envmon/swab-results` and `GET /api/warehouse360/overview` remain unenforced (contract mismatch or mapper shape gap — see plan).
+4. **`GET /api/envmon/site-summary`, `GET /api/envmon/swab-results`, and warehouse360 inbound/outbound/staging/exceptions now have `response_model`** — enforced after backend-contract-enforcement (2026-05-21) and envmon-swab-contract-alignment (2026-05-22). `GET /api/warehouse360/overview` remains unenforced (mapper shape gap).
 5. **All SPC, Quality readonly-evidence, and batch-release schemas are ahead of runtime** — contracts exist and Python models are generated, but no live route uses them.
 6. **`SPCMonitoringContextSchema` with `operationId` (added PR #67) is furthest ahead of runtime** — the schema, Python model, and mapping helpers are all updated but no native route has been wired.
 7. **Proxy routes (SPC, CQ Lab, V1 warehouse summary) bypass contract validation** — the backend passes through the V1 JSON unvalidated; the frontend adapter validates the response against the Zod schema.
@@ -126,7 +126,8 @@
 | Schema | Domain | Purpose | Frontend consumer | Backend route | Gen. Python model | Runtime mode | Validation location | Source object(s) | Status | Gap / next action |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `EnvMonSiteSummarySchema` | EnvMon | Site summary (zones, positives, compliance rate) | EnvMonAdapter / SiteSummaryPanel | `GET /api/envmon/site-summary` | Yes — `EnvMonSiteSummary` | databricks-api | **both** (frontend Zod + `response_model=EnvMonSiteSummary`) | `gold_inspection_lot` (filter INSPECTION_TYPE IN ('14','Z14')) | **complete-contract-binding** | browser-verify against live UAT environment |
-| `EnvMonSwabResultSchema` | EnvMon | Swab result items | EnvMonAdapter / SwabResultsPanel | `GET /api/envmon/swab-results` | Yes — `EnvMonSwabResult` | databricks-api | frontend only (no `response_model` on route) | `gold_batch_quality_result_v` | route-wired-no-backend-validation | Add `response_model`; browser-verify |
+| `EnvMonNativeSwabResultSchema` | EnvMon | Source-truthful SAP QM swab result (26 fields, no zone columns) | EnvMonAdapter (`getNativeSwabResults`) / NativeMonitoringView | `GET /api/envmon/swab-results` | Yes — `EnvMonNativeSwabResult` | databricks-api | **both** (frontend Zod + `response_model=list[EnvMonNativeSwabResult]`) | `gold_inspection_lot`, `gold_inspection_point`, `gold_batch_quality_result_v` | **complete-contract-binding** | browser-verify against live UAT; zone/spatial fields deferred |
+| `EnvMonSwabResultSchema` | EnvMon | Zone-based swab model (idealised; mock only) | EnvMonAdapter (`getEnvMonSwabResults`) — mock only | None (mock data only) | Yes — `EnvMonSwabResult` | mock | n/a (mock only) | No SAP QM source for zoneId/zoneName/testType/organism | mock-only-no-route | Retained for mock data compatibility; not source-truthful; do not wire to live route |
 | `EnvMonZoneSchema` | EnvMon | Monitoring zone | EnvMonAdapter (mock) | None | Yes — `EnvMonZone` | mock | n/a | — | mock-only-no-route | Python model unused |
 | `EnvMonAlertSchema` | EnvMon | Environmental alert | EnvMonAdapter (mock) | None | Yes — `EnvMonAlert` | mock | n/a | — | mock-only-no-route | Python model unused |
 | `EnvMonHeatmapCellSchema` | EnvMon | Heatmap cell (floor plan) | EnvMonAdapter (mock) | None | Yes — `EnvMonHeatmapCell` | mock | n/a | `em_location_coordinates` etc. (may not exist in UAT) | production-blocked | Python model unused |
@@ -172,13 +173,12 @@
 
 ### Routes without `response_model` (backend validation gap)
 
-Updated 2026-05-21: envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions are now enforced. See `backend-contract-enforcement-plan.md` for skip reasoning on remaining routes.
+Updated 2026-05-22: envmon/site-summary, envmon/swab-results, and warehouse360 inbound/outbound/staging/exceptions are now enforced. See `backend-contract-enforcement-plan.md` for skip reasoning on remaining routes.
 
 | Route | Domain | Gap | Blocker |
 |---|---|---|---|
 | `POST /api/trace2/batch-header` | Traceability | Dual-mode proxy; `response_model` applies to both paths; V1 shape unverified | Browser-verify V1 path |
 | `POST /api/por/order-header` | POH | Dual-mode proxy; mapper also adds `inspectionLotId` not in model | Fix mapper AND browser-verify V1 path |
-| `GET /api/envmon/swab-results` | EnvMon | Mapper returns 20+ expanded fields; contract requires `zoneId`/`zoneName`/`testType`/`organism`/`sampleDate` (no source) | Align mapper to contract |
 | `GET /api/warehouse360/overview` | Warehouse | Mapper returns V1-style keys (`ordersTotal`, `trsOpen`, etc.) — completely different from `Warehouse360Overview` | Rewrite mapper to contract shape |
 | `POST /api/wh360/warehouse-summary` | Warehouse | V1 proxy; response shape not browser-verified | Browser-verify V1 proxy |
 | `GET /api/cq/lab/fails` | Quality (CQ Lab) | Always V1 proxy passthrough; response shape not browser-verified | Browser-verify V1 proxy |

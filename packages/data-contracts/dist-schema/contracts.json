@@ -1677,6 +1677,255 @@
       ],
       "additionalProperties": false
     },
+    "EnvMonNativeSwabResult": {
+      "type": "object",
+      "properties": {
+        "inspectionLotId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inspectionPointId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sampleId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operationId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "functionalLocation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sampleSummary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sampleHour": {
+          "anyOf": [
+            {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inspectionType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inspectionEndDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "micId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "micName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "micCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quantitativeResult": {
+          "anyOf": [
+            {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "qualitativeResult": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetValue": {
+          "anyOf": [
+            {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upperTolerance": {
+          "anyOf": [
+            {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lowerTolerance": {
+          "anyOf": [
+            {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unitOfMeasure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "valuation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "warning",
+            "pending",
+            "pass"
+          ]
+        },
+        "inspector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inspectionMethod": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "materialId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "processOrderId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "inspectionLotId",
+        "inspectionPointId",
+        "sampleId",
+        "operationId",
+        "functionalLocation",
+        "sampleSummary",
+        "sampleHour",
+        "plantId",
+        "inspectionType",
+        "createdDate",
+        "inspectionEndDate",
+        "micId",
+        "micName",
+        "micCode",
+        "result",
+        "quantitativeResult",
+        "qualitativeResult",
+        "targetValue",
+        "upperTolerance",
+        "lowerTolerance",
+        "unitOfMeasure",
+        "valuation",
+        "status",
+        "inspector",
+        "inspectionMethod",
+        "materialId",
+        "batchId",
+        "processOrderId"
+      ],
+      "additionalProperties": false
+    },
     "EnvMonSiteSummary": {
       "type": "object",
       "properties": {

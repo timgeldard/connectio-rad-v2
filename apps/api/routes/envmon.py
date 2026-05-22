@@ -25,7 +25,7 @@ from adapters.envmon.envmon_databricks_adapter import (
     map_site_summary_rows,
     map_swab_result_rows,
 )
-from contracts.generated import EnvMonSiteSummary
+from contracts.generated import EnvMonNativeSwabResult, EnvMonSiteSummary
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -84,7 +84,7 @@ async def envmon_site_summary(
     return map_site_summary_rows(rows, plant_id)
 
 
-@router.get("/envmon/swab-results")
+@router.get("/envmon/swab-results", response_model=list[EnvMonNativeSwabResult])
 async def envmon_swab_results(
     plant_id: str,
     period_start: str,
@@ -94,7 +94,7 @@ async def envmon_swab_results(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> list:
+) -> list[EnvMonNativeSwabResult]:
     """Environmental monitoring swab results — databricks-api only.
 
     Returns individual SAP QM inspection results per MIC characteristic per sampling
@@ -109,7 +109,7 @@ async def envmon_swab_results(
     limit: default 100, clamped to [1, 500]. Not a bound parameter — embedded as literal.
 
     No em_* spatial joins. zoneId / hygieneZone not available from SAP QM alone.
-    Frontend wiring deferred — EnvMonSwabResultSchema requires zoneId (no source).
+    Contract: EnvMonNativeSwabResult — source-truthful SAP QM shape (no zone fields).
     """
     backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if backend_mode != "databricks-api":

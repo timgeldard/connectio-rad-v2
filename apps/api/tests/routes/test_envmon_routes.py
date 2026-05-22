@@ -709,3 +709,62 @@ class TestEnvMonSwabResultsDatabricksMode:
                 )
 
         assert response.status_code == 200
+
+    async def test_response_model_schema_registered(self) -> None:
+        """OpenAPI schema for swab-results must reference EnvMonNativeSwabResult — confirms response_model is wired."""
+        async with _make_client() as client:
+            response = await client.get("/openapi.json")
+
+        schema = response.json()
+        path_item = schema["paths"].get("/api/envmon/swab-results", {})
+        get_op = path_item.get("get", {})
+        response_200 = get_op.get("responses", {}).get("200", {})
+        content = response_200.get("content", {})
+        schema_ref = content.get("application/json", {}).get("schema", {})
+        items = schema_ref.get("items", {})
+        assert "$ref" in items and "EnvMonNativeSwabResult" in items["$ref"]
+
+    async def test_response_keys_match_contract_shape(self, monkeypatch) -> None:
+        """Response keys must exactly match EnvMonNativeSwabResult — catches future field drift."""
+        self._databricks_env(monkeypatch)
+
+        expected_keys = {
+            "inspectionLotId", "inspectionPointId", "sampleId", "operationId",
+            "functionalLocation", "sampleSummary", "sampleHour", "plantId",
+            "inspectionType", "createdDate", "inspectionEndDate", "micId",
+            "micName", "micCode", "result", "quantitativeResult",
+            "qualitativeResult", "targetValue", "upperTolerance",
+            "lowerTolerance", "unitOfMeasure", "valuation", "status",
+            "inspector", "inspectionMethod", "materialId", "batchId",
+            "processOrderId",
+        }
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        assert set(response.json()[0].keys()) == expected_keys
+
+    async def test_no_invented_zone_fields_in_response(self, monkeypatch) -> None:
+        """Zone-based fields (zoneId, zoneName, testType, organism) have no SAP QM source — must not appear."""
+        self._databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SWAB_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SWAB_RESULTS_URL, headers=_HEADERS_WITH_TOKEN
+                )
+
+        row = response.json()[0]
+        for absent_key in ("zoneId", "zoneName", "testType", "organism"):
+            assert absent_key not in row, f"Invented field '{absent_key}' must not appear in response"
