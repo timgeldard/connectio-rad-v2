@@ -27,7 +27,7 @@ enforce if its mapper output exactly matches the model's field list.
 | `POST /trace2/batch-header` | No | `BatchHeaderSummary` | Databricks mapper: yes | **skip-proxy-passthrough** | Dual-mode: legacy-api branch proxies V1 whose response shape is not browser-verified. `extra='forbid'` would raise on any extra V1 key. |
 | `POST /por/order-header` | No | `ProcessOrderHeader` | No — mapper adds `inspectionLotId` not in model | **skip-proxy-passthrough + skip-contract-mismatch** | Two independent blockers: (1) dual-mode V1 proxy; (2) `map_process_order_header_rows` unconditionally adds `inspectionLotId` which is absent from `ProcessOrderHeader`. Either alone would block enforcement. |
 | `GET /envmon/site-summary` | No | `EnvMonSiteSummary` | Yes — exactly 12 fields | **enforce-now (Slice 1)** | databricks-api only (returns 503 otherwise); mapper produces exactly the 12 camelCase fields the model declares. |
-| `GET /envmon/swab-results` | No | `EnvMonSwabResult` | No — shape mismatch | **skip-contract-mismatch** | Mapper returns ~20 expanded fields (inspectionLotId, micId, micName, etc.); model requires `zoneId`, `zoneName`, `testType`, `organism`, `sampleDate` which have no source column equivalent. Contract and mapper are misaligned; alignment is a separate data-layer item. |
+| `GET /envmon/swab-results` | No → **Yes** | `EnvMonNativeSwabResult` | Yes — exact match after contract alignment | **enforce-now (Slice 3, feature/envmon-swab-contract-alignment)** | `EnvMonNativeSwabResultSchema` promoted to `@connectio/data-contracts` (2026-05-22); `response_model=list[EnvMonNativeSwabResult]` added. Old `EnvMonSwabResult` (zone-based) retained for mock data only. |
 | `GET /warehouse360/overview` | No | `Warehouse360Overview` | No — completely different shape | **skip-contract-mismatch** | Mapper returns V1-style keys (`ordersTotal`, `trsOpen`, `tosOpen`, `binUtilPct`, etc.). `Warehouse360Overview` contract uses `inboundDueCount`, `outboundDueCount`, etc. Requires mapper rewrite before enforcement. |
 | `GET /warehouse360/inbound` | No | `list[Warehouse360InboundItem]` | Yes — 18 fields | **enforce-now (Slice 2)** | databricks-api only; mapper produces exactly the 18 camelCase fields the model declares. |
 | `GET /warehouse360/outbound` | No | `list[Warehouse360OutboundItem]` | Yes — 16 fields | **enforce-now (Slice 2)** | databricks-api only; mapper produces exactly the 16 camelCase fields the model declares. |
@@ -77,7 +77,12 @@ not touched:
 | Item | Blocker |
 |---|---|
 | `POST /por/order-header` enforcement | Remove `inspectionLotId` from mapper OR add field to `ProcessOrderHeader` contract, then verify V1 proxy mode |
-| `GET /envmon/swab-results` enforcement | Align mapper output with `EnvMonSwabResult` contract (zone/organism/testType fields) |
 | `GET /warehouse360/overview` enforcement | Rewrite `map_warehouse_overview_rows` to emit `inboundDueCount`, `outboundDueCount`, etc. matching `Warehouse360Overview` |
 | `GET /cq/lab/plants` enforcement | Browser-verify `/api/cq/lab/plants` in legacy-api mode; confirm V1 response shape is compatible |
 | `POST /trace2/batch-header` enforcement | Browser-verify `/api/trace2/batch-header` in legacy-api mode; confirm V1 response shape is compatible |
+
+## Completed Items (enforced on follow-on branch)
+
+| Item | Branch | Completion date |
+|---|---|---|
+| `GET /envmon/swab-results` enforcement | `feature/envmon-swab-contract-alignment` | 2026-05-22 |

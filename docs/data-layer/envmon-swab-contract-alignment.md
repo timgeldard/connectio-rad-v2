@@ -2,7 +2,8 @@
 
 **Date:** 2026-05-22
 **Branch:** `feature/envmon-swab-contract-alignment`
-**Relates to:** `backend-contract-enforcement-plan.md` — `/api/envmon/swab-results` skip-contract-mismatch
+**Status:** **COMPLETE** — all 5 slices implemented and pushed 2026-05-22
+**Relates to:** `backend-contract-enforcement-plan.md` — `/api/envmon/swab-results` skip-contract-mismatch (now resolved)
 
 ---
 
@@ -181,3 +182,21 @@ is already correct; only the contract needs to be updated to match it.
 - `status` is a derived required field (never null) — safe to keep required in the new schema.
 - No Databricks SQL is changed. No inspection type filter is changed. No new routes are added.
 - Empty array response remains valid and does not imply "no contamination."
+
+---
+
+## Implementation result (2026-05-22)
+
+Option B implemented across 5 slices on branch `feature/envmon-swab-contract-alignment`:
+
+| Slice | Description | Commit | Status |
+|---|---|---|---|
+| 1 | Analysis document + Slice 1 commit | `0aa2f61` (prior branch) | Complete |
+| 2 | Promote `EnvMonNativeSwabResultSchema` to `@connectio/data-contracts`; update adapter + frontend imports; regenerate Python model | `10023dd` | Complete |
+| 3 | Add `response_model=list[EnvMonNativeSwabResult]` to `GET /api/envmon/swab-results` | `6647b75` | Complete |
+| 4 | Add 3 new tests: OpenAPI schema registration, exact contract shape, no invented zone fields | `dd879ee` | Complete |
+| 5 | Docs sync: update backend-contract-enforcement-plan, contract-route-coverage-matrix, data-layer-implementation-backlog, this file | — | Complete |
+
+**42 tests pass** (39 existing + 3 new). No Databricks SQL changed. No mapper changed. No new routes added.
+
+**Remaining prerequisite before browser UAT:** Confirm INSPECTION_TYPE filter values in live UAT data (Rank 12 in backlog).
