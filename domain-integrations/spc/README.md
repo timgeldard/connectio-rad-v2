@@ -29,6 +29,10 @@ This directory houses the SPC domain-integration components, including adapters,
 - [V2 Contract Mapping](./docs/spc-v2-contract-mapping.md) — field-by-field mapping aligned to verified schema
 - [Native Migration Readiness Checklist](./docs/spc-native-migration-readiness-checklist.md) — go/no-go gate
 
+## Semantic-Model Functional Parity Audit
+
+- [SPC Semantic-Model Functional Parity Audit](./docs/spc-semantic-model-functional-parity.md) — compares standalone `timgeldard/spc` app, ConnectIO-RAD, and Databricks `spc_*` objects; identifies surfacing gaps vs. true missing features; recommends a safe 7-phase migration sequence
+
 ## Native Contract Alignment (post-PR #65)
 
 After PR #65, the [contract-alignment tranche](./docs/spc-native-contract-alignment-audit.md)

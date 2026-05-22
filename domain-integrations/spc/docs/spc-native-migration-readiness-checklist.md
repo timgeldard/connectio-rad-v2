@@ -224,6 +224,15 @@
   in V1 or in `connected_plant_uat.gold`, and the panel will remain mock-only or be deferred
   when a native route is wired. Documented in `spc-v2-contract-mapping.md` §12
 
+- [x] **Semantic-model functional parity audit completed** — standalone `timgeldard/spc` app
+  compared against ConnectIO-RAD and verified Databricks `spc_*` objects. Top findings:
+  `spc_process_flow_source_mv`, `spc_lineage_graph_mv`, `spc_correlation_source_mv`, and
+  `spc_attribute_subgroup_mv` are all present in UAT but unwired in ConnectIO-RAD (surfacing
+  gaps, not source gaps). `spc_capability_detail_mv` and `spc_nelson_rule_flags_mv` remain
+  confirmed absent. `CharacteristicCapabilitySchema.cp/cpk/pp/ppk` should be relaxed to
+  optional in a follow-on contract PR.
+  - Document: [spc-semantic-model-functional-parity.md](./spc-semantic-model-functional-parity.md)
+
 ---
 
 ## 12. Source Truthfulness Wording Updated
