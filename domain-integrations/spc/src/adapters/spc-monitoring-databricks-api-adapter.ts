@@ -1,20 +1,24 @@
 import { SPCMonitoringAdapter } from './spc-monitoring-adapter.js'
 import type { AdapterResult } from '@connectio/source-adapters'
-import type { 
-  SPCMonitoringContext, 
-  SPCSummary, 
-  SPCSignal,
-  MonitoredSPCCharacteristic,
-  ControlChartSeries,
-  CharacteristicCapability,
-  SPCAlarmHistoryItem,
-  SPCRelatedBatch,
-  SPCSubgroupResponse,
-  ControlChartPoint
+import {
+  type SPCMonitoringContext,
+  type SPCSummary,
+  type SPCSignal,
+  type MonitoredSPCCharacteristic,
+  type ControlChartSeries,
+  type CharacteristicCapability,
+  type SPCAlarmHistoryItem,
+  type SPCRelatedBatch,
+  type ControlChartPoint,
+  SPCSubgroupResponseSchema,
 } from '@connectio/data-contracts'
 import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
 
-async function proxyGet(baseUrl: string, path: string, params: Record<string, string>): Promise<unknown> {
+async function proxyGet(
+  baseUrl: string,
+  path: string,
+  params: Record<string, string>,
+): Promise<unknown> {
   const url = new URL(`${baseUrl}${path}`)
   for (const [key, val] of Object.entries(params)) {
     if (val) url.searchParams.set(key, val)
@@ -24,15 +28,24 @@ async function proxyGet(baseUrl: string, path: string, params: Record<string, st
   return response.json()
 }
 
-function toErrorResult<T>(err: unknown, source: 'databricks-api' = 'databricks-api'): AdapterResult<T> {
+function toErrorResult<T>(
+  err: unknown,
+  source: 'databricks-api' = 'databricks-api',
+): AdapterResult<T> {
   const status = (err as { status?: number })?.status
   const code =
-    status === 401 ? ('unauthorized' as const)
-      : status === 404 ? ('not-found' as const)
+    status === 401
+      ? ('unauthorized' as const)
+      : status === 404
+        ? ('not-found' as const)
         : ('network' as const)
   return {
     ok: false,
-    error: { code, message: `Proxy returned ${status ?? 'unknown'}`, retryable: (status ?? 0) >= 500 },
+    error: {
+      code,
+      message: `Proxy returned ${status ?? 'unknown'}`,
+      retryable: (status ?? 0) >= 500,
+    },
     displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
     source,
   }
@@ -40,7 +53,7 @@ function toErrorResult<T>(err: unknown, source: 'databricks-api' = 'databricks-a
 
 /**
  * SPC Monitoring Databricks API Adapter.
- * 
+ *
  * @remarks
  * Implements the native Databricks route `GET /api/spc/subgroups` to fetch subgroup data.
  * Adheres strictly to guardrails:
@@ -56,24 +69,36 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
-  private unavailable<T>(): AdapterResult<T> {
+  private unavailable<T>(
+    message: string = 'SPC Databricks adapter unavailable — required SPC gold views are not deployed.',
+  ): AdapterResult<T> {
     return {
       ok: false,
       error: {
         code: 'not-found',
-        message: 'SPC Databricks adapter unavailable — required SPC gold views are not deployed.',
-        retryable: false
+        message,
+        retryable: false,
       },
       displayState: 'error',
-      source: 'databricks-api'
+      source: 'databricks-api',
     }
   }
 
   override async getControlChartSeries(
-    request: SPCMonitoringAdapterRequest
+    request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<ControlChartSeries>> {
     if (!request.materialId || !request.characteristicId || !request.plantId) {
-      return this.unavailable()
+      return this.unavailable('Missing required identifiers (material, plant, or characteristic).')
+    }
+
+    if (!request.operationId || request.operationId.trim() === '') {
+      return this.unavailable(
+        'Native Databricks route requires operationId. workCentreId cannot be used as a substitute.',
+      )
+    }
+
+    if (!request.dateFrom || !request.dateTo) {
+      return this.unavailable('Native Databricks route requires dateFrom and dateTo filters.')
     }
 
     try {
@@ -81,41 +106,69 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
         material_id: request.materialId,
         plant_id: request.plantId,
         mic_id: request.characteristicId,
+        operation_id: request.operationId,
+        date_from: request.dateFrom,
+        date_to: request.dateTo,
       }
-      
-      // Map operationId if present (never workCentreId)
-      if (request.operationId) params['operation_id'] = request.operationId
 
-      const raw = await proxyGet(this.baseUrl, '/api/spc/subgroups', params) as SPCSubgroupResponse
+      if (request.limit !== undefined) {
+        params['limit'] = request.limit.toString()
+      }
 
-      const points: ControlChartPoint[] = (raw.points || []).map((p, idx) => ({
+      const raw = await proxyGet(this.baseUrl, '/api/spc/subgroups', params)
+
+      const parsed = SPCSubgroupResponseSchema.safeParse(raw)
+      if (!parsed.success) {
+        return {
+          ok: false,
+          error: {
+            code: 'invalid-data' as any, // fallback to any if invalid-data is not in union
+            message: 'Invalid backend response from Databricks API',
+            retryable: false,
+          },
+          displayState: 'error',
+          source: 'databricks-api',
+        }
+      }
+      const data = parsed.data
+
+      const points: ControlChartPoint[] = data.points.map((p, idx) => ({
         pointId: `pt-${idx}-${p.batchId}`,
         timestamp: p.batchDate,
         value: p.subgroupMean,
         batchId: p.batchId,
         sampleId: undefined, // Not provided by subgroups view
         signalIds: [], // Hard-coded empty, signals are calculated client-side
-        status: 'not-evaluated' as const // Deliberately avoiding 'in-control' claim
+        status: 'not-evaluated' as const, // Deliberately avoiding 'in-control' claim
       }))
 
       // Pick specs from first point (they are identical per batch if not changed)
-      const firstPoint = raw.points?.[0]
+      const firstPoint = data.points[0]
       const lsl = firstPoint?.lslSpec ?? undefined
       const usl = firstPoint?.uslSpec ?? undefined
+      const sampleCount = firstPoint?.sampleCount ?? 1
+
+      // Derive chartType safely
+      let resolvedChartType: ControlChartSeries['chartType'] = 'individuals'
+      if (request.chartType === 'xbar-r' || request.chartType === 'individuals') {
+        resolvedChartType = request.chartType
+      } else if (sampleCount > 1) {
+        resolvedChartType = 'xbar-r'
+      }
 
       const series: ControlChartSeries = {
         chartId: `${request.materialId}-${request.characteristicId}`,
-        chartType: 'individuals', // Using individuals as default/placeholder for subgroup mean plotting
-        characteristicId: raw.micId ?? request.characteristicId,
-        characteristicName: raw.micName ?? request.characteristicId,
+        chartType: resolvedChartType,
+        characteristicId: data.micId ?? request.characteristicId,
+        characteristicName: data.micName ?? request.characteristicId,
         points,
         centerLine: undefined, // Client-side calculation handles this
         upperControlLimit: undefined,
         lowerControlLimit: undefined,
         upperSpecLimit: usl,
         lowerSpecLimit: lsl,
-        unitOfMeasure: '', // Not provided by subgroup response yet
-        limitProvenance: 'calculated-from-sample', // Limits will be computed from sample data client-side
+        unitOfMeasure: '', // UOM is unavailable in slice 1 Databricks response
+        limitProvenance: 'unknown', // Limits are not calculated or returned by the adapter
         approvalState: 'not-approved',
         lockedLimits: false, // Locked limits deferred to Slice 2
         confidence: 1.0,
@@ -132,32 +185,46 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
     }
   }
 
-  override async getCharacteristicCapability(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<CharacteristicCapability>> {
+  override async getCharacteristicCapability(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<CharacteristicCapability>> {
     // Deliberately hardcoding unavailable to comply with guardrails
     return this.unavailable()
   }
 
-  override async getSPCMonitoringContext(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCMonitoringContext>> {
+  override async getSPCMonitoringContext(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<SPCMonitoringContext>> {
     return this.unavailable()
   }
 
-  override async getSPCSummary(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSummary>> {
+  override async getSPCSummary(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<SPCSummary>> {
     return this.unavailable()
   }
 
-  override async getActiveSPCSignals(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSignal[]>> {
+  override async getActiveSPCSignals(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<SPCSignal[]>> {
     return this.unavailable()
   }
 
-  override async getMonitoredCharacteristics(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
+  override async getMonitoredCharacteristics(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
     return this.unavailable()
   }
 
-  override async getSPCAlarmHistory(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
+  override async getSPCAlarmHistory(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
     return this.unavailable()
   }
 
-  override async getSPCRelatedBatches(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCRelatedBatch[]>> {
+  override async getSPCRelatedBatches(
+    _request: SPCMonitoringAdapterRequest,
+  ): Promise<AdapterResult<SPCRelatedBatch[]>> {
     return this.unavailable()
   }
 }

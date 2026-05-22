@@ -16,7 +16,7 @@ export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
     if (!featureFlags.spc.liveSources) {
       return createDisabledAdapter<SPCMonitoringAdapter>(
         'databricks-api',
-        'SPC Monitoring Databricks API adapter is disabled by feature flags.'
+        'SPC Monitoring Databricks API adapter is disabled by feature flags.',
       )
     }
     // Native Databricks integration is currently blocked/pending gold-view alignment.
@@ -28,7 +28,7 @@ export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
     if (!featureFlags.spc.liveSources) {
       return createDisabledAdapter<SPCMonitoringAdapter>(
         'legacy-api',
-        'SPC Monitoring Legacy API adapter is disabled by feature flags.'
+        'SPC Monitoring Legacy API adapter is disabled by feature flags.',
       )
     }
     // V1 SPC proxy routes exist (wired but not browser-verified).
