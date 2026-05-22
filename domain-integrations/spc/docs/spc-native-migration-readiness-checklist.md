@@ -1,17 +1,32 @@
 # SPC Native Migration Readiness Checklist
 
-**Date:** 2026-05-21
-**Status:** Object inventory, types, and schemas verified by PR #65; native contract alignment completed by the contract-alignment tranche (Slices 1-7 of `feature/spc-native-contract-alignment`); native route remains blocked pending the items called out in §15.
+**Date:** 2026-05-22 (updated; original 2026-05-21)
+**Status:** Slice 1 native subgroup route implemented 2026-05-22. Browser UAT pending. Production readiness blocked.
 **Purpose:** Gate checklist before implementing native V2 SPC Databricks routes
 
-> **Status note (2026-05-21).** SPC native contract mapping is aligned to
-> the verified Databricks schema (PR #65 + this tranche). Pure mapping
-> helpers and fixtures exist for the verified schema; **no runtime route
-> is wired**. The V1 legacy bridge remains the recommended short-term path.
-> The "Go" criteria below are unchanged — they still gate the wiring.
-> See [`spc-native-contract-alignment-audit.md`](./spc-native-contract-alignment-audit.md),
-> the rewritten [`spc-v2-contract-mapping.md`](./spc-v2-contract-mapping.md),
-> and [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md).
+> **Status note (2026-05-22).** `GET /api/spc/subgroups` (slice 1) is now implemented in
+> `apps/api/routes/spc.py` (databricks-api mode only). The route queries
+> `spc_quality_metric_subgroup_mv` and returns a narrow `SPCSubgroupResponse`.
+>
+> **What is unavailable (locked at Literal[False] / Literal[True] in the contract):**
+> - **Capability (Cp/Cpk/Pp/Ppk): unavailable** — `spc_capability_detail_mv` absent in UAT;
+>   `capabilityAvailable: false` is a contract literal, not a runtime flag.
+> - **Nelson stored flags: unavailable** — `spc_nelson_rule_flags_mv` absent in UAT;
+>   `nelsonStoredFlagsAvailable: false` is a contract literal.
+> - **Signals: client-side only** — `signalsClientSideOnly: true` is a contract literal;
+>   frontend must calculate Nelson rule violations; the route never claims "in control".
+> - **Locked limits: deferred to slice 2** — `lockedLimits: null` always in slice 1.
+>
+> **What remains blocked:**
+> - Browser UAT: no end-to-end browser test has been run with the V2 frontend against
+>   UAT Databricks. Do not claim browser-verified or production-ready.
+> - Frontend wire-up: `SPCMonitoringDatabricksApiAdapter.getControlChartSeries` requires
+>   `unitOfMeasure` and `ControlChartPoint.status`; deferred to slice 3.
+> - Full chart-data route (`POST /spc/chart-data`): deferred — locked limits and control
+>   limit block still unresolved.
+>
+> See [`spc-native-route-prerequisite-plan.md`](./spc-native-route-prerequisite-plan.md)
+> for the full implementation notes.
 
 > This checklist must be completed before any V2 native SPC route (either V1 proxy or direct
 > Databricks API) is implemented, enabled, or tested against live data. All items are currently

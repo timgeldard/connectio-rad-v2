@@ -214,3 +214,41 @@ export const SPCRelatedBatchSchema = z.object({
 })
 
 export type SPCRelatedBatch = z.infer<typeof SPCRelatedBatchSchema>
+
+// ---------------------------------------------------------------------------
+// SPCSubgroupPoint / SPCSubgroupResponse  (slice 1 — native Databricks only)
+//
+// Narrow schemas backed by spc_quality_metric_subgroup_mv (verified UAT
+// 2026-05-22). Uses GROUP BY (batch_id, batch_date); one point per subgroup.
+// capabilityAvailable / nelsonStoredFlagsAvailable are z.literal(false) to
+// prevent clients from requesting features that do not exist in the source.
+// lockedLimits is z.null() for slice 1 — spc_locked_limits DESCRIBE TABLE
+// not confirmed; deferred to slice 2.
+// ---------------------------------------------------------------------------
+
+export const SPCSubgroupPointSchema = z.object({
+  batchId: z.string(),
+  batchDate: z.string(),
+  subgroupMean: z.number(),
+  subgroupRange: z.number().nullable(),
+  sampleCount: z.number().int().min(1),
+  lslSpec: z.number().nullable(),
+  uslSpec: z.number().nullable(),
+})
+
+export type SPCSubgroupPoint = z.infer<typeof SPCSubgroupPointSchema>
+
+export const SPCSubgroupResponseSchema = z.object({
+  materialId: z.string(),
+  plantId: z.string(),
+  micId: z.string(),
+  micName: z.string().nullable(),
+  operationId: z.string(),
+  points: z.array(SPCSubgroupPointSchema),
+  lockedLimits: z.null(),
+  capabilityAvailable: z.literal(false),
+  nelsonStoredFlagsAvailable: z.literal(false),
+  signalsClientSideOnly: z.literal(true),
+})
+
+export type SPCSubgroupResponse = z.infer<typeof SPCSubgroupResponseSchema>

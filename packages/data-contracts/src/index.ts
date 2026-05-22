@@ -199,6 +199,8 @@ export type {
   CharacteristicCapability,
   SPCAlarmHistoryItem,
   SPCRelatedBatch,
+  SPCSubgroupPoint,
+  SPCSubgroupResponse,
 } from './schemas/spc-monitoring.js'
 export {
   MonitoredSPCCharacteristicSchema,
@@ -210,6 +212,8 @@ export {
   CharacteristicCapabilitySchema,
   SPCAlarmHistoryItemSchema,
   SPCRelatedBatchSchema,
+  SPCSubgroupPointSchema,
+  SPCSubgroupResponseSchema,
 } from './schemas/spc-monitoring.js'
 
 export type {

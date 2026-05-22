@@ -7713,6 +7713,152 @@
       ],
       "additionalProperties": false
     },
+    "SPCSubgroupPoint": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "batchDate": {
+          "type": "string"
+        },
+        "subgroupMean": {
+          "type": "number"
+        },
+        "subgroupRange": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sampleCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lslSpec": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "uslSpec": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "batchId",
+        "batchDate",
+        "subgroupMean",
+        "subgroupRange",
+        "sampleCount",
+        "lslSpec",
+        "uslSpec"
+      ],
+      "additionalProperties": false
+    },
+    "SPCSubgroupResponse": {
+      "type": "object",
+      "properties": {
+        "materialId": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "micId": {
+          "type": "string"
+        },
+        "micName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "batchId": {
+                "type": "string"
+              },
+              "batchDate": {
+                "type": "string"
+              },
+              "subgroupMean": {
+                "type": "number"
+              },
+              "subgroupRange": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "sampleCount": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "lslSpec": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "uslSpec": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "batchId",
+              "batchDate",
+              "subgroupMean",
+              "subgroupRange",
+              "sampleCount",
+              "lslSpec",
+              "uslSpec"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "lockedLimits": {
+          "type": "null"
+        },
+        "capabilityAvailable": {
+          "type": "boolean",
+          "const": false
+        },
+        "nelsonStoredFlagsAvailable": {
+          "type": "boolean",
+          "const": false
+        },
+        "signalsClientSideOnly": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "materialId",
+        "plantId",
+        "micId",
+        "micName",
+        "operationId",
+        "points",
+        "lockedLimits",
+        "capabilityAvailable",
+        "nelsonStoredFlagsAvailable",
+        "signalsClientSideOnly"
+      ],
+      "additionalProperties": false
+    },
     "SPCSummary": {
       "type": "object",
       "properties": {
