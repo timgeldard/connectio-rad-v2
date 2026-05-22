@@ -3,9 +3,10 @@
 Default mode (``BACKEND_ADAPTER_MODE=legacy-api``): forwards requests to the
 V1 SPC FastAPI backend at ``V1_SPC_API_BASE_URL``.
 
-Databricks mode (``BACKEND_ADAPTER_MODE=databricks-api``): not yet implemented;
-returns 503. The SPC databricks adapter should query gold views directly once
-fully verified.
+Databricks mode (``BACKEND_ADAPTER_MODE=databricks-api``):
+  GET /spc/subgroups  — implemented (slice 1, 2026-05-22). Queries
+    spc_quality_metric_subgroup_mv directly. See spc_databricks_adapter.py.
+  All other routes — return 503 in databricks-api mode.
 
 Proxy routes wired here (NOT yet browser-verified against live V1 UAT):
   GET  /spc/materials      → V1 /api/spc/materials
@@ -22,11 +23,26 @@ No service-principal fallback for user-facing reads (Databricks identity policy)
 from __future__ import annotations
 
 import os
-from typing import Optional
+from datetime import date as _date
+from typing import Annotated, Optional
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, Response
 from pydantic import BaseModel
+
+from adapters.spc.spc_databricks_adapter import (
+    MAX_SUBGROUPS,
+    SubgroupsRequest,
+    get_spc_subgroups_spec,
+    map_spc_subgroup_rows,
+)
+from contracts.generated import SPCSubgroupResponse
+from routes._databricks import (
+    build_user_identity,
+    require_databricks_config,
+    run_query,
+    set_databricks_response_headers,
+)
 
 router = APIRouter()
 
@@ -218,6 +234,89 @@ async def spc_chart_data(
 
 
 # ---------------------------------------------------------------------------
+# Native Databricks route — slice 1 (subgroups)
+# ---------------------------------------------------------------------------
+
+_P999_SENTINEL = "P999"
+
+
+_MAX_DATE_WINDOW_DAYS = 730
+
+
+@router.get("/spc/subgroups", response_model=SPCSubgroupResponse)
+async def spc_subgroups(
+    material_id: Annotated[str, Query(..., min_length=1, description="SAP material number")],
+    plant_id: Annotated[str, Query(..., min_length=1, description="Plant ID")],
+    mic_id: Annotated[str, Query(..., min_length=1, description="MIC / characteristic ID")],
+    operation_id: Annotated[str, Query(..., min_length=1, description="Sequential inspection-operation ID (not SAP work centre)")],
+    date_from: _date = Query(..., description="Start date inclusive (YYYY-MM-DD)"),
+    date_to: _date = Query(..., description="End date inclusive (YYYY-MM-DD)"),
+    limit: int = Query(default=100, ge=1, description="Max subgroups to return"),
+    response: Response = None,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> SPCSubgroupResponse:
+    """SPC subgroup chart data — databricks-api mode only (slice 1, 2026-05-22).
+
+    Returns aggregated subgroup points from spc_quality_metric_subgroup_mv.
+    Filters on material/plant/MIC/operation and date range before returning.
+    Max 200 subgroups per request. Max date window 730 days.
+
+    Capability (Cp/Cpk/Pp/Ppk): unavailable — not in source MV.
+    Nelson stored flags: unavailable — spc_nelson_rule_flags_mv absent in UAT.
+    Signals: client-side only — frontend must calculate Nelson rule violations.
+    Locked limits: deferred to slice 2.
+
+    Browser UAT: pending. Production readiness: blocked.
+
+    P999 sentinel plant rejected with 422. Legacy-api mode returns 503.
+    Blank filter values, invalid dates, inverted date range, and date windows
+    exceeding 730 days are rejected with 422.
+    """
+    if date_from > date_to:
+        raise HTTPException(status_code=422, detail="date_from must be on or before date_to.")
+    if (date_to - date_from).days > _MAX_DATE_WINDOW_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Date window exceeds maximum of {_MAX_DATE_WINDOW_DAYS} days. "
+                   "Narrow the date range to prevent broad scans of the source MV.",
+        )
+
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="GET /spc/subgroups is only available in databricks-api mode. "
+                   "Set BACKEND_ADAPTER_MODE=databricks-api.",
+        )
+
+    if plant_id == _P999_SENTINEL:
+        raise HTTPException(status_code=422, detail="P999 is a test sentinel and cannot be used in production queries.")
+
+    clamped_limit = max(1, min(limit, MAX_SUBGROUPS))
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+
+    request = SubgroupsRequest(
+        material_id=material_id,
+        plant_id=plant_id,
+        mic_id=mic_id,
+        operation_id=operation_id,
+        date_from=date_from.isoformat(),
+        date_to=date_to.isoformat(),
+        limit=clamped_limit,
+    )
+
+    rows, spec = await run_query(lambda: get_spc_subgroups_spec(request), identity, host, warehouse_id)
+    set_databricks_response_headers(response, spec)
+
+    result = map_spc_subgroup_rows(rows, request)
+    return SPCSubgroupResponse.model_validate(result)
+
+
+# ---------------------------------------------------------------------------
 # Internal guard
 # ---------------------------------------------------------------------------
 
@@ -225,13 +324,13 @@ async def spc_chart_data(
 def _ensure_legacy_mode() -> None:
     """Raise 503 if BACKEND_ADAPTER_MODE is not legacy-api (or unset).
 
-    databricks-api mode is not yet implemented for SPC — it requires
-    direct gold-view SQL queries that are pending UAT column verification.
+    databricks-api mode support: GET /spc/subgroups is now implemented.
+    All other SPC routes still return 503 in databricks-api mode.
     """
     mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if mode == "databricks-api":
         raise HTTPException(
             status_code=503,
-            detail="SPC in databricks-api mode is not yet implemented. "
+            detail="SPC in databricks-api mode is not yet implemented for this route. "
                    "Set BACKEND_ADAPTER_MODE=legacy-api and configure V1_SPC_API_BASE_URL.",
         )

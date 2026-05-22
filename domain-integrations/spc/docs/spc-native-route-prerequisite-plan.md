@@ -1,6 +1,6 @@
 # SPC Native Route — Prerequisite Plan
 
-**Date:** 2026-05-21
+**Date:** 2026-05-22 (updated; original plan 2026-05-21)
 **Branch:** `feature/spc-native-contract-alignment`
 **Predecessor evidence:** PR #65 — Databricks verification pack (commits `f641a8d`, `50c8b9a`)
 **Companion docs:**
@@ -8,14 +8,45 @@
 [`spc-v2-contract-mapping.md`](./spc-v2-contract-mapping.md),
 [`spc-databricks-verification-results-summary.md`](./spc-databricks-verification-results-summary.md),
 [`spc-native-migration-readiness-checklist.md`](./spc-native-migration-readiness-checklist.md)
-**Status:** Documentation only. **No native route is implemented. No FastAPI route in `apps/api/routes/spc.py` is modified by this plan.**
 
-> **Purpose.** This document specifies exactly what a future native SPC
-> Databricks route would look like, given the verified PR #65 schema, the
-> contract mapping (Slice 2), the pure helpers (Slice 4), and their tests
-> (Slice 5). It is the implementation-ready shape — but implementation is
-> **not** approved by this tranche. A future PR explicitly scoped to "wire
-> SPC native route" will pick this up.
+**Status (2026-05-22): Slice 1 native subgroup route IMPLEMENTED.**
+`GET /api/spc/subgroups` is now live in `apps/api/routes/spc.py` (databricks-api mode only).
+See implementation notes below.
+
+> **Implementation notes (slice 1, 2026-05-22):**
+>
+> - Route: `GET /api/spc/subgroups` (not `POST /api/spc/chart-data` as originally proposed;
+>   a narrow GET with all required filters is safer for the first slice)
+> - Source: `spc_quality_metric_subgroup_mv` (UAT columns confirmed 2026-05-22)
+> - Response model: `SPCSubgroupResponse` (new narrow Zod schema — not `ControlChartSeries`)
+> - **Capability: unavailable.** `capabilityAvailable: false` (Literal[False]) — Cp/Cpk/Pp/Ppk
+>   not in source MV; `spc_capability_detail_mv` absent in UAT.
+> - **Nelson stored flags: unavailable.** `nelsonStoredFlagsAvailable: false` (Literal[False]) —
+>   `spc_nelson_rule_flags_mv` absent in UAT.
+> - **Signals: client-side only.** `signalsClientSideOnly: true` (Literal[True]) — no stored
+>   signal rows; frontend must calculate Nelson rule violations.
+> - **Locked limits: deferred to slice 2.** `lockedLimits: null` always — `spc_locked_limits`
+>   DESCRIBE TABLE not confirmed; wiring deferred.
+> - **Browser UAT: pending.** Route is live in code but no end-to-end browser test has been run
+>   against UAT Databricks with the V2 frontend. Cannot claim UAT or production readiness.
+> - **Production readiness: blocked.** Same gates as before apply.
+> - Frontend wire-up: **not done**. `SPCMonitoringDatabricksApiAdapter.getControlChartSeries`
+>   requires `unitOfMeasure` and `ControlChartPoint.status` which the new narrow schema does not
+>   provide. Frontend wire-up is deferred to slice 3.
+> - All 87 backend tests pass (adapter + route tests, including validation hardening from PR #75
+>   review). Pre-existing architecture guardrail failure in `trace2_databricks_adapter.py` is unrelated.
+> - **Verified candidate operation IDs (spc-databricks-verification-results-summary.md, 2026-05-22):**
+>   pH candidate: 20642328 / P523 / mic 0010 / **operation_id 00000004** (not 00000001 as initially
+>   transcribed); Salt candidate: 20047111 / C037 / mic 0060 / operation_id 00000001.
+> - **Point1 artefact:** `SPCSubgroupResponse.points` uses a generated `Point1` class rather than
+>   `SPCSubgroupPoint` because `export-json-schema.ts` processes schemas in isolation and emits array
+>   item definitions inline rather than as `$ref`. Runtime validation is unaffected (structurally
+>   identical). Fixing the cross-ref would require changing the export script and is deferred.
+> - **Validation hardening (PR #75 review):** blank filter strings → 422; invalid date format → 422;
+>   date_from > date_to → 422; date window > 730 days → 422 (guard against broad MV scans).
+>
+> This plan's proposed `POST /spc/chart-data` full response shape (§3) is deferred to a
+> future slice once locked limits are confirmed and the frontend adapter can be wired.
 
 ---
 
