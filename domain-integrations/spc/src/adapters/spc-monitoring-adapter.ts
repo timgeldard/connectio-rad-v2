@@ -28,8 +28,13 @@ export interface SPCMonitoringAdapterRequest {
   readonly materialId: string
   readonly plantId?: string
   readonly workCentreId?: string
+  readonly operationId?: string
   readonly batchId?: string
   readonly characteristicId?: string
+  readonly chartType?: string
+  readonly dateFrom?: string
+  readonly dateTo?: string
+  readonly limit?: number
 }
 
 type NowFn = () => string
@@ -40,11 +45,7 @@ function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
   return { ok: true, data, fetchedAt: now(), source: 'mock' }
 }
 
-function err<T>(
-  code: AdapterError['code'],
-  message: string,
-  retryable = false
-): AdapterResult<T> {
+function err<T>(code: AdapterError['code'], message: string, retryable = false): AdapterResult<T> {
   return { ok: false, error: { code, message, retryable }, displayState: 'error', source: 'mock' }
 }
 
@@ -60,33 +61,32 @@ export class SPCMonitoringAdapter {
   }
 
   async getSPCMonitoringContext(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<SPCMonitoringContext>> {
     return ok(mockSPCMonitoringContext, this.now)
   }
 
-  async getSPCSummary(
-    _request: SPCMonitoringAdapterRequest
-  ): Promise<AdapterResult<SPCSummary>> {
+  async getSPCSummary(_request: SPCMonitoringAdapterRequest): Promise<AdapterResult<SPCSummary>> {
     return ok(mockSPCSummary, this.now)
   }
 
   async getActiveSPCSignals(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<SPCSignal[]>> {
     return ok(mockActiveSPCSignals, this.now)
   }
 
   async getMonitoredCharacteristics(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
     return ok(mockMonitoredCharacteristics, this.now)
   }
 
   async getControlChartSeries(
-    request: SPCMonitoringAdapterRequest
+    request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<ControlChartSeries>> {
-    if (request.characteristicId === 'CHAR-MOISTURE-001') return ok(mockMoistureChartSeries, this.now)
+    if (request.characteristicId === 'CHAR-MOISTURE-001')
+      return ok(mockMoistureChartSeries, this.now)
     if (request.characteristicId === 'CHAR-FAT-001') return ok(mockFatChartSeries, this.now)
     if (request.characteristicId === 'CHAR-SALT-001') return ok(mockSaltChartSeries, this.now)
     if (request.characteristicId === 'CHAR-TEXTURE-001') return ok(mockTextureChartSeries, this.now)
@@ -94,19 +94,19 @@ export class SPCMonitoringAdapter {
   }
 
   async getCharacteristicCapability(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<CharacteristicCapability>> {
     return ok(mockCharacteristicCapability, this.now)
   }
 
   async getSPCAlarmHistory(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<SPCAlarmHistoryItem[]>> {
     return ok(mockSPCAlarmHistory, this.now)
   }
 
   async getSPCRelatedBatches(
-    _request: SPCMonitoringAdapterRequest
+    _request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<SPCRelatedBatch[]>> {
     return ok(mockSPCRelatedBatches, this.now)
   }

@@ -1,53 +1,145 @@
 # Data-Layer Implementation Backlog
 
-> Generated from the cross-domain data-layer completion audit (2026-05-21).
+> Generated from the cross-domain data-layer completion audit (2026-05-21) and updated (2026-05-22).
 > See [data-layer-completion-inventory.md](./data-layer-completion-inventory.md) for capability status.
 > See [adapter-coverage-audit.md](./adapter-coverage-audit.md) for adapter risk details.
 > See [source-verification-coverage.md](./source-verification-coverage.md) for source object gaps.
 
-This backlog is ranked to prioritise the fastest path to controlled UAT evidence, then governance closures, then implementation slices that require Databricks access or business approval.
+This backlog separates UAT-blocked work from non-UAT hardening. Browser UAT evidence cannot currently be gathered. The programme should not stall, but it also must not pretend browser UAT has happened.
 
-Items 1–2 require a deployed Databricks Apps environment with OAuth, not Databricks SQL access.
-Items 3–4 require Databricks SQL access.
-Items 5–10 require a combination of governance decisions and engineering work.
+## Work that can progress without browser UAT
+
+### 1. Main CI / formatting stabilisation
+- Fix any remaining format check failures.
+- Do not continue feature work while main is CI-red.
+- No Databricks access required.
+- No browser UAT required.
+
+### 2. Trace App backend route and mapper hardening tests
+**Purpose:**
+Add or extend backend tests for Trace App routes and mappers without requiring browser UAT.
+
+**Target areas:**
+- recall-readiness mapper
+- supplier-batches mapper
+- batch-quality-passport mapper
+- mass-balance-ledger mapper
+- holds-ledger mapper
+- investigation-timeline mapper
+
+**Acceptance criteria:**
+- no recall decision emitted
+- recommendationStatus remains `not-evaluated`
+- delivery rows remain `delivery-evidence`, not `delivered`
+- supplier risk remains `unknown` unless source-backed
+- no UOM defaults to KG
+- no unsourced Release decision / Group QA placeholder rows
+- quality status remains heuristic
+- mass-balance reconciliation remains application-derived / heuristic
+- response_model contracts still pass
+
+*No Databricks SQL required. No browser UAT required.*
+
+### 3. Warehouse360 source/route repair
+**Purpose:**
+Repair known native route/source mismatches.
+
+**Known issues:**
+- inbound SQL column mismatch
+- staging source view mismatch
+- exceptions source view mismatch
+- overview mapper/contract mismatch
+
+**Classify carefully:**
+- First code/test planning can progress without browser UAT.
+- Final route verification requires Databricks SQL access.
+- Overview rewrite requires business rules for near-expiry and reconciliation exception definitions.
+
+*Do not claim Warehouse360 UAT readiness.*
+
+### 4. QM usage-decision lot-selection decision record
+**Purpose:**
+Prepare governance decision record for multiple inspection lots per material/batch/plant.
+
+**Question:**
+When multiple inspection lots exist, which lot or lots are authoritative for read-only evidence display?
+
+**Options to document:**
+- latest lot by created/decision date
+- all lots shown per-lot with no single authoritative rollup
+- usage-decision-counter based selection
+- plant/material/batch scoped lot fan-out
+- no rollup until QM process owner confirms
+
+**Acceptance criteria:**
+- decision options documented
+- recommendation proposed
+- implementation consequence documented
+- no code wiring until business owner confirms
+
+*No browser UAT required. Databricks SQL may not be required if existing source/grain docs are sufficient.*
+
+### 5. Quality broader source-verification pack
+**Purpose:**
+Prepare or complete source-verification docs for:
+- inspection lots
+- MIC results
+- CoA-like results
+- deviations/notifications
+
+**Classify:**
+- query pack preparation does not require Databricks access
+- execution does require Databricks SQL access
+- no live route wiring until verified
+
+### 6. SPC native frontend adapter preparation
+**Purpose:**
+Prepare adapter/UI wiring plan for native subgroup route without claiming UAT.
+
+**Guardrails:**
+- no Cp/Cpk/Pp/Ppk
+- no stored Nelson flags
+- no locked limits
+- no “in control” claim
+- no production readiness
+- browser UAT pending
+
+*This can progress as design/test scaffolding, but final evidence requires browser UAT.*
+
+### 7. Contract-route coverage cleanup
+**Purpose:**
+Ensure the matrix reflects actual main after PRs #75–#78.
+
+**Acceptance:**
+- `GET /api/spc/subgroups` is no longer described as absent.
+- Trace App routes are shown as code-fixed but browser-UAT-pending.
+- Quality read-only evidence remains skeleton/unavailable.
+- Warehouse360 overview remains blocked.
+- EnvMon remains contract-bound but browser-UAT-pending unless evidence exists.
 
 ---
 
-## Rank 1 — Traceability: Run browser UAT evidence capture
+## Blocked until browser UAT access
 
-| Field | Value |
-|---|---|
-| **Domain** | Traceability |
-| **Work package** | Run Traceability UAT evidence runbook against deployed app; capture filled runbook + screenshots + Copy UAT Evidence payload |
-| **Why it matters** | Traceability has 6 live routes wired and 4+ source objects verified, but zero browser UAT evidence captured. This is the fastest path to meaningful UAT proof in the repo. Fills the only remaining gap between "code-ready" and "evidence-backed." |
-| **Depends on** | Deployed Databricks Apps instance with `databricks-api` mode + OAuth; UAT runbook at `domain-integrations/traceability/docs/traceability-uat-evidence-runbook.md` |
-| **Databricks SQL required?** | No — deployed app in databricks-api mode only |
-| **Business governance required?** | No (initially) — mass balance caveats remain; UD display excluded |
-| **Runtime code required?** | No — all routes already wired |
-| **Expected files / routes / contracts** | No new files; update `uat-validation-ledger.md` with evidence; attach screenshots and Copy UAT Evidence payloads |
-| **Acceptance criteria** | Runbook fully filled for candidate Material 20035129 / Batch 8000049668 / Plant C061; screenshots for batch header, trace graph, customer deliveries, supplier exposure, production history; mass balance caveat banner confirmed visible; Copy UAT Evidence payload captured and committed |
-| **Risk if skipped** | No evidence of live Databricks correctness; cannot claim parity; DEF-TRACE-005 and TRACE-P1-010/011 uninvestigated |
+- **Traceability browser evidence capture:** code may exist, source may be verified, browser evidence not captured, production readiness not claimed
+- **POH browser evidence capture:** code may exist, source may be verified, browser evidence not captured, production readiness not claimed
+- **SPC subgroup browser evidence:** code may exist, source may be verified, browser evidence not captured, production readiness not claimed
+- **EnvMon browser evidence:** code may exist, source may be verified, browser evidence not captured, production readiness not claimed
+- **Trace App full workspace browser evidence:** code may exist, source may be verified, browser evidence not captured, production readiness not claimed
 
 ---
 
-## Rank 2 — POH: Run browser UAT evidence capture
+## Requires Databricks SQL access
 
-| Field | Value |
-|---|---|
-| **Domain** | POH / Operations |
-| **Work package** | Run POH UAT evidence runbook against deployed app; verify PR #62 fixes in live mode |
-| **Why it matters** | POH has 4 live native routes (header, operations, confirmations, goods movements), PR #62 hardening (component grouping, source attribution), and 2 verified UAT candidates. Browser evidence confirms the code is correct in live Databricks mode — without it the PR #62 fixes are untested against real data. |
-| **Depends on** | Deployed Databricks Apps instance with `databricks-api` mode + OAuth; runbook at `domain-integrations/operations/docs/poh-uat-evidence-runbook.md` |
-| **Databricks SQL required?** | No — deployed app only |
-| **Business governance required?** | No |
-| **Runtime code required?** | No — routes already wired |
-| **Expected files / routes / contracts** | No new files; update `golden-process-orders.md` with evidence; attach screenshots and Copy UAT Evidence payload |
-| **Acceptance criteria** | Runbook filled for PO 7006965038 and/or 7006965039 / Plant C113; all 4 panels (header, operations, confirmations, goods movements) visible and non-empty; section source badges confirm `databricks-api`; Copy UAT Evidence payload captured |
-| **Risk if skipped** | PR #62 source attribution fix unconfirmed in live mode; mixed live/mock issue in `legacy-api` mode undiscovered |
+- **Trace mass-balance semantic closure:** MOVEMENT_CATEGORY direction and BALANCE_QTY
+- **Warehouse360 route repair final verification**
+- **Quality broader source verification execution**
+- **EnvMon INSPECTION_TYPE confirmation**
+- **SPC advanced semantic object verification if new routes are planned**
 
 ---
 
-## Rank 3 — CQ Lab: Fix critical `getLabPlants()` silent mock fallback *(completed 2026-05-21 on feature/data-layer-completion-audit)*
+## Requires business/governance decision
 
 | Field | Value |
 |---|---|
