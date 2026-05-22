@@ -6,7 +6,7 @@ import '@testing-library/jest-dom/vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { NativeMonitoringView } from './native-monitoring-view.js'
 import { envmonAdapter } from '../adapters/envmon-adapter.js'
-import type { EnvMonNativeSwabResult } from '../adapters/envmon-adapter.js'
+import type { EnvMonNativeSwabResult } from '@connectio/data-contracts'
 
 const summary = {
   plantId: 'C061',

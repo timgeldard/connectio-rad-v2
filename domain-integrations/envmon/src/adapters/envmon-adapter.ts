@@ -4,12 +4,16 @@ import type {
   EnvMonZone,
   EnvMonAlert,
   EnvMonSwabResult,
+  EnvMonNativeSwabResult,
   EnvMonTrend,
   EnvMonHeatmapCell,
   EnvMonCorrectiveAction,
   EnvMonSwabVector,
 } from '@connectio/data-contracts'
-import { EnvMonSiteSummarySchema as SiteSummarySchema } from '@connectio/data-contracts'
+import {
+  EnvMonSiteSummarySchema as SiteSummarySchema,
+  EnvMonNativeSwabResultSchema,
+} from '@connectio/data-contracts'
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import { z } from 'zod'
 import {
@@ -33,39 +37,6 @@ export interface EnvMonAdapterRequest {
 }
 
 export type EnvMonNativeSwabStatus = 'fail' | 'warning' | 'pending' | 'pass'
-
-export const EnvMonNativeSwabResultSchema = z.object({
-  inspectionLotId: z.string().nullable(),
-  inspectionPointId: z.string().nullable(),
-  sampleId: z.string().nullable(),
-  operationId: z.string().nullable(),
-  functionalLocation: z.string().nullable(),
-  sampleSummary: z.string().nullable(),
-  sampleHour: z.union([z.string(), z.number()]).nullable(),
-  plantId: z.string().nullable(),
-  inspectionType: z.string().nullable(),
-  createdDate: z.string().nullable(),
-  inspectionEndDate: z.string().nullable(),
-  micId: z.string().nullable(),
-  micName: z.string().nullable(),
-  micCode: z.string().nullable(),
-  result: z.union([z.string(), z.number()]).nullable(),
-  quantitativeResult: z.union([z.number(), z.string()]).nullable(),
-  qualitativeResult: z.string().nullable(),
-  targetValue: z.union([z.number(), z.string()]).nullable(),
-  upperTolerance: z.union([z.number(), z.string()]).nullable(),
-  lowerTolerance: z.union([z.number(), z.string()]).nullable(),
-  unitOfMeasure: z.string().nullable(),
-  valuation: z.string().nullable(),
-  status: z.enum(['fail', 'warning', 'pending', 'pass']),
-  inspector: z.string().nullable(),
-  inspectionMethod: z.string().nullable(),
-  materialId: z.string().nullable(),
-  batchId: z.string().nullable(),
-  processOrderId: z.string().nullable(),
-})
-
-export type EnvMonNativeSwabResult = z.infer<typeof EnvMonNativeSwabResultSchema>
 
 export type NowFn = () => string
 
