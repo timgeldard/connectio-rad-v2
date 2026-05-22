@@ -125,14 +125,16 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
           </section>
 
           {/* Usage decision section */}
-          <section>
-            <div style={eyebrowStyle}>Usage decision evidence</div>
-            <UsageDecisionSection
-              usageDecision={data.usageDecision ?? null}
-              inspectionLots={data.inspectionLots}
-              lotCount={lotCount}
-            />
-          </section>
+          {data.usageDecision && (
+            <section>
+              <div style={eyebrowStyle}>Usage decision evidence</div>
+              <UsageDecisionSection
+                usageDecision={data.usageDecision}
+                inspectionLots={data.inspectionLots}
+                lotCount={lotCount}
+              />
+            </section>
+          )}
 
           {/* MIC / characteristic section */}
           <section>
