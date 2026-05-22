@@ -158,7 +158,8 @@ function HoldsTable({ rows, active }: { rows: readonly HoldEntry[]; active: bool
                 <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--valentia-slate, #005776)', fontWeight: 600 }}>{h.id}</td>
                 <td style={{ padding: '9px 12px' }}>{h.reason}</td>
                 <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {h.qty.toLocaleString()} <span style={{ color: 'var(--shell-fg-2)' }}>{h.uom}</span>
+                  {h.qty.toLocaleString()}{' '}
+                  <span style={{ color: 'var(--shell-fg-2)' }}>{h.uom ?? 'units'}</span>
                 </td>
                 <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>{h.opened}</td>
                 <td style={{ padding: '9px 12px' }}>

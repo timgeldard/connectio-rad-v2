@@ -4,7 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type {
   BatchQualityPassport,
   PassportProduction,
-  PassportSignoff,
+  PassportUsageDecisionEvidence,
   PassportStock,
   QualityCharacteristic,
 } from '@connectio/data-contracts'
@@ -136,8 +136,12 @@ export function QualityPassportPanel({
             </Section>
           )}
 
-          <Section num={isExternal ? '06' : '07'} label="Approval & sign-off">
-            <SignoffList rows={data.signoff} isExternal={isExternal} />
+          <Section
+            num={isExternal ? '06' : '07'}
+            label="Usage-decision evidence"
+            extra="Not governed sign-off"
+          >
+            <UsageDecisionEvidenceList rows={data.usageDecisionEvidence} isExternal={isExternal} />
           </Section>
         </div>
       )}
@@ -150,8 +154,9 @@ export function QualityPassportPanel({
 // ---------------------------------------------------------------------------
 
 function HeroBand({ data }: { data: BatchQualityPassport }) {
+  const confidence = data.quality.heuristicQualityConfidence
   const confColor =
-    data.quality.confidence >= 90 ? '#1a8454' : data.quality.confidence >= 75 ? '#8a6b00' : '#c63b00'
+    confidence >= 90 ? '#1a8454' : confidence >= 75 ? '#8a6b00' : '#c63b00'
   const failedMics = data.quality.coa.filter((c) => c.status === 'fail').length
   const warnMics = data.quality.coa.filter((c) => c.status === 'warn').length
   const acceptLots = data.lotHistory.filter((l) => l.result === 'accept').length
@@ -170,12 +175,26 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
       }}
     >
       <div style={{ padding: 16, borderRight: '1px solid var(--shell-line, #E5E3D7)' }}>
-        <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)', marginBottom: 6 }}>
-          Quality confidence
+        <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span>Quality confidence</span>
+          <span
+            title="This score is application-derived from MIC pass/fail and warning counts. It is not a governed SAP/QM field."
+            style={{
+              fontSize: 9,
+              padding: '1px 5px',
+              borderRadius: 4,
+              background: 'var(--sunrise, #F9C20A)20',
+              color: '#8a6b00',
+              fontWeight: 700,
+              letterSpacing: 0.4,
+            }}
+          >
+            HEURISTIC
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 36, fontWeight: 800, color: confColor, lineHeight: 1 }}>
-            {data.quality.confidence}
+            {confidence}
             <span style={{ fontSize: 14, color: 'var(--shell-fg-2)', fontWeight: 600 }}>/100</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--shell-fg-2)' }}>
@@ -183,6 +202,9 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
               <div key={n}>· {n}</div>
             ))}
           </div>
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--shell-fg-2)', marginTop: 6, fontStyle: 'italic' }}>
+          Source: {data.quality.confidenceSource === 'application-heuristic' ? 'application-heuristic — not governed' : 'governed'}
         </div>
       </div>
       <KpiTile label="Lots produced" value={data.lotHistory.length} sub="over 4 days" />
@@ -632,37 +654,76 @@ function MassBalanceBanner({
   )
 }
 
-function SignoffList({ rows, isExternal }: { rows: readonly PassportSignoff[]; isExternal: boolean }) {
+function UsageDecisionEvidenceList({
+  rows,
+  isExternal,
+}: {
+  rows: readonly PassportUsageDecisionEvidence[]
+  isExternal: boolean
+}) {
   return (
-    <div style={{ display: 'grid', gap: 6 }}>
-      {rows.map((s) => (
-        <div
-          key={s.role}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            padding: '10px 14px',
-            background: 'var(--shell-surface-2, #F8F7F0)',
-            borderRadius: 6,
-          }}
-        >
-          <div style={{ minWidth: 160 }}>
-            <div style={{ fontSize: 10.5, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--shell-fg-2)', marginBottom: 2 }}>
-              {s.role}
+    <>
+      <div
+        style={{
+          fontSize: 11,
+          color: 'var(--shell-fg-2)',
+          fontStyle: 'italic',
+          marginBottom: 8,
+          padding: '6px 10px',
+          background: 'var(--sunrise, #F9C20A)15',
+          borderLeft: '3px solid var(--sunrise, #F9C20A)',
+          borderRadius: 4,
+        }}
+      >
+        These rows show the SAP usage-decision audit trail. They are NOT governed e-signatures,
+        release approvals, or QA sign-offs.
+      </div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        {rows.map((s) => (
+          <div
+            key={`${s.role}-${s.recordedAt}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              padding: '10px 14px',
+              background: 'var(--shell-surface-2, #F8F7F0)',
+              borderRadius: 6,
+            }}
+          >
+            <div style={{ minWidth: 160 }}>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  color: 'var(--shell-fg-2)',
+                  marginBottom: 2,
+                }}
+              >
+                {s.role}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
+                {isExternal && s.decisionBy !== '—' ? '[masked]' : s.decisionBy}
+              </div>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>
-              {isExternal && s.name !== '—' ? '[masked]' : s.name}
+            <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: 'var(--shell-fg-2)' }}>
+              {s.recordedAt || '—'}
             </div>
+            <StatusPill
+              status={s.decisionType === 'usage-decision-recorded' ? 'ok' : s.decisionType === 'inspection-completed' ? 'warn' : 'neutral'}
+              label={
+                s.decisionType === 'usage-decision-recorded'
+                  ? 'Decision recorded'
+                  : s.decisionType === 'inspection-completed'
+                    ? 'Inspection done'
+                    : 'No evidence'
+              }
+            />
           </div>
-          <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: 'var(--shell-fg-2)' }}>{s.time}</div>
-          <StatusPill
-            status={s.status === 'signed' ? 'ok' : s.status === 'pending' ? 'warn' : 'neutral'}
-            label={s.status === 'not-required' ? 'N/A' : s.status}
-          />
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   )
 }
 

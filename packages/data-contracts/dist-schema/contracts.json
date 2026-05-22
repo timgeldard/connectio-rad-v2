@@ -193,10 +193,17 @@
         "quality": {
           "type": "object",
           "properties": {
-            "confidence": {
+            "heuristicQualityConfidence": {
               "type": "number",
               "minimum": 0,
               "maximum": 100
+            },
+            "confidenceSource": {
+              "type": "string",
+              "enum": [
+                "application-heuristic",
+                "governed"
+              ]
             },
             "overallStatus": {
               "type": "string",
@@ -268,7 +275,8 @@
             }
           },
           "required": [
-            "confidence",
+            "heuristicQualityConfidence",
+            "confidenceSource",
             "overallStatus",
             "notes",
             "coa"
@@ -421,7 +429,7 @@
           ],
           "additionalProperties": false
         },
-        "signoff": {
+        "usageDecisionEvidence": {
           "type": "array",
           "items": {
             "type": "object",
@@ -429,26 +437,26 @@
               "role": {
                 "type": "string"
               },
-              "name": {
+              "decisionBy": {
                 "type": "string"
               },
-              "status": {
+              "decisionType": {
                 "type": "string",
                 "enum": [
-                  "signed",
-                  "pending",
-                  "not-required"
+                  "usage-decision-recorded",
+                  "inspection-completed",
+                  "none"
                 ]
               },
-              "time": {
+              "recordedAt": {
                 "type": "string"
               }
             },
             "required": [
               "role",
-              "name",
-              "status",
-              "time"
+              "decisionBy",
+              "decisionType",
+              "recordedAt"
             ],
             "additionalProperties": false
           }
@@ -461,7 +469,7 @@
         "production",
         "lotHistory",
         "massBalance",
-        "signoff"
+        "usageDecisionEvidence"
       ],
       "additionalProperties": false
     },
@@ -2917,7 +2925,10 @@
           "type": "number"
         },
         "uom": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "opened": {
           "type": "string"
@@ -2993,7 +3004,10 @@
                 "type": "number"
               },
               "uom": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "opened": {
                 "type": "string"
@@ -3058,6 +3072,12 @@
               "qty": {
                 "type": "number"
               },
+              "uom": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "color": {
                 "type": [
                   "string",
@@ -3068,7 +3088,8 @@
             "required": [
               "code",
               "label",
-              "qty"
+              "qty",
+              "uom"
             ],
             "additionalProperties": false
           }
@@ -3093,6 +3114,12 @@
         "qty": {
           "type": "number"
         },
+        "uom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "color": {
           "type": [
             "string",
@@ -3103,7 +3130,8 @@
       "required": [
         "code",
         "label",
-        "qty"
+        "qty",
+        "uom"
       ],
       "additionalProperties": false
     },
@@ -3917,13 +3945,21 @@
         },
         "dateEnd": {
           "type": "string"
+        },
+        "reconciliationSource": {
+          "type": "string",
+          "enum": [
+            "application-heuristic",
+            "governed"
+          ]
         }
       },
       "required": [
         "kpi",
         "events",
         "dateStart",
-        "dateEnd"
+        "dateEnd",
+        "reconciliationSource"
       ],
       "additionalProperties": false
     },
@@ -4818,10 +4854,17 @@
     "PassportQuality": {
       "type": "object",
       "properties": {
-        "confidence": {
+        "heuristicQualityConfidence": {
           "type": "number",
           "minimum": 0,
           "maximum": 100
+        },
+        "confidenceSource": {
+          "type": "string",
+          "enum": [
+            "application-heuristic",
+            "governed"
+          ]
         },
         "overallStatus": {
           "type": "string",
@@ -4893,39 +4936,11 @@
         }
       },
       "required": [
-        "confidence",
+        "heuristicQualityConfidence",
+        "confidenceSource",
         "overallStatus",
         "notes",
         "coa"
-      ],
-      "additionalProperties": false
-    },
-    "PassportSignoff": {
-      "type": "object",
-      "properties": {
-        "role": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "signed",
-            "pending",
-            "not-required"
-          ]
-        },
-        "time": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "role",
-        "name",
-        "status",
-        "time"
       ],
       "additionalProperties": false
     },
@@ -4958,6 +4973,35 @@
         "restricted",
         "transit",
         "uom"
+      ],
+      "additionalProperties": false
+    },
+    "PassportUsageDecisionEvidence": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "decisionBy": {
+          "type": "string"
+        },
+        "decisionType": {
+          "type": "string",
+          "enum": [
+            "usage-decision-recorded",
+            "inspection-completed",
+            "none"
+          ]
+        },
+        "recordedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "decisionBy",
+        "decisionType",
+        "recordedAt"
       ],
       "additionalProperties": false
     },
@@ -8162,10 +8206,27 @@
         "status": {
           "type": "string",
           "enum": [
+            "delivery-evidence",
             "delivered",
             "in-transit",
             "recalled",
-            "blocked"
+            "blocked",
+            "unknown"
+          ]
+        },
+        "statusSource": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "delivery-record-present",
+                "governed",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "doc": {
@@ -8186,10 +8247,12 @@
     "RecallDeliveryStatus": {
       "type": "string",
       "enum": [
+        "delivery-evidence",
         "delivered",
         "in-transit",
         "recalled",
-        "blocked"
+        "blocked",
+        "unknown"
       ]
     },
     "RecallReadiness": {
@@ -8273,10 +8336,27 @@
               "status": {
                 "type": "string",
                 "enum": [
+                  "delivery-evidence",
                   "delivered",
                   "in-transit",
                   "recalled",
-                  "blocked"
+                  "blocked",
+                  "unknown"
+                ]
+              },
+              "statusSource": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "delivery-record-present",
+                      "governed",
+                      "unavailable"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
                 ]
               },
               "doc": {
@@ -8295,17 +8375,20 @@
             "additionalProperties": false
           }
         },
-        "recallRecommended": {
-          "type": [
-            "boolean",
-            "null"
+        "recommendationStatus": {
+          "type": "string",
+          "enum": [
+            "not-evaluated",
+            "recommended",
+            "not-recommended"
           ]
         }
       },
       "required": [
         "totals",
         "countries",
-        "deliveries"
+        "deliveries",
+        "recommendationStatus"
       ],
       "additionalProperties": false
     },

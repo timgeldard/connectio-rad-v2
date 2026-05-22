@@ -30,11 +30,25 @@ export interface RecallPanelProps {
 }
 
 const STATUS_TONES = {
+  // 'delivery-evidence' is the source-truthful default — gold_batch_delivery_v
+  // posts a delivery row but doesn't expose an operational status. We render
+  // a neutral tone so the UI does NOT imply "delivered" without governance.
+  'delivery-evidence': { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' },
   delivered: { bg: 'var(--jade, #44CF93)20', fg: '#1a8454' },
   'in-transit': { bg: 'var(--valentia-slate, #005776)20', fg: 'var(--valentia-slate, #005776)' },
   recalled: { bg: 'var(--sunset, #F24A00)20', fg: 'var(--sunset, #F24A00)' },
   blocked: { bg: 'var(--sunrise, #F9C20A)20', fg: '#8a6b00' },
+  unknown: { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' },
 } as const
+
+const STATUS_LABELS: Record<keyof typeof STATUS_TONES, string> = {
+  'delivery-evidence': 'Delivery record',
+  delivered: 'Delivered',
+  'in-transit': 'In transit',
+  recalled: 'Recalled',
+  blocked: 'Blocked',
+  unknown: 'Unknown',
+}
 
 export function RecallPanel({ request }: RecallPanelProps) {
   const { data: result, isLoading } = useRecallReadiness(request)
@@ -62,7 +76,7 @@ export function RecallPanel({ request }: RecallPanelProps) {
     >
       {data && (
         <div style={{ padding: 20 }}>
-          {data.recallRecommended && (
+          {data.recommendationStatus === 'recommended' && (
             <div
               role="alert"
               style={{
@@ -77,6 +91,23 @@ export function RecallPanel({ request }: RecallPanelProps) {
               }}
             >
               ⚠ Recall recommended for this batch — escalate to the Quality team.
+            </div>
+          )}
+          {data.recommendationStatus === 'not-evaluated' && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 10,
+                background: 'var(--sunrise, #F9C20A)15',
+                borderLeft: '3px solid var(--sunrise, #F9C20A)',
+                borderRadius: 4,
+                color: 'var(--shell-fg-2)',
+                fontSize: 11.5,
+                fontStyle: 'italic',
+              }}
+            >
+              Recall recommendation: not evaluated. A governed recall-rule engine has not been
+              wired. Do NOT interpret this as "no recall needed".
             </div>
           )}
 
@@ -149,7 +180,7 @@ export function RecallPanel({ request }: RecallPanelProps) {
               </thead>
               <tbody>
                 {data.deliveries.map((d) => {
-                  const tone = STATUS_TONES[d.status]
+                  const tone = STATUS_TONES[d.status] ?? STATUS_TONES.unknown
                   return (
                     <tr key={d.id} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
                       <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--valentia-slate, #005776)', fontWeight: 600 }}>{d.id}</td>
@@ -167,12 +198,16 @@ export function RecallPanel({ request }: RecallPanelProps) {
                             borderRadius: 999,
                             fontSize: 11,
                             fontWeight: 600,
-                            textTransform: 'capitalize',
                             background: tone.bg,
                             color: tone.fg,
                           }}
+                          title={
+                            d.statusSource === 'delivery-record-present'
+                              ? 'Source: gold_batch_delivery_v posting record — no governed operational status'
+                              : undefined
+                          }
                         >
-                          {d.status.replace('-', ' ')}
+                          {STATUS_LABELS[d.status] ?? d.status}
                         </span>
                       </td>
                       <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>{d.doc}</td>

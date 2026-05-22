@@ -32,7 +32,8 @@ export const MOCK_BATCH_QUALITY_PASSPORT: BatchQualityPassport = {
     uom: 'KG',
   },
   quality: {
-    confidence: 87,
+    heuristicQualityConfidence: 87,
+    confidenceSource: 'application-heuristic',
     overallStatus: 'accepted',
     notes: ['1 conditional release', '1 MIC near limit', 'No audit findings'],
     coa: [
@@ -75,10 +76,10 @@ export const MOCK_BATCH_QUALITY_PASSPORT: BatchQualityPassport = {
     note: 'Reconciled — all production and outflow postings balance to current on-hand within 0.01%.',
     detailUrl: 'mass-balance',
   },
-  signoff: [
-    { role: 'QA reviewer', name: 'S. Murphy', status: 'signed', time: '2024-03-12 11:42' },
-    { role: 'Release decision', name: 'D. Ferreira', status: 'signed', time: '2024-03-12 14:08' },
-    { role: 'Group QA', name: '—', status: 'not-required', time: '' },
+  usageDecisionEvidence: [
+    { role: 'QA reviewer', decisionBy: 'S. Murphy', decisionType: 'inspection-completed', recordedAt: '2024-03-12 11:42' },
+    { role: 'Release decision', decisionBy: 'D. Ferreira', decisionType: 'usage-decision-recorded', recordedAt: '2024-03-12 14:08' },
+    { role: 'Group QA', decisionBy: '—', decisionType: 'none', recordedAt: '' },
   ],
 }
 
@@ -153,6 +154,7 @@ function buildMockMassBalance(): MassBalanceLedger {
     events,
     dateStart: '2024-03-08',
     dateEnd: '2024-05-06',
+    reconciliationSource: 'application-heuristic',
   }
 }
 
@@ -189,13 +191,13 @@ export const MOCK_RECALL_READINESS: RecallReadiness = {
     { code: 'NL', name: 'Netherlands', qty: 880, pct: 0.21 },
   ],
   deliveries: [
-    { id: '8030054411', customer: 'Müller Foods GmbH', country: 'DE', date: '2024-03-14', qty: 1200, status: 'delivered', doc: 'INV-44120' },
-    { id: '8030054512', customer: 'Müller Foods GmbH', country: 'DE', date: '2024-03-16', qty: 1000, status: 'delivered', doc: 'INV-44141' },
-    { id: '8030054613', customer: 'Lactalis France', country: 'FR', date: '2024-03-15', qty: 800, status: 'delivered', doc: 'INV-44162' },
-    { id: '8030054714', customer: 'Lactalis France', country: 'FR', date: '2024-03-18', qty: 400, status: 'in-transit', doc: 'INV-44183' },
-    { id: '8030054815', customer: 'FrieslandCampina', country: 'NL', date: '2024-03-19', qty: 880, status: 'in-transit', doc: 'INV-44204' },
+    { id: '8030054411', customer: 'Müller Foods GmbH', country: 'DE', date: '2024-03-14', qty: 1200, status: 'delivery-evidence', statusSource: 'delivery-record-present', doc: 'INV-44120' },
+    { id: '8030054512', customer: 'Müller Foods GmbH', country: 'DE', date: '2024-03-16', qty: 1000, status: 'delivery-evidence', statusSource: 'delivery-record-present', doc: 'INV-44141' },
+    { id: '8030054613', customer: 'Lactalis France', country: 'FR', date: '2024-03-15', qty: 800, status: 'delivery-evidence', statusSource: 'delivery-record-present', doc: 'INV-44162' },
+    { id: '8030054714', customer: 'Lactalis France', country: 'FR', date: '2024-03-18', qty: 400, status: 'delivery-evidence', statusSource: 'delivery-record-present', doc: 'INV-44183' },
+    { id: '8030054815', customer: 'FrieslandCampina', country: 'NL', date: '2024-03-19', qty: 880, status: 'delivery-evidence', statusSource: 'delivery-record-present', doc: 'INV-44204' },
   ],
-  recallRecommended: false,
+  recommendationStatus: 'not-evaluated',
 }
 
 // ---------------------------------------------------------------------------
@@ -204,16 +206,16 @@ export const MOCK_RECALL_READINESS: RecallReadiness = {
 
 export const MOCK_HOLDS_LEDGER: HoldsLedger = {
   activeHolds: [
-    { id: 'H-2024-0312', reason: 'Q4 · Quality inspection', reasonCode: 'Q4', qty: 850, uom: 'KG', opened: '2024-03-22', owner: "B. O'Neill", status: 'pending', detail: 'Pending re-test on retain sample' },
-    { id: 'H-2024-0315', reason: 'B3 · Blocked stock', reasonCode: 'B3', qty: 2100, uom: 'KG', opened: '2024-03-25', owner: 'S. Murphy', status: 'pending', detail: 'Customer claim under investigation · Müller Foods' },
+    { id: 'H-2024-0312', reason: 'Q4 · Quality inspection', reasonCode: 'Q4', qty: 850, uom: null, opened: '2024-03-22', owner: "B. O'Neill", status: 'pending', detail: 'Pending re-test on retain sample' },
+    { id: 'H-2024-0315', reason: 'B3 · Blocked stock', reasonCode: 'B3', qty: 2100, uom: null, opened: '2024-03-25', owner: 'S. Murphy', status: 'pending', detail: 'Customer claim under investigation · Müller Foods' },
   ],
   resolvedHolds: [
-    { id: 'H-2024-0290', reason: 'Q4 · Quality inspection', reasonCode: 'Q4', qty: 17050, uom: 'KG', opened: '2024-03-09', resolved: '2024-03-12', owner: 'S. Murphy', status: 'released', detail: 'Initial post-production QC hold', resolution: 'Released — MIC pass' },
+    { id: 'H-2024-0290', reason: 'Q4 · Quality inspection', reasonCode: 'Q4', qty: 17050, uom: null, opened: '2024-03-09', resolved: '2024-03-12', owner: 'S. Murphy', status: 'released', detail: 'Initial post-production QC hold', resolution: 'Released — MIC pass' },
   ],
   qtyByReason: [
-    { code: 'B3', label: 'Blocked stock', qty: 2100, color: 'var(--sunset, #F24A00)' },
-    { code: 'Q4', label: 'Quality inspection', qty: 850, color: 'var(--sage, #289BA2)' },
-    { code: 'R1', label: 'Restricted', qty: 450, color: 'var(--sunrise, #F9C20A)' },
+    { code: 'B3', label: 'Blocked stock', qty: 2100, uom: null, color: 'var(--sunset, #F24A00)' },
+    { code: 'Q4', label: 'Quality inspection', qty: 850, uom: null, color: 'var(--sage, #289BA2)' },
+    { code: 'R1', label: 'Restricted', qty: 450, uom: null, color: 'var(--sunrise, #F9C20A)' },
   ],
 }
 

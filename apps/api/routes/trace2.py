@@ -583,6 +583,19 @@ async def mass_balance(
 # Trace App slice — POST /trace2/recall-readiness
 # ---------------------------------------------------------------------------
 
+def _reject_blank(field: str, value: str) -> None:
+    """Reject blank required identifiers BEFORE they reach Databricks.
+
+    Returns nothing on success; raises HTTPException(422) otherwise.
+    Centralised so every Trace App route enforces the same rule.
+    """
+    if not value or not value.strip():
+        raise HTTPException(
+            status_code=422,
+            detail=f"{field} must not be blank.",
+        )
+
+
 class RecallReadinessBody(BaseModel):
     material_id: str
     batch_id: str
@@ -610,6 +623,9 @@ async def recall_readiness(
             status_code=503,
             detail="recall-readiness requires BACKEND_ADAPTER_MODE=databricks-api",
         )
+
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
@@ -675,6 +691,9 @@ async def supplier_batches(
             status_code=503,
             detail="supplier-batches requires BACKEND_ADAPTER_MODE=databricks-api",
         )
+
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
@@ -751,6 +770,9 @@ async def batch_quality_passport(
             detail="batch-quality-passport requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
+
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email
@@ -823,6 +845,9 @@ async def mass_balance_ledger(
             detail="mass-balance-ledger requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
+
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email
@@ -879,6 +904,9 @@ async def investigation_timeline(
             detail="investigation-timeline requires BACKEND_ADAPTER_MODE=databricks-api",
         )
 
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
+
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email
@@ -929,6 +957,9 @@ async def holds_ledger(
             status_code=503,
             detail="holds-ledger requires BACKEND_ADAPTER_MODE=databricks-api",
         )
+
+    _reject_blank("material_id", body.material_id)
+    _reject_blank("batch_id", body.batch_id)
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(

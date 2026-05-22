@@ -1502,9 +1502,12 @@ def map_recall_readiness_rows(rows: list[dict]) -> Optional[dict]:
             "country": country_id,
             "date": str(posting_date) if posting_date is not None else "",
             "qty": qty,
-            # gold_batch_delivery_v has no delivery-status column yet — report all as 'delivered'.
-            # When a status column lands, derive: in-transit / blocked / recalled accordingly.
-            "status": "delivered",
+            # gold_batch_delivery_v has no delivery-status column. We emit
+            # 'delivery-evidence' (source-truthful default) and tag the
+            # provenance so the UI cannot misread it as governed delivery
+            # status. When a status column lands, derive the real value.
+            "status": "delivery-evidence",
+            "statusSource": "delivery-record-present",
             "doc": str(sales_order) if sales_order is not None else "",
         })
 
@@ -1528,9 +1531,10 @@ def map_recall_readiness_rows(rows: list[dict]) -> Optional[dict]:
         },
         "countries": countries,
         "deliveries": deliveries,
-        # Recall recommendation is a governance decision and is not yet computed
-        # server-side; remains null until a recall-rules adapter exists.
-        "recallRecommended": False,
+        # Recall recommendation is a governance decision and is not yet
+        # computed server-side. The only safe value is `not-evaluated`.
+        # The UI MUST NOT interpret this as "no recall needed".
+        "recommendationStatus": "not-evaluated",
     }
     return result
 
@@ -1997,6 +2001,10 @@ def map_mass_balance_ledger_rows(rows: list[dict]) -> Optional[dict]:
         "events": events,
         "dateStart": date_start,
         "dateEnd": date_end,
+        # Reconciliation is application-derived (variance formula above).
+        # MOVEMENT_CATEGORY direction and BALANCE_QTY semantics are not yet
+        # governed — UI must surface this caveat.
+        "reconciliationSource": "application-heuristic",
     }
 
 
@@ -2202,18 +2210,30 @@ def map_holds_ledger_rows(rows: list[dict]) -> Optional[dict]:
     if not rows:
         return None
     first = rows[0]
-    uom = "KG"  # gold_batch_stock_v does not expose uom; use material's uom in a future revision
+    # gold_batch_stock_v does not expose a UOM column for this view. The
+    # contract has `uom: string | null` — do NOT default to "KG". Future
+    # revision: join to gold_material.BASE_UNIT_OF_MEASURE.
+    uom: Optional[str] = None
 
-    qty_by_reason = []
+    qty_by_reason: list[dict] = []
     blocked = float(first.get("blocked") or 0)
     restricted = float(first.get("restricted") or 0)
     qi = float(first.get("quality_inspection") or 0)
     if blocked > 0:
-        qty_by_reason.append({"code": "B3", "label": "Blocked stock", "qty": blocked, "color": "var(--sunset, #F24A00)"})
+        qty_by_reason.append({
+            "code": "B3", "label": "Blocked stock", "qty": blocked,
+            "uom": uom, "color": "var(--sunset, #F24A00)",
+        })
     if qi > 0:
-        qty_by_reason.append({"code": "Q4", "label": "Quality inspection", "qty": qi, "color": "var(--sage, #289BA2)"})
+        qty_by_reason.append({
+            "code": "Q4", "label": "Quality inspection", "qty": qi,
+            "uom": uom, "color": "var(--sage, #289BA2)",
+        })
     if restricted > 0:
-        qty_by_reason.append({"code": "R1", "label": "Restricted", "qty": restricted, "color": "var(--sunrise, #F9C20A)"})
+        qty_by_reason.append({
+            "code": "R1", "label": "Restricted", "qty": restricted,
+            "uom": uom, "color": "var(--sunrise, #F9C20A)",
+        })
 
     active: list[dict] = []
     resolved: list[dict] = []
@@ -2532,18 +2552,34 @@ def build_batch_quality_passport(
         else f"Unexplained variance of {abs(variance):.1f} {b.get('uom') or 'KG'}."
     )
 
-    # Signoff — derive from latest accepted lot (best we can do without a dedicated source)
-    signoff: list[dict] = []
-    latest_accept = next((r for r in lot_rows if r.get("usage_decision") and "accept" in str(r.get("usage_decision")).lower()), None)
+    # Usage-decision evidence — derived from the latest accepted lot's
+    # CREATED_BY. This is NOT a governed signoff / e-signature / release
+    # approval. The contract schema deliberately uses
+    # `PassportUsageDecisionEvidence` with `decisionType` to make that clear.
+    usage_decision_evidence: list[dict] = []
+    latest_accept = next(
+        (r for r in lot_rows if r.get("usage_decision") and "accept" in str(r.get("usage_decision")).lower()),
+        None,
+    )
     if latest_accept:
-        signoff.append({
+        usage_decision_evidence.append({
             "role": "QA reviewer",
-            "name": str(latest_accept.get("decision_by") or "—"),
-            "status": "signed",
-            "time": str(latest_accept.get("date") or ""),
+            "decisionBy": str(latest_accept.get("decision_by") or "—"),
+            "decisionType": "usage-decision-recorded",
+            "recordedAt": str(latest_accept.get("date") or ""),
         })
-    signoff.append({"role": "Release decision", "name": "—", "status": "not-required" if not latest_accept else "pending", "time": ""})
-    signoff.append({"role": "Group QA", "name": "—", "status": "not-required", "time": ""})
+    usage_decision_evidence.append({
+        "role": "Release decision",
+        "decisionBy": "—",
+        "decisionType": "none",
+        "recordedAt": "",
+    })
+    usage_decision_evidence.append({
+        "role": "Group QA",
+        "decisionBy": "—",
+        "decisionType": "none",
+        "recordedAt": "",
+    })
 
     # daysToExpiry: compute from identity.expiryDate vs today
     from datetime import datetime, timezone
@@ -2570,7 +2606,10 @@ def build_batch_quality_passport(
     return {
         "identity": identity,
         "quality": {
-            "confidence": confidence,
+            # Heuristic — not a governed QM score. Schema enforces the
+            # naming and the `confidenceSource` tag.
+            "heuristicQualityConfidence": confidence,
+            "confidenceSource": "application-heuristic",
             "overallStatus": overall_status,
             "notes": notes,
             "coa": coa,
@@ -2582,5 +2621,5 @@ def build_batch_quality_passport(
             "variance": variance,
             "note": variance_note,
         },
-        "signoff": signoff,
+        "usageDecisionEvidence": usage_decision_evidence,
     }

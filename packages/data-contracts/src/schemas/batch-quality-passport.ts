@@ -43,8 +43,21 @@ export const PassportIdentitySchema = z.object({
 })
 export type PassportIdentity = z.infer<typeof PassportIdentitySchema>
 
+/**
+ * Quality KPI block.
+ *
+ * - `heuristicQualityConfidence` is an application-level derived score (0–100)
+ *   computed from failed/warn MIC counts and rejected results. It is NOT a
+ *   governed SAP/QM field and MUST be presented as a heuristic in the UI.
+ * - `confidenceSource` is fixed at `application-heuristic` while the score is
+ *   client-derived; it transitions to `governed` only when a backed QM
+ *   calculation is authorised.
+ * - `overallStatus` is also derived from the same heuristic — treat as a
+ *   *summary indicator*, not a release decision.
+ */
 export const PassportQualitySchema = z.object({
-  confidence: z.number().min(0).max(100),
+  heuristicQualityConfidence: z.number().min(0).max(100),
+  confidenceSource: z.enum(['application-heuristic', 'governed']),
   overallStatus: z.enum(['accepted', 'conditional', 'rejected']),
   notes: z.array(z.string()),
   coa: z.array(QualityCharacteristicSchema),
@@ -82,13 +95,27 @@ export const PassportMassBalanceSchema = z.object({
 })
 export type PassportMassBalance = z.infer<typeof PassportMassBalanceSchema>
 
-export const PassportSignoffSchema = z.object({
+/**
+ * Usage-decision evidence — NOT governed signoff.
+ *
+ * This represents the SAP usage-decision audit trail (who recorded the
+ * inspection decision, when). It is NOT an e-signature, release approval,
+ * Group QA signoff, or any other governed authority. The UI MUST label
+ * these rows as "decision evidence" / "decision by" — never as "signed
+ * off" / "approved" / "released".
+ *
+ * `decisionType` distinguishes the SAP event recorded:
+ *   - `usage-decision-recorded` — INSPECTION_LOT USAGE_DECISION was entered
+ *   - `inspection-completed`    — inspection lot reached END status
+ *   - `none`                    — no decision evidence available
+ */
+export const PassportUsageDecisionEvidenceSchema = z.object({
   role: z.string(),
-  name: z.string(),
-  status: z.enum(['signed', 'pending', 'not-required']),
-  time: z.string(),
+  decisionBy: z.string(),
+  decisionType: z.enum(['usage-decision-recorded', 'inspection-completed', 'none']),
+  recordedAt: z.string(),
 })
-export type PassportSignoff = z.infer<typeof PassportSignoffSchema>
+export type PassportUsageDecisionEvidence = z.infer<typeof PassportUsageDecisionEvidenceSchema>
 
 /**
  * Batch Quality Passport — consolidated quality identity card for a batch.
@@ -97,6 +124,11 @@ export type PassportSignoff = z.infer<typeof PassportSignoffSchema>
  * mode masks supplier names, plant code, process order, reviewer names, and
  * production line/operator. Backend must enforce masking; frontend visually
  * adapts when the audience flag is set.
+ *
+ * `usageDecisionEvidence` replaces what was formerly called `signoff`.
+ * This rename is deliberate — see PassportUsageDecisionEvidenceSchema.
+ * Do NOT treat these rows as governed approval / e-signature / release
+ * authority. The UI MUST surface them as decision *evidence* only.
  */
 export const BatchQualityPassportSchema = z.object({
   identity: PassportIdentitySchema,
@@ -105,6 +137,6 @@ export const BatchQualityPassportSchema = z.object({
   production: PassportProductionSchema,
   lotHistory: z.array(LotHistoryEntrySchema),
   massBalance: PassportMassBalanceSchema,
-  signoff: z.array(PassportSignoffSchema),
+  usageDecisionEvidence: z.array(PassportUsageDecisionEvidenceSchema),
 })
 export type BatchQualityPassport = z.infer<typeof BatchQualityPassportSchema>

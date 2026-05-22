@@ -356,7 +356,7 @@ export type {
   PassportStock,
   PassportProduction,
   PassportMassBalance,
-  PassportSignoff,
+  PassportUsageDecisionEvidence,
   QualityCharacteristic,
   LotHistoryEntry,
 } from './schemas/batch-quality-passport.js'
@@ -367,7 +367,7 @@ export {
   PassportStockSchema,
   PassportProductionSchema,
   PassportMassBalanceSchema,
-  PassportSignoffSchema,
+  PassportUsageDecisionEvidenceSchema,
   QualityCharacteristicSchema,
   LotHistoryEntrySchema,
 } from './schemas/batch-quality-passport.js'

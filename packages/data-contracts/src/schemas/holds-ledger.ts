@@ -8,7 +8,13 @@ export const HoldEntrySchema = z.object({
   reason: z.string(),
   reasonCode: z.string().nullable().optional(),
   qty: z.number(),
-  uom: z.string(),
+  /**
+   * Unit of measure. NULL when the source does not expose a UOM column
+   * (current holds-ledger derivation does not join to material master).
+   * The UI MUST render "source units" / empty when null — it MUST NOT
+   * invent KG or any other unit.
+   */
+  uom: z.string().nullable(),
   opened: z.string(),
   resolved: z.string().nullable().optional(),
   owner: z.string(),
@@ -22,6 +28,8 @@ export const HoldsQtyByReasonSchema = z.object({
   code: z.string(),
   label: z.string(),
   qty: z.number(),
+  /** UOM is nullable for the same reason as on HoldEntry — do not invent units. */
+  uom: z.string().nullable(),
   color: z.string().nullable().optional(),
 })
 export type HoldsQtyByReason = z.infer<typeof HoldsQtyByReasonSchema>
