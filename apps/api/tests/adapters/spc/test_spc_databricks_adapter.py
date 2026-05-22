@@ -5,8 +5,8 @@ Column names confirmed-ddl (DESCRIBE TABLE run in connected_plant_uat, 2026-05-2
   operation_id, batch_id, batch_date, sum_value, batch_n, batch_range,
   lsl_spec, usl_spec.
 
-UAT candidates used in tests (pp.txt):
-  20642328 / P523 / 0010 / op 00000001 / pH — spec limits 7.2 / 7.8
+UAT candidates (spc-databricks-verification-results-summary.md, 2026-05-22):
+  20642328 / P523 / 0010 / op 00000004 / pH — spec limits 7.2 / 7.8
   20047111 / C037 / 0060 / op 00000001 / Salt — lsl/usl 0.0 sentinel
 """
 import pytest
@@ -26,7 +26,7 @@ def _request(**kwargs) -> SubgroupsRequest:
         "material_id": "20642328",
         "plant_id": "P523",
         "mic_id": "0010",
-        "operation_id": "00000001",
+        "operation_id": "00000004",
         "date_from": "2024-01-01",
         "date_to": "2026-05-22",
         "limit": 100,
@@ -67,7 +67,7 @@ class TestGetSpcSubgroupsSpec:
         assert spec.params["material_id"] == "20642328"
         assert spec.params["plant_id"] == "P523"
         assert spec.params["mic_id"] == "0010"
-        assert spec.params["operation_id"] == "00000001"
+        assert spec.params["operation_id"] == "00000004"
         assert spec.params["date_from"] == "2024-01-01"
         assert spec.params["date_to"] == "2026-05-22"
 
@@ -198,8 +198,8 @@ class TestMapSpcSubgroupRows:
         assert result["micId"] == "0010"
 
     def test_echoes_operation_id(self) -> None:
-        result = map_spc_subgroup_rows([_ph_row()], _request(operation_id="00000001"))
-        assert result["operationId"] == "00000001"
+        result = map_spc_subgroup_rows([_ph_row()], _request(operation_id="00000004"))
+        assert result["operationId"] == "00000004"
 
     def test_mic_name_from_first_row(self) -> None:
         result = map_spc_subgroup_rows([_ph_row()], _request())

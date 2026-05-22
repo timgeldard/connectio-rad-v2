@@ -33,9 +33,9 @@ _SUBGROUPS_URL = (
     "?material_id=20642328"
     "&plant_id=P523"
     "&mic_id=0010"
-    "&operation_id=00000001"
+    "&operation_id=00000004"
     "&date_from=2024-01-01"
-    "&date_to=2026-05-22"
+    "&date_to=2025-12-31"
     "&limit=10"
 )
 
@@ -146,9 +146,9 @@ class TestSpcSubgroupsP999Sentinel:
             "?material_id=20642328"
             "&plant_id=P999"
             "&mic_id=0010"
-            "&operation_id=00000001"
+            "&operation_id=00000004"
             "&date_from=2024-01-01"
-            "&date_to=2026-05-22"
+            "&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -169,7 +169,7 @@ class TestSpcSubgroupsP999Sentinel:
         url = (
             "/api/spc/subgroups"
             "?material_id=20642328&plant_id=P999&mic_id=0010"
-            "&operation_id=00000001&date_from=2024-01-01&date_to=2026-05-22"
+            "&operation_id=00000004&date_from=2025-01-01&date_to=2025-12-31"
         )
         with patch(
             "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
@@ -207,7 +207,7 @@ class TestSpcSubgroupsLimitClamping:
             url = (
                 f"/api/spc/subgroups"
                 f"?material_id=20642328&plant_id=P523&mic_id=0010"
-                f"&operation_id=00000001&date_from=2024-01-01&date_to=2026-05-22"
+                f"&operation_id=00000004&date_from=2025-01-01&date_to=2025-12-31"
                 f"&limit={MAX_SUBGROUPS + 9999}"
             )
             async with _make_client() as client:
@@ -221,7 +221,7 @@ class TestSpcSubgroupsLimitClamping:
         url = (
             "/api/spc/subgroups"
             "?material_id=20642328&plant_id=P523&mic_id=0010"
-            "&operation_id=00000001&date_from=2024-01-01&date_to=2026-05-22"
+            "&operation_id=00000004&date_from=2025-01-01&date_to=2025-12-31"
             "&limit=0"
         )
         async with _make_client() as client:
@@ -244,8 +244,8 @@ class TestSpcSubgroupsRequiredFilters:
         self._databricks_env(monkeypatch)
         url = (
             "/api/spc/subgroups"
-            "?plant_id=P523&mic_id=0010&operation_id=00000001"
-            "&date_from=2024-01-01&date_to=2026-05-22"
+            "?plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2025-01-01&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -255,8 +255,8 @@ class TestSpcSubgroupsRequiredFilters:
         self._databricks_env(monkeypatch)
         url = (
             "/api/spc/subgroups"
-            "?material_id=20642328&mic_id=0010&operation_id=00000001"
-            "&date_from=2024-01-01&date_to=2026-05-22"
+            "?material_id=20642328&mic_id=0010&operation_id=00000004"
+            "&date_from=2025-01-01&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -266,8 +266,8 @@ class TestSpcSubgroupsRequiredFilters:
         self._databricks_env(monkeypatch)
         url = (
             "/api/spc/subgroups"
-            "?material_id=20642328&plant_id=P523&operation_id=00000001"
-            "&date_from=2024-01-01&date_to=2026-05-22"
+            "?material_id=20642328&plant_id=P523&operation_id=00000004"
+            "&date_from=2025-01-01&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -278,7 +278,7 @@ class TestSpcSubgroupsRequiredFilters:
         url = (
             "/api/spc/subgroups"
             "?material_id=20642328&plant_id=P523&mic_id=0010"
-            "&date_from=2024-01-01&date_to=2026-05-22"
+            "&date_from=2025-01-01&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -289,7 +289,7 @@ class TestSpcSubgroupsRequiredFilters:
         url = (
             "/api/spc/subgroups"
             "?material_id=20642328&plant_id=P523&mic_id=0010"
-            "&operation_id=00000001&date_to=2026-05-22"
+            "&operation_id=00000004&date_to=2025-12-31"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -300,7 +300,7 @@ class TestSpcSubgroupsRequiredFilters:
         url = (
             "/api/spc/subgroups"
             "?material_id=20642328&plant_id=P523&mic_id=0010"
-            "&operation_id=00000001&date_from=2024-01-01"
+            "&operation_id=00000004&date_from=2024-01-01"
         )
         async with _make_client() as client:
             response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
@@ -405,7 +405,7 @@ class TestSpcSubgroupsResponseShape:
                 response = await client.get(_SUBGROUPS_URL, headers=_HEADERS_WITH_TOKEN)
         data = response.json()
         assert "workCentreId" not in data
-        assert data["operationId"] == "00000001"
+        assert data["operationId"] == "00000004"
 
     async def test_no_mock_fallback_on_query_error(self, monkeypatch) -> None:
         """Databricks error must propagate as 502 — never fall back to mock data."""
@@ -525,3 +525,152 @@ class TestSpcSubgroupsResponseShape:
         ]
         for field in v1_field_names:
             assert field not in body_str, f"V1 field name leaked into response: {field}"
+
+
+# ---------------------------------------------------------------------------
+# Parameter validation — blank strings, date format, date ordering, date window
+# ---------------------------------------------------------------------------
+
+class TestSpcSubgroupsParameterValidation:
+    """Blank strings, bad dates, inverted range, and over-wide window must all 422
+    before any Databricks query is made."""
+
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+    async def test_blank_material_id_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id="
+            "&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2024-01-01&date_to=2024-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_plant_id_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328"
+            "&plant_id=&mic_id=0010&operation_id=00000004"
+            "&date_from=2024-01-01&date_to=2024-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_mic_id_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523"
+            "&mic_id=&operation_id=00000004"
+            "&date_from=2024-01-01&date_to=2024-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_operation_id_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523&mic_id=0010"
+            "&operation_id="
+            "&date_from=2024-01-01&date_to=2024-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_invalid_date_from_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=not-a-date&date_to=2024-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_invalid_date_to_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2024-01-01&date_to=31-12-2024"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_date_from_after_date_to_returns_422(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2025-01-01&date_to=2024-01-01"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_over_wide_date_window_returns_422(self, monkeypatch) -> None:
+        """Date windows exceeding 730 days must be rejected before any Databricks query."""
+        self._databricks_env(monkeypatch)
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=20642328&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2020-01-01&date_to=2026-12-31"
+        )
+        async with _make_client() as client:
+            response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_exactly_730_day_window_is_accepted(self, monkeypatch) -> None:
+        """730-day window is at the boundary — must be accepted, not rejected."""
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            url = (
+                "/api/spc/subgroups"
+                "?material_id=20642328&plant_id=P523&mic_id=0010&operation_id=00000004"
+                "&date_from=2024-01-01&date_to=2025-12-31"
+            )
+            async with _make_client() as client:
+                response = await client.get(url, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+
+    async def test_validation_failures_do_not_call_databricks(self, monkeypatch) -> None:
+        """Blank material_id must be rejected before any Databricks query is made."""
+        self._databricks_env(monkeypatch)
+        called: list[bool] = []
+
+        async def _mock(*args, **kwargs):
+            called.append(True)
+            return []
+
+        url = (
+            "/api/spc/subgroups"
+            "?material_id=&plant_id=P523&mic_id=0010&operation_id=00000004"
+            "&date_from=2024-01-01&date_to=2024-12-31"
+        )
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock,
+        ):
+            async with _make_client() as client:
+                await client.get(url, headers=_HEADERS_WITH_TOKEN)
+
+        assert called == []

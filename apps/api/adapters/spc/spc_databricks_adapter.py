@@ -43,6 +43,15 @@ Column verification status (pp.txt, 2026-05-22 — UAT confirmed):
     Capability metrics — capabilityAvailable is Literal[False] in response contract.
 
 SPC_CATALOG falls back to TRACE_CATALOG (same workspace). See object_resolver.py.
+
+UAT candidate operation IDs (verified 2026-05-22, spc-databricks-verification-results-summary.md):
+  pH   — material 20642328 / P523 / mic 0010 / operation_id 00000004  (spec limits 7.2/7.8)
+  Salt — material 20047111 / C037 / mic 0060 / operation_id 00000001  (0.0 sentinel spec limits)
+
+Point1 artefact (generated.py): datamodel-codegen generates an anonymous Point1 class for
+SPCSubgroupResponse.points because export-json-schema.ts processes schemas in isolation and
+emits the item schema inline rather than as a $ref to SPCSubgroupPoint. Runtime validation is
+unaffected — Point1 is structurally identical to SPCSubgroupPoint.
 """
 from __future__ import annotations
 

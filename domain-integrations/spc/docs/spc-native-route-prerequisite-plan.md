@@ -33,8 +33,17 @@ See implementation notes below.
 > - Frontend wire-up: **not done**. `SPCMonitoringDatabricksApiAdapter.getControlChartSeries`
 >   requires `unitOfMeasure` and `ControlChartPoint.status` which the new narrow schema does not
 >   provide. Frontend wire-up is deferred to slice 3.
-> - All 76 backend tests pass (adapter + route tests). Pre-existing architecture guardrail
->   failure in `trace2_databricks_adapter.py` is unrelated.
+> - All 87 backend tests pass (adapter + route tests, including validation hardening from PR #75
+>   review). Pre-existing architecture guardrail failure in `trace2_databricks_adapter.py` is unrelated.
+> - **Verified candidate operation IDs (spc-databricks-verification-results-summary.md, 2026-05-22):**
+>   pH candidate: 20642328 / P523 / mic 0010 / **operation_id 00000004** (not 00000001 as initially
+>   transcribed); Salt candidate: 20047111 / C037 / mic 0060 / operation_id 00000001.
+> - **Point1 artefact:** `SPCSubgroupResponse.points` uses a generated `Point1` class rather than
+>   `SPCSubgroupPoint` because `export-json-schema.ts` processes schemas in isolation and emits array
+>   item definitions inline rather than as `$ref`. Runtime validation is unaffected (structurally
+>   identical). Fixing the cross-ref would require changing the export script and is deferred.
+> - **Validation hardening (PR #75 review):** blank filter strings → 422; invalid date format → 422;
+>   date_from > date_to → 422; date window > 730 days → 422 (guard against broad MV scans).
 >
 > This plan's proposed `POST /spc/chart-data` full response shape (§3) is deferred to a
 > future slice once locked limits are confirmed and the frontend adapter can be wired.

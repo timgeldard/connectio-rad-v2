@@ -23,7 +23,8 @@ No service-principal fallback for user-facing reads (Databricks identity policy)
 from __future__ import annotations
 
 import os
-from typing import Optional
+from datetime import date as _date
+from typing import Annotated, Optional
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Query, Response
@@ -239,14 +240,17 @@ async def spc_chart_data(
 _P999_SENTINEL = "P999"
 
 
+_MAX_DATE_WINDOW_DAYS = 730
+
+
 @router.get("/spc/subgroups", response_model=SPCSubgroupResponse)
 async def spc_subgroups(
-    material_id: str = Query(..., description="SAP material number"),
-    plant_id: str = Query(..., description="Plant ID"),
-    mic_id: str = Query(..., description="MIC / characteristic ID"),
-    operation_id: str = Query(..., description="Sequential inspection-operation ID (not SAP work centre)"),
-    date_from: str = Query(..., description="Start date inclusive (YYYY-MM-DD)"),
-    date_to: str = Query(..., description="End date inclusive (YYYY-MM-DD)"),
+    material_id: Annotated[str, Query(..., min_length=1, description="SAP material number")],
+    plant_id: Annotated[str, Query(..., min_length=1, description="Plant ID")],
+    mic_id: Annotated[str, Query(..., min_length=1, description="MIC / characteristic ID")],
+    operation_id: Annotated[str, Query(..., min_length=1, description="Sequential inspection-operation ID (not SAP work centre)")],
+    date_from: _date = Query(..., description="Start date inclusive (YYYY-MM-DD)"),
+    date_to: _date = Query(..., description="End date inclusive (YYYY-MM-DD)"),
     limit: int = Query(default=100, ge=1, description="Max subgroups to return"),
     response: Response = None,
     x_forwarded_access_token: str | None = Header(default=None),
@@ -257,7 +261,7 @@ async def spc_subgroups(
 
     Returns aggregated subgroup points from spc_quality_metric_subgroup_mv.
     Filters on material/plant/MIC/operation and date range before returning.
-    Max 200 subgroups per request.
+    Max 200 subgroups per request. Max date window 730 days.
 
     Capability (Cp/Cpk/Pp/Ppk): unavailable — not in source MV.
     Nelson stored flags: unavailable — spc_nelson_rule_flags_mv absent in UAT.
@@ -267,7 +271,18 @@ async def spc_subgroups(
     Browser UAT: pending. Production readiness: blocked.
 
     P999 sentinel plant rejected with 422. Legacy-api mode returns 503.
+    Blank filter values, invalid dates, inverted date range, and date windows
+    exceeding 730 days are rejected with 422.
     """
+    if date_from > date_to:
+        raise HTTPException(status_code=422, detail="date_from must be on or before date_to.")
+    if (date_to - date_from).days > _MAX_DATE_WINDOW_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Date window exceeds maximum of {_MAX_DATE_WINDOW_DAYS} days. "
+                   "Narrow the date range to prevent broad scans of the source MV.",
+        )
+
     mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
     if mode != "databricks-api":
         raise HTTPException(
@@ -289,8 +304,8 @@ async def spc_subgroups(
         plant_id=plant_id,
         mic_id=mic_id,
         operation_id=operation_id,
-        date_from=date_from,
-        date_to=date_to,
+        date_from=date_from.isoformat(),
+        date_to=date_to.isoformat(),
         limit=clamped_limit,
     )
 
