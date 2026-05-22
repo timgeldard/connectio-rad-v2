@@ -127,7 +127,7 @@ export const ControlChartPointSchema = z.object({
   batchId: z.string().optional(),
   sampleId: z.string().optional(),
   signalIds: z.array(z.string()),
-  status: z.enum(['in-control', 'warning', 'out-of-control']),
+  status: z.enum(['in-control', 'warning', 'out-of-control', 'not-evaluated']),
 })
 
 export type ControlChartPoint = z.infer<typeof ControlChartPointSchema>
