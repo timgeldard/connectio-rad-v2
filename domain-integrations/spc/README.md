@@ -99,12 +99,12 @@ Databricks verification pack (SQL queries, evidence tables, handoff checklist).
 
 To migrate from sandbox mock mode to a production-ready state:
 
-- **V1 App URL Confirmation**: Confirm the V1 SPC Databricks App URL is accessible in the UAT environment.
+- **V1 App URL Confirmation**: Confirm the V1 SPC Databricks App URL is accessible in the UAT environment (if using the optional legacy bridge).
 - **Navigation Model Fix**: Update `SPCMonitoringAdapterRequest` to use `materialId` as the primary entry-point parameter.
-- **Proxy Route Implementation**: Create `apps/api/routes/spc.py` with proxy routes to V1 SPC endpoints.
-- **Adapter Wiring**: Implement `SPCMonitoringLegacyApiAdapter` using verified V1 field shapes.
-- **Column Verification**: Verify `spc_quality_metric_subgroup_v` and `spc_locked_limits` column names in UAT.
+- **Native Route Verification**: The native `GET /api/spc/subgroups` is implemented; browser UAT is outstanding.
+- **Optional Legacy Bridge**: The V1 legacy bridge remains an optional short-term fallback if native UAT reveals schema gaps.
+- **Column Verification**: Verify `spc_quality_metric_subgroup_v` and `spc_locked_limits` column names in UAT for the native route.
 - **UAT Candidate Identification**: Confirm a real plant/material/MIC combination with SPC data in `connected_plant_uat.gold`.
-- **Source Badge Verification**: Verify `<EvidencePanel>` badge updates to `source: 'legacy-api'` once proxy is wired.
+- **Source Badge Verification**: Verify `<EvidencePanel>` badge updates to `source: 'databricks-api'` (or `legacy-api`).
 - **Control-Rule Semantics**: Confirm whether rule detection should remain frontend-computed (per V1) or move to API layer.
 - **i18n Support**: Introduce localization support for titles and warning strings if required.

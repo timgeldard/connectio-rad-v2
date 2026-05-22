@@ -268,7 +268,7 @@ class TestSupplierBatchViewMapping:
         result = map_supplier_batch_view(consumed, [])
         # No supplier-risk source exists yet; mapper should default to a safe
         # value, NOT 'high'.
-        assert result["consumedLots"][0]["risk"] == "low"
+        assert result["consumedLots"][0]["risk"] == "unknown"
 
 
 class TestHoldsLedgerMapping:

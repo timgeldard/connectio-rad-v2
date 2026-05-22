@@ -3993,15 +3993,15 @@ class AdditionalProperties(
     RootModel[
         Union[
             str | float | bool | None,
-            list["AdditionalProperties" | None],
-            dict[str, "AdditionalProperties" | None],
+            list[AdditionalProperties | None],
+            dict[str, AdditionalProperties | None],
         ]
     ]
 ):
     root: Union[
         str | float | bool | None,
-        list["AdditionalProperties" | None],
-        dict[str, "AdditionalProperties" | None],
+        list[AdditionalProperties | None],
+        dict[str, AdditionalProperties | None],
     ]
 
 

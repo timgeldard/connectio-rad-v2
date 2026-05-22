@@ -9,7 +9,7 @@
 3. **POST /trace2/batch-header uses no `response_model`** — this is a proxy route in mixed mode; the backend doesn't validate the V1 or native response against Pydantic before returning it.
 4. **`GET /api/envmon/site-summary` and `GET /api/envmon/swab-results` have `response_model` and are production-ready**. Warehouse360 inbound/outbound/staging/exceptions have `response_model` but **3 of 4 are broken in production** (DDL verified 2026-05-22): inbound SQL column names wrong; staging view missing; exceptions view missing. `GET /api/warehouse360/overview` remains unenforced (mapper shape gap + schema mismatches). See `warehouse360-overview-contract-alignment.md`.
 5. **All SPC, Quality readonly-evidence, and batch-release schemas are ahead of runtime** — contracts exist and Python models are generated, but no live route uses them.
-6. **`SPCMonitoringContextSchema` with `operationId` (added PR #67) is furthest ahead of runtime** — the schema, Python model, and mapping helpers are all updated but no native route has been wired.
+6. **`SPCMonitoringContextSchema` with `operationId` (added PR #67) is furthest ahead of runtime** — the schema, Python model, and mapping helpers are all updated and the native `GET /api/spc/subgroups` is wired, though **browser UAT is pending**.
 7. **Proxy routes (SPC, CQ Lab, V1 warehouse summary) bypass contract validation** — the backend passes through the V1 JSON unvalidated; the frontend adapter validates the response against the Zod schema.
 
 ---
