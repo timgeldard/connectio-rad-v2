@@ -21,7 +21,7 @@ export function spcMonitoringAdapterFactory(): SPCMonitoringAdapter {
     }
     // Native Databricks integration is currently blocked/pending gold-view alignment.
     // Returns unavailable/not-implemented status until native routes exist.
-    return new SPCMonitoringDatabricksApiAdapter()
+    return new SPCMonitoringDatabricksApiAdapter(baseUrl)
   }
 
   if (mode === 'legacy-api') {
