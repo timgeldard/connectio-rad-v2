@@ -7,18 +7,18 @@ const SeveritySchema = z.enum(['low', 'medium', 'high', 'critical'])
 // ---------------------------------------------------------------------------
 
 export const ProcessOrderReviewContextSchema = z.object({
-  processOrderId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string().optional(),
-  plantId: z.string(),
-  lineOrResource: z.string().optional(),
-  orderStatus: z.enum(['created', 'released', 'in-process', 'confirmed', 'partially-confirmed', 'closed', 'cancelled']),
-  qualityStatus: z.enum(['not-inspected', 'in-inspection', 'passed', 'failed', 'conditionally-released', 'on-hold']),
-  stagingStatus: z.enum(['not-started', 'partial', 'fully-staged', 'blocked', 'not-required']),
-  lastUpdatedAt: z.string().datetime(),
-  activeScope: z.string().optional(),
-  activeView: z.string().optional(),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  lineOrResource: z.string().optional().describe('[classification: source-field]'),
+  orderStatus: z.enum(['created', 'released', 'in-process', 'confirmed', 'partially-confirmed', 'closed', 'cancelled']).describe('[classification: source-field]'),
+  qualityStatus: z.enum(['not-inspected', 'in-inspection', 'passed', 'failed', 'conditionally-released', 'on-hold']).describe('[classification: application-heuristic]'),
+  stagingStatus: z.enum(['not-started', 'partial', 'fully-staged', 'blocked', 'not-required']).describe('[classification: application-heuristic]'),
+  lastUpdatedAt: z.string().datetime().describe('[classification: source-field]'),
+  activeScope: z.string().optional().describe('[classification: application-derived]'),
+  activeView: z.string().optional().describe('[classification: application-derived]'),
 })
 
 export type ProcessOrderReviewContext = z.infer<typeof ProcessOrderReviewContextSchema>
@@ -28,22 +28,22 @@ export type ProcessOrderReviewContext = z.infer<typeof ProcessOrderReviewContext
 // ---------------------------------------------------------------------------
 
 export const ProcessOrderHeaderSchema = z.object({
-  processOrderId: z.string(),
-  orderType: z.enum(['process-order', 'production-order', 'maintenance-order', 'planned-order']),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string().optional(),
-  plantId: z.string(),
-  productionLine: z.string().optional(),
-  plannedQuantity: z.number().min(0),
-  confirmedQuantity: z.number().min(0),
-  scrapQuantity: z.number().min(0).optional(),
-  uom: z.string(),
-  plannedStart: z.string().datetime().nullable().optional(),
-  plannedFinish: z.string().datetime().nullable().optional(),
-  actualStart: z.string().datetime().nullable().optional(),
-  actualFinish: z.string().datetime().nullable().optional(),
-  orderStatus: z.enum(['created', 'released', 'in-process', 'confirmed', 'partially-confirmed', 'closed', 'cancelled']),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  orderType: z.enum(['process-order', 'production-order', 'maintenance-order', 'planned-order']).describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  productionLine: z.string().optional().describe('[classification: source-field]'),
+  plannedQuantity: z.number().min(0).describe('[classification: source-field]'),
+  confirmedQuantity: z.number().min(0).describe('[classification: source-field]'),
+  scrapQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  plannedStart: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  plannedFinish: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  actualStart: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  actualFinish: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  orderStatus: z.enum(['created', 'released', 'in-process', 'confirmed', 'partially-confirmed', 'closed', 'cancelled']).describe('[classification: source-field]'),
 })
 
 export type ProcessOrderHeader = z.infer<typeof ProcessOrderHeaderSchema>
@@ -53,16 +53,16 @@ export type ProcessOrderHeader = z.infer<typeof ProcessOrderHeaderSchema>
 // ---------------------------------------------------------------------------
 
 export const OrderProgressSummarySchema = z.object({
-  processOrderId: z.string(),
-  progressPercent: z.number().min(0).max(100),
-  operationsComplete: z.number().int().min(0),
-  operationsTotal: z.number().int().min(0),
-  confirmationsComplete: z.number().int().min(0),
-  openConfirmations: z.number().int().min(0),
-  currentOperation: z.string().optional(),
-  delayMinutes: z.number().min(0),
-  riskLevel: z.enum(['on-track', 'at-risk', 'delayed', 'blocked']),
-  confidence: z.number().min(0).max(1),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  progressPercent: z.number().min(0).max(100).describe('[classification: application-derived]'),
+  operationsComplete: z.number().int().min(0).describe('[classification: source-derived]'),
+  operationsTotal: z.number().int().min(0).describe('[classification: source-derived]'),
+  confirmationsComplete: z.number().int().min(0).describe('[classification: source-derived]'),
+  openConfirmations: z.number().int().min(0).describe('[classification: source-derived]'),
+  currentOperation: z.string().optional().describe('[classification: source-derived]'),
+  delayMinutes: z.number().min(0).describe('[classification: source-derived]'),
+  riskLevel: z.enum(['on-track', 'at-risk', 'delayed', 'blocked']).describe('[classification: application-heuristic]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
 })
 
 export type OrderProgressSummary = z.infer<typeof OrderProgressSummarySchema>
@@ -72,14 +72,14 @@ export type OrderProgressSummary = z.infer<typeof OrderProgressSummarySchema>
 // ---------------------------------------------------------------------------
 
 export const ExecutionTimelineItemSchema = z.object({
-  eventId: z.string(),
-  timestamp: z.string().datetime(),
-  eventType: z.enum(['order-released', 'operation-started', 'operation-confirmed', 'goods-issued', 'deviation-raised', 'quality-inspection', 'staging-completed', 'order-confirmed', 'order-closed', 'alert']),
-  title: z.string(),
-  description: z.string(),
-  sourceSystem: z.string(),
-  actor: z.string().optional(),
-  severity: SeveritySchema.optional(),
+  eventId: z.string().describe('[classification: source-field]'),
+  timestamp: z.string().datetime().describe('[classification: source-field]'),
+  eventType: z.enum(['order-released', 'operation-started', 'operation-confirmed', 'goods-issued', 'deviation-raised', 'quality-inspection', 'staging-completed', 'order-confirmed', 'order-closed', 'alert']).describe('[classification: source-field]'),
+  title: z.string().describe('[classification: source-field]'),
+  description: z.string().describe('[classification: source-field]'),
+  sourceSystem: z.string().describe('[classification: source-field]'),
+  actor: z.string().optional().describe('[classification: source-field]'),
+  severity: SeveritySchema.optional().describe('[classification: source-derived]'),
 })
 
 export type ExecutionTimelineItem = z.infer<typeof ExecutionTimelineItemSchema>
@@ -89,14 +89,14 @@ export type ExecutionTimelineItem = z.infer<typeof ExecutionTimelineItemSchema>
 // ---------------------------------------------------------------------------
 
 export const OrderQualityContextSchema = z.object({
-  inspectionLotId: z.string().optional(),
-  releaseCaseId: z.string().optional(),
-  qualityStatus: z.enum(['not-inspected', 'in-inspection', 'passed', 'failed', 'conditionally-released', 'on-hold']),
-  usageDecision: z.string().optional(),
-  failedCharacteristics: z.number().int().min(0),
-  openDeviations: z.number().int().min(0),
-  spcSignals: z.number().int().min(0),
-  releaseBlockers: z.array(z.string()),
+  inspectionLotId: z.string().optional().describe('[classification: source-field]'),
+  releaseCaseId: z.string().optional().describe('[classification: source-field]'),
+  qualityStatus: z.enum(['not-inspected', 'in-inspection', 'passed', 'failed', 'conditionally-released', 'on-hold']).describe('[classification: application-heuristic]'),
+  usageDecision: z.string().optional().describe('[classification: source-field]'),
+  failedCharacteristics: z.number().int().min(0).describe('[classification: source-derived]'),
+  openDeviations: z.number().int().min(0).describe('[classification: source-derived]'),
+  spcSignals: z.number().int().min(0).describe('[classification: source-derived]'),
+  releaseBlockers: z.array(z.string()).describe('[classification: source-derived]'),
 })
 
 export type OrderQualityContext = z.infer<typeof OrderQualityContextSchema>
@@ -106,14 +106,14 @@ export type OrderQualityContext = z.infer<typeof OrderQualityContextSchema>
 // ---------------------------------------------------------------------------
 
 export const OrderStagingContextSchema = z.object({
-  processOrderId: z.string(),
-  stagingStatus: z.enum(['not-started', 'partial', 'fully-staged', 'blocked', 'not-required']),
-  componentsRequired: z.number().int().min(0),
-  componentsStaged: z.number().int().min(0),
-  missingComponents: z.number().int().min(0),
-  blockedComponents: z.number().int().min(0),
-  openTransferRequirements: z.number().int().min(0),
-  readinessStatus: z.enum(['ready', 'partial', 'blocked', 'not-started']),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  stagingStatus: z.enum(['not-started', 'partial', 'fully-staged', 'blocked', 'not-required']).describe('[classification: source-field]'),
+  componentsRequired: z.number().int().min(0).describe('[classification: source-derived]'),
+  componentsStaged: z.number().int().min(0).describe('[classification: source-derived]'),
+  missingComponents: z.number().int().min(0).describe('[classification: source-derived]'),
+  blockedComponents: z.number().int().min(0).describe('[classification: source-derived]'),
+  openTransferRequirements: z.number().int().min(0).describe('[classification: source-derived]'),
+  readinessStatus: z.enum(['ready', 'partial', 'blocked', 'not-started']).describe('[classification: application-heuristic]'),
 })
 
 export type OrderStagingContext = z.infer<typeof OrderStagingContextSchema>
@@ -123,13 +123,13 @@ export type OrderStagingContext = z.infer<typeof OrderStagingContextSchema>
 // ---------------------------------------------------------------------------
 
 export const RelatedBatchContextSchema = z.object({
-  batchId: z.string(),
-  materialId: z.string(),
-  relationshipType: z.enum(['output', 'input-component', 'co-product', 'by-product', 'rework']),
-  traceRisk: z.enum(['none', 'potential', 'confirmed']),
-  qualityStatus: z.enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review']),
-  stockStatus: z.enum(['unrestricted', 'blocked', 'in-transit', 'quality-inspection', 'restricted']),
-  drillThroughTarget: z.string().optional(),
+  batchId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  relationshipType: z.enum(['output', 'input-component', 'co-product', 'by-product', 'rework']).describe('[classification: source-field]'),
+  traceRisk: z.enum(['none', 'potential', 'confirmed']).describe('[classification: application-heuristic]'),
+  qualityStatus: z.enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review']).describe('[classification: application-heuristic]'),
+  stockStatus: z.enum(['unrestricted', 'blocked', 'in-transit', 'quality-inspection', 'restricted']).describe('[classification: application-heuristic]'),
+  drillThroughTarget: z.string().optional().describe('[classification: application-derived]'),
 })
 
 export type RelatedBatchContext = z.infer<typeof RelatedBatchContextSchema>
@@ -139,21 +139,21 @@ export type RelatedBatchContext = z.infer<typeof RelatedBatchContextSchema>
 // ---------------------------------------------------------------------------
 
 export const ProcessOrderOperationSchema = z.object({
-  operationId: z.string(),
-  operationNumber: z.string(),
-  operationText: z.string(),
-  workCentre: z.string(),
-  resource: z.string().optional(),
-  plannedStart: z.string().datetime().nullable().optional(),
-  plannedFinish: z.string().datetime().nullable().optional(),
-  actualStart: z.string().datetime().nullable().optional(),
-  actualFinish: z.string().datetime().nullable().optional(),
-  status: z.enum(['pending', 'in-progress', 'confirmed', 'skipped']),
-  plannedDurationMinutes: z.number().min(0),
-  actualDurationMinutes: z.number().min(0).optional(),
-  confirmationStatus: z.enum(['unconfirmed', 'partially-confirmed', 'final-confirmed']),
-  confirmed: z.boolean(),
-  hasException: z.boolean(),
+  operationId: z.string().describe('[classification: source-field]'),
+  operationNumber: z.string().describe('[classification: source-field]'),
+  operationText: z.string().describe('[classification: source-field]'),
+  workCentre: z.string().describe('[classification: source-field]'),
+  resource: z.string().optional().describe('[classification: source-field]'),
+  plannedStart: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  plannedFinish: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  actualStart: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  actualFinish: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  status: z.enum(['pending', 'in-progress', 'confirmed', 'skipped']).describe('[classification: source-field]'),
+  plannedDurationMinutes: z.number().min(0).describe('[classification: source-derived]'),
+  actualDurationMinutes: z.number().min(0).optional().describe('[classification: source-derived]'),
+  confirmationStatus: z.enum(['unconfirmed', 'partially-confirmed', 'final-confirmed']).describe('[classification: source-field]'),
+  confirmed: z.boolean().describe('[classification: source-field]'),
+  hasException: z.boolean().describe('[classification: source-derived]'),
 })
 
 export type ProcessOrderOperation = z.infer<typeof ProcessOrderOperationSchema>
@@ -163,22 +163,22 @@ export type ProcessOrderOperation = z.infer<typeof ProcessOrderOperationSchema>
 // ---------------------------------------------------------------------------
 
 export const ProcessOrderConfirmationSchema = z.object({
-  confirmationId: z.string(),
-  operationId: z.string(),
+  confirmationId: z.string().describe('[classification: source-field]'),
+  operationId: z.string().describe('[classification: source-field]'),
   // Not in vw_gold_confirmation — re-require once gold view exposes PHASE_DESCRIPTION join (2026-05-17)
-  operationText: z.string().optional(),
-  confirmedYield: z.number().min(0),
-  scrapQuantity: z.number().min(0).optional(),
-  reworkQuantity: z.number().min(0).optional(),
-  uom: z.string(),
-  confirmedAt: z.string().datetime().nullable().optional(),
-  confirmedBy: z.string().optional(),
+  operationText: z.string().optional().describe('[classification: source-field]'),
+  confirmedYield: z.number().min(0).describe('[classification: source-field]'),
+  scrapQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
+  reworkQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  confirmedAt: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  confirmedBy: z.string().optional().describe('[classification: source-field]'),
   // Not in vw_gold_confirmation — re-require once gold view exposes final-confirmation flag (2026-05-17)
-  isFinalConfirmation: z.boolean().optional(),
-  setupDurationMinutes: z.number().min(0).optional(),
-  machineDurationMinutes: z.number().min(0).optional(),
-  cleaningDurationMinutes: z.number().min(0).optional(),
-  variancePercent: z.number().optional(),
+  isFinalConfirmation: z.boolean().optional().describe('[classification: source-field]'),
+  setupDurationMinutes: z.number().min(0).optional().describe('[classification: source-field]'),
+  machineDurationMinutes: z.number().min(0).optional().describe('[classification: source-field]'),
+  cleaningDurationMinutes: z.number().min(0).optional().describe('[classification: source-field]'),
+  variancePercent: z.number().optional().describe('[classification: source-derived]'),
 })
 
 export type ProcessOrderConfirmation = z.infer<typeof ProcessOrderConfirmationSchema>
@@ -188,19 +188,19 @@ export type ProcessOrderConfirmation = z.infer<typeof ProcessOrderConfirmationSc
 // ---------------------------------------------------------------------------
 
 export const ProcessOrderGoodsMovementSchema = z.object({
-  movementId: z.string(),
-  movementType: z.string(),
-  direction: z.enum(['input', 'output', 'unknown']),
-  materialId: z.string(),
+  movementId: z.string().describe('[classification: source-field]'),
+  movementType: z.string().describe('[classification: source-field]'),
+  direction: z.enum(['input', 'output', 'unknown']).describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
   // Not in vw_gold_adp_movement — re-require once material master join is available (2026-05-17)
-  materialDescription: z.string().optional(),
-  batchId: z.string().optional(),
-  quantity: z.number(),
-  uom: z.string(),
-  postedAt: z.string().datetime().nullable().optional(),
-  postedBy: z.string().optional(),
-  referenceDocument: z.string().optional(),
-  storageLocation: z.string().optional(),
+  materialDescription: z.string().optional().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  quantity: z.number().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  postedAt: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
+  postedBy: z.string().optional().describe('[classification: source-field]'),
+  referenceDocument: z.string().optional().describe('[classification: source-field]'),
+  storageLocation: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type ProcessOrderGoodsMovement = z.infer<typeof ProcessOrderGoodsMovementSchema>

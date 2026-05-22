@@ -75,13 +75,13 @@ export type QualityCoaDocumentStatus = z.infer<typeof QualityCoaDocumentStatusSc
 // ---------------------------------------------------------------------------
 
 export const QualityEvidenceRequestSchema = z.object({
-  plantId: z.string().optional(),
-  materialId: z.string().optional(),
-  batchId: z.string().optional(),
-  inspectionLotId: z.string().optional(),
-  processOrderId: z.string().optional(),
-  dateFrom: z.string().date().optional(),
-  dateTo: z.string().date().optional(),
+  plantId: z.string().optional().describe('[classification: source-field]'),
+  materialId: z.string().optional().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  inspectionLotId: z.string().optional().describe('[classification: source-field]'),
+  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  dateFrom: z.string().date().optional().describe('[classification: source-field]'),
+  dateTo: z.string().date().optional().describe('[classification: source-field]'),
 }).strict()
 
 export type QualityEvidenceRequest = z.infer<typeof QualityEvidenceRequestSchema>
@@ -91,17 +91,17 @@ export type QualityEvidenceRequest = z.infer<typeof QualityEvidenceRequestSchema
 // ---------------------------------------------------------------------------
 
 export const QualityInspectionLotEvidenceSchema = z.object({
-  inspectionLotId: z.string(),
-  inspectionType: z.string().optional().nullable(),
-  inspectionLotStatus: z.string().optional().nullable(),
-  materialId: z.string().optional().nullable(),
-  batchId: z.string().optional().nullable(),
-  plantId: z.string().optional().nullable(),
-  processOrderId: z.string().optional().nullable(),
-  createdAt: z.string().datetime().optional().nullable(),
-  startedAt: z.string().datetime().optional().nullable(),
-  completedAt: z.string().datetime().optional().nullable(),
-  source: QualityEvidenceSourceSchema,
+  inspectionLotId: z.string().describe('[classification: source-field]'),
+  inspectionType: z.string().optional().nullable().describe('[classification: source-field]'),
+  inspectionLotStatus: z.string().optional().nullable().describe('[classification: source-field]'),
+  materialId: z.string().optional().nullable().describe('[classification: source-field]'),
+  batchId: z.string().optional().nullable().describe('[classification: source-field]'),
+  plantId: z.string().optional().nullable().describe('[classification: source-field]'),
+  processOrderId: z.string().optional().nullable().describe('[classification: source-field]'),
+  createdAt: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  startedAt: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  completedAt: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  source: QualityEvidenceSourceSchema.describe('[classification: source-field]'),
   /**
    * Per-lot usage decision evidence fields.
    *
@@ -113,10 +113,10 @@ export const QualityInspectionLotEvidenceSchema = z.object({
    * PROHIBITED: These fields must not be mapped to "Released", "Approved",
    * "Cleared", or "Can release" without a governed lot-selection rule.
    */
-  usageDecisionCode: z.string().optional().nullable(),
-  usageDecisionText: z.string().optional().nullable(),
-  usageDecisionMappingStatus: QualityUsageDecisionMappingStatusSchema.optional().nullable(),
-  usageDecisionCreatedAt: z.string().datetime().optional().nullable(),
+  usageDecisionCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  usageDecisionText: z.string().optional().nullable().describe('[classification: source-field]'),
+  usageDecisionMappingStatus: QualityUsageDecisionMappingStatusSchema.optional().nullable().describe('[classification: application-derived]'),
+  usageDecisionCreatedAt: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
 }).strict()
 
 export type QualityInspectionLotEvidence = z.infer<typeof QualityInspectionLotEvidenceSchema>
@@ -132,25 +132,25 @@ export type QualityInspectionLotEvidence = z.infer<typeof QualityInspectionLotEv
  * SPC control limits, and `resultStatus` is not a release approval state.
  */
 export const QualityMicResultEvidenceSchema = z.object({
-  micId: z.string().optional().nullable(),
-  micCode: z.string().optional().nullable(),
-  micName: z.string().optional().nullable(),
-  characteristicId: z.string().optional().nullable(),
-  resultValue: z.number().optional().nullable(),
-  resultText: z.string().optional().nullable(),
-  resultUnit: z.string().optional().nullable(),
-  lowerSpecificationLimit: z.number().optional().nullable(),
-  upperSpecificationLimit: z.number().optional().nullable(),
-  targetValue: z.number().optional().nullable(),
-  toleranceText: z.string().optional().nullable(),
-  valuationCode: z.string().optional().nullable(),
-  valuationText: z.string().optional().nullable(),
-  resultStatus: z.enum(['pass', 'fail', 'warning', 'pending', 'unknown', 'not-evaluated']),
-  sampleId: z.string().optional().nullable(),
-  sampleDate: z.string().datetime().optional().nullable(),
-  resultDate: z.string().datetime().optional().nullable(),
-  method: z.string().optional().nullable(),
-  source: QualityEvidenceSourceSchema,
+  micId: z.string().optional().nullable().describe('[classification: source-field]'),
+  micCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  micName: z.string().optional().nullable().describe('[classification: source-field]'),
+  characteristicId: z.string().optional().nullable().describe('[classification: source-field]'),
+  resultValue: z.number().optional().nullable().describe('[classification: source-field]'),
+  resultText: z.string().optional().nullable().describe('[classification: source-field]'),
+  resultUnit: z.string().optional().nullable().describe('[classification: source-field]'),
+  lowerSpecificationLimit: z.number().optional().nullable().describe('[classification: source-field]'),
+  upperSpecificationLimit: z.number().optional().nullable().describe('[classification: source-field]'),
+  targetValue: z.number().optional().nullable().describe('[classification: source-field]'),
+  toleranceText: z.string().optional().nullable().describe('[classification: source-field]'),
+  valuationCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  valuationText: z.string().optional().nullable().describe('[classification: source-field]'),
+  resultStatus: z.enum(['pass', 'fail', 'warning', 'pending', 'unknown', 'not-evaluated']).describe('[classification: application-heuristic]'),
+  sampleId: z.string().optional().nullable().describe('[classification: source-field]'),
+  sampleDate: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  resultDate: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  method: z.string().optional().nullable().describe('[classification: source-field]'),
+  source: QualityEvidenceSourceSchema.describe('[classification: source-field]'),
 }).strict()
 
 export type QualityMicResultEvidence = z.infer<typeof QualityMicResultEvidenceSchema>
@@ -166,14 +166,14 @@ export type QualityMicResultEvidence = z.infer<typeof QualityMicResultEvidenceSc
  * avoids accepted/released/conditional release semantics.
  */
 export const QualityUsageDecisionEvidenceSchema = z.object({
-  usageDecisionCode: z.string().optional().nullable(),
-  usageDecisionText: z.string().optional().nullable(),
-  valuationCode: z.string().optional().nullable(),
-  qualityScore: z.number().optional().nullable(),
-  createdBy: z.string().optional().nullable(),
-  createdAt: z.string().datetime().optional().nullable(),
-  source: QualityEvidenceSourceSchema,
-  mappingStatus: QualityUsageDecisionMappingStatusSchema,
+  usageDecisionCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  usageDecisionText: z.string().optional().nullable().describe('[classification: source-field]'),
+  valuationCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  qualityScore: z.number().optional().nullable().describe('[classification: source-field]'),
+  createdBy: z.string().optional().nullable().describe('[classification: source-field]'),
+  createdAt: z.string().datetime().optional().nullable().describe('[classification: source-field]'),
+  source: QualityEvidenceSourceSchema.describe('[classification: source-field]'),
+  mappingStatus: QualityUsageDecisionMappingStatusSchema.describe('[classification: application-derived]'),
 }).strict()
 
 export type QualityUsageDecisionEvidence = z.infer<typeof QualityUsageDecisionEvidenceSchema>
@@ -186,19 +186,19 @@ export type QualityUsageDecisionEvidence = z.infer<typeof QualityUsageDecisionEv
  * CoA-like result evidence.
  *
  * `documentStatus` is limited to unavailable/unknown until a source proves
- * official CoA document approval, sign-off, versioning, or PDF availability.
+ * official CoA document approval, signoff, versioning, or PDF availability.
  */
 export const QualityCoaResultEvidenceSchema = z.object({
-  micCode: z.string().optional().nullable(),
-  micName: z.string().optional().nullable(),
-  targetValue: z.number().optional().nullable(),
-  toleranceRange: z.string().optional().nullable(),
-  actualResult: z.number().optional().nullable(),
-  resultStatus: z.string().optional().nullable(),
-  withinSpec: z.string().optional().nullable(),
-  deviationFromTarget: z.number().optional().nullable(),
-  source: QualityEvidenceSourceSchema,
-  documentStatus: QualityCoaDocumentStatusSchema,
+  micCode: z.string().optional().nullable().describe('[classification: source-field]'),
+  micName: z.string().optional().nullable().describe('[classification: source-field]'),
+  targetValue: z.number().optional().nullable().describe('[classification: source-field]'),
+  toleranceRange: z.string().optional().nullable().describe('[classification: source-field]'),
+  actualResult: z.number().optional().nullable().describe('[classification: source-field]'),
+  resultStatus: z.string().optional().nullable().describe('[classification: application-heuristic]'),
+  withinSpec: z.string().optional().nullable().describe('[classification: application-heuristic]'),
+  deviationFromTarget: z.number().optional().nullable().describe('[classification: source-derived]'),
+  source: QualityEvidenceSourceSchema.describe('[classification: source-field]'),
+  documentStatus: QualityCoaDocumentStatusSchema.describe('[classification: source-field]'),
 }).strict()
 
 export type QualityCoaResultEvidence = z.infer<typeof QualityCoaResultEvidenceSchema>
@@ -208,16 +208,16 @@ export type QualityCoaResultEvidence = z.infer<typeof QualityCoaResultEvidenceSc
 // ---------------------------------------------------------------------------
 
 export const QualityEvidenceSummarySchema = z.object({
-  source: QualityEvidenceSourceSchema,
-  status: QualityEvidenceStatusSchema,
-  inspectionLotCount: z.number().int().min(0),
-  micResultCount: z.number().int().min(0),
-  usageDecisionStatus: QualityUsageDecisionStatusSchema,
-  coaResultCount: z.number().int().min(0),
-  unavailableEvidence: z.array(z.string()),
-  warnings: z.array(z.string()),
-  queriedAt: z.string().datetime(),
-  sourceFreshnessStatus: QualitySourceFreshnessStatusSchema,
+  source: QualityEvidenceSourceSchema.describe('[classification: source-field]'),
+  status: QualityEvidenceStatusSchema.describe('[classification: application-derived]'),
+  inspectionLotCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  micResultCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  usageDecisionStatus: QualityUsageDecisionStatusSchema.describe('[classification: application-derived]'),
+  coaResultCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  unavailableEvidence: z.array(z.string()).describe('[classification: application-derived]'),
+  warnings: z.array(z.string()).describe('[classification: application-derived]'),
+  queriedAt: z.string().datetime().describe('[classification: source-field]'),
+  sourceFreshnessStatus: QualitySourceFreshnessStatusSchema.describe('[classification: application-derived]'),
   /**
    * Extended state model fields.
    *
@@ -228,11 +228,11 @@ export const QualityEvidenceSummarySchema = z.object({
    * PROHIBITED: `evidenceState` must never be set to "released", "approved", "cleared",
    * or any value implying release authority. Only evidence-oriented states are valid.
    */
-  evidenceState: z.string().optional(),
-  sourceStatus: z.string().optional(),
-  lotCount: z.number().int().min(0).optional(),
-  multipleLotsWarning: z.string().optional(),
-  missingLotWarning: z.string().optional(),
+  evidenceState: z.string().optional().describe('[classification: application-derived]'),
+  sourceStatus: z.string().optional().describe('[classification: source-field]'),
+  lotCount: z.number().int().min(0).optional().describe('[classification: source-derived]'),
+  multipleLotsWarning: z.string().optional().describe('[classification: application-derived]'),
+  missingLotWarning: z.string().optional().describe('[classification: application-derived]'),
 }).strict()
 
 export type QualityEvidenceSummary = z.infer<typeof QualityEvidenceSummarySchema>

@@ -7,19 +7,19 @@ const SeveritySchema = z.enum(['low', 'medium', 'high', 'critical'])
 // ---------------------------------------------------------------------------
 
 export const ProductionStagingContextSchema = z.object({
-  plantId: z.string(),
-  warehouseId: z.string(),
-  warehouseName: z.string(),
-  planDate: z.string().date(),
-  totalOrders: z.number().int().min(0),
-  stagedOrders: z.number().int().min(0),
-  partialOrders: z.number().int().min(0),
-  blockedOrders: z.number().int().min(0),
-  openShortfalls: z.number().int().min(0),
-  openMoveRequests: z.number().int().min(0),
-  overallReadinessPercent: z.number().min(0).max(100),
-  riskStatus: z.enum(['ready', 'at-risk', 'blocked', 'unknown']),
-  lastUpdatedAt: z.string().datetime(),
+  plantId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  warehouseName: z.string().describe('[classification: source-field]'),
+  planDate: z.string().date().describe('[classification: source-field]'),
+  totalOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  stagedOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  partialOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  blockedOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  openShortfalls: z.number().int().min(0).describe('[classification: source-derived]'),
+  openMoveRequests: z.number().int().min(0).describe('[classification: source-derived]'),
+  overallReadinessPercent: z.number().min(0).max(100).describe('[classification: application-derived]'),
+  riskStatus: z.enum(['ready', 'at-risk', 'blocked', 'unknown']).describe('[classification: application-heuristic]'),
+  lastUpdatedAt: z.string().datetime().describe('[classification: source-field]'),
 })
 
 export type ProductionStagingContext = z.infer<typeof ProductionStagingContextSchema>
@@ -29,22 +29,22 @@ export type ProductionStagingContext = z.infer<typeof ProductionStagingContextSc
 // ---------------------------------------------------------------------------
 
 export const StagingOrderSummarySchema = z.object({
-  processOrderId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string(),
-  plantId: z.string(),
-  lineOrResource: z.string(),
-  plannedStart: z.string().datetime(),
-  requiredQuantity: z.number(),
-  stagedQuantity: z.number(),
-  shortfallQuantity: z.number(),
-  uom: z.string(),
-  stagingArea: z.string(),
-  status: z.enum(['not-staged', 'partial', 'staged', 'blocked', 'not-required']),
-  urgency: SeveritySchema,
-  pickTaskIds: z.array(z.string()),
-  blockerReason: z.string().optional(),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  lineOrResource: z.string().describe('[classification: source-field]'),
+  plannedStart: z.string().datetime().describe('[classification: source-field]'),
+  requiredQuantity: z.number().describe('[classification: source-field]'),
+  stagedQuantity: z.number().describe('[classification: source-field]'),
+  shortfallQuantity: z.number().describe('[classification: source-derived]'),
+  uom: z.string().describe('[classification: source-field]'),
+  stagingArea: z.string().describe('[classification: source-field]'),
+  status: z.enum(['not-staged', 'partial', 'staged', 'blocked', 'not-required']).describe('[classification: source-field]'),
+  urgency: SeveritySchema.describe('[classification: source-derived]'),
+  pickTaskIds: z.array(z.string()).describe('[classification: source-field]'),
+  blockerReason: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type StagingOrderSummary = z.infer<typeof StagingOrderSummarySchema>
@@ -54,22 +54,22 @@ export type StagingOrderSummary = z.infer<typeof StagingOrderSummarySchema>
 // ---------------------------------------------------------------------------
 
 export const StagingPickTaskSchema = z.object({
-  taskId: z.string(),
-  processOrderId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  warehouseId: z.string(),
-  storageLocation: z.string(),
-  destinationLocation: z.string(),
-  requiredQuantity: z.number(),
-  pickedQuantity: z.number(),
-  uom: z.string(),
-  assignee: z.string().optional(),
-  status: z.enum(['open', 'in-progress', 'picked', 'staged', 'cancelled']),
-  priority: SeveritySchema,
-  createdAt: z.string().datetime(),
-  completedAt: z.string().datetime().optional(),
-  batchId: z.string().optional(),
+  taskId: z.string().describe('[classification: source-field]'),
+  processOrderId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  storageLocation: z.string().describe('[classification: source-field]'),
+  destinationLocation: z.string().describe('[classification: source-field]'),
+  requiredQuantity: z.number().describe('[classification: source-field]'),
+  pickedQuantity: z.number().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  assignee: z.string().optional().describe('[classification: source-field]'),
+  status: z.enum(['open', 'in-progress', 'picked', 'staged', 'cancelled']).describe('[classification: source-field]'),
+  priority: SeveritySchema.describe('[classification: source-field]'),
+  createdAt: z.string().datetime().describe('[classification: source-field]'),
+  completedAt: z.string().datetime().optional().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type StagingPickTask = z.infer<typeof StagingPickTaskSchema>
@@ -79,15 +79,15 @@ export type StagingPickTask = z.infer<typeof StagingPickTaskSchema>
 // ---------------------------------------------------------------------------
 
 export const StagingZoneCapacitySchema = z.object({
-  zoneId: z.string(),
-  zoneName: z.string(),
-  warehouseId: z.string(),
-  capacityPercent: z.number().min(0).max(100),
-  pendingOrders: z.number().int().min(0),
-  stagedOrders: z.number().int().min(0),
-  blockedOrders: z.number().int().min(0),
-  status: z.enum(['available', 'high-utilisation', 'full', 'blocked']),
-  overflowRisk: z.boolean(),
+  zoneId: z.string().describe('[classification: source-field]'),
+  zoneName: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  capacityPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  pendingOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  stagedOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  blockedOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  status: z.enum(['available', 'high-utilisation', 'full', 'blocked']).describe('[classification: application-heuristic]'),
+  overflowRisk: z.boolean().describe('[classification: application-heuristic]'),
 })
 
 export type StagingZoneCapacity = z.infer<typeof StagingZoneCapacitySchema>
@@ -97,20 +97,20 @@ export type StagingZoneCapacity = z.infer<typeof StagingZoneCapacitySchema>
 // ---------------------------------------------------------------------------
 
 export const StagingShortfallSchema = z.object({
-  shortfallId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  plantId: z.string(),
-  warehouseId: z.string(),
-  requiredQuantity: z.number(),
-  availableQuantity: z.number(),
-  shortfallQuantity: z.number(),
-  uom: z.string(),
-  affectedOrders: z.array(z.string()),
-  urgency: SeveritySchema,
-  procurementStatus: z.enum(['in-stock', 'in-transit', 'ordered', 'delayed', 'out-of-stock', 'unknown']),
-  expectedArrival: z.string().datetime().optional(),
-  canBeSubstituted: z.boolean(),
+  shortfallId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  requiredQuantity: z.number().describe('[classification: source-field]'),
+  availableQuantity: z.number().describe('[classification: source-field]'),
+  shortfallQuantity: z.number().describe('[classification: source-derived]'),
+  uom: z.string().describe('[classification: source-field]'),
+  affectedOrders: z.array(z.string()).describe('[classification: source-field]'),
+  urgency: SeveritySchema.describe('[classification: source-derived]'),
+  procurementStatus: z.enum(['in-stock', 'in-transit', 'ordered', 'delayed', 'out-of-stock', 'unknown']).describe('[classification: application-heuristic]'),
+  expectedArrival: z.string().datetime().optional().describe('[classification: source-field]'),
+  canBeSubstituted: z.boolean().describe('[classification: source-derived]'),
 })
 
 export type StagingShortfall = z.infer<typeof StagingShortfallSchema>
@@ -120,22 +120,22 @@ export type StagingShortfall = z.infer<typeof StagingShortfallSchema>
 // ---------------------------------------------------------------------------
 
 export const StagingMoveRequestSchema = z.object({
-  requestId: z.string(),
-  warehouseId: z.string(),
-  fromLocation: z.string(),
-  toLocation: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  quantity: z.number(),
-  uom: z.string(),
-  processOrderId: z.string().optional(),
-  requestedBy: z.string(),
-  assignedTo: z.string().optional(),
-  status: z.enum(['open', 'assigned', 'in-transit', 'completed', 'cancelled']),
-  priority: SeveritySchema,
-  createdAt: z.string().datetime(),
-  completedAt: z.string().datetime().optional(),
-  reason: z.string(),
+  requestId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  fromLocation: z.string().describe('[classification: source-field]'),
+  toLocation: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  quantity: z.number().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  requestedBy: z.string().describe('[classification: source-field]'),
+  assignedTo: z.string().optional().describe('[classification: source-field]'),
+  status: z.enum(['open', 'assigned', 'in-transit', 'completed', 'cancelled']).describe('[classification: source-field]'),
+  priority: SeveritySchema.describe('[classification: source-field]'),
+  createdAt: z.string().datetime().describe('[classification: source-field]'),
+  completedAt: z.string().datetime().optional().describe('[classification: source-field]'),
+  reason: z.string().describe('[classification: source-field]'),
 })
 
 export type StagingMoveRequest = z.infer<typeof StagingMoveRequestSchema>
@@ -145,19 +145,19 @@ export type StagingMoveRequest = z.infer<typeof StagingMoveRequestSchema>
 // ---------------------------------------------------------------------------
 
 export const StagingReadinessSummarySchema = z.object({
-  planDate: z.string().date(),
-  warehouseId: z.string(),
-  totalOrders: z.number().int().min(0),
-  fullyStaged: z.number().int().min(0),
-  partiallyStaged: z.number().int().min(0),
-  notStaged: z.number().int().min(0),
-  blocked: z.number().int().min(0),
-  percentReady: z.number().min(0).max(100),
-  openShortfalls: z.number().int().min(0),
-  pendingPickTasks: z.number().int().min(0),
-  openMoveRequests: z.number().int().min(0),
-  riskStatus: z.enum(['ready', 'at-risk', 'blocked', 'unknown']),
-  confidence: z.number().min(0).max(1),
+  planDate: z.string().date().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  totalOrders: z.number().int().min(0).describe('[classification: source-derived]'),
+  fullyStaged: z.number().int().min(0).describe('[classification: source-derived]'),
+  partiallyStaged: z.number().int().min(0).describe('[classification: source-derived]'),
+  notStaged: z.number().int().min(0).describe('[classification: source-derived]'),
+  blocked: z.number().int().min(0).describe('[classification: source-derived]'),
+  percentReady: z.number().min(0).max(100).describe('[classification: application-derived]'),
+  openShortfalls: z.number().int().min(0).describe('[classification: source-derived]'),
+  pendingPickTasks: z.number().int().min(0).describe('[classification: source-derived]'),
+  openMoveRequests: z.number().int().min(0).describe('[classification: source-derived]'),
+  riskStatus: z.enum(['ready', 'at-risk', 'blocked', 'unknown']).describe('[classification: application-heuristic]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
 })
 
 export type StagingReadinessSummary = z.infer<typeof StagingReadinessSummarySchema>
@@ -167,19 +167,19 @@ export type StagingReadinessSummary = z.infer<typeof StagingReadinessSummarySche
 // ---------------------------------------------------------------------------
 
 export const StagingPickingWaveSchema = z.object({
-  waveId: z.string(),
-  warehouseId: z.string(),
-  planDate: z.string().date(),
-  waveLabel: z.string(),
-  includedOrders: z.array(z.string()),
-  totalTasks: z.number().int().min(0),
-  completedTasks: z.number().int().min(0),
-  status: z.enum(['planned', 'in-progress', 'completed', 'partial', 'cancelled']),
-  scheduledStart: z.string().datetime().optional(),
-  actualStart: z.string().datetime().optional(),
-  estimatedCompletion: z.string().datetime().optional(),
-  actualCompletion: z.string().datetime().optional(),
-  assignedTeam: z.string().optional(),
+  waveId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  planDate: z.string().date().describe('[classification: source-field]'),
+  waveLabel: z.string().describe('[classification: source-field]'),
+  includedOrders: z.array(z.string()).describe('[classification: source-field]'),
+  totalTasks: z.number().int().min(0).describe('[classification: source-derived]'),
+  completedTasks: z.number().int().min(0).describe('[classification: source-derived]'),
+  status: z.enum(['planned', 'in-progress', 'completed', 'partial', 'cancelled']).describe('[classification: source-field]'),
+  scheduledStart: z.string().datetime().optional().describe('[classification: source-field]'),
+  actualStart: z.string().datetime().optional().describe('[classification: source-field]'),
+  estimatedCompletion: z.string().datetime().optional().describe('[classification: source-field]'),
+  actualCompletion: z.string().datetime().optional().describe('[classification: source-field]'),
+  assignedTeam: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type StagingPickingWave = z.infer<typeof StagingPickingWaveSchema>
@@ -189,19 +189,19 @@ export type StagingPickingWave = z.infer<typeof StagingPickingWaveSchema>
 // ---------------------------------------------------------------------------
 
 export const StagingAlertSchema = z.object({
-  alertId: z.string(),
-  warehouseId: z.string(),
-  alertType: z.enum(['shortfall', 'overdue-pick', 'zone-capacity', 'move-delay', 'blocked-order', 'other']),
-  severity: SeveritySchema,
-  processOrderId: z.string().optional(),
-  materialId: z.string().optional(),
-  zoneId: z.string().optional(),
-  description: z.string(),
-  recommendedAction: z.string(),
-  raisedAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().optional(),
-  status: z.enum(['open', 'acknowledged', 'in-progress', 'resolved']),
-  owner: z.string().optional(),
+  alertId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  alertType: z.enum(['shortfall', 'overdue-pick', 'zone-capacity', 'move-delay', 'blocked-order', 'other']).describe('[classification: source-field]'),
+  severity: SeveritySchema.describe('[classification: source-derived]'),
+  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  materialId: z.string().optional().describe('[classification: source-field]'),
+  zoneId: z.string().optional().describe('[classification: source-field]'),
+  description: z.string().describe('[classification: source-field]'),
+  recommendedAction: z.string().describe('[classification: application-heuristic]'),
+  raisedAt: z.string().datetime().describe('[classification: source-field]'),
+  resolvedAt: z.string().datetime().optional().describe('[classification: source-field]'),
+  status: z.enum(['open', 'acknowledged', 'in-progress', 'resolved']).describe('[classification: source-field]'),
+  owner: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type StagingAlert = z.infer<typeof StagingAlertSchema>
