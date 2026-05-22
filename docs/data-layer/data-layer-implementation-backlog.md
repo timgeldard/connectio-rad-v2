@@ -270,7 +270,7 @@ No timeline estimated. Do not wire shell-wide assistant before these gates.
 | 3 | Quality | Fix CQ Lab getLabPlants() CRITICAL fallback | Yes (small fix) | No | No | **P0** |
 | 4 | Traceability | Mass balance semantic closure | No (governance); Yes (after) | Optional | Yes | **P1** |
 | 5 | Quality | Confirm QM UD lot-selection rule | No | No | **Done (Option A)** | **Complete** |
-| 6 | Quality | Wire QM UD read-only per-lot route | Yes (route + adapter) | Yes | **Done** | **In Progress** |
+| 6 | Quality | Wire QM UD read-only per-lot route | Yes (route + adapter) | Yes | **Done** | **Complete** |
 | 7 | SPC | V1 legacy bridge browser verification decision | Yes (adapter) | No for bridge | Yes for native | **P2** |
 | 8 | Quality | Run broader source verification pack | No (SQL only) | Yes | No | **P2** |
 | 9 | Traceability | Confirm LINK_TYPE='DELIVERY' in live data | No | No (app only) | No | **P1** (part of Rank 1) |
@@ -278,4 +278,4 @@ No timeline estimated. Do not wire shell-wide assistant before these gates.
 | 11 | SPC | Raise data platform migrations 012 + 013 | No (platform action) | No | No | **P2** |
 | 12 | EnvMon | Confirm INSPECTION_TYPE filter + browser-verify | Possibly | Yes | No | **P2** |
 | 13 | Cross-domain | Add response_model to validation-gap routes | Yes (small per route) | No | No | **P2** |
-| 14 | POH | Fix legacy-api adapter JSDoc comment | Yes (comment only) | No | No | **P2** |
+| 14 | POH | Fix legacy-api adapter JSDoc comment | Yes (comment only) | No | No | **Complete** |

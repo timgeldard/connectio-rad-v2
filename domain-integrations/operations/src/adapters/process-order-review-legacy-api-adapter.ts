@@ -17,9 +17,9 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
-  /**
+   /**
    * Tier: legacy-api — wired to V1 POH order-header endpoint.
-   * Falls back to mock on any error until verified.
+   * Returns an error AdapterResult on network or proxy failure.
    */
   override async getProcessOrderHeader(
     request: ProcessOrderReviewAdapterRequest,
