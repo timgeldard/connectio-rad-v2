@@ -205,7 +205,7 @@
                 "governed"
               ]
             },
-            "overallStatus": {
+            "heuristicQualityStatus": {
               "type": "string",
               "enum": [
                 "accepted",
@@ -277,7 +277,7 @@
           "required": [
             "heuristicQualityConfidence",
             "confidenceSource",
-            "overallStatus",
+            "heuristicQualityStatus",
             "notes",
             "coa"
           ],
@@ -4866,7 +4866,7 @@
             "governed"
           ]
         },
-        "overallStatus": {
+        "heuristicQualityStatus": {
           "type": "string",
           "enum": [
             "accepted",
@@ -4938,7 +4938,7 @@
       "required": [
         "heuristicQualityConfidence",
         "confidenceSource",
-        "overallStatus",
+        "heuristicQualityStatus",
         "notes",
         "coa"
       ],
@@ -10431,7 +10431,8 @@
                 "enum": [
                   "low",
                   "medium",
-                  "high"
+                  "high",
+                  "unknown"
                 ]
               }
             },
@@ -10604,7 +10605,8 @@
       "enum": [
         "low",
         "medium",
-        "high"
+        "high",
+        "unknown"
       ]
     },
     "SupplierLot": {
@@ -10639,7 +10641,8 @@
           "enum": [
             "low",
             "medium",
-            "high"
+            "high",
+            "unknown"
           ]
         }
       },
