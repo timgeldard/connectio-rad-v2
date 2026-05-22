@@ -166,20 +166,20 @@ Items 5–10 require a combination of governance decisions and engineering work.
 
 ---
 
-## Rank 10 — Warehouse: Source schema alignment (overview route prioritised)
+## Rank 10 — Warehouse: Fix production-broken WH360 native routes (ELEVATED — DDL verified 2026-05-22)
 
 | Field | Value |
 |---|---|
 | **Domain** | Warehouse360 |
-| **Work package** | Verify `wh360_kpi_snapshot_v` columns in Databricks to unblock the `GET /api/warehouse360/overview` mapper rewrite; then identify source objects for the 4 other native warehouse routes. |
-| **Why it matters** | The overview route mapper/contract alignment analysis (2026-05-22, `warehouse360-overview-contract-alignment.md`) confirmed that 10 of 11 non-optional contract fields cannot be safely populated without Databricks verification. The frontend adapter already expects contract shape and silently returns 0 for all counts — the mismatch is actively masking data. Verification of `wh360_kpi_snapshot_v` is the single prerequisite for the mapper rewrite. The 4 other warehouse routes are `response_model`-enforced but source objects remain unidentified (DDL unverified). |
-| **Depends on** | Databricks SQL access (`DESCRIBE TABLE` on `wh360_kpi_snapshot_v`) |
-| **Databricks SQL required?** | Yes |
-| **Business governance required?** | No |
-| **Runtime code required?** | Yes (after verification) — rewrite `map_warehouse_overview_rows` to emit contract shape; update `test_warehouse360_routes.py`; add `response_model=Warehouse360Overview` to route |
-| **Expected files / routes / contracts** | `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` (SQL + mapper); `apps/api/routes/warehouse360.py` (response_model); `apps/api/tests/routes/test_warehouse360_routes.py` (replace V1-key assertions); update `warehouse360-overview-contract-alignment.md` with DDL evidence |
-| **Acceptance criteria** | `DESCRIBE TABLE wh360_kpi_snapshot_v` output documented; all 9 required count columns confirmed or gaps raised with data platform; mapper rewritten to emit `inboundDueCount`, `outboundDueCount`, `stagingOpenCount`, `nearExpiryCount`, `reconciliationExceptionCount`, `blockedStockCount`, `plantId`; `response_model=Warehouse360Overview` added; tests pass with contract-shape assertions |
-| **Risk if skipped** | Overview route continues to silently return 0 for all KPI counts; frontend displays no-data state for all overview metrics; `response_model` cannot be added safely |
+| **Work package** | Fix 3 production-broken WH360 native routes (wrong column names / missing views) and then implement the overview mapper rewrite. |
+| **Why it matters** | Live Databricks verification (2026-05-22, `warehouse360-overview-contract-alignment.md`) confirmed that 3 of 4 `response_model`-enforced warehouse routes fail in production: (1) inbound adapter SQL references non-existent column names (`DOCUMENT_TYPE`, `PURCHASE_ORDER_ID`, `WAREHOUSE_NUMBER` vs actual `doc_type`, `po_id`, no `warehouse_number`); (2) staging route references `staging_orders_v` which does not exist; (3) exceptions route references `wh360_imwm_exceptions_v` which does not exist (correct name: `imwm_exceptions_v`). These routes pass unit tests because tests mock Databricks — they have never been verified against real data. The overview route additionally has a mapper/contract shape gap (all 9 count fields return 0). |
+| **Depends on** | Data platform team to confirm intended schema and fix view names/column names (items 1–3 above); business confirmation for near-expiry threshold and reconciliation exception type (items 4–5 in `warehouse360-overview-contract-alignment.md`) |
+| **Databricks SQL required?** | Already done (DDL verified). Further access needed for testing after fixes. |
+| **Business governance required?** | Yes — near-expiry threshold; reconciliation exception type filter |
+| **Runtime code required?** | Yes — fix adapter SQL for inbound (column name rewrite); fix adapter SQL for staging (use `wh360_process_orders_v` or new view); fix adapter SQL for exceptions (rename to `imwm_exceptions_v`); rewrite overview mapper to use multi-view subqueries emitting contract shape; add `response_model=Warehouse360Overview`; update tests |
+| **Expected files / routes / contracts** | `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` (4 SQL rewrites + new overview subquery SQL); `apps/api/routes/warehouse360.py` (`response_model`); `apps/api/tests/routes/test_warehouse360_routes.py` (update all assertions); `apps/api/tests/adapters/warehouse360/test_warehouse360_adapter.py` |
+| **Acceptance criteria** | All 4 adapter SQLs run successfully against `connected_plant_uat`; inbound/outbound/staging/exceptions return real rows; overview returns `inboundDueCount`, `outboundDueCount`, `stagingOpenCount`, `nearExpiryCount`, `reconciliationExceptionCount`, `blockedStockCount`, `plantId`; `response_model=Warehouse360Overview` added; all tests pass |
+| **Risk if skipped** | All 5 WH360 native routes fail silently or with 500 errors in production; frontend displays no data or cached errors; `response_model` enforcement provides false safety on broken routes |
 
 ---
 
@@ -276,7 +276,7 @@ No timeline estimated. Do not wire shell-wide assistant before these gates.
 | 7 | SPC | V1 legacy bridge browser verification decision | Yes (adapter) | No for bridge | Yes for native | **P2** |
 | 8 | Quality | Run broader source verification pack | No (SQL only) | Yes | No | **P2** |
 | 9 | Traceability | Confirm LINK_TYPE='DELIVERY' in live data | No | No (app only) | No | **P1** (part of Rank 1) |
-| 10 | Warehouse | Source schema alignment (overview prioritised — see `warehouse360-overview-contract-alignment.md`) | Yes (after SQL) | Yes | No | **P3** |
+| 10 | Warehouse | Fix production-broken WH360 routes + overview mapper rewrite (see `warehouse360-overview-contract-alignment.md`) | Yes | Done (needs follow-up) | Yes (near-expiry + exception type) | **P2** (elevated — routes confirmed broken in prod) |
 | 11 | SPC | Raise data platform migrations 012 + 013 | No (platform action) | No | No | **P2** |
 | 12 | EnvMon | Confirm INSPECTION_TYPE filter + browser-verify | Possibly | Yes | No | **P2** |
 | 13 | Cross-domain | Add response_model to validation-gap routes | Yes (small per route) | No | No | **P2** |
