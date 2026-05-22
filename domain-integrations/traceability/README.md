@@ -40,14 +40,14 @@ pnpm nx typecheck di-traceability
 
 ## Key docs
 
-| Doc | Purpose |
-|-----|---------|
-| `docs/mb56-parity-review.md` | Gap analysis vs. reference SQL engine |
-| `docs/uat-acceptance-script.md` | 10 UAT scenarios for QA / food-safety users |
-| `docs/golden-test-batches.md` | Register of known test batches |
-| `docs/uat-validation-ledger.md` | Live UAT run history |
-| `docs/traceability-defect-backlog.md` | Classified defect register |
-| `docs/production-readiness-checklist.md` | Gates before production use |
+| Doc                                         | Purpose                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| `docs/mb56-parity-review.md`                | Gap analysis vs. reference SQL engine                             |
+| `docs/uat-acceptance-script.md`             | 10 UAT scenarios for QA / food-safety users                       |
+| `docs/golden-test-batches.md`               | Register of known test batches                                    |
+| `docs/uat-validation-ledger.md`             | Live UAT run history                                              |
+| `docs/traceability-defect-backlog.md`       | Classified defect register                                        |
+| `docs/production-readiness-checklist.md`    | Gates before production use                                       |
 | `docs/traceability-genie-readiness-pack.md` | First approved Traceability Genie question pack and blocked scope |
 
 ## Status
