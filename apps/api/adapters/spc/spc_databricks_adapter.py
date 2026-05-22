@@ -99,6 +99,7 @@ def get_spc_subgroups_spec(request: SubgroupsRequest) -> QuerySpec:
     Raises DatabricksConfigError if SPC_CATALOG and TRACE_CATALOG are both unset.
     """
     mv = resolve_domain_object("spc", _SPC_MV)
+    safe_limit = max(1, min(MAX_SUBGROUPS, int(request.limit)))
 
     sql = f"""
     SELECT
@@ -119,7 +120,7 @@ def get_spc_subgroups_spec(request: SubgroupsRequest) -> QuerySpec:
       AND batch_date  <= :date_to
     GROUP BY batch_id, batch_date
     ORDER BY batch_date DESC
-    LIMIT {request.limit}
+    LIMIT {safe_limit}
     """
 
     return QuerySpec(
@@ -171,8 +172,8 @@ def map_spc_subgroup_rows(rows: list[dict], request: SubgroupsRequest) -> dict:
             raw_name = row.get("mic_name")
             mic_name = str(raw_name) if raw_name is not None else None
 
-        lsl = _parse_spec_limit(row.get("lsl_spec"))
-        usl = _parse_spec_limit(row.get("usl_spec"))
+        lsl = _to_float_or_none(row.get("lsl_spec"))
+        usl = _to_float_or_none(row.get("usl_spec"))
         # Sentinel: both 0.0 means not populated in UAT — map pair to null.
         if lsl == 0.0 and usl == 0.0:
             lsl = None
@@ -185,7 +186,7 @@ def map_spc_subgroup_rows(rows: list[dict], request: SubgroupsRequest) -> dict:
             "batchId": str(row.get("batch_id") or ""),
             "batchDate": str(row.get("batch_date") or ""),
             "subgroupMean": mean,
-            "subgroupRange": _float_or_none(row.get("subgroup_range")),
+            "subgroupRange": _to_float_or_none(row.get("subgroup_range")),
             "sampleCount": max(1, int(row.get("sample_count") or 1)),
             "lslSpec": lsl,
             "uslSpec": usl,
@@ -205,16 +206,7 @@ def map_spc_subgroup_rows(rows: list[dict], request: SubgroupsRequest) -> dict:
     }
 
 
-def _parse_spec_limit(value: object) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _float_or_none(value: object) -> float | None:
+def _to_float_or_none(value: object) -> float | None:
     if value is None:
         return None
     try:

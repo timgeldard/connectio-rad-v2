@@ -140,6 +140,7 @@ class TestSpcSubgroupsP999Sentinel:
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
         monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
         url = (
             "/api/spc/subgroups"
@@ -159,6 +160,7 @@ class TestSpcSubgroupsP999Sentinel:
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
         monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
         called: list[bool] = []
 
@@ -239,6 +241,7 @@ class TestSpcSubgroupsRequiredFilters:
         monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
         monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
         monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
 
     async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
         self._databricks_env(monkeypatch)

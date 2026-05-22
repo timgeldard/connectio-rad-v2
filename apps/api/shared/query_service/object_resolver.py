@@ -69,7 +69,7 @@ def resolve_domain_object(
     catalog cannot be resolved (missing env var and no override).
 
     Args:
-        domain: One of "poh", "cq", "trace2", "envmon", "wh360".
+        domain: One of "poh", "cq", "trace2", "envmon", "spc", "wh360".
         object_name: Code constant — the table/view name without qualification.
             Must never be a user-supplied value.
         schema_override: When set, bypasses the schema env var (e.g., "gold" for
