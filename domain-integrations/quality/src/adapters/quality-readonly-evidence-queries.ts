@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import type { QualityEvidenceResponse } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
-import {
-  qualityReadOnlyEvidenceAdapter,
-  type QualityReadOnlyEvidenceAdapterRequest,
-} from './quality-readonly-evidence-adapter.js'
+import { qualityReadOnlyEvidenceAdapterInstance } from './quality-readonly-evidence-adapter-factory.js'
+import type { QualityReadOnlyEvidenceAdapterRequest } from './quality-readonly-evidence-adapter.js'
 
 const QUALITY_EVIDENCE_STALE_TIME_MS = 3 * 60 * 1000
 
@@ -24,7 +22,7 @@ function qualityEvidenceKey(request: QualityReadOnlyEvidenceAdapterRequest) {
 export function useQualityReadOnlyEvidence(request: QualityReadOnlyEvidenceAdapterRequest) {
   return useQuery<AdapterResult<QualityEvidenceResponse>>({
     queryKey: qualityEvidenceKey(request),
-    queryFn: () => qualityReadOnlyEvidenceAdapter.getQualityEvidence(request),
+    queryFn: () => qualityReadOnlyEvidenceAdapterInstance.getQualityEvidence(request),
     staleTime: QUALITY_EVIDENCE_STALE_TIME_MS,
   })
 }

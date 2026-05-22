@@ -33,11 +33,7 @@ function formatStatusLabel(value: string) {
   return value.replace(/-/g, ' ')
 }
 
-function statusColor(state: string) {
-  return state === 'loaded' || state === 'source-present'
-    ? 'var(--shell-good)'
-    : 'var(--shell-warn)'
-}
+
 
 export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidencePanelProps) {
   const { data: result, isLoading } = useQualityReadOnlyEvidence(request)

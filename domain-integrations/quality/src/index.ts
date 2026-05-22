@@ -99,8 +99,8 @@ export { connectedQualityLabAdapterInstance } from './adapters/connected-quality
 
 export {
   QualityReadOnlyEvidenceAdapter,
-  qualityReadOnlyEvidenceAdapter,
 } from './adapters/quality-readonly-evidence-adapter.js'
+export { qualityReadOnlyEvidenceAdapterInstance } from './adapters/quality-readonly-evidence-adapter-factory.js'
 export type {
   QualityReadOnlyEvidenceAdapterRequest,
   QualityReadOnlyEvidenceAdapterOptions,

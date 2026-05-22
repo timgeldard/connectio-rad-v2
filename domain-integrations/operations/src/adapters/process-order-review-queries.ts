@@ -21,9 +21,8 @@ export function useProcessOrderHeader(request: ProcessOrderReviewAdapterRequest,
   return useQuery({
     queryKey: ['por-header', request.processOrderId ?? null, request.plantId ?? null],
     queryFn: () => processOrderReviewAdapter.getProcessOrderHeader(request),
-    enabled: Boolean(request.processOrderId),
+    enabled: Boolean(request.processOrderId) && (options.enabled ?? true),
     staleTime: STALE,
-    enabled: options.enabled ?? true,
   })
 }
 
@@ -76,9 +75,8 @@ export function useOrderOperations(request: ProcessOrderReviewAdapterRequest, op
   return useQuery({
     queryKey: ['por-operations', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderOperations(request),
-    enabled: Boolean(request.processOrderId),
+    enabled: Boolean(request.processOrderId) && (options.enabled ?? true),
     staleTime: STALE,
-    enabled: options.enabled ?? true,
   })
 }
 
@@ -86,9 +84,8 @@ export function useOrderConfirmations(request: ProcessOrderReviewAdapterRequest,
   return useQuery({
     queryKey: ['por-confirmations', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderConfirmations(request),
-    enabled: Boolean(request.processOrderId),
+    enabled: Boolean(request.processOrderId) && (options.enabled ?? true),
     staleTime: STALE,
-    enabled: options.enabled ?? true,
   })
 }
 
@@ -96,8 +93,7 @@ export function useOrderGoodsMovements(request: ProcessOrderReviewAdapterRequest
   return useQuery({
     queryKey: ['por-goods-movements', request.processOrderId ?? null, request.plantId ?? null, request.materialId ?? null, request.batchId ?? null],
     queryFn: () => processOrderReviewAdapter.getOrderGoodsMovements(request),
-    enabled: Boolean(request.processOrderId),
+    enabled: Boolean(request.processOrderId) && (options.enabled ?? true),
     staleTime: STALE,
-    enabled: options.enabled ?? true,
   })
 }
