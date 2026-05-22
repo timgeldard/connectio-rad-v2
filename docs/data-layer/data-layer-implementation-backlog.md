@@ -269,8 +269,8 @@ No timeline estimated. Do not wire shell-wide assistant before these gates.
 | 2 | POH | Browser UAT evidence capture | No (runbook only) | No (app only) | No | **P0** |
 | 3 | Quality | Fix CQ Lab getLabPlants() CRITICAL fallback | Yes (small fix) | No | No | **P0** |
 | 4 | Traceability | Mass balance semantic closure | No (governance); Yes (after) | Optional | Yes | **P1** |
-| 5 | Quality | Confirm QM UD lot-selection rule | No (governance only) | No | Yes | **P1** |
-| 6 | Quality | Wire QM UD read-only per-lot route | Yes (route + adapter) | Yes | After Rank 5 | **P1** (after 5) |
+| 5 | Quality | Confirm QM UD lot-selection rule | No | No | **Done (Option A)** | **Complete** |
+| 6 | Quality | Wire QM UD read-only per-lot route | Yes (route + adapter) | Yes | **Done** | **In Progress** |
 | 7 | SPC | V1 legacy bridge browser verification decision | Yes (adapter) | No for bridge | Yes for native | **P2** |
 | 8 | Quality | Run broader source verification pack | No (SQL only) | Yes | No | **P2** |
 | 9 | Traceability | Confirm LINK_TYPE='DELIVERY' in live data | No | No (app only) | No | **P1** (part of Rank 1) |

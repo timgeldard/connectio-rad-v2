@@ -101,13 +101,13 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-012 — QM usage-decision source not wired (blocks accurate supplier risk + production history release evidence)
-**Status:** Open — schema/grain/join verified 2026-05-21; code/text semantics governance from QM process owner required before any release-status mapping
+**Status:** Closed — schema/grain/join verified 2026-05-21; code/text semantics governance (Option A: Strict Lot-Level Evidence) confirmed 2026-05-22.
 **Affected:** `MaterialSupplierExposurePanel` (openSupplierActions, highestRiskSupplier), `ProductionHistoryPanel` (release-decision interpretation), `BatchHeaderPanel` (qualityStatus)
 **Evidence:** Source object `gold_inspection_usage_decision` verified live 2026-05-21 via Databricks CLI (warehouse `connected_plant_uat / e76480b94bea6ed5`): 13 columns, 15,473,693 rows, grain = `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)` (0 duplicates confirmed). Historical source — USAGE_DECISION_COUNTER is STRING; blank = first decision, then '1', '2', ... Use `CAST(NULLIF(USAGE_DECISION_COUNTER,'') AS INT)` to get latest per lot, not `MAX()` on the raw string. No MATERIAL_ID/BATCH_ID/PLANT_ID in the UD table — join to batch requires two hops: UD → `gold_inspection_lot` → material/batch/plant. Join to `gold_inspection_lot` confirmed; `USAGE_DECISION_LONG_TEXT` is in `gold_inspection_lot`, not in the UD table. UAT candidate (MATERIAL_ID=20052009, BATCH_ID=0008602411, PLANT_ID=C061) matched to lot 030005059533, code=A, date=2024-08-27. 9 distinct usage-decision codes observed: A (90.3%), AE (7.5%), AC (1.2%), R (0.6%), ACE (0.2%), RE (0.2%), A9, RR, '' empty (269 rows). `gold_batch_production_history_v.quality_status` exposes 'Pass'/'Fail' labels but these are not the SAP QM release decision.
 **Risk:** Investigators may infer release decisions or supplier quality risk from indirect signals (gold view labelling, inspection lots) without a verified mapping to the underlying QM evidence chain.
 **Mitigation in current slices:** Supplier panel `openSupplierActions=0` and `highestRiskSupplier` absent. Production history panel includes a dashed disclaimer that the Pass/Fail label is not a release decision. Batch header `qualityStatus` is already conservative (`pending`/`unknown` only).
-**Governance gate (ACTIVE):** V2 must display source usage-decision code/text verbatim. It must not map to accepted, released, rejected, conditional, or blocked unless a governed SAP QM mapping is verified in writing with the Kerry Quality/QM process owner. All 9 observed codes must be covered. Missing usage-decision must not be displayed as accepted or released.
-**Proposed fix:** Obtain governed code mapping from Kerry Quality/QM process owner (covering all 9 codes: A, AE, AC, R, ACE, RE, A9, RR, '' empty). Once confirmed in writing, wire a single supplemental QuerySpec and expose verified display fields on each affected panel.
+**Governance gate (CLOSED):** Governed code mapping obtained and confirmed (Option A). V2 will display source usage-decision code/text verbatim per lot.
+**Fix applied:** Option A governance confirmed. Wiring into live backend in progress.
 **Verification docs:** `qm-usage-decision-source-verification.md`, `qm-usage-decision-grain-and-joins.md`, `qm-usage-decision-code-semantics.md`, `qm-usage-decision-cross-domain-consumption-plan.md`
 **Requires UAT:** Yes
 

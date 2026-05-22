@@ -113,16 +113,15 @@ Caveats (from `qm-usage-decision-grain-and-joins.md` §9):
 
 **Multiple UD rows per inspection lot (historical):** Resolved by the latest-row pattern in §5.
 
-**Multiple inspection lots per material/batch/plant:** Not yet assessed. This is the primary open gate.
+**Multiple inspection lots per material/batch/plant:** Governed by Option A (Strict Lot-Level Evidence).
 
 | Scenario | Required handling |
 |---|---|
 | Exactly one inspection lot per material/batch/plant | Display UD evidence for that lot directly |
-| Multiple lots, governed selection rule exists | Apply governed rule to select authoritative lot; label clearly |
-| Multiple lots, no selection rule | Surface evidence per lot (not per batch); label "Multiple inspection lots — see per-lot detail" |
+| Multiple lots | Surface evidence per lot (not per batch); label "Multiple inspection lots — showing per-lot detail" |
 | Zero lots for a batch | Show "No inspection lot found for this batch" — not "No usage decision" |
 
-**Do not:** aggregate lot-level decisions into a single "batch release status" without a governed aggregation rule.
+**Governed rule:** Option A (Strict Lot-Level Evidence - No Aggregation) was approved. Do not aggregate lot-level decisions into a single "batch release status".
 
 ---
 
