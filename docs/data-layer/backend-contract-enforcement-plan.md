@@ -77,7 +77,7 @@ not touched:
 | Item | Blocker |
 |---|---|
 | `POST /por/order-header` enforcement | Remove `inspectionLotId` from mapper OR add field to `ProcessOrderHeader` contract, then verify V1 proxy mode |
-| `GET /warehouse360/overview` enforcement | Rewrite `map_warehouse_overview_rows` to emit `inboundDueCount`, `outboundDueCount`, etc. matching `Warehouse360Overview` |
+| `GET /warehouse360/overview` enforcement | Rewrite `map_warehouse_overview_rows` to emit `inboundDueCount`, `outboundDueCount`, etc. matching `Warehouse360Overview`. Analysis complete (2026-05-22): frontend already expects contract shape; silently returns 0 for all counts. 10 of 11 non-optional fields require Databricks verification of `wh360_kpi_snapshot_v`. See `warehouse360-overview-contract-alignment.md`. |
 | `GET /cq/lab/plants` enforcement | Browser-verify `/api/cq/lab/plants` in legacy-api mode; confirm V1 response shape is compatible |
 | `POST /trace2/batch-header` enforcement | Browser-verify `/api/trace2/batch-header` in legacy-api mode; confirm V1 response shape is compatible |
 

@@ -1,6 +1,6 @@
 # Contract-to-Route Coverage Matrix
 
-> Snapshot: 2026-05-22. Updated 2026-05-22 (envmon-swab-contract-alignment branch) to reflect `EnvMonNativeSwabResultSchema` promotion and `response_model` enforcement on `GET /api/envmon/swab-results`. Previously updated 2026-05-21 (backend-contract-enforcement branch) for envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
+> Snapshot: 2026-05-22. Updated 2026-05-22 (warehouse360-overview-contract-alignment analysis) to document mapper/contract mismatch for `GET /api/warehouse360/overview` and confirm Option C (no runtime change; Databricks verification required). Previously updated 2026-05-22 (envmon-swab-contract-alignment branch) to reflect `EnvMonNativeSwabResultSchema` promotion and `response_model` enforcement on `GET /api/envmon/swab-results`. Previously updated 2026-05-21 (backend-contract-enforcement branch) for envmon/site-summary and warehouse360 inbound/outbound/staging/exceptions. Built from direct inspection of `packages/data-contracts/src/schemas/`, `apps/api/routes/`, and `apps/api/contracts/generated.py`.
 
 ## Key findings (read first)
 
@@ -139,7 +139,7 @@
 
 | Schema | Domain | Purpose | Frontend consumer | Backend route | Gen. Python model | Runtime mode | Validation location | Source object(s) | Status | Gap / next action |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `Warehouse360OverviewSchema` | Warehouse | Overview KPIs | Warehouse360Adapter / OverviewPanel | `GET /api/warehouse360/overview` | Yes — `Warehouse360Overview` | databricks-api | frontend only (no `response_model`) | Not identified | route-wired-no-backend-validation | Add `response_model`; identify source objects; run Warehouse schema alignment |
+| `Warehouse360OverviewSchema` | Warehouse | Overview KPIs | Warehouse360Adapter / OverviewPanel | `GET /api/warehouse360/overview` | Yes — `Warehouse360Overview` | databricks-api | frontend only (no `response_model`) | `wh360_kpi_snapshot_v` (V1 KPI view — columns do not match contract) | **mapper-shape-gap** — source-truthful contract columns unverified | See `warehouse360-overview-contract-alignment.md`. Frontend already maps to contract shape (silently returns 0 for all counts). Backend SQL/mapper emits V1 KPI keys — completely different shape. Requires Databricks verification of `wh360_kpi_snapshot_v` columns before mapper can be rewritten. Do not silently map `inbound_open` → `inboundDueCount` or `bins_blocked` → `blockedStockCount`. |
 | `Warehouse360InboundItemSchema` | Warehouse | Inbound items | Warehouse360Adapter / InboundPanel | `GET /api/warehouse360/inbound` | Yes — `Warehouse360InboundItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360InboundItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Source objects not yet DDL-verified; browser-verify against live UAT |
 | `Warehouse360OutboundItemSchema` | Warehouse | Outbound items | Warehouse360Adapter / OutboundPanel | `GET /api/warehouse360/outbound` | Yes — `Warehouse360OutboundItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360OutboundItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Same |
 | `Warehouse360StagingItemSchema` | Warehouse | Staging items | Warehouse360Adapter / StagingPanel | `GET /api/warehouse360/staging` | Yes — `Warehouse360StagingItem` | databricks-api | **both** (frontend Zod + `response_model=list[Warehouse360StagingItem]`) | Not identified (schema-verified) | **complete-contract-binding** | Same |
@@ -179,7 +179,7 @@ Updated 2026-05-22: envmon/site-summary, envmon/swab-results, and warehouse360 i
 |---|---|---|---|
 | `POST /api/trace2/batch-header` | Traceability | Dual-mode proxy; `response_model` applies to both paths; V1 shape unverified | Browser-verify V1 path |
 | `POST /api/por/order-header` | POH | Dual-mode proxy; mapper also adds `inspectionLotId` not in model | Fix mapper AND browser-verify V1 path |
-| `GET /api/warehouse360/overview` | Warehouse | Mapper returns V1-style keys (`ordersTotal`, `trsOpen`, etc.) — completely different from `Warehouse360Overview` | Rewrite mapper to contract shape |
+| `GET /api/warehouse360/overview` | Warehouse | Mapper returns V1-style keys (`ordersTotal`, `trsOpen`, etc.) — 0 of 11 non-optional contract fields can be safely populated. Frontend already expects contract shape and silently returns 0 for all counts. | DESCRIBE `wh360_kpi_snapshot_v` in Databricks to confirm contract columns exist before rewriting mapper. See `warehouse360-overview-contract-alignment.md`. |
 | `POST /api/wh360/warehouse-summary` | Warehouse | V1 proxy; response shape not browser-verified | Browser-verify V1 proxy |
 | `GET /api/cq/lab/fails` | Quality (CQ Lab) | Always V1 proxy passthrough; response shape not browser-verified | Browser-verify V1 proxy |
 | `GET /api/cq/lab/plants` | Quality (CQ Lab) | Dual-mode; `response_model` applies to both proxy and native branch | Browser-verify V1 path |

@@ -166,20 +166,20 @@ Items 5–10 require a combination of governance decisions and engineering work.
 
 ---
 
-## Rank 10 — Warehouse: Source schema alignment
+## Rank 10 — Warehouse: Source schema alignment (overview route prioritised)
 
 | Field | Value |
 |---|---|
 | **Domain** | Warehouse360 |
-| **Work package** | Identify the actual Databricks table/view names behind the 5 native warehouse routes; DESCRIBE TABLE or equivalent; compare to Zod schemas |
-| **Why it matters** | All 5 native warehouse routes are wired and return HTTP 200 in UAT, but the source objects are completely unidentified in this audit. The SQL query names are not visible in route code or docs. Without source identification, source semantics cannot be verified and the warehouse panel cannot be trusted. |
-| **Depends on** | Databricks SQL access; OR read the route SQL queries directly from `apps/api/routes/warehouse360.py` |
-| **Databricks SQL required?** | Yes for verification; No for identification (read route SQL) |
+| **Work package** | Verify `wh360_kpi_snapshot_v` columns in Databricks to unblock the `GET /api/warehouse360/overview` mapper rewrite; then identify source objects for the 4 other native warehouse routes. |
+| **Why it matters** | The overview route mapper/contract alignment analysis (2026-05-22, `warehouse360-overview-contract-alignment.md`) confirmed that 10 of 11 non-optional contract fields cannot be safely populated without Databricks verification. The frontend adapter already expects contract shape and silently returns 0 for all counts — the mismatch is actively masking data. Verification of `wh360_kpi_snapshot_v` is the single prerequisite for the mapper rewrite. The 4 other warehouse routes are `response_model`-enforced but source objects remain unidentified (DDL unverified). |
+| **Depends on** | Databricks SQL access (`DESCRIBE TABLE` on `wh360_kpi_snapshot_v`) |
+| **Databricks SQL required?** | Yes |
 | **Business governance required?** | No |
-| **Runtime code required?** | No |
-| **Expected files / routes / contracts** | Update `docs/migration/warehouse-functional-parity-audit.md` with source object names and schema evidence; update `source-verification-coverage.md` |
-| **Acceptance criteria** | At least 1 warehouse source table name identified and DDL confirmed per route; Zod schema compared to DDL; gaps documented |
-| **Risk if skipped** | Warehouse routes are wired but untrustworthy; source schema mismatches silently accepted |
+| **Runtime code required?** | Yes (after verification) — rewrite `map_warehouse_overview_rows` to emit contract shape; update `test_warehouse360_routes.py`; add `response_model=Warehouse360Overview` to route |
+| **Expected files / routes / contracts** | `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` (SQL + mapper); `apps/api/routes/warehouse360.py` (response_model); `apps/api/tests/routes/test_warehouse360_routes.py` (replace V1-key assertions); update `warehouse360-overview-contract-alignment.md` with DDL evidence |
+| **Acceptance criteria** | `DESCRIBE TABLE wh360_kpi_snapshot_v` output documented; all 9 required count columns confirmed or gaps raised with data platform; mapper rewritten to emit `inboundDueCount`, `outboundDueCount`, `stagingOpenCount`, `nearExpiryCount`, `reconciliationExceptionCount`, `blockedStockCount`, `plantId`; `response_model=Warehouse360Overview` added; tests pass with contract-shape assertions |
+| **Risk if skipped** | Overview route continues to silently return 0 for all KPI counts; frontend displays no-data state for all overview metrics; `response_model` cannot be added safely |
 
 ---
 
@@ -224,8 +224,8 @@ Items 5–10 require a combination of governance decisions and engineering work.
 | **Domain** | Cross-domain |
 | **Work package** | Add `response_model` declarations to routes that are missing backend validation. See `docs/data-layer/backend-contract-enforcement-plan.md` for full decision table. |
 | **Why it matters** | Without `response_model`, FastAPI does not validate the response shape before sending. If a source object changes (column rename, type change), the API silently returns malformed data. Backend validation is a safety net. |
-| **Status** | **Partially complete (2026-05-22, branches `feature/backend-contract-enforcement` + `feature/envmon-swab-contract-alignment`).** Enforced: `GET /envmon/site-summary` (EnvMonSiteSummary), `GET /envmon/swab-results` (EnvMonNativeSwabResult), `GET /warehouse360/{inbound,outbound,staging,exceptions}` (4 models). Skipped with documented reasons: `/trace2/batch-header` (proxy-passthrough), `/por/order-header` (proxy-passthrough + mapper mismatch), `/warehouse360/overview` (mapper shape mismatch), `/cq/lab/fails` (proxy-passthrough), `/cq/lab/plants` (proxy-passthrough). |
-| **Remaining work** | Fix mapper for `/por/order-header` (remove `inspectionLotId`); rewrite `/warehouse360/overview` mapper to contract shape; browser-verify V1 proxy paths before enforcing `/trace2/batch-header`, `/cq/lab/*` |
+| **Status** | **Partially complete (2026-05-22, branches `feature/backend-contract-enforcement` + `feature/envmon-swab-contract-alignment`).** Enforced: `GET /envmon/site-summary` (EnvMonSiteSummary), `GET /envmon/swab-results` (EnvMonNativeSwabResult), `GET /warehouse360/{inbound,outbound,staging,exceptions}` (4 models). Skipped with documented reasons: `/trace2/batch-header` (proxy-passthrough), `/por/order-header` (proxy-passthrough + mapper mismatch), `/warehouse360/overview` (mapper shape gap — analysis complete, see `warehouse360-overview-contract-alignment.md`), `/cq/lab/fails` (proxy-passthrough), `/cq/lab/plants` (proxy-passthrough). |
+| **Remaining work** | Fix mapper for `/por/order-header` (remove `inspectionLotId`); rewrite `/warehouse360/overview` mapper to contract shape after Databricks verification of `wh360_kpi_snapshot_v` columns (see Rank 10); browser-verify V1 proxy paths before enforcing `/trace2/batch-header`, `/cq/lab/*` |
 | **Databricks SQL required?** | No |
 | **Business governance required?** | No |
 | **Runtime code required?** | Yes — mapper fixes per route |
@@ -276,7 +276,7 @@ No timeline estimated. Do not wire shell-wide assistant before these gates.
 | 7 | SPC | V1 legacy bridge browser verification decision | Yes (adapter) | No for bridge | Yes for native | **P2** |
 | 8 | Quality | Run broader source verification pack | No (SQL only) | Yes | No | **P2** |
 | 9 | Traceability | Confirm LINK_TYPE='DELIVERY' in live data | No | No (app only) | No | **P1** (part of Rank 1) |
-| 10 | Warehouse | Source schema alignment | No (SQL only) | Yes | No | **P3** |
+| 10 | Warehouse | Source schema alignment (overview prioritised — see `warehouse360-overview-contract-alignment.md`) | Yes (after SQL) | Yes | No | **P3** |
 | 11 | SPC | Raise data platform migrations 012 + 013 | No (platform action) | No | No | **P2** |
 | 12 | EnvMon | Confirm INSPECTION_TYPE filter + browser-verify | Possibly | Yes | No | **P2** |
 | 13 | Cross-domain | Add response_model to validation-gap routes | Yes (small per route) | No | No | **P2** |
