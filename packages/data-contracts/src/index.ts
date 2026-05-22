@@ -348,3 +348,80 @@ export type {
 
 export type { UATEvidencePayload } from './schemas/uat.js'
 export { UATEvidencePayloadSchema } from './schemas/uat.js'
+
+export type {
+  BatchQualityPassport,
+  PassportIdentity,
+  PassportQuality,
+  PassportStock,
+  PassportProduction,
+  PassportMassBalance,
+  PassportUsageDecisionEvidence,
+  QualityCharacteristic,
+  LotHistoryEntry,
+} from './schemas/batch-quality-passport.js'
+export {
+  BatchQualityPassportSchema,
+  PassportIdentitySchema,
+  PassportQualitySchema,
+  PassportStockSchema,
+  PassportProductionSchema,
+  PassportMassBalanceSchema,
+  PassportUsageDecisionEvidenceSchema,
+  QualityCharacteristicSchema,
+  LotHistoryEntrySchema,
+} from './schemas/batch-quality-passport.js'
+
+export type { MassBalanceLedger, MassBalanceEvent } from './schemas/mass-balance-ledger.js'
+export {
+  MassBalanceLedgerSchema,
+  MassBalanceEventSchema,
+  MassBalanceKpiSchema,
+  MassBalancePostingsSchema,
+} from './schemas/mass-balance-ledger.js'
+
+export type {
+  InvestigationTimeline,
+  TimelineEvent,
+  TimelineEventType,
+  TimelineEventTone,
+  TimelineEventSourceSystem,
+} from './schemas/investigation-timeline.js'
+export {
+  InvestigationTimelineSchema,
+  TimelineEventSchema,
+  TimelineEventTypeSchema,
+  TimelineEventToneSchema,
+  TimelineEventSourceSystemSchema,
+} from './schemas/investigation-timeline.js'
+
+export type {
+  RecallReadiness,
+  RecallDelivery,
+  RecallCountry,
+  RecallTotals,
+  RecallDeliveryStatus,
+} from './schemas/recall-readiness.js'
+export {
+  RecallReadinessSchema,
+  RecallDeliverySchema,
+  RecallCountrySchema,
+  RecallTotalsSchema,
+  RecallDeliveryStatusSchema,
+} from './schemas/recall-readiness.js'
+
+export type { HoldsLedger, HoldEntry, HoldsQtyByReason, HoldStatus } from './schemas/holds-ledger.js'
+export {
+  HoldsLedgerSchema,
+  HoldEntrySchema,
+  HoldsQtyByReasonSchema,
+  HoldStatusSchema,
+} from './schemas/holds-ledger.js'
+
+export type { SupplierBatchView, SupplierLot, SiblingBatch, SupplierLotRisk } from './schemas/supplier-batch-view.js'
+export {
+  SupplierBatchViewSchema,
+  SupplierLotSchema,
+  SiblingBatchSchema,
+  SupplierLotRiskSchema,
+} from './schemas/supplier-batch-view.js'

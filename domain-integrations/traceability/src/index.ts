@@ -35,6 +35,20 @@ export type {
   TraceInvestigationViewId,
 } from './trace-investigation-workspace.js'
 
+// ---------------------------------------------------------------------------
+// Phase 5 — Trace App workspace (search-driven standalone, pilot)
+// ---------------------------------------------------------------------------
+
+export { traceAppRegistration } from './trace-app-registration.js'
+export { TraceAppWorkspace } from './trace-app-workspace.js'
+export type { TraceAppWorkspaceProps } from './trace-app-workspace.js'
+export { PLANTS, TRACE_APP_TABS } from './trace-app/plants.js'
+export type {
+  PlantDescriptor,
+  TraceAppTabId,
+  TraceAppTabDescriptor,
+} from './trace-app/plants.js'
+
 // Evidence panels
 export { BatchHeaderPanel } from './panels/batch-header-panel.js'
 export type { BatchHeaderPanelProps } from './panels/batch-header-panel.js'
@@ -69,6 +83,22 @@ export type { RiskSignalsPanelProps } from './panels/risk-signals-panel.js'
 export { TraceExposureForReleasePanel } from './panels/trace-exposure-for-release-panel.js'
 export type { TraceExposureForReleasePanelProps } from './panels/trace-exposure-for-release-panel.js'
 
+// Network view panels (Investigation Overview Network)
+export { BatchHeaderNetworkPanel } from './panels/batch-header-network-panel.js'
+export type {
+  BatchHeaderNetworkPanelProps,
+  StockBucket,
+} from './panels/batch-header-network-panel.js'
+
+export { CustomerExposureNetworkPanel } from './panels/customer-exposure-network-panel.js'
+export type { CustomerExposureNetworkPanelProps } from './panels/customer-exposure-network-panel.js'
+
+export { TraceGraphNetworkPanel } from './panels/trace-graph-network-panel.js'
+export type {
+  TraceGraphNetworkPanelProps,
+  RiskFilter,
+} from './panels/trace-graph-network-panel.js'
+
 // Forms
 export { TraceQueryForm } from './forms/trace-query-form.js'
 export type { TraceQueryFormProps } from './forms/trace-query-form.js'
@@ -76,6 +106,9 @@ export type { TraceQueryFormProps } from './forms/trace-query-form.js'
 // Views
 export { TraceGeniePilotView } from './views/trace-genie-pilot-view.js'
 export type { TraceGeniePilotViewProps } from './views/trace-genie-pilot-view.js'
+
+export { NetworkOverviewView } from './views/network-overview-view.js'
+export type { NetworkOverviewViewProps } from './views/network-overview-view.js'
 
 // Adapter and queries
 export { Trace2Adapter, trace2Adapter } from './adapters/trace2-adapter.js'

@@ -139,6 +139,340 @@
       ],
       "additionalProperties": false
     },
+    "BatchQualityPassport": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "object",
+          "properties": {
+            "materialDescription": {
+              "type": "string"
+            },
+            "materialId": {
+              "type": "string"
+            },
+            "batchId": {
+              "type": "string"
+            },
+            "plantName": {
+              "type": "string"
+            },
+            "plantId": {
+              "type": "string"
+            },
+            "processOrderId": {
+              "type": "string"
+            },
+            "manufactureDate": {
+              "type": "string"
+            },
+            "expiryDate": {
+              "type": "string"
+            },
+            "daysToExpiry": {
+              "type": "integer"
+            },
+            "uom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "materialDescription",
+            "materialId",
+            "batchId",
+            "plantName",
+            "plantId",
+            "processOrderId",
+            "manufactureDate",
+            "expiryDate",
+            "daysToExpiry",
+            "uom"
+          ],
+          "additionalProperties": false
+        },
+        "quality": {
+          "type": "object",
+          "properties": {
+            "heuristicQualityConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "confidenceSource": {
+              "type": "string",
+              "enum": [
+                "application-heuristic",
+                "governed"
+              ]
+            },
+            "overallStatus": {
+              "type": "string",
+              "enum": [
+                "accepted",
+                "conditional",
+                "rejected"
+              ]
+            },
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "coa": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "mic": {
+                    "type": "string"
+                  },
+                  "param": {
+                    "type": "string"
+                  },
+                  "low": {
+                    "type": "number"
+                  },
+                  "high": {
+                    "type": "number"
+                  },
+                  "target": {
+                    "type": "number"
+                  },
+                  "actual": {
+                    "type": "number"
+                  },
+                  "uom": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ok",
+                      "warn",
+                      "fail"
+                    ]
+                  },
+                  "binary": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "mic",
+                  "param",
+                  "low",
+                  "high",
+                  "target",
+                  "actual",
+                  "uom",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "heuristicQualityConfidence",
+            "confidenceSource",
+            "overallStatus",
+            "notes",
+            "coa"
+          ],
+          "additionalProperties": false
+        },
+        "stock": {
+          "type": "object",
+          "properties": {
+            "unrestricted": {
+              "type": "number"
+            },
+            "qualityInspection": {
+              "type": "number"
+            },
+            "blocked": {
+              "type": "number"
+            },
+            "restricted": {
+              "type": "number"
+            },
+            "transit": {
+              "type": "number"
+            },
+            "uom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "unrestricted",
+            "qualityInspection",
+            "blocked",
+            "restricted",
+            "transit",
+            "uom"
+          ],
+          "additionalProperties": false
+        },
+        "production": {
+          "type": "object",
+          "properties": {
+            "orderId": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            },
+            "operator": {
+              "type": "string"
+            },
+            "startedAt": {
+              "type": "string"
+            },
+            "confirmedAt": {
+              "type": "string"
+            },
+            "plannedQty": {
+              "type": "number"
+            },
+            "actualQty": {
+              "type": "number"
+            },
+            "yield": {
+              "type": "number"
+            },
+            "originatingCustomer": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "orderId",
+            "line",
+            "operator",
+            "startedAt",
+            "confirmedAt",
+            "plannedQty",
+            "actualQty",
+            "yield",
+            "originatingCustomer",
+            "notes"
+          ],
+          "additionalProperties": false
+        },
+        "lotHistory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string"
+              },
+              "inspection": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string",
+                "enum": [
+                  "accept",
+                  "conditional",
+                  "reject"
+                ]
+              },
+              "mics": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "decisionBy": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "date",
+              "inspection",
+              "result",
+              "mics",
+              "failed",
+              "decisionBy"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "massBalance": {
+          "type": "object",
+          "properties": {
+            "variance": {
+              "type": "number"
+            },
+            "note": {
+              "type": "string"
+            },
+            "detailUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "variance",
+            "note"
+          ],
+          "additionalProperties": false
+        },
+        "usageDecisionEvidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "decisionBy": {
+                "type": "string"
+              },
+              "decisionType": {
+                "type": "string",
+                "enum": [
+                  "usage-decision-recorded",
+                  "inspection-completed",
+                  "none"
+                ]
+              },
+              "recordedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "role",
+              "decisionBy",
+              "decisionType",
+              "recordedAt"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "identity",
+        "quality",
+        "stock",
+        "production",
+        "lotHistory",
+        "massBalance",
+        "usageDecisionEvidence"
+      ],
+      "additionalProperties": false
+    },
     "BatchReleaseContext": {
       "type": "object",
       "properties": {
@@ -1125,17 +1459,34 @@
           "type": "boolean"
         },
         "maxExposureDepth": {
-          "type": "integer",
-          "minimum": 1
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "uom": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "deliveryEvidenceSource": {
-          "type": "string",
-          "enum": [
-            "lineage",
-            "inventory-movements"
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "lineage",
+                "inventory-movements"
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -2555,6 +2906,312 @@
       ],
       "additionalProperties": false
     },
+    "HoldEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "reasonCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qty": {
+          "type": "number"
+        },
+        "uom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "opened": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "owner": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "released",
+            "rejected"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "reason",
+        "qty",
+        "uom",
+        "opened",
+        "owner",
+        "status",
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "HoldStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "released",
+        "rejected"
+      ]
+    },
+    "HoldsLedger": {
+      "type": "object",
+      "properties": {
+        "activeHolds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reasonCode": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "qty": {
+                "type": "number"
+              },
+              "uom": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "opened": {
+                "type": "string"
+              },
+              "resolved": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "owner": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "released",
+                  "rejected"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              },
+              "resolution": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "reason",
+              "qty",
+              "uom",
+              "opened",
+              "owner",
+              "status",
+              "detail"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "resolvedHolds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HoldsLedger/properties/activeHolds/items"
+          }
+        },
+        "qtyByReason": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "number"
+              },
+              "uom": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "color": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "label",
+              "qty",
+              "uom"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "activeHolds",
+        "resolvedHolds",
+        "qtyByReason"
+      ],
+      "additionalProperties": false
+    },
+    "HoldsQtyByReason": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number"
+        },
+        "uom": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "qty",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
+    "InvestigationTimeline": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "production",
+                  "consumption",
+                  "qc",
+                  "release",
+                  "approval",
+                  "hold",
+                  "dispatch",
+                  "note"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "actor": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "tone": {
+                "type": "string",
+                "enum": [
+                  "good",
+                  "warn",
+                  "bad",
+                  "brand",
+                  "neutral"
+                ]
+              },
+              "sourceSystem": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "SAP",
+                      "LIMS",
+                      "TRACE",
+                      "MANUAL"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ts",
+              "type",
+              "label",
+              "actor",
+              "detail",
+              "tone"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "events"
+      ],
+      "additionalProperties": false
+    },
     "LateOrder": {
       "type": "object",
       "properties": {
@@ -2754,6 +3411,47 @@
         "utilizationPercent",
         "locationType",
         "isBlocked"
+      ],
+      "additionalProperties": false
+    },
+    "LotHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "inspection": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "conditional",
+            "reject"
+          ]
+        },
+        "mics": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "decisionBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "inspection",
+        "result",
+        "mics",
+        "failed",
+        "decisionBy"
       ],
       "additionalProperties": false
     },
@@ -3032,6 +3730,239 @@
       ],
       "additionalProperties": false
     },
+    "MassBalanceEvent": {
+      "type": "object",
+      "properties": {
+        "d": {
+          "type": "integer"
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delta": {
+          "type": "number"
+        },
+        "cum": {
+          "type": "number"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "101",
+            "261",
+            "601",
+            "701",
+            "Z01"
+          ]
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "d",
+        "delta",
+        "cum",
+        "code",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "MassBalanceKpi": {
+      "type": "object",
+      "properties": {
+        "produced": {
+          "type": "number"
+        },
+        "consumed": {
+          "type": "number"
+        },
+        "shipped": {
+          "type": "number"
+        },
+        "adjusted": {
+          "type": "number"
+        },
+        "current": {
+          "type": "number"
+        },
+        "variance": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "postings": {
+          "type": "object",
+          "properties": {
+            "production": {
+              "type": "integer"
+            },
+            "consumption": {
+              "type": "integer"
+            },
+            "dispatch": {
+              "type": "integer"
+            },
+            "adjustment": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "production",
+            "consumption",
+            "dispatch",
+            "adjustment"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "produced",
+        "consumed",
+        "shipped",
+        "adjusted",
+        "current",
+        "variance",
+        "uom",
+        "postings"
+      ],
+      "additionalProperties": false
+    },
+    "MassBalanceLedger": {
+      "type": "object",
+      "properties": {
+        "kpi": {
+          "type": "object",
+          "properties": {
+            "produced": {
+              "type": "number"
+            },
+            "consumed": {
+              "type": "number"
+            },
+            "shipped": {
+              "type": "number"
+            },
+            "adjusted": {
+              "type": "number"
+            },
+            "current": {
+              "type": "number"
+            },
+            "variance": {
+              "type": "number"
+            },
+            "uom": {
+              "type": "string"
+            },
+            "postings": {
+              "type": "object",
+              "properties": {
+                "production": {
+                  "type": "integer"
+                },
+                "consumption": {
+                  "type": "integer"
+                },
+                "dispatch": {
+                  "type": "integer"
+                },
+                "adjustment": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "production",
+                "consumption",
+                "dispatch",
+                "adjustment"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "produced",
+            "consumed",
+            "shipped",
+            "adjusted",
+            "current",
+            "variance",
+            "uom",
+            "postings"
+          ],
+          "additionalProperties": false
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "d": {
+                "type": "integer"
+              },
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "delta": {
+                "type": "number"
+              },
+              "cum": {
+                "type": "number"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "101",
+                  "261",
+                  "601",
+                  "701",
+                  "Z01"
+                ]
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "d",
+              "delta",
+              "cum",
+              "code",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dateStart": {
+          "type": "string"
+        },
+        "dateEnd": {
+          "type": "string"
+        },
+        "reconciliationSource": {
+          "type": "string",
+          "enum": [
+            "application-heuristic",
+            "governed"
+          ]
+        }
+      },
+      "required": [
+        "kpi",
+        "events",
+        "dateStart",
+        "dateEnd",
+        "reconciliationSource"
+      ],
+      "additionalProperties": false
+    },
     "MassBalanceMovement": {
       "type": "object",
       "properties": {
@@ -3074,6 +4005,30 @@
         "delta",
         "runningBalance",
         "uom"
+      ],
+      "additionalProperties": false
+    },
+    "MassBalancePostings": {
+      "type": "object",
+      "properties": {
+        "production": {
+          "type": "integer"
+        },
+        "consumption": {
+          "type": "integer"
+        },
+        "dispatch": {
+          "type": "integer"
+        },
+        "adjustment": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "production",
+        "consumption",
+        "dispatch",
+        "adjustment"
       ],
       "additionalProperties": false
     },
@@ -3775,6 +4730,278 @@
         "blockedComponents",
         "openTransferRequirements",
         "readinessStatus"
+      ],
+      "additionalProperties": false
+    },
+    "PassportIdentity": {
+      "type": "object",
+      "properties": {
+        "materialDescription": {
+          "type": "string"
+        },
+        "materialId": {
+          "type": "string"
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "plantName": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": "string"
+        },
+        "processOrderId": {
+          "type": "string"
+        },
+        "manufactureDate": {
+          "type": "string"
+        },
+        "expiryDate": {
+          "type": "string"
+        },
+        "daysToExpiry": {
+          "type": "integer"
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "materialDescription",
+        "materialId",
+        "batchId",
+        "plantName",
+        "plantId",
+        "processOrderId",
+        "manufactureDate",
+        "expiryDate",
+        "daysToExpiry",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
+    "PassportMassBalance": {
+      "type": "object",
+      "properties": {
+        "variance": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        },
+        "detailUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "variance",
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "PassportProduction": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "confirmedAt": {
+          "type": "string"
+        },
+        "plannedQty": {
+          "type": "number"
+        },
+        "actualQty": {
+          "type": "number"
+        },
+        "yield": {
+          "type": "number"
+        },
+        "originatingCustomer": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId",
+        "line",
+        "operator",
+        "startedAt",
+        "confirmedAt",
+        "plannedQty",
+        "actualQty",
+        "yield",
+        "originatingCustomer",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "PassportQuality": {
+      "type": "object",
+      "properties": {
+        "heuristicQualityConfidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "confidenceSource": {
+          "type": "string",
+          "enum": [
+            "application-heuristic",
+            "governed"
+          ]
+        },
+        "overallStatus": {
+          "type": "string",
+          "enum": [
+            "accepted",
+            "conditional",
+            "rejected"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coa": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mic": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "low": {
+                "type": "number"
+              },
+              "high": {
+                "type": "number"
+              },
+              "target": {
+                "type": "number"
+              },
+              "actual": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "warn",
+                  "fail"
+                ]
+              },
+              "binary": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "mic",
+              "param",
+              "low",
+              "high",
+              "target",
+              "actual",
+              "uom",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "heuristicQualityConfidence",
+        "confidenceSource",
+        "overallStatus",
+        "notes",
+        "coa"
+      ],
+      "additionalProperties": false
+    },
+    "PassportStock": {
+      "type": "object",
+      "properties": {
+        "unrestricted": {
+          "type": "number"
+        },
+        "qualityInspection": {
+          "type": "number"
+        },
+        "blocked": {
+          "type": "number"
+        },
+        "restricted": {
+          "type": "number"
+        },
+        "transit": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "unrestricted",
+        "qualityInspection",
+        "blocked",
+        "restricted",
+        "transit",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
+    "PassportUsageDecisionEvidence": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "decisionBy": {
+          "type": "string"
+        },
+        "decisionType": {
+          "type": "string",
+          "enum": [
+            "usage-decision-recorded",
+            "inspection-completed",
+            "none"
+          ]
+        },
+        "recordedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "decisionBy",
+        "decisionType",
+        "recordedAt"
       ],
       "additionalProperties": false
     },
@@ -4680,6 +5907,57 @@
         "severity",
         "description",
         "owner"
+      ],
+      "additionalProperties": false
+    },
+    "QualityCharacteristic": {
+      "type": "object",
+      "properties": {
+        "mic": {
+          "type": "string"
+        },
+        "param": {
+          "type": "string"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "target": {
+          "type": "number"
+        },
+        "actual": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "warn",
+            "fail"
+          ]
+        },
+        "binary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "mic",
+        "param",
+        "low",
+        "high",
+        "target",
+        "actual",
+        "uom",
+        "status"
       ],
       "additionalProperties": false
     },
@@ -6883,6 +8161,265 @@
         "not-requested"
       ]
     },
+    "RecallCountry": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number"
+        },
+        "pct": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "qty",
+        "pct"
+      ],
+      "additionalProperties": false
+    },
+    "RecallDelivery": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "customer": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "delivery-evidence",
+            "delivered",
+            "in-transit",
+            "recalled",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "statusSource": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "delivery-record-present",
+                "governed",
+                "unavailable"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "doc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "customer",
+        "country",
+        "date",
+        "qty",
+        "status",
+        "doc"
+      ],
+      "additionalProperties": false
+    },
+    "RecallDeliveryStatus": {
+      "type": "string",
+      "enum": [
+        "delivery-evidence",
+        "delivered",
+        "in-transit",
+        "recalled",
+        "blocked",
+        "unknown"
+      ]
+    },
+    "RecallReadiness": {
+      "type": "object",
+      "properties": {
+        "totals": {
+          "type": "object",
+          "properties": {
+            "customers": {
+              "type": "integer"
+            },
+            "countries": {
+              "type": "integer"
+            },
+            "deliveries": {
+              "type": "integer"
+            },
+            "shipped": {
+              "type": "number"
+            },
+            "uom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "customers",
+            "countries",
+            "deliveries",
+            "shipped",
+            "uom"
+          ],
+          "additionalProperties": false
+        },
+        "countries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "number"
+              },
+              "pct": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "code",
+              "name",
+              "qty",
+              "pct"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "deliveries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "customer": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "number"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "delivery-evidence",
+                  "delivered",
+                  "in-transit",
+                  "recalled",
+                  "blocked",
+                  "unknown"
+                ]
+              },
+              "statusSource": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "delivery-record-present",
+                      "governed",
+                      "unavailable"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "customer",
+              "country",
+              "date",
+              "qty",
+              "status",
+              "doc"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "recommendationStatus": {
+          "type": "string",
+          "enum": [
+            "not-evaluated",
+            "recommended",
+            "not-recommended"
+          ]
+        }
+      },
+      "required": [
+        "totals",
+        "countries",
+        "deliveries",
+        "recommendationStatus"
+      ],
+      "additionalProperties": false
+    },
+    "RecallTotals": {
+      "type": "object",
+      "properties": {
+        "customers": {
+          "type": "integer"
+        },
+        "countries": {
+          "type": "integer"
+        },
+        "deliveries": {
+          "type": "integer"
+        },
+        "shipped": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "customers",
+        "countries",
+        "deliveries",
+        "shipped",
+        "uom"
+      ],
+      "additionalProperties": false
+    },
     "RelatedBatchContext": {
       "type": "object",
       "properties": {
@@ -8082,6 +9619,40 @@
       ],
       "additionalProperties": false
     },
+    "SiblingBatch": {
+      "type": "object",
+      "properties": {
+        "plant": {
+          "type": "string"
+        },
+        "plantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "mfg": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "number"
+        },
+        "vendorBatch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "plant",
+        "batchId",
+        "mfg",
+        "qty",
+        "vendorBatch"
+      ],
+      "additionalProperties": false
+    },
     "StagingAlert": {
       "type": "object",
       "properties": {
@@ -8823,6 +10394,103 @@
       ],
       "additionalProperties": false
     },
+    "SupplierBatchView": {
+      "type": "object",
+      "properties": {
+        "consumedLots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "vendor": {
+                "type": "string"
+              },
+              "vendorBatch": {
+                "type": "string"
+              },
+              "material": {
+                "type": "string"
+              },
+              "receipt": {
+                "type": "string"
+              },
+              "consumed": {
+                "type": "number"
+              },
+              "uom": {
+                "type": "string"
+              },
+              "coa": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "risk": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            },
+            "required": [
+              "vendor",
+              "vendorBatch",
+              "material",
+              "receipt",
+              "consumed",
+              "uom",
+              "risk"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "siblingBatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "plant": {
+                "type": "string"
+              },
+              "plantId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "batchId": {
+                "type": "string"
+              },
+              "mfg": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "number"
+              },
+              "vendorBatch": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "plant",
+              "batchId",
+              "mfg",
+              "qty",
+              "vendorBatch"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "consumedLots",
+        "siblingBatches"
+      ],
+      "additionalProperties": false
+    },
     "SupplierDetail": {
       "type": "object",
       "properties": {
@@ -8930,6 +10598,158 @@
         "openSupplierActions"
       ],
       "additionalProperties": false
+    },
+    "SupplierLotRisk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "SupplierLot": {
+      "type": "object",
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "vendorBatch": {
+          "type": "string"
+        },
+        "material": {
+          "type": "string"
+        },
+        "receipt": {
+          "type": "string"
+        },
+        "consumed": {
+          "type": "number"
+        },
+        "uom": {
+          "type": "string"
+        },
+        "coa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "risk": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "required": [
+        "vendor",
+        "vendorBatch",
+        "material",
+        "receipt",
+        "consumed",
+        "uom",
+        "risk"
+      ],
+      "additionalProperties": false
+    },
+    "TimelineEvent": {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "production",
+            "consumption",
+            "qc",
+            "release",
+            "approval",
+            "hold",
+            "dispatch",
+            "note"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "tone": {
+          "type": "string",
+          "enum": [
+            "good",
+            "warn",
+            "bad",
+            "brand",
+            "neutral"
+          ]
+        },
+        "sourceSystem": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "SAP",
+                "LIMS",
+                "TRACE",
+                "MANUAL"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ts",
+        "type",
+        "label",
+        "actor",
+        "detail",
+        "tone"
+      ],
+      "additionalProperties": false
+    },
+    "TimelineEventSourceSystem": {
+      "type": "string",
+      "enum": [
+        "SAP",
+        "LIMS",
+        "TRACE",
+        "MANUAL"
+      ]
+    },
+    "TimelineEventTone": {
+      "type": "string",
+      "enum": [
+        "good",
+        "warn",
+        "bad",
+        "brand",
+        "neutral"
+      ]
+    },
+    "TimelineEventType": {
+      "type": "string",
+      "enum": [
+        "production",
+        "consumption",
+        "qc",
+        "release",
+        "approval",
+        "hold",
+        "dispatch",
+        "note"
+      ]
     },
     "TraceEdge": {
       "type": "object",

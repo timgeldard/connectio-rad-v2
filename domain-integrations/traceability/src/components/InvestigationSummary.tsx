@@ -97,7 +97,7 @@ export function InvestigationSummary({
   } else if (hasShippedExposure) {
     // Depth-aware tiering (reference engine: depth=1→CRITICAL, depth≥2→HIGH).
     // Falls back to CRITICAL when depth is unavailable (conservative).
-    if (maxExposureDepth !== undefined && maxExposureDepth >= 2) {
+    if (maxExposureDepth != null && maxExposureDepth >= 2) {
       severity = 'HIGH'
       severityLabel = 'High Indirect Exposure'
       alertMessage = 'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
@@ -111,7 +111,7 @@ export function InvestigationSummary({
       bannerBg = 'rgba(199, 51, 21, 0.08)'
       bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
     }
-  } else if (maxExposureDepth !== undefined && maxExposureDepth >= 2) {
+  } else if (maxExposureDepth != null && maxExposureDepth >= 2) {
     // Indirect multi-hop lineage with no confirmed shipments — reference engine: MEDIUM.
     severity = 'MEDIUM'
     alertMessage = 'Warning: Indirect lineage exposure detected at depth 2 or beyond. No direct shipments confirmed.'

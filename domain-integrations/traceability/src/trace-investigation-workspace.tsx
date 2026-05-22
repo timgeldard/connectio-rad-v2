@@ -3,6 +3,7 @@ import type { ScopeContext } from '@connectio/data-contracts'
 import { traceInvestigationRegistration } from './trace-investigation-registration.js'
 import { TraceActionsPanel } from './actions/trace-actions-panel.js'
 import { OverviewView } from './views/overview-view.js'
+import { NetworkOverviewView } from './views/network-overview-view.js'
 import { TraceGeniePilotView } from './views/trace-genie-pilot-view.js'
 import { TraceTreeView } from './views/trace-tree-view.js'
 import { MassBalanceView } from './views/mass-balance-view.js'
@@ -17,6 +18,7 @@ import { MOCK_INVESTIGATION_ID } from './adapters/trace2-mock-data.js'
 /** Valid view identifiers for the Trace Investigation workspace. */
 export type TraceInvestigationViewId =
   | 'overview'
+  | 'network-overview'
   | 'trace-tree'
   | 'trace-genie-pilot'
   | 'mass-balance'
@@ -75,7 +77,8 @@ export function TraceInvestigationWorkspace({
 
   const activeView = resolveView(viewId, request)
 
-  const showActionSidebar = viewId !== 'trace-tree' && viewId !== 'trace-genie-pilot'
+  const showActionSidebar =
+    viewId !== 'trace-tree' && viewId !== 'trace-genie-pilot' && viewId !== 'network-overview'
 
   return (
     <StandardWorkspaceTemplate
@@ -100,6 +103,8 @@ function resolveView(viewId: string, request: Trace2AdapterRequest): React.React
   switch (viewId as TraceInvestigationViewId) {
     case 'overview':
       return <OverviewView request={request} />
+    case 'network-overview':
+      return <NetworkOverviewView request={request} />
     case 'trace-tree':
       return <TraceTreeView request={request} />
     case 'trace-genie-pilot':
@@ -123,6 +128,7 @@ function resolveView(viewId: string, request: Trace2AdapterRequest): React.React
 function isValidViewId(viewId: string): viewId is TraceInvestigationViewId {
   const valid: TraceInvestigationViewId[] = [
     'overview',
+    'network-overview',
     'trace-tree',
     'trace-genie-pilot',
     'mass-balance',
