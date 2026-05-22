@@ -34,7 +34,7 @@ export const MOCK_BATCH_QUALITY_PASSPORT: BatchQualityPassport = {
   quality: {
     heuristicQualityConfidence: 87,
     confidenceSource: 'application-heuristic',
-    overallStatus: 'accepted',
+    heuristicQualityStatus: 'accepted',
     notes: ['1 conditional release', '1 MIC near limit', 'No audit findings'],
     coa: [
       { mic: 'MIC-001', param: 'Moisture', low: 38, high: 42, target: 40, actual: 40.2, uom: '%', status: 'ok' },

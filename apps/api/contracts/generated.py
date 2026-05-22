@@ -3230,8 +3230,8 @@ class SupplierExposureSummary(BaseModel):
     suppliers: list[Supplier] | None = None
 
 
-class SupplierLotRisk(RootModel[Literal['low', 'medium', 'high']]):
-    root: Literal['low', 'medium', 'high']
+class SupplierLotRisk(RootModel[Literal['low', 'medium', 'high', 'unknown']]):
+    root: Literal['low', 'medium', 'high', 'unknown']
 
 
 class SupplierLot(BaseModel):

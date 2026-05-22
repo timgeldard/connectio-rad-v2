@@ -80,6 +80,12 @@ We use the following conservative status classifications:
   * **Customer exposure lineage-only first slice implemented (2026-05-20):** `POST /api/trace2/customer-exposure` route wired to `gold_batch_lineage` downstream CTE. Preliminary exposure-depth indicator only — not V1-parity customer delivery evidence. `deliveryEvidenceSource='lineage'` set on responses. Panel shows "Lineage-only exposure indicator" label.
   * **V1-parity customer delivery slice implemented (2026-05-20):** `POST /api/trace2/customer-deliveries` wired to `gold_batch_delivery_v` (no plant filter — recall coverage requires all plants). Returns `affectedCustomers`, `affectedDeliveries`, `shippedQuantity`, `countries` (from `COUNTRY_ID`). `deliveryEvidenceSource='inventory-movements'`. WHERE key column names (MATERIAL_ID/BATCH_ID) pending DESCRIBE TABLE confirmation — see DEF-TRACE-006/TRACE-P1-009.
   * **UAT Blockers:**
+    * Trace App routes (`recall-readiness`, `supplier-batches`, `batch-quality-passport`, `mass-balance-ledger`, `investigation-timeline`, `holds-ledger`) exist as code-fixed but browser-UAT-pending read-only evidence routes. They do not provide recall decisions, release decisions, QA signoff, SAP write-back, or production approvals.
+    * Mass balance reconciliation remains application-derived/heuristic until movement semantics and BALANCE_QTY are governed.
+    * Quality Passport confidence/status are application-derived heuristics, not official QA release status.
+    * Recall recommendation status is not-evaluated.
+    * Delivery rows are delivery evidence, not confirmed delivery lifecycle status unless a status source is added.
+    * Supplier risk is unavailable/unknown unless a supplier-risk source is wired.
     * Live Databricks UAT is blocked: no live E2E validation against UAT databases has occurred.
     * Column names in `gold_batch_summary_v` confirmed (2026-05-19); `gold_batch_mass_balance_v` WHERE filter columns still unverified.
     * Unity Catalog, OAuth token forwarding (`x-forwarded-access-token`), and audit trail logging must be verified in the deployed environment.
@@ -109,9 +115,9 @@ We use the following conservative status classifications:
   by Databricks CLI (PR #65, 2026-05-21). V2 contract alignment to verified schema
   completed (PR #67, Slices 1-7, merged 2026-05-21).
   Pure mapping helpers and fixtures exist for the verified schema; no native
-  runtime route is wired. V1 legacy bridge remains the recommended short-term
   path. **No native SPC UAT readiness, production readiness, in-control status,
   stored signals, verified capability, or approved control limits are claimed.**
+  Native `GET /api/spc/subgroups` exists and is Databricks-api-only. It is code-fixed/source-mapped for subgroup data. It has required filters and a 730-day max date window. Browser UAT is still pending. Production readiness is still blocked. Capability Cp/Cpk/Pp/Ppk remains unavailable unless source/governance is added. Stored Nelson flags remain unavailable. Locked limits are deferred. V1 legacy bridge may still be useful for broader functional parity, but it is no longer true that no native route exists.
 * **Summary:**
   * UAT readiness hardening completed: explicit adapter factory pattern implemented.
   * Evidence completeness summary and truthfulness banners active in Chart Overview.

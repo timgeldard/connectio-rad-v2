@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const SupplierLotRiskSchema = z.enum(['low', 'medium', 'high'])
+export const SupplierLotRiskSchema = z.enum(['low', 'medium', 'high', 'unknown'])
 export type SupplierLotRisk = z.infer<typeof SupplierLotRiskSchema>
 
 export const SupplierLotSchema = z.object({

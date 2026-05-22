@@ -38,8 +38,7 @@ This directory houses the SPC domain-integration components, including adapters,
 After PR #65, the [contract-alignment tranche](./docs/spc-native-contract-alignment-audit.md)
 re-checked every V2 SPC contract field against the verified Databricks schema.
 The result is that V2 contracts, fixtures, helper mappings, and an
-implementation plan are aligned to the verified Databricks schema, but
-**no native runtime route is wired**. The legacy V1 bridge remains the
+implementation plan are aligned to the verified Databricks schema. The native `GET /api/spc/subgroups` is wired, but **browser UAT is pending**. The legacy V1 bridge remains the
 recommended short-term path. The following sit on this branch
 (`feature/spc-native-contract-alignment`):
 
