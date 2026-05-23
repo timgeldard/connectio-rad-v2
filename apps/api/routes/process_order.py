@@ -77,14 +77,14 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
     return response.json()
 
 
-@router.post("/por/order-header")
+@router.post("/por/order-header", response_model=ProcessOrderHeader)
 async def order_header(
     body: OrderHeaderRequest,
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+):
     """Process order header — supports legacy-api and databricks-api modes.
 
     ``BACKEND_ADAPTER_MODE=databricks-api`` switches to native Databricks SQL.

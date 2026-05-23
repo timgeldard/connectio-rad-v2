@@ -146,12 +146,18 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
     STATUS, MATERIAL_ID, MATERIAL_DESCRIPTION, PLANT_ID, INSPECTION_LOT_ID only.
     Fields not in the view (orderType, quantities, dates, batchId, productionLine)
     return empty/zero defaults. These will be populated once a richer view is available.
+
+    INSPECTION_LOT_ID is fetched by the SQL but is NOT part of the
+    ProcessOrderHeader contract (contract has extra='forbid'). Inspection-lot
+    evidence belongs to the separate OrderQualityContext contract, not here.
+    The mapper therefore drops the field rather than emitting an
+    unmodeled key that would fail response_model validation.
     """
     if not rows:
         return None
     row = rows[0]
 
-    result: dict[str, object] = {
+    return {
         "processOrderId": str(row.get("process_order_id") or ""),
         "orderType": "process-order",  # not in view — default
         "materialId": str(row.get("material_id") or ""),
@@ -164,11 +170,6 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
         "plannedFinish": None,      # not in view
         "orderStatus": _map_order_status(row.get("order_status_raw")),
     }
-
-    if row.get("inspection_lot_id"):
-        result["inspectionLotId"] = str(row["inspection_lot_id"])
-
-    return result
 
 
 def _map_order_status(raw: object) -> str:

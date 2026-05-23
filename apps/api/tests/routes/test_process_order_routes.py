@@ -307,6 +307,134 @@ class TestOrderHeaderDatabricksMode:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/por/order-header — response_model contract enforcement
+# ---------------------------------------------------------------------------
+
+class TestOrderHeaderResponseModel:
+    """Prove that POST /api/por/order-header is enforced through the
+    generated ProcessOrderHeader contract."""
+
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import ProcessOrderHeader
+
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        # Round-trip through the generated model with extra='forbid' — a
+        # non-contract field leaking into the response would raise here.
+        ProcessOrderHeader.model_validate(response.json())
+
+    async def test_response_uses_camelcase_aliases(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        data = response.json()
+        for key in (
+            "processOrderId", "orderType", "materialId", "materialDescription",
+            "plantId", "plannedQuantity", "confirmedQuantity", "uom", "orderStatus",
+        ):
+            assert key in data, f"missing required contract field: {key}"
+        # No snake_case leakage from the SQL column names.
+        for snake in ("process_order_id", "material_id", "plant_id", "order_status", "inspection_lot_id"):
+            assert snake not in data
+        # inspectionLotId is not part of the ProcessOrderHeader contract.
+        assert "inspectionLotId" not in data
+
+    async def test_status_enums_match_contract(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        data = response.json()
+        assert data["orderType"] in {
+            "process-order", "production-order", "maintenance-order", "planned-order",
+        }
+        assert data["orderStatus"] in {
+            "created", "released", "in-process", "confirmed",
+            "partially-confirmed", "closed", "cancelled",
+        }
+
+    async def test_no_unsafe_release_or_completion_claims(self, monkeypatch) -> None:
+        """The view does not return planned/confirmed quantities or dates;
+        the mapper defaults them to zero/None. The response must never carry
+        invented business decisions like 'safe', 'approved', or 'complete'."""
+        self._databricks_env(monkeypatch)
+        # Row that mimics a real SAP STATUS that does NOT include any
+        # completion-related token — exercise the conservative branch.
+        row_unknown_status = {**_FAKE_ROW, "order_status_raw": ""}
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[row_unknown_status],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        data = response.json()
+        # No invented fields outside the contract.
+        for forbidden in ("safe", "approved", "released", "complete", "onTime", "onTrack", "recallRecommended"):
+            assert forbidden not in data
+        # Empty STATUS must not auto-promote to 'confirmed' / 'closed'.
+        assert data["orderStatus"] not in {"confirmed", "partially-confirmed", "closed"}
+
+    async def test_inspection_lot_id_is_stripped_from_response(self, monkeypatch) -> None:
+        """The SQL fetches INSPECTION_LOT_ID but ProcessOrderHeader does not
+        model it (it belongs to OrderQualityContext). The mapper drops it so
+        response_model serialization does not 500 on extra='forbid'."""
+        self._databricks_env(monkeypatch)
+        row_with_lot = {**_FAKE_ROW, "inspection_lot_id": "LOT001"}
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[row_with_lot],
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-header",
+                    json={"process_order_id": "000000100001"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        assert "inspectionLotId" not in response.json()
+
+
+# ---------------------------------------------------------------------------
 # GET /api/por/order-operations — databricks-api only
 # ---------------------------------------------------------------------------
 
