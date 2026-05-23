@@ -244,6 +244,8 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 9. QualityUsageDecisionEvidence
 
+> **Spec:** [`data-products/quality-usage-decision-evidence.md`](./data-products/quality-usage-decision-evidence.md) — Option A governance (Strict Lot-Level Evidence), 9-code governed label dictionary, contract reconciliation (`QualityInspectionLotEvidence` canonical vs `PassportUsageDecisionEvidence` derived), mapping-status taxonomy, forbidden claims, production-readiness gate.
+
 | Aspect | Value |
 |---|---|
 | Business object | SAP usage-decision evidence at inspection-lot level (lot ID + decision text + valuator + timestamp) |
@@ -268,6 +270,8 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 ---
 
 ## 10. WarehouseOperationalSnapshot
+
+> **Spec:** [`data-products/warehouse-operational-snapshot.md`](./data-products/warehouse-operational-snapshot.md) — gating document. 3 of 4 sibling routes are broken against live Databricks (overview returns V1 KPI shape silently mapped to 0; inbound/staging/exceptions 500 on UAT). Spec lists the 5-item prerequisite gate that MUST close before any L3+ implementation work proceeds.
 
 | Aspect | Value |
 |---|---|
