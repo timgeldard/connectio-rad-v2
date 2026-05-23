@@ -20,7 +20,7 @@ Audit cut-off: rebased onto `main` at the point this document landed.
 
 ---
 
-## Summary table — all 39 routes under `/api/*`
+## Summary table — all 38 routes under `/api/*`
 
 | # | Method · Path | Router file | Data product | Source mapped | Contract | `response_model` | Fields classified | Mapper tests | Browser-UAT | Governance caveats |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -28,28 +28,28 @@ Audit cut-off: rebased onto `main` at the point this document landed.
 | 2 | GET `/api/diagnostics/auth-headers` | `auth_diagnostics.py` | (infra) | n/a | none | ✗ | n/a | n/a | n/a | n/a |
 | 3 | GET `/api/health` | `health.py` | (infra) | n/a | none | ✗ | n/a | n/a | n/a | n/a |
 | 4 | GET `/api/workspaces/manifest` | `workspaces.py` | (infra) | n/a | `WorkspaceManifestSchema` | ✓ | n/a | n/a | n/a | n/a |
-| 5 | POST `/api/quality/read-only-evidence` | `quality.py` | QualityUsageDecisionEvidence | partial | `QualityEvidenceResponseSchema` | ✓ | partial | ✗ | pending | ✓ (Option A enforced) |
+| 5 | POST `/api/quality/read-only-evidence` | `quality.py` | QualityUsageDecisionEvidence | partial | `QualityEvidenceResponseSchema` | ✓ | partial | ✓ (`test_quality_databricks_adapter.py`) | pending | ✓ (Option A enforced) |
 | 6 | GET `/api/cq/lab/fails` | `connected_quality_lab.py` | (CQ lab — not catalogued) | partial | none | ✗ | ✗ | ✗ | pending | ✗ |
-| 7 | GET `/api/cq/lab/plants` | `connected_quality_lab.py` | (CQ lab — not catalogued) | partial | none | ✗ | ✗ | ✗ | pending | ✗ |
-| 8 | GET `/api/envmon/site-summary` | `envmon.py` | (EnvMon site summary — partial) | ✓ | `EnvMonSiteSummarySchema` | ✓ | partial | ✗ | pending | partial |
-| 9 | GET `/api/envmon/swab-results` | `envmon.py` | EnvMonSwabResultEvidence | ✓ | `EnvMonNativeSwabResultSchema` | ✓ | ✓ | ✗ | pending | ✓ (status is heuristic) |
-| 10 | POST `/api/por/order-header` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderHeaderSchema` | ✗ (no `response_model`) | partial | ✗ | pending | partial |
-| 11 | GET `/api/por/order-operations` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderOperationSchema` | ✓ | partial | ✗ | pending | partial |
-| 12 | GET `/api/por/order-confirmations` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderConfirmationSchema` | ✓ | partial | ✗ | pending | partial |
-| 13 | GET `/api/por/order-goods-movements` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderGoodsMovementSchema` | ✓ | partial | ✗ | pending | partial |
+| 7 | GET `/api/cq/lab/plants` | `connected_quality_lab.py` | (CQ lab — not catalogued) | partial | none | ✗ | ✗ | ✓ (`TestMapLabPlantsRows`) | pending | ✗ |
+| 8 | GET `/api/envmon/site-summary` | `envmon.py` | (EnvMon site summary — partial) | ✓ | `EnvMonSiteSummarySchema` | ✓ | partial | ✓ (`TestMapSiteSummaryRows`) | pending | partial |
+| 9 | GET `/api/envmon/swab-results` | `envmon.py` | EnvMonSwabResultEvidence | ✓ | `EnvMonNativeSwabResultSchema` | ✓ | ✓ | ✓ (`TestMapSwabResultRows`) | pending | ✓ (status is heuristic) |
+| 10 | POST `/api/por/order-header` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderHeaderSchema` | ✗ (no `response_model`) | partial | ✓ (`TestMapProcessOrderHeaderRows`) | pending | partial |
+| 11 | GET `/api/por/order-operations` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderOperationSchema` | ✓ | partial | ✓ (`TestMapOrderOperationsRows`) | pending | partial |
+| 12 | GET `/api/por/order-confirmations` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderConfirmationSchema` | ✓ | partial | ✓ (`TestMapOrderConfirmationsRows`) | pending | partial |
+| 13 | GET `/api/por/order-goods-movements` | `process_order.py` | ProcessOrderExecutionEvidence | ✓ | `ProcessOrderGoodsMovementSchema` | ✓ | partial | ✓ (`TestMapOrderGoodsMovementsRows`) | pending | partial |
 | 14 | GET `/api/spc/materials` | `spc.py` | (SPC navigation — legacy proxy) | ✗ (legacy) | none | ✗ | n/a | ✗ | pending | n/a |
 | 15 | GET `/api/spc/plants` | `spc.py` | (SPC navigation — legacy proxy) | ✗ (legacy) | none | ✗ | n/a | ✗ | pending | n/a |
 | 16 | GET `/api/spc/characteristics` | `spc.py` | (SPC navigation — legacy proxy) | ✗ (legacy) | none | ✗ | n/a | ✗ | pending | n/a |
 | 17 | GET `/api/spc/capability` | `spc.py` | (SPC capability — legacy proxy) | ✗ (legacy) | none | ✗ | n/a | ✗ | pending | n/a |
 | 18 | POST `/api/spc/chart-data` | `spc.py` | SPCChartDataSeries | ✓ | `SpcChartDataResponseSchema` | ✓ | ✓ | ✗ | pending | ✓ (locked-limits, signals deferred) |
-| 19 | GET `/api/spc/subgroups` | `spc.py` | SPCSubgroupSeries | ✓ | `SPCSubgroupResponseSchema` | ✓ | ✓ | route-level only | pending | ✓ (capability+nelson hardcoded false) |
-| 20 | POST `/api/trace2/batch-header` | `trace2.py` | (Batch header — supports BatchQualityPassport) | ✓ | `BatchHeaderSummarySchema` | ✗ (returns `dict`) | partial | ✗ | pending | ✗ |
-| 21 | POST `/api/trace2/trace-graph` | `trace2.py` | TraceGraph | ✓ | `TraceGraphSchema` | ✓ | ✓ | ✗ | pending | partial |
-| 22 | POST `/api/trace2/customer-exposure` | `trace2.py` | CustomerExposureEvidence | ✓ | `CustomerExposureSummarySchema` | ✓ | ✓ | ✗ | pending | partial (deliveryEvidenceSource marker) |
-| 23 | POST `/api/trace2/customer-deliveries` | `trace2.py` | CustomerExposureEvidence | ✓ | `CustomerExposureSummarySchema` | ✓ | ✓ | ✗ | pending | partial |
-| 24 | POST `/api/trace2/supplier-exposure` | `trace2.py` | SupplierExposureEvidence | ✓ | `SupplierExposureSummarySchema` | ✓ | ✓ | ✗ | pending | ✓ (risk source absent) |
-| 25 | POST `/api/trace2/production-history` | `trace2.py` | (Production history — supports ProcessOrder) | ✓ | `ProductionHistorySummarySchema` | ✓ | partial | ✗ | pending | partial |
-| 26 | POST `/api/trace2/mass-balance` | `trace2.py` | (Mass-balance summary — supports MassBalanceLedger) | ✓ | `MassBalanceSummarySchema` | ✓ | partial | ✗ | pending | partial |
+| 19 | GET `/api/spc/subgroups` | `spc.py` | SPCSubgroupSeries | ✓ | `SPCSubgroupResponseSchema` | ✓ | ✓ | ✓ (`TestMapSpcSubgroupRows`) | pending | ✓ (capability+nelson hardcoded false) |
+| 20 | POST `/api/trace2/batch-header` | `trace2.py` | (Batch header — supports BatchQualityPassport) | ✓ | `BatchHeaderSummarySchema` | ✗ (returns `dict`) | partial | ✓ (`TestMapBatchHeaderRows`) | pending | ✗ |
+| 21 | POST `/api/trace2/trace-graph` | `trace2.py` | TraceGraph | ✓ | `TraceGraphSchema` | ✓ | ✓ | ✓ (`TestMapTraceGraph`) | pending | partial |
+| 22 | POST `/api/trace2/customer-exposure` | `trace2.py` | CustomerExposureEvidence | ✓ | `CustomerExposureSummarySchema` | ✓ | ✓ | ✓ (`TestMapCustomerExposureRows`) | pending | partial (deliveryEvidenceSource marker) |
+| 23 | POST `/api/trace2/customer-deliveries` | `trace2.py` | CustomerExposureEvidence | ✓ | `CustomerExposureSummarySchema` | ✓ | ✓ | ✓ (`TestMapCustomerDeliveryRows`) | pending | partial |
+| 24 | POST `/api/trace2/supplier-exposure` | `trace2.py` | SupplierExposureEvidence | ✓ | `SupplierExposureSummarySchema` | ✓ | ✓ | ✓ (`TestMapSupplierExposureRows`) | pending | ✓ (risk source absent) |
+| 25 | POST `/api/trace2/production-history` | `trace2.py` | (Production history — supports ProcessOrder) | ✓ | `ProductionHistorySummarySchema` | ✓ | partial | ✓ (`TestMapProductionHistoryRows`) | pending | partial |
+| 26 | POST `/api/trace2/mass-balance` | `trace2.py` | (Mass-balance summary — supports MassBalanceLedger) | ✓ | `MassBalanceSummarySchema` | ✓ | partial | ✓ (`TestMapMassBalanceRows`) | pending | partial |
 | 27 | POST `/api/trace2/recall-readiness` | `trace2.py` | CustomerExposureEvidence | ✓ | `RecallReadinessSchema` | ✓ | ✓ | ✓ | pending | ✓ (recommendationStatus, delivery-evidence) |
 | 28 | POST `/api/trace2/supplier-batches` | `trace2.py` | SupplierExposureEvidence | ✓ | `SupplierBatchViewSchema` | ✓ | ✓ | ✓ | pending | ✓ (risk default low; cross-plant) |
 | 29 | POST `/api/trace2/batch-quality-passport` | `trace2.py` | BatchQualityPassport | ✓ | `BatchQualityPassportSchema` | ✓ | ✓ | ✗ | pending | ✓ (usage-decision-evidence, heuristic confidence) |
@@ -97,26 +97,34 @@ These routes return raw `dict` or `list` and bypass Pydantic validation on the r
 
 **Action:** define schemas for the CQ Lab routes; converge `/wh360/warehouse-summary` on the existing `Warehouse360Summary` contract.
 
-### Mapper tests missing (P0 — applies to 32 of 38 routes)
+### Mapper tests missing (data-bearing gap)
 
-Only 4 routes have direct mapper unit tests today, all from the Trace App slice:
+**Correction (post-review):** the initial audit understated coverage. After
+re-inventorying `apps/api/tests/adapters/`, **20 of 34 data-bearing routes
+have direct mapper unit tests**. The remaining gap is **10 routes** (after
+excluding the 4 SPC legacy proxy routes, which have no native mapper).
 
-- `POST /api/trace2/recall-readiness` — `TestRecallReadinessMapping`
-- `POST /api/trace2/supplier-batches` — `TestSupplierBatchViewMapping`
-- `POST /api/trace2/mass-balance-ledger` — `TestMassBalanceLedgerMapping`
-- `POST /api/trace2/holds-ledger` — `TestHoldsLedgerMapping`
+| Route | Mapper without direct tests |
+|---|---|
+| `GET /api/cq/lab/fails` | (no mapper — returns raw dict) |
+| `POST /api/spc/chart-data` | `map_spc_chart_response` |
+| `POST /api/trace2/batch-quality-passport` | `build_batch_quality_passport` |
+| `POST /api/trace2/investigation-timeline` | `map_investigation_timeline_rows` |
+| `POST /api/wh360/warehouse-summary` | `map_warehouse_summary_rows` |
+| `GET /api/warehouse360/overview` | `map_warehouse_overview_rows` |
+| `GET /api/warehouse360/inbound` | `map_inbound_rows` |
+| `GET /api/warehouse360/outbound` | `map_outbound_rows` |
+| `GET /api/warehouse360/staging` | `map_staging_rows` |
+| `GET /api/warehouse360/exceptions` | `map_exceptions_rows` |
 
-The other 32 data-bearing routes have **only route-level (HTTP) tests or none at all** — no direct exercise of the row→contract mapping logic.
+`build_batch_quality_passport` and `map_investigation_timeline_rows` are
+addressed by the open `test/trace-app-mapper-hardening` PR (40 new cases).
 
-**Action:** the catalogue P0 follow-on (add mapper unit tests across all 11 products) is the highest-impact next slice. Recommended target order:
+**Action priority for the remaining 8:**
 
-1. `map_spc_subgroup_rows` (SPC subgroups — the most-deployed slice)
-2. `build_batch_quality_passport` (the largest fan-out)
-3. `map_trace_graph` (cycle / anchor / cross-plant semantics)
-4. `map_quality_usage_decision_rows` (Option A enforcement)
-5. The four ProcessOrderExecutionEvidence mappers
-6. `map_warehouse_overview_rows` and siblings (blocked on source DDL)
-7. `map_swab_result_rows` (valuation-code → status mapping)
+1. `map_spc_chart_response` (SPC chart-data — the failing locked-limits test surfaces a real bug)
+2. `map_warehouse_overview_rows` and siblings — blocked on the `WarehouseOperationalSnapshot` prerequisite gate
+3. CQ Lab routes — decide whether to model or deprecate
 
 ### Browser-UAT pending (38 of 38 routes)
 
@@ -188,7 +196,7 @@ Mostly the post-PR-#82 schemas are classified. Older schemas only partially clas
 |---|---|---|---|
 | **P0** | Fix `QualityUsageDecisionQuerySpec` dataclass ordering | route #5 (and any test that imports `main`) | very small |
 | **P0** | Add `response_model` to the 4 routes missing it | routes #10, #20, #33, #34 | small |
-| **P0** | Add direct mapper unit tests for SPC subgroups + BatchQualityPassport + TraceGraph | routes #19, #29, #21 | medium |
+| **P0** | Add direct mapper unit tests for the 8 remaining gaps (chart-data, passport, timeline, 5 warehouse, CQ lab) | routes #6, #18, #29, #31, #33–#38 | medium |
 | P1 | Sweep field classification on pre-PR-#82 schemas | routes #20, #25, #26, plus #34–#38 | small per schema |
 | P1 | Add governance caveats in pre-PR-#76 route docstrings | routes #20–#26 | small |
 | P1 | Define UAT capture template + record evidence for L3/L4 routes | all data-bearing routes | per-route small |
