@@ -24,16 +24,16 @@ To give a future implementation agent a safe, bounded scope for wiring read-only
 
 All of the following must be true before any implementation starts:
 
-| Precondition | Status |
-|---|---|
-| Source object confirmed (`gold_inspection_usage_decision`) | Done — verified 2026-05-21 |
-| Schema confirmed (13 columns) | Done — verified 2026-05-21 |
-| Grain confirmed (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`) | Done — verified 2026-05-21 |
-| Inspection-lot join confirmed | Done — verified 2026-05-21 |
-| All 9 UD codes governed | Done — confirmed by Kerry Quality/QM process owner (tim.geldard@kerry.com) 2026-05-21. Supports read-only display labels only. Does not authorise release/reject actions, SAP QM write-back, e-signature, or batch-level release decisions. |
-| Fan-out: multiple UD rows per lot — latest-row logic defined | Done — SQL template in `qm-usage-decision-grain-and-joins.md` §9 |
-| Fan-out: multiple lots per batch — selection rule confirmed | **Not done** — this is the remaining gate before batch-level display |
-| No service-principal fallback | Required — user OAuth only |
+| Precondition                                                   | Status                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source object confirmed (`gold_inspection_usage_decision`)     | Done — verified 2026-05-21                                                                                                                                                                                                                  |
+| Schema confirmed (13 columns)                                  | Done — verified 2026-05-21                                                                                                                                                                                                                  |
+| Grain confirmed (`INSPECTION_LOT_ID + USAGE_DECISION_COUNTER`) | Done — verified 2026-05-21                                                                                                                                                                                                                  |
+| Inspection-lot join confirmed                                  | Done — verified 2026-05-21                                                                                                                                                                                                                  |
+| All 9 UD codes governed                                        | Done — confirmed by Kerry Quality/QM process owner (tim.geldard@kerry.com) 2026-05-21. Supports read-only display labels only. Does not authorise release/reject actions, SAP QM write-back, e-signature, or batch-level release decisions. |
+| Fan-out: multiple UD rows per lot — latest-row logic defined   | Done — SQL template in `qm-usage-decision-grain-and-joins.md` §9                                                                                                                                                                            |
+| Fan-out: multiple lots per batch — selection rule confirmed    | **Not done** — this is the remaining gate before batch-level display                                                                                                                                                                        |
+| No service-principal fallback                                  | Required — user OAuth only                                                                                                                                                                                                                  |
 
 **The remaining gate before batch-level wiring is the lot-selection rule.** If a material/batch/plant has multiple inspection lots, which lot's usage decision is displayed? This requires a governed rule from the Kerry QM process owner. Without it, either surface evidence per lot (not per batch) or display "multiple lots — see detailed view."
 
@@ -41,10 +41,10 @@ All of the following must be true before any implementation starts:
 
 ## 3. Source Objects
 
-| Object | Catalog path | Purpose |
-|---|---|---|
-| `gold_inspection_usage_decision` | `connected_plant_uat.gold.gold_inspection_usage_decision` | Primary UD source — 13 columns, grain `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)` |
-| `gold_inspection_lot` | `connected_plant_uat.gold.gold_inspection_lot` | Join target for MATERIAL_ID, BATCH_ID, PLANT_ID, PROCESS_ORDER_ID, USAGE_DECISION_LONG_TEXT |
+| Object                           | Catalog path                                              | Purpose                                                                                     |
+| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `gold_inspection_usage_decision` | `connected_plant_uat.gold.gold_inspection_usage_decision` | Primary UD source — 13 columns, grain `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)`         |
+| `gold_inspection_lot`            | `connected_plant_uat.gold.gold_inspection_lot`            | Join target for MATERIAL_ID, BATCH_ID, PLANT_ID, PROCESS_ORDER_ID, USAGE_DECISION_LONG_TEXT |
 
 ---
 
@@ -115,11 +115,11 @@ Caveats (from `qm-usage-decision-grain-and-joins.md` §9):
 
 **Multiple inspection lots per material/batch/plant:** Governed by Option A (Strict Lot-Level Evidence).
 
-| Scenario | Required handling |
-|---|---|
-| Exactly one inspection lot per material/batch/plant | Display UD evidence for that lot directly |
-| Multiple lots | Surface evidence per lot (not per batch); label "Multiple inspection lots — showing per-lot detail" |
-| Zero lots for a batch | Show "No inspection lot found for this batch" — not "No usage decision" |
+| Scenario                                            | Required handling                                                                                   |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Exactly one inspection lot per material/batch/plant | Display UD evidence for that lot directly                                                           |
+| Multiple lots                                       | Surface evidence per lot (not per batch); label "Multiple inspection lots — showing per-lot detail" |
+| Zero lots for a batch                               | Show "No inspection lot found for this batch" — not "No usage decision"                             |
 
 **Governed rule:** Option A (Strict Lot-Level Evidence - No Aggregation) was approved. Do not aggregate lot-level decisions into a single "batch release status".
 
@@ -129,18 +129,18 @@ Caveats (from `qm-usage-decision-grain-and-joins.md` §9):
 
 Always show the source UD code verbatim first. The governed label is additive.
 
-| Code | Display label | Release meaning |
-|---|---|---|
-| `A` | Accepted | → unrestricted stock |
-| `AE` | Accepted (variant / EM) | Accepted — variant / EM |
-| `AC` | Accepted with concession | Accepted with concession |
-| `ACE` | Accepted with concession (variant / EM) | Accepted with concession — variant / EM |
-| `A9` | Accepted — batch restricted | Accepted but batch restricted |
-| `R` | Rejected | → blocked stock |
-| `RE` | Rejected (variant / EM) | Rejected — variant / EM |
-| `RR` | Rejected — batch restricted globally | Rejected + batch restricted globally |
-| `''` (empty string) | Pending — lot open, stock in QI | Inspection lot still open; no decision taken |
-| absent / null lot | "No inspection lot found for this batch" | Not a decision; source gap |
+| Code                | Display label                            | Release meaning                              |
+| ------------------- | ---------------------------------------- | -------------------------------------------- |
+| `A`                 | Accepted                                 | → unrestricted stock                         |
+| `AE`                | Accepted (variant / EM)                  | Accepted — variant / EM                      |
+| `AC`                | Accepted with concession                 | Accepted with concession                     |
+| `ACE`               | Accepted with concession (variant / EM)  | Accepted with concession — variant / EM      |
+| `A9`                | Accepted — batch restricted              | Accepted but batch restricted                |
+| `R`                 | Rejected                                 | → blocked stock                              |
+| `RE`                | Rejected (variant / EM)                  | Rejected — variant / EM                      |
+| `RR`                | Rejected — batch restricted globally     | Rejected + batch restricted globally         |
+| `''` (empty string) | Pending — lot open, stock in QI          | Inspection lot still open; no decision taken |
+| absent / null lot   | "No inspection lot found for this batch" | Not a decision; source gap                   |
 
 **Important:** "Accepted" and "Rejected" in the table above are governed source usage-decision labels only — they are not release authorisations or app decisions. They reflect the SAP QM inspection team's recorded outcome for the inspection lot. V2 does not make release decisions.
 
@@ -225,14 +225,14 @@ Before any live route is merged:
 
 ## 12. Go / No-Go Checklist
 
-| Gate | Status | Required to proceed |
-|---|---|---|
-| Source object verified | Done | |
-| Latest-row SQL template validated against live data | Not done | Run template against UAT candidate; confirm counter and date ordering |
-| Multiple lots per batch — count checked for UAT candidate | Not done | Run fan-out check SQL from `qm-usage-decision-grain-and-joins.md` §7 |
-| Lot-selection rule confirmed (if multiple lots exist) | Not done | Kerry QM process owner must confirm |
-| Unity Catalog grant for `gold_inspection_usage_decision` + `gold_inspection_lot` | Not confirmed | Verify for service-principal-free OAuth path |
-| Unit tests pass | Not done | Write and run before wiring |
-| No `releaseApproved` / `canRelease` field introduced | Confirmed | Permanent constraint |
-| No SAP QM write-back | Confirmed | Permanent constraint |
-| No service-principal fallback | Confirmed | Permanent constraint |
+| Gate                                                                             | Status        | Required to proceed                                                   |
+| -------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------- |
+| Source object verified                                                           | Done          |                                                                       |
+| Latest-row SQL template validated against live data                              | Not done      | Run template against UAT candidate; confirm counter and date ordering |
+| Multiple lots per batch — count checked for UAT candidate                        | Not done      | Run fan-out check SQL from `qm-usage-decision-grain-and-joins.md` §7  |
+| Lot-selection rule confirmed (if multiple lots exist)                            | Not done      | Kerry QM process owner must confirm                                   |
+| Unity Catalog grant for `gold_inspection_usage_decision` + `gold_inspection_lot` | Not confirmed | Verify for service-principal-free OAuth path                          |
+| Unit tests pass                                                                  | Not done      | Write and run before wiring                                           |
+| No `releaseApproved` / `canRelease` field introduced                             | Confirmed     | Permanent constraint                                                  |
+| No SAP QM write-back                                                             | Confirmed     | Permanent constraint                                                  |
+| No service-principal fallback                                                    | Confirmed     | Permanent constraint                                                  |
