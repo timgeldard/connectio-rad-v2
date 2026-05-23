@@ -36,7 +36,6 @@ function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
   return { ok: true, data, fetchedAt: now(), source: 'mock' }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function err<T>(code: AdapterError['code'], message: string, retryable = false): AdapterResult<T> {
   return { ok: false, error: { code, message, retryable }, displayState: 'error', source: 'mock' }
 }
@@ -53,55 +52,55 @@ export class ProductionStagingAdapter {
   }
 
   async getProductionStagingContext(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<ProductionStagingContext>> {
     return ok(mockProductionStagingContext, this.now)
   }
 
   async getStagingReadinessSummary(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingReadinessSummary>> {
     return ok(mockStagingReadiness, this.now)
   }
 
   async getStagingOrderSummaries(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingOrderSummary[]>> {
     return ok(mockStagingOrders, this.now)
   }
 
   async getStagingPickTasks(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingPickTask[]>> {
     return ok(mockPickTasks, this.now)
   }
 
   async getStagingZoneCapacity(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingZoneCapacity[]>> {
     return ok(mockZoneCapacity, this.now)
   }
 
   async getStagingShortfalls(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingShortfall[]>> {
     return ok(mockShortfalls, this.now)
   }
 
   async getStagingMoveRequests(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingMoveRequest[]>> {
     return ok(mockMoveRequests, this.now)
   }
 
   async getStagingPickingWaves(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingPickingWave[]>> {
     return ok(mockPickingWaves, this.now)
   }
 
   async getStagingAlerts(
-    _request: ProductionStagingAdapterRequest
+    _request: ProductionStagingAdapterRequest,
   ): Promise<AdapterResult<StagingAlert[]>> {
     return ok(mockStagingAlerts, this.now)
   }

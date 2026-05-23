@@ -19,7 +19,6 @@ function ok<T>(data: T, now: NowFn = defaultNow): AdapterResult<T> {
   return { ok: true, data, fetchedAt: now(), source: 'mock' }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function err<T>(code: AdapterError['code'], message: string, retryable = false): AdapterResult<T> {
   return { ok: false, error: { code, message, retryable }, displayState: 'error', source: 'mock' }
 }
@@ -36,13 +35,13 @@ export class WarehouseStagingAdapter {
   }
 
   async getWarehouseStagingStatus(
-    _request: WarehouseStagingAdapterRequest
+    _request: WarehouseStagingAdapterRequest,
   ): Promise<AdapterResult<WarehouseStagingStatus[]>> {
     return ok(mockWarehouseStagingStatus, this.now)
   }
 
   async getMaterialShortagesForPlan(
-    _request: WarehouseStagingAdapterRequest
+    _request: WarehouseStagingAdapterRequest,
   ): Promise<AdapterResult<MaterialShortage[]>> {
     return ok(mockMaterialShortagesForPlan, this.now)
   }

@@ -10,14 +10,27 @@ const compat = new FlatCompat({ baseDirectory: import.meta.dirname })
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.nx/**', '**/packages/design-system/components/ui/**'] },
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.nx/**',
+      '**/packages/design-system/components/ui/**',
+    ],
+  },
 
   // TypeScript base rules
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
-      parserOptions: { project: true },
+      // projectService (typescript-eslint >=8) replaces the legacy `project: true`.
+      // It uses the TypeScript Project Service so type-aware linting works without
+      // requiring every test/config file to be added to a project tsconfig's
+      // `include` glob — fixes the repo-wide "ESLint was configured to run on
+      // ... TSConfig does not include this file" parse errors.
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
@@ -28,9 +41,31 @@ export default [
     rules: {
       ...tsPlugin.configs['recommended'].rules,
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
+
+  // Test files, vitest/tailwind configs, and one-off scripts are not part of
+  // any project tsconfig's `include` glob (they would expand the TypeScript
+  // build outputs). Lint them WITHOUT the type-aware project service so they
+  // parse cleanly; non-type-aware rules still apply.
+  {
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/test-setup.ts',
+      '**/vitest.config.ts',
+      '**/tailwind.config.ts',
+      'packages/data-contracts/scripts/**/*.ts',
+    ],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { projectService: false },
     },
   },
 
@@ -150,14 +185,41 @@ export default [
               ],
             },
             // Cross-integration scope isolation
-            { sourceTag: 'scope:traceability', onlyDependOnLibsWithTags: ['scope:traceability', 'scope:shared'] },
-            { sourceTag: 'scope:quality', onlyDependOnLibsWithTags: ['scope:quality', 'scope:shared'] },
-            { sourceTag: 'scope:operations', onlyDependOnLibsWithTags: ['scope:operations', 'scope:shared', 'scope:quality', 'scope:warehouse', 'scope:maintenance'] },
-            { sourceTag: 'scope:warehouse', onlyDependOnLibsWithTags: ['scope:warehouse', 'scope:shared'] },
-            { sourceTag: 'scope:envmon', onlyDependOnLibsWithTags: ['scope:envmon', 'scope:shared'] },
+            {
+              sourceTag: 'scope:traceability',
+              onlyDependOnLibsWithTags: ['scope:traceability', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:quality',
+              onlyDependOnLibsWithTags: ['scope:quality', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:operations',
+              onlyDependOnLibsWithTags: [
+                'scope:operations',
+                'scope:shared',
+                'scope:quality',
+                'scope:warehouse',
+                'scope:maintenance',
+              ],
+            },
+            {
+              sourceTag: 'scope:warehouse',
+              onlyDependOnLibsWithTags: ['scope:warehouse', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:envmon',
+              onlyDependOnLibsWithTags: ['scope:envmon', 'scope:shared'],
+            },
             { sourceTag: 'scope:spc', onlyDependOnLibsWithTags: ['scope:spc', 'scope:shared'] },
-            { sourceTag: 'scope:maintenance', onlyDependOnLibsWithTags: ['scope:maintenance', 'scope:shared'] },
-            { sourceTag: 'scope:analytics', onlyDependOnLibsWithTags: ['scope:analytics', 'scope:shared'] },
+            {
+              sourceTag: 'scope:maintenance',
+              onlyDependOnLibsWithTags: ['scope:maintenance', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:analytics',
+              onlyDependOnLibsWithTags: ['scope:analytics', 'scope:shared'],
+            },
             { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
           ],
         },
@@ -175,7 +237,10 @@ export default [
         {
           patterns: [
             { group: ['@radix-ui/*'], message: 'Import from @connectio/design-system instead.' },
-            { group: ['class-variance-authority'], message: 'Import from @connectio/design-system instead.' },
+            {
+              group: ['class-variance-authority'],
+              message: 'Import from @connectio/design-system instead.',
+            },
             { group: ['clsx'], message: 'Import from @connectio/design-system instead.' },
             { group: ['tailwind-merge'], message: 'Import from @connectio/design-system instead.' },
             { group: ['lucide-react'], message: 'Import from @connectio/design-system instead.' },

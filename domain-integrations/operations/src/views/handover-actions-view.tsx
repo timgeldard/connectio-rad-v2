@@ -3,7 +3,7 @@ import { OperationsActionQueuePanel } from '../panels/operations-action-queue-pa
 // TODO: Move cross-domain panels to a shared UI package to resolve circularity
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { QualityBlockersPanel } from '@connectio/di-quality'
-// eslint-disable-next-line @nx/enforce-module-boundaries
+
 import { MaintenanceConstraintPanel } from '@connectio/di-maintenance'
 import type {
   OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
@@ -25,7 +25,11 @@ const GRID: React.CSSProperties = {
   alignItems: 'start',
 }
 
-export function HandoverActionsView({ opsRequest, qualityRequest, maintenanceRequest }: HandoverActionsViewProps) {
+export function HandoverActionsView({
+  opsRequest,
+  qualityRequest,
+  maintenanceRequest,
+}: HandoverActionsViewProps) {
   return (
     <div style={GRID}>
       <ShiftHandoverPanel request={opsRequest} />

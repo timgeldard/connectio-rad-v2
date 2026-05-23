@@ -2,7 +2,7 @@ import { MaterialShortagePanel } from '../panels/material-shortage-panel.js'
 import { LateOrdersPanel } from '../panels/late-orders-panel.js'
 import { OperationsActionQueuePanel } from '../panels/operations-action-queue-panel.js'
 // TODO: Move cross-domain panels to a shared UI package to resolve circularity
-// eslint-disable-next-line @nx/enforce-module-boundaries
+
 import { WarehouseStagingStatusPanel } from '@connectio/di-warehouse'
 import type {
   OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
@@ -22,7 +22,10 @@ const GRID: React.CSSProperties = {
   alignItems: 'start',
 }
 
-export function MaterialStagingRiskView({ opsRequest, warehouseRequest }: MaterialStagingRiskViewProps) {
+export function MaterialStagingRiskView({
+  opsRequest,
+  warehouseRequest,
+}: MaterialStagingRiskViewProps) {
   return (
     <div style={GRID}>
       <MaterialShortagePanel request={opsRequest} />

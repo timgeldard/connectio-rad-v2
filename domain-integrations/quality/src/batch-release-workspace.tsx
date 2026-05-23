@@ -74,21 +74,6 @@ export function BatchReleaseWorkspace({
   onSelectCase,
 }: BatchReleaseWorkspaceProps) {
   const adapterMode = import.meta.env.VITE_ADAPTER_MODE || 'mock'
-  
-  if (!releaseCaseId && !scope.batchId) {
-    return (
-      <StandardWorkspaceTemplate
-        registration={batchReleaseRegistration}
-        scope={scope}
-        defaultViewId="release-queue"
-      >
-        <BatchReleaseInitialState 
-          adapterMode={adapterMode} 
-          onLoadCandidate={() => onSelectCase?.('RC-2024-001847')} 
-        />
-      </StandardWorkspaceTemplate>
-    )
-  }
 
   const effectiveCaseId = releaseCaseId || 'RC-2024-001847'
 
@@ -116,8 +101,26 @@ export function BatchReleaseWorkspace({
     releaseCaseId: effectiveCaseId,
   }
 
+  // Hook MUST be called before any conditional return so React's
+  // rules-of-hooks invariant holds. The initial-state branch below
+  // simply doesn't consume the resulting context.
   const { data: contextResult } = useReleaseContext(qualityRequest)
   const context = contextResult?.ok ? contextResult.data : null
+
+  if (!releaseCaseId && !scope.batchId) {
+    return (
+      <StandardWorkspaceTemplate
+        registration={batchReleaseRegistration}
+        scope={scope}
+        defaultViewId="release-queue"
+      >
+        <BatchReleaseInitialState
+          adapterMode={adapterMode}
+          onLoadCandidate={() => onSelectCase?.('RC-2024-001847')}
+        />
+      </StandardWorkspaceTemplate>
+    )
+  }
 
   const activeView = resolveView(viewId, {
     qualityRequest,
@@ -140,19 +143,13 @@ export function BatchReleaseWorkspace({
           title="Quality Batch Release Integration Specifications"
           status="partial-native"
           sourceLabel="Hybrid/Mixed Quality Data Source"
-          routes={[
-            'GET /api/cq/lab/fails',
-            'GET /api/cq/lab/plants'
-          ]}
-          sourceObjects={[
-            'vw_cq_lab_failures',
-            'vw_cq_lab_plants'
-          ]}
+          routes={['GET /api/cq/lab/fails', 'GET /api/cq/lab/plants']}
+          sourceObjects={['vw_cq_lab_failures', 'vw_cq_lab_plants']}
           limitations={[
             'UAT verification pending',
             'Connected Quality Lab Board uses V1 legacy API (/api/cq/lab/fails)',
             'Batch release summaries, deviations, and CoA readiness are simulated in-memory (mock mode)',
-            'Read-only cockpit — release actions are simulated and will not execute in SAP'
+            'Read-only cockpit — release actions are simulated and will not execute in SAP',
           ]}
           lastVerified="Pending UAT Sweep"
         />
@@ -180,7 +177,14 @@ interface ViewRequests {
  * @returns The view component, or ReleaseQueueView as the default fallback.
  */
 function resolveView(viewId: string, requests: ViewRequests): React.ReactNode {
-  const { qualityRequest, traceRequest, operationsRequest, warehouseRequest, onSelectCase, activeCaseId } = requests
+  const {
+    qualityRequest,
+    traceRequest,
+    operationsRequest,
+    warehouseRequest,
+    onSelectCase,
+    activeCaseId,
+  } = requests
 
   switch (viewId as BatchReleaseViewId) {
     case 'release-queue':
@@ -194,12 +198,7 @@ function resolveView(viewId: string, requests: ViewRequests): React.ReactNode {
     case 'batch-decision':
       return <BatchDecisionView request={qualityRequest} />
     case 'quality-evidence':
-      return (
-        <QualityEvidenceView
-          qualityRequest={qualityRequest}
-          traceRequest={traceRequest}
-        />
-      )
+      return <QualityEvidenceView qualityRequest={qualityRequest} traceRequest={traceRequest} />
     case 'operations-evidence':
       return (
         <OperationsEvidenceView
