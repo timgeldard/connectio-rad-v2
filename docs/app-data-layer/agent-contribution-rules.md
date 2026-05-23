@@ -46,7 +46,7 @@ Future implementation prompts should start by identifying:
 ## Style Requirements
 
 - Be concise but explicit.
-- Use markdown tables where useful.
+- Use Markdown tables where useful.
 - Do not overclaim current implementation quality.
 - Do not claim browser UAT evidence exists unless provided by the user.
 - Do not claim production readiness.
