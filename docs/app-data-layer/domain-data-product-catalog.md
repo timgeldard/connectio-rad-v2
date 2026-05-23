@@ -45,9 +45,9 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | Source objects | `gold.spc_quality_metric_subgroup_mv` |
 | Field classifications | Yes — `[classification: source-field]`, `[classification: source-derived]`, `[classification: unavailable]` |
 | `response_model` enforced | Yes |
-| Mapper tests | Not found |
-| Maturity | L4 — Mapper/contract tested via route tests; browser-UAT pending |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `browser-uat-pending` |
+| Mapper tests | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_adapter.py::TestMapSpcSubgroupRows` |
+| Maturity | L4 — direct mapper tests + route-level tests present; browser-UAT pending |
+| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending` |
 
 **Known caveats**
 
@@ -55,7 +55,7 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 - The 730-day date-window guard is enforced server-side to prevent broad scans.
 - P999 plant sentinel is rejected with 422 before any Databricks call.
 
-**Next action** — Add direct mapper unit tests for the row shape and capture browser-UAT evidence.
+**Next action** — Capture browser-UAT evidence per `route-readiness-standard.md`.
 
 ---
 
@@ -97,18 +97,18 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | Source objects | `gold.gold_batch_summary_v`, `gold.gold_batch_stock_v`, `gold.gold_material`, `gold.gold_batch_production_history_v`, `gold.gold_batch_quality_result_v`, `gold.gold_inspection_usage_decision` |
 | Field classifications | Yes — every nested schema carries `[classification: ...]` markers including `application-heuristic` for confidence + status and `source-field` for identity / stock |
 | `response_model` enforced | Yes |
-| Mapper tests | Not found |
-| Maturity | L3 — Route implemented; mapper unit tests absent |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `browser-uat-pending`, `mapper-test-pending` |
+| Mapper tests | ✓ `apps/api/tests/adapters/trace2/test_trace_app_mappers.py::TestBuildBatchQualityPassport` (open in `test/trace-app-mapper-hardening`) |
+| Maturity | L3 → L4 once the mapper-hardening PR merges |
+| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `browser-uat-pending` (mapper-tested once PR lands) |
 
 **Known caveats**
 
 - `usageDecisionEvidence` replaces what was originally called `signoff`. Rows MUST NOT be presented as governed approval / e-signature / release authority.
 - `heuristicQualityConfidence` + `confidenceSource: 'application-heuristic'` — confidence is derived from failed-MIC and warning counts; not a governed SAP/QM field.
 - Mass-balance variance is sourced but the `reconciliationSource` is `application-heuristic` (see MassBalanceLedger).
-- No `daysToExpiry` server-side calculation — leave to UI.
+- `daysToExpiry` is computed server-side from `identity.expiryDate` vs current UTC time (`build_batch_quality_passport` at trace2_databricks_adapter.py:2573–2584). The UI displays the value verbatim.
 
-**Next action** — Direct mapper unit tests for `build_batch_quality_passport` (identity, quality, stock, production, lot-history sections) and per-section row-shape tests.
+**Next action** — Capture browser-UAT evidence; close the lot-history coverage gap in the mapper tests (currently no test asserts ordering across multiple lots).
 
 ---
 
@@ -150,9 +150,9 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | Source objects | `gold.gold_batch_lineage`, `gold.gold_material` |
 | Field classifications | Yes — nodes/edges carry `[classification: source-field]`, `[classification: source-derived]`, `[classification: application-derived]`, `[classification: application-heuristic]` |
 | `response_model` enforced | Yes |
-| Mapper tests | Not found |
-| Maturity | L3 — Route implemented; mapper unit tests absent |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-test-pending` |
+| Mapper tests | ✓ `apps/api/tests/adapters/trace2/test_trace2_databricks_adapter.py::TestMapTraceGraph` |
+| Maturity | L4 — direct mapper tests + route-level tests present; browser-UAT pending |
+| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending` |
 
 **Known caveats**
 
@@ -160,7 +160,7 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 - No `plant_id` filter on the anchor — by design (cross-plant lineage must be visible for recall coverage).
 - Cycle detection via `path` column in the recursive CTE.
 
-**Next action** — Mapper unit tests covering cycle handling, anchor-plant policy, and node/edge mapping.
+**Next action** — Capture browser-UAT evidence; expand mapper tests to cover deeper cycle and cross-plant cases (existing tests cover the happy path).
 
 ---
 
@@ -280,19 +280,21 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | Contract | `packages/data-contracts/src/schemas/warehouse-360-overview.ts` — `Warehouse360OverviewSchema` + 12 nested schemas |
 | Route | `GET /api/warehouse360/overview`, `/inbound`, `/outbound`, `/staging`, `/exceptions` in `apps/api/routes/warehouse360.py` |
 | Mapper | `map_warehouse_overview_rows` in `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` |
-| Source objects | `gold.gold_warehouse_inventory`, `gold.gold_warehouse_holds` (implied — DDL verification pending) |
+| Source objects (actual adapter SQL) | `wh360_kpi_snapshot_v` (overview — returns 11 V1 KPI cols, NOT the contract fields); `wh360_inbound_v` (inbound — adapter SQL references non-existent columns); `wh360_deliveries_v` (outbound — likely works); `staging_orders_v` (staging — **view does not exist** in UAT); `wh360_imwm_exceptions_v` (exceptions — **view does not exist**; correct name is `imwm_exceptions_v`) |
+| Source objects (target after gate closes) | `wh360_inbound_v`, `wh360_deliveries_v`, `wh360_process_orders_v`, `wh360_near_expiry_batches_v`, `imwm_exceptions_v`, `imwm_stock_comparison_v` |
 | Field classifications | Yes — but partial coverage |
-| `response_model` enforced | Yes |
+| `response_model` enforced | **Deliberately disabled** on `/overview` (mapper output diverges from contract); ✓ on the 4 sibling routes (3 of which return HTTP 500 against live UAT) |
 | Mapper tests | Not found |
-| Maturity | L1/L2 — Source DDL verification incomplete; contract is defined but source-mapping incomplete |
-| Readiness | `code-fixed`, `contract-defined`, `route-implemented`, `source-coverage-pending`, `mapper-test-pending` |
+| Maturity | L1/L2 — contract diverged from mapper; 3 of 4 sibling routes broken in production |
+| Readiness | `code-fixed`, `contract-defined`, `route-implemented`, `source-coverage-pending`, `mapper-test-pending`, `production-blocked` |
 
 **Known caveats**
 
-- See `docs/data-layer/warehouse360-overview-contract-alignment.md` — source columns are not all verified live; some fields are heuristic placeholders.
-- Capacity / utilisation are derived in the mapper; backing column semantics need governance.
+- See [`data-products/warehouse-operational-snapshot.md`](./data-products/warehouse-operational-snapshot.md) for the full gating spec.
+- `GET /api/warehouse360/inbound`, `/staging`, `/exceptions` return **HTTP 500 against live Databricks** — wrong column names, missing views.
+- `GET /api/warehouse360/overview` returns the V1 KPI shape; frontend silently maps every contract count → 0.
 
-**Next action** — `source-verification` PR for `gold_warehouse_inventory` and `gold_warehouse_holds` DDL; gate the route on verified columns only.
+**Next action** — Close the 5-item prerequisite gate from the spec before any L3+ work proceeds.
 
 ---
 
@@ -326,7 +328,7 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 | Priority | Action | Affects |
 |---|---|---|
-| P0 | Add direct mapper unit tests across all 11 products (currently only 4 have any) | 1, 3, 5, 8, 9, 10, 11 |
+| P0 | Add direct mapper unit tests for the remaining products without them (5 of 11 now have direct mapper coverage: 1, 4, 5, 6, 7; 3 has tests in unmerged PR) | 2, 8, 9, 10, 11 |
 | P0 | Browser-UAT runbook + evidence capture for SPC and Trace App routes | 1, 2, 3, 4, 5, 6, 7 |
 | P1 | Source-verification PRs for `gold_warehouse_inventory`, supplier-risk source, governed recall-rule engine | 7, 10, 6 |
 | P1 | Governance decisions on `recommendationStatus`, `reconciliationSource`, lot-vs-batch usage-decision aggregation | 4, 6, 9 |
