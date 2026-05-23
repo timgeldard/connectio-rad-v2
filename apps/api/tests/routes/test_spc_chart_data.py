@@ -100,7 +100,7 @@ class TestSpcChartDataQuerySafety:
         _databricks_env(monkeypatch)
         payload = _valid_payload()
         
-        async def _mock(spec, identity):
+        async def _mock(self_obj, spec, identity):
             # Assert query safety fields are present in the spec params
             assert "material_id" in spec.params
             assert "plant_id" in spec.params
@@ -122,7 +122,7 @@ class TestSpcChartDataLockedLimitsSemantics:
         
         # We need to simulate the execution of two queries: subgroups and limits
         call_count = 0
-        async def _mock(spec, identity):
+        async def _mock(self_obj, spec, identity):
             nonlocal call_count
             call_count += 1
             if "locked_limits" in spec.name:
@@ -153,7 +153,7 @@ class TestSpcChartDataGuardrails:
         _databricks_env(monkeypatch)
         payload = _valid_payload()
         
-        async def _mock(spec, identity):
+        async def _mock(self_obj, spec, identity):
             return []
             
         with patch("shared.query_service.query_executor.QueryExecutor.execute", _mock):

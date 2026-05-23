@@ -10,8 +10,8 @@ from adapters.quality.quality_databricks_adapter import (
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
+    run_query,
 )
-from shared.query_service.query_executor import run_query
 
 router = APIRouter(prefix="/quality", tags=["quality"])
 
@@ -35,28 +35,42 @@ async def get_read_only_evidence(
     
     if adapter_mode != "databricks-api":
         # Return the unavailable skeleton if not configured for native Databricks.
+        # `QualityEvidenceResponse.request` / `.summary` are generated as
+        # anonymous nested Pydantic classes (`Request`, `Summary`) — not
+        # `QualityEvidenceRequest` / `QualityEvidenceSummary`. We dump to dict
+        # so Pydantic's response validation re-coerces the structurally
+        # identical payload into the expected nested types.
+        # Source verification is not yet complete in this deployment. The
+        # route intentionally reports `source: 'databricks-api'` (the
+        # intended source) and `status: 'pending-source-verification'`
+        # — not `'unavailable'` — to make the readiness gate explicit and
+        # to surface the no-decision-authority caveat in `warnings`.
+        unavailable_summary = QualityEvidenceSummary(
+            source='databricks-api',
+            status='pending-source-verification',
+            inspectionLotCount=0,
+            micResultCount=0,
+            usageDecisionStatus='source-unverified',
+            coaResultCount=0,
+            unavailableEvidence=[
+                'inspection-lots',
+                'mic-results',
+                'usage-decision',
+                'coa-results',
+                'deviations'
+            ],
+            warnings=[
+                'Quality evidence is pending source verification — '
+                'must not be interpreted as accepted or released.',
+                'Set BACKEND_ADAPTER_MODE=databricks-api once UAT source '
+                'verification completes.',
+            ],
+            queriedAt=queried_at,
+            sourceFreshnessStatus='not-verified'
+        )
         return QualityEvidenceResponse(
-            request=request,
-            summary=QualityEvidenceSummary(
-                source='unavailable',
-                status='unavailable',
-                inspectionLotCount=0,
-                micResultCount=0,
-                usageDecisionStatus='unavailable',
-                coaResultCount=0,
-                unavailableEvidence=[
-                    'inspection-lots',
-                    'mic-results',
-                    'usage-decision',
-                    'coa-results',
-                    'deviations'
-                ],
-                warnings=[
-                    'Quality evidence requires BACKEND_ADAPTER_MODE=databricks-api.',
-                ],
-                queriedAt=queried_at,
-                sourceFreshnessStatus='not-verified'
-            ),
+            request=request.model_dump(by_alias=True),
+            summary=unavailable_summary.model_dump(by_alias=True),
             inspectionLots=[],
             micResults=[],
             usageDecision=None,
@@ -81,10 +95,14 @@ async def get_read_only_evidence(
 
     inspection_lots, summary = map_quality_usage_decision_rows(rows, queried_at)
 
+    # See unavailable-skeleton note above: dump-then-coerce is required because
+    # `QualityEvidenceResponse.request` / `.summary` / `.inspection_lots` are
+    # anonymous nested Pydantic types in the generated model, not the
+    # top-level QualityEvidence* classes.
     return QualityEvidenceResponse(
-        request=request,
-        summary=summary,
-        inspectionLots=inspection_lots,
+        request=request.model_dump(by_alias=True),
+        summary=summary.model_dump(by_alias=True),
+        inspectionLots=[lot.model_dump(by_alias=True) for lot in inspection_lots],
         micResults=[],
         usageDecision=None,
         coaResults=[]
