@@ -65,9 +65,26 @@ class TestWarehouseInboundSpec:
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/inbound"
         assert spec.cache_policy == CacheTier.PER_USER_60S
-        assert spec.params["warehouse_id"] == "WH01"
+        # The view does not expose LGNUM — warehouse_id is accepted but the
+        # SQL no longer filters on it (documented in the source-verification doc).
+        assert "warehouse_id" not in spec.params
         assert "wh360_inbound_v" in spec.sql
         assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_inbound_v`" in spec.sql
+
+    def test_spec_uses_actual_wh360_inbound_v_columns(self) -> None:
+        """Pin the source-verified column names so a regression cannot
+        silently revert to the broken upper-case identifiers."""
+        spec = get_warehouse_inbound_spec(WarehouseInboundRequest("WH01"))
+        for actual_col in ("po_id", "po_item", "doc_type", "vendor_id",
+                           "plant_id", "storage_loc", "material_id", "material_name",
+                           "ordered_qty", "gr_qty", "open_qty", "uom",
+                           "delivery_date", "delivery_complete", "qa_lot_id", "qa_status"):
+            assert actual_col in spec.sql, f"missing source column {actual_col!r}"
+        # Old broken UPPER_CASE identifiers must NOT come back.
+        for broken_col in ("DOCUMENT_TYPE", "PURCHASE_ORDER_ID", "WAREHOUSE_NUMBER",
+                           "EXPECTED_DATE", "QUANTITY", "UNIT_OF_MEASURE",
+                           "EXCEPTION_REASON"):
+            assert broken_col not in spec.sql, f"broken column {broken_col!r} leaked back into SQL"
 
 
 class TestWarehouseOutboundSpec:
@@ -119,9 +136,10 @@ class TestQuerySpecDynamicFiltering:
         assert spec.params["plant_id"] == "PL10"
         assert spec.params["date_from"] == "2026-05-01"
         assert spec.params["date_to"] == "2026-05-31"
-        assert "PLANT_ID = :plant_id" in spec.sql
-        assert "EXPECTED_DATE >= :date_from" in spec.sql
-        assert "EXPECTED_DATE <= :date_to" in spec.sql
+        # Lower-case actual column names from wh360_inbound_v.
+        assert "plant_id = :plant_id" in spec.sql
+        assert "delivery_date >= :date_from" in spec.sql
+        assert "delivery_date <= :date_to" in spec.sql
         assert "LIMIT 250" in spec.sql
 
     def test_outbound_with_all_filters(self) -> None:
@@ -253,25 +271,27 @@ class TestWarehouseRowMappers:
         assert res["binUtilPct"] == 0.0
 
     def test_map_inbound_rows_preserves_sap_ids(self) -> None:
+        # Row shape matches actual wh360_inbound_v columns.
         rows = [{
-            "document_type": "Purchase Order",
-            "purchase_order_id": "0045001234",
-            "stock_transport_order_id": "",
-            "item_id": "00010",
+            "po_id": "0045001234",
+            "po_item": "00010",
+            "doc_type": "PO",
+            "doc_cat": "F",
             "vendor_id": "0008100123",
-            "supplying_plant_id": "",
-            "material_id": "000000000000821034",
-            "material_description": "Raw Milk",
-            "batch_id": "0000123456",
+            "vendor_name": "Dairy Supplier Ltd",
             "plant_id": "IE10",
-            "storage_location": "SL01",
-            "warehouse_number": "WH01",
-            "expected_date": "2026-05-18",
-            "received_date": None,
-            "quantity": 25000.0,
-            "unit_of_measure": "L",
-            "status": "OPEN",
-            "exception_reason": "",
+            "storage_loc": "SL01",
+            "material_id": "000000000000821034",
+            "material_name": "Raw Milk",
+            "ordered_qty": 25000.0,
+            "gr_qty": 0.0,
+            "open_qty": 25000.0,
+            "uom": "L",
+            "delivery_date": "2026-05-18",
+            "po_date": "2026-05-10",
+            "delivery_complete": "N",
+            "qa_lot_id": None,
+            "qa_status": None,
         }]
         res = map_warehouse_inbound_rows(rows)
         assert len(res) == 1
@@ -279,8 +299,110 @@ class TestWarehouseRowMappers:
         assert item["documentType"] == "PO"
         assert item["purchaseOrderId"] == "0045001234"
         assert item["materialId"] == "000000000000821034"
-        assert item["batchId"] == "0000123456"
+        # Inbound PO lines have no GR-batch until receipt — null is source-truthful.
+        assert item["batchId"] is None
         assert item["expectedDate"] == "2026-05-18T00:00:00"
+
+    # ------------------------------------------------------------------
+    # Source-truthful inbound mapper guardrails (Gate 1 implementation).
+    # ------------------------------------------------------------------
+
+    def test_inbound_status_open_when_delivery_incomplete(self) -> None:
+        rows = [{
+            "po_id": "P1", "doc_type": "PO", "material_id": "M1",
+            "delivery_complete": "N", "open_qty": 100.0, "uom": "KG",
+        }]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["status"] == "open"
+        # Not received → no received date.
+        assert res[0]["receivedDate"] is None
+
+    def test_inbound_status_received_when_delivery_complete(self) -> None:
+        rows = [{
+            "po_id": "P1", "doc_type": "PO", "material_id": "M1",
+            "delivery_complete": "Y", "open_qty": 0.0, "uom": "KG",
+            "delivery_date": "2026-05-18",
+        }]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["status"] == "received"
+        # Received → receivedDate echoes delivery_date.
+        assert res[0]["receivedDate"] is not None
+        assert "2026-05-18" in res[0]["receivedDate"]
+
+    def test_inbound_status_none_when_neither_open_nor_received(self) -> None:
+        """delivery_complete='' and open_qty=0 means the lifecycle isn't
+        meaningful here. Source-truthful: return None rather than guess."""
+        rows = [{
+            "po_id": "P1", "doc_type": "PO", "material_id": "M1",
+            "delivery_complete": "", "open_qty": 0.0, "uom": "KG",
+        }]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["status"] is None
+
+    def test_inbound_warehouse_number_is_null_not_invented(self) -> None:
+        """wh360_inbound_v has no LGNUM/warehouse_number column. Mapper
+        must emit None, not the request's warehouse_id or an empty string."""
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1"}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["warehouseNumber"] is None
+
+    def test_inbound_sto_fields_are_null(self) -> None:
+        """STO identifier and supplying plant are absent in this view."""
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1"}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["stockTransportOrderId"] is None
+        assert res[0]["supplyingPlantId"] is None
+
+    def test_inbound_exception_reason_is_null(self) -> None:
+        """Exceptions live in imwm_exceptions_v — never invent one here."""
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1"}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["exceptionReason"] is None
+
+    def test_inbound_unit_of_measure_not_defaulted(self) -> None:
+        """No UOM in source → null. Mapper MUST NOT default to 'KG'."""
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1", "uom": None}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["unitOfMeasure"] is None
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1", "uom": ""}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["unitOfMeasure"] is None
+
+    def test_inbound_document_type_unknown_for_unrecognised_codes(self) -> None:
+        for raw in (None, "", "MYSTERY", "XYZ"):
+            rows = [{"po_id": "P1", "doc_type": raw, "material_id": "M1"}]
+            res = map_warehouse_inbound_rows(rows)
+            assert res[0]["documentType"] == "unknown", f"doc_type={raw!r} leaked"
+
+    def test_inbound_document_type_sto_when_source_says_sto(self) -> None:
+        rows = [{"po_id": "P1", "doc_type": "STO", "material_id": "M1"}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["documentType"] == "STO"
+
+    def test_inbound_quantity_maps_to_open_qty(self) -> None:
+        """The contract has a single `quantity` field. We map it to
+        `open_qty` (still-due quantity) — the most useful value for the
+        inbound cockpit panel. The decision is documented in the
+        source-verification doc."""
+        rows = [{
+            "po_id": "P1", "doc_type": "PO", "material_id": "M1",
+            "ordered_qty": 1000.0, "gr_qty": 300.0, "open_qty": 700.0,
+        }]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["quantity"] == 700.0
+
+    def test_inbound_quantity_null_when_open_qty_absent(self) -> None:
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1", "open_qty": None}]
+        res = map_warehouse_inbound_rows(rows)
+        assert res[0]["quantity"] is None
+
+    def test_inbound_does_not_emit_invented_business_fields(self) -> None:
+        """No 'safe' / 'approved' / 'released' / 'cleared' / 'overdue' /
+        'due' fields invented on the wire."""
+        rows = [{"po_id": "P1", "doc_type": "PO", "material_id": "M1", "delivery_complete": "Y"}]
+        res = map_warehouse_inbound_rows(rows)
+        for forbidden in ("safe", "approved", "released", "cleared", "overdue", "due", "recallRecommended"):
+            assert forbidden not in res[0]
 
     def test_map_outbound_rows_preserves_sap_ids(self) -> None:
         rows = [{
