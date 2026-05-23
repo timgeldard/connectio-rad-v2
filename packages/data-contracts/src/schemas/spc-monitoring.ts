@@ -120,6 +120,21 @@ export type SPCSignal = z.infer<typeof SPCSignalSchema>
 // ControlChartPoint
 // ---------------------------------------------------------------------------
 
+/**
+ * Control-chart point.
+ *
+ * `status` is source-truthful by default:
+ *   - `not-evaluated` — the route returned the subgroup point but no
+ *     server-side rule engine has classified it. The native subgroup route
+ *     (PR #82) intentionally emits this rather than claiming `in-control`.
+ *   - `in-control` / `warning` / `out-of-control` — set ONLY when a
+ *     governed signal-engine (e.g. Nelson/WECO via stored flags) has
+ *     evaluated the point.
+ *
+ * UI MUST NOT collapse `not-evaluated` into `in-control`. Tests in this
+ * domain enforce that the native databricks-api adapter never emits
+ * `in-control` without a governed source.
+ */
 export const ControlChartPointSchema = z.object({
   pointId: z.string().describe('[classification: source-field]'),
   timestamp: z.string().datetime().describe('[classification: source-field]'),
@@ -127,7 +142,9 @@ export const ControlChartPointSchema = z.object({
   batchId: z.string().optional().describe('[classification: source-field]'),
   sampleId: z.string().optional().describe('[classification: source-field]'),
   signalIds: z.array(z.string()).describe('[classification: source-derived]'),
-  status: z.enum(['in-control', 'warning', 'out-of-control']).describe('[classification: application-heuristic]'),
+  status: z
+    .enum(['not-evaluated', 'in-control', 'warning', 'out-of-control'])
+    .describe('[classification: application-heuristic]'),
 })
 
 export type ControlChartPoint = z.infer<typeof ControlChartPointSchema>
