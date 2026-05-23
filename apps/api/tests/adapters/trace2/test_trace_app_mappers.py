@@ -511,3 +511,231 @@ class TestTimelineMissingTimestampSurfacesExplicitly:
         assert len(result["events"]) == 2
         for ev in result["events"]:
             assert ev["ts"] == ""
+
+
+# ===========================================================================
+# map_mass_balance_ledger_rows — source-truthful mapper hardening (PR 7)
+# ===========================================================================
+
+
+def _mb_row(**overrides) -> dict:
+    """One row from gold_batch_mass_balance_v (verified MSEG view).
+    Quantity carries the natural sign (positive for receipts, negative
+    for issues/dispatches). MOVEMENT_CATEGORY direction semantics are
+    unresolved; the mapper buckets purely on movement_type code.
+    """
+    base = {
+        "movement_type": "101",
+        "movement_category": "production",
+        "quantity": 1000.0,
+        "balance_qty": 1000.0,
+        "uom": "KG",
+        "posting_date": "2024-03-08",
+    }
+    base.update(overrides)
+    return base
+
+
+class TestMapMassBalanceLedgerRows:
+    """Direct mapper hardening for map_mass_balance_ledger_rows.
+
+    Pin the source-truthful semantics required by the PR 7 brief:
+      - movement quantities preserve sign
+      - UOM comes from source or empty string (no KG default)
+      - bucket codes derived from MOVEMENT_TYPE only
+      - reconciliationSource stays application-heuristic
+      - no invented recall / approved / released / safe claims
+      - empty input returns None (caller returns 404)
+    """
+
+    # --- happy path --------------------------------------------------------
+
+    def test_empty_rows_returns_none(self) -> None:
+        """Caller relies on None to return 404 with the 'do not interpret as
+        zero ledger' message."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        assert map_mass_balance_ledger_rows([]) is None
+
+    def test_happy_path_validates_against_generated_contract(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        from contracts.generated import MassBalanceLedger
+
+        rows = [
+            _mb_row(),
+            _mb_row(movement_type="261", quantity=-200.0, balance_qty=800.0, posting_date="2024-03-09"),
+            _mb_row(movement_type="601", quantity=-300.0, balance_qty=500.0, posting_date="2024-03-10"),
+        ]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        MassBalanceLedger.model_validate(result)
+
+    # --- sign preservation -------------------------------------------------
+
+    def test_negative_consumption_kept_negative(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type="261", quantity=-150.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["events"][0]["delta"] == -150.0
+        assert result["kpi"]["consumed"] == -150.0
+
+    def test_negative_dispatch_kept_negative(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type="601", quantity=-300.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["events"][0]["delta"] == -300.0
+        assert result["kpi"]["shipped"] == -300.0
+
+    def test_positive_production_kept_positive(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type="101", quantity=1000.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["events"][0]["delta"] == 1000.0
+        assert result["kpi"]["produced"] == 1000.0
+
+    # --- UOM source-truth --------------------------------------------------
+
+    def test_uom_echoes_source_value(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(uom="L")]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["kpi"]["uom"] == "L"
+
+    def test_uom_is_empty_string_when_source_null(self) -> None:
+        """The MassBalanceKpi contract requires `uom: string` (not
+        nullable). Until a contract relaxation lands, the mapper emits
+        empty string when uom is null — NEVER 'KG'."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(uom=None)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["kpi"]["uom"] == ""
+        assert result["kpi"]["uom"] != "KG"
+
+    def test_uom_not_defaulted_to_kg_for_unfamiliar_uom(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(uom="LB"), _mb_row(uom=None)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        # First non-null UOM wins; remaining rows do not promote anything to KG.
+        assert result["kpi"]["uom"] == "LB"
+
+    # --- movement-type bucketing ------------------------------------------
+
+    def test_unknown_movement_type_buckets_to_z01(self) -> None:
+        """Movement types outside the known {101/102/131, 261/262,
+        601/602, 701/702/711/712} sets fall into 'Z01' — they MUST NOT
+        be silently classified as production/consumption/dispatch."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type="999", quantity=50.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["events"][0]["code"] == "Z01"
+        # And the KPI buckets stay zero for the known categories.
+        assert result["kpi"]["produced"] == 0
+        assert result["kpi"]["consumed"] == 0
+        assert result["kpi"]["shipped"] == 0
+        assert result["kpi"]["adjusted"] == 0
+
+    def test_movement_type_none_buckets_to_z01(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type=None, quantity=50.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["events"][0]["code"] == "Z01"
+
+    def test_postings_counts_match_per_bucket_events(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [
+            _mb_row(movement_type="101", quantity=100.0),
+            _mb_row(movement_type="101", quantity=200.0),
+            _mb_row(movement_type="261", quantity=-50.0),
+            _mb_row(movement_type="601", quantity=-30.0),
+            _mb_row(movement_type="701", quantity=10.0),
+        ]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        postings = result["kpi"]["postings"]
+        assert postings["production"] == 2
+        assert postings["consumption"] == 1
+        assert postings["dispatch"] == 1
+        assert postings["adjustment"] == 1
+
+    # --- variance / reconciliation ----------------------------------------
+
+    def test_reconciliation_source_stays_application_heuristic(self) -> None:
+        """The variance formula and BALANCE_QTY semantics are not yet
+        governed. reconciliationSource MUST stay 'application-heuristic'
+        until a governance source lands. UI must surface the caveat."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row()]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["reconciliationSource"] == "application-heuristic"
+
+    def test_variance_is_not_zero_when_postings_dont_close(self) -> None:
+        """Unexplained variance MUST surface as a non-zero value, not be
+        hidden behind a zero default. variance = produced + adjusted +
+        consumed + shipped - current. With produced=100, current=50,
+        variance should be 50 (not zero)."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(movement_type="101", quantity=100.0, balance_qty=50.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["kpi"]["variance"] == 50.0
+
+    def test_variance_zero_only_when_postings_genuinely_close(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [
+            _mb_row(movement_type="101", quantity=100.0, balance_qty=100.0),
+            _mb_row(movement_type="261", quantity=-30.0, balance_qty=70.0),
+            _mb_row(movement_type="601", quantity=-20.0, balance_qty=50.0),
+        ]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        # produced(100) + consumed(-30) + shipped(-20) - current(50) = 0
+        assert result["kpi"]["variance"] == 0
+
+    # --- no unsafe claims --------------------------------------------------
+
+    def test_no_invented_release_or_safety_fields(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row()]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        for forbidden in ("safe", "approved", "released", "cleared",
+                          "recallRecommended", "reconciled"):
+            assert forbidden not in result
+            assert forbidden not in result["kpi"]
+
+    def test_event_does_not_carry_release_status_keys(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(), _mb_row(movement_type="601", quantity=-100.0)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        for event in result["events"]:
+            for forbidden in ("status", "safe", "approved", "released"):
+                assert forbidden not in event
+
+    # --- missing optional source fields -----------------------------------
+
+    def test_missing_posting_date_yields_empty_string_not_dropped(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(posting_date=None)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert len(result["events"]) == 1
+        assert result["events"][0]["date"] == ""
+
+    def test_null_quantity_treated_as_zero_not_dropped(self) -> None:
+        """A missing quantity row must surface as a zero-delta event, not
+        be silently dropped — the chronology must stay intact."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(quantity=None)]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert len(result["events"]) == 1
+        assert result["events"][0]["delta"] == 0
