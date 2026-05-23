@@ -28,6 +28,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     map_mass_balance_ledger_rows,
     map_recall_readiness_rows,
     map_supplier_batch_view,
+    build_batch_quality_passport,
 )
 
 
@@ -321,6 +322,27 @@ class TestHoldsLedgerMapping:
         assert result["activeHolds"][0]["id"] == "L1"
         assert result["resolvedHolds"][0]["id"] == "L2"
         assert result["resolvedHolds"][0]["status"] == "released"
+
+
+class TestBatchQualityPassportMapping:
+    def test_uses_heuristic_status_and_no_placeholders(self) -> None:
+        identity_rows = [{"batch_id": "B1", "material_id": "M1"}]
+        coa_rows = []
+        lots_rows = [{"inspection_lot_id": "L1", "usage_decision": "Accepted"}]
+        summary_rows = []
+        balance_rows = []
+        
+        result = build_batch_quality_passport(identity_rows, coa_rows, lots_rows, summary_rows, balance_rows)
+        assert result is not None
+        # Heuristic quality assertion
+        assert "heuristicQualityConfidence" in result["quality"]
+        assert "heuristicQualityStatus" in result["quality"]
+        assert "overallStatus" not in result["quality"]
+        
+        # Usage decisions should only include actual lots, no "Release decision" / "Group QA" placeholders
+        for ud in result["usageDecisionEvidence"]:
+            assert ud.get("role") != "Group QA"
+            assert ud.get("decisionType") != "Release decision"
 
 
 # ---------------------------------------------------------------------------
