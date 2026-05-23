@@ -421,3 +421,93 @@ class TestMapInvestigationTimelineRows:
         rows = [{"ts": "2024-03-08T06:00", "event_type": "note", "label": "X", "actor": "A", "detail": "", "tone": "neutral", "source_system": good_source}]
         result = map_investigation_timeline_rows(rows)
         assert result["events"][0]["sourceSystem"] == good_source
+
+
+# ===========================================================================
+# Generated-contract round-trip — pins the wire shape against
+# apps/api/contracts/generated.py so a future mapper or schema change
+# cannot silently emit an unmodeled key.
+# ===========================================================================
+
+
+class TestPassportValidatesAgainstGeneratedContract:
+    """The existing TestBuildBatchQualityPassport class asserts on the
+    dict shape directly. This class adds the missing step: the dict must
+    also round-trip through the generated Pydantic ``BatchQualityPassport``
+    model — every nested type is ``extra='forbid'`` so a leak of an
+    unmodeled key (e.g. ``released`` / ``recallRecommended``) surfaces here
+    rather than reaching the wire."""
+
+    def test_happy_path_passport_validates(self) -> None:
+        from contracts.generated import BatchQualityPassport
+
+        result = build_batch_quality_passport(
+            identity_rows=[_identity_row()],
+            coa_rows=[_coa_row()],
+            lot_rows=[_lot_row()],
+            summary_rows=[_summary_row()],
+            balance_rows=[_balance_row()],
+        )
+        assert result is not None
+        # `_unverifiedSections` is an internal mapper marker (not modelled
+        # by the contract); drop it before validating the wire payload.
+        result.pop("_unverifiedSections", None)
+        BatchQualityPassport.model_validate(result)
+
+    def test_empty_subqueries_still_validate(self) -> None:
+        """No CoA rows, no lots, no summary, no balance — the resulting
+        passport must still validate; missing optional evidence MUST NOT
+        invent a field outside the contract."""
+        from contracts.generated import BatchQualityPassport
+
+        result = build_batch_quality_passport(
+            identity_rows=[_identity_row()],
+            coa_rows=[],
+            lot_rows=[],
+            summary_rows=[],
+            balance_rows=[],
+        )
+        assert result is not None
+        result.pop("_unverifiedSections", None)
+        BatchQualityPassport.model_validate(result)
+
+
+class TestTimelineValidatesAgainstGeneratedContract:
+    """Same generated-contract round-trip for ``InvestigationTimeline``."""
+
+    def test_mixed_events_validate(self) -> None:
+        from contracts.generated import InvestigationTimeline
+
+        rows = [
+            {"ts": "2024-03-08T06:00", "event_type": "production", "label": "M-101", "actor": "SAP",  "detail": "100.0 KG", "tone": "good",   "source_system": "SAP"},
+            {"ts": "2024-03-09T06:00", "event_type": "qc",         "label": "LOT-1", "actor": "Lab",  "detail": "passed",   "tone": "good",   "source_system": "LIMS"},
+            {"ts": "2024-03-10T06:00", "event_type": "dispatch",   "label": "DEL-1", "actor": "SAP",  "detail": "50.0 KG",  "tone": "brand",  "source_system": "SAP"},
+        ]
+        result = map_investigation_timeline_rows(rows)
+        InvestigationTimeline.model_validate(result)
+
+    def test_empty_timeline_validates(self) -> None:
+        """An empty timeline is NOT a 404 and NOT 'no issue found' — it's
+        explicit absence of evidence. It must still validate against the
+        contract."""
+        from contracts.generated import InvestigationTimeline
+
+        result = map_investigation_timeline_rows([])
+        InvestigationTimeline.model_validate(result)
+
+
+class TestTimelineMissingTimestampSurfacesExplicitly:
+    """Existing tests cover unknown / blank label, actor, type, tone, and
+    source_system. The timestamp branch was untested. The mapper must NOT
+    drop the event or invent a timestamp — missing ``ts`` is preserved as
+    an empty string so the UI can render the absence verbatim."""
+
+    def test_blank_timestamp_preserves_event_with_empty_ts(self) -> None:
+        rows = [
+            {"ts": "",   "event_type": "note", "label": "X", "actor": "A", "detail": "", "tone": "neutral"},
+            {"ts": None, "event_type": "note", "label": "Y", "actor": "B", "detail": "", "tone": "neutral"},
+        ]
+        result = map_investigation_timeline_rows(rows)
+        assert len(result["events"]) == 2
+        for ev in result["events"]:
+            assert ev["ts"] == ""
