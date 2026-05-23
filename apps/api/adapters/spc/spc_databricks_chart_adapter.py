@@ -51,9 +51,9 @@ def get_spc_chart_subgroups_spec(request: SpcChartDataRequest) -> QuerySpec:
     WHERE material_id  = :material_id
       AND plant_id     = :plant_id
       AND mic_id       = :mic_id
-      AND (:operation_id IS NULL OR operation_id = :operation_id)
-      AND (:date_from   IS NULL OR batch_date   >= :date_from)
-      AND (:date_to     IS NULL OR batch_date   <= :date_to)
+      AND operation_id = :operation_id
+      AND batch_date  >= :date_from
+      AND batch_date  <= :date_to
       AND plant_id <> 'P999'
       AND material_id IS NOT NULL
       AND TRIM(material_id) <> ''
@@ -90,7 +90,7 @@ def get_spc_locked_limits_spec(request: SpcChartDataRequest) -> QuerySpec:
     WHERE material_id = :material_id
       AND plant_id    = :plant_id
       AND mic_id      = :mic_id
-      AND (:operation_id IS NULL OR operation_id = :operation_id)
+      AND operation_id = :operation_id
       AND chart_type  = :resolved_chart_type
     LIMIT 1
     """

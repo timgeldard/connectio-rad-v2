@@ -187,10 +187,10 @@ class SpcChartDataRequest(BaseModel):
     material_id: str = Field(..., alias='materialId')
     plant_id: str = Field(..., alias='plantId')
     mic_id: str = Field(..., alias='micId')
-    operation_id: Optional[str] = Field(None, alias='operationId')
+    operation_id: str = Field(..., alias='operationId')
     chart_type: Optional[ChartType] = Field(None, alias='chartType')
-    date_from: Optional[str] = Field(None, alias='dateFrom')
-    date_to: Optional[str] = Field(None, alias='dateTo')
+    date_from: str = Field(..., alias='dateFrom')
+    date_to: str = Field(..., alias='dateTo')
     max_rows: Optional[int] = Field(None, alias='maxRows', ge=1, le=200)
 
 class SpcChartLimitsBlock(BaseModel):
