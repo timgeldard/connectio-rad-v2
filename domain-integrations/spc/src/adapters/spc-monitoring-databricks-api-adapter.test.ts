@@ -115,6 +115,133 @@ describe('SPCMonitoringDatabricksApiAdapter', () => {
         expect(result.data.approvalState).toBe('not-approved')
         expect(result.data.limitProvenance).toBe('unknown')
         expect(result.data.chartType).toBe('xbar-r') // Derived from sampleCount=5
+        // UOM is null (source-truthful) — the subgroups slice 1 response has
+        // no UOM column, and the contract was relaxed in PR 8 to allow null.
+        expect(result.data.unitOfMeasure).toBeNull()
+        // Point status stays 'not-evaluated' — never collapsed to 'in-control'.
+        expect(result.data.points[0].status).toBe('not-evaluated')
+      }
+    })
+
+    it('emits null unitOfMeasure (source-truthful) rather than an empty-string sentinel', async () => {
+      // PR 8 changed the contract from `z.string()` to
+      // `z.string().nullable().optional()`. The adapter now emits null
+      // instead of '' so the UI can render an explicit "source units"
+      // indicator. This test pins that behaviour.
+      const mockSubgroupResponse = {
+        materialId: 'MAT1',
+        plantId: 'P1',
+        micId: 'MIC1',
+        micName: null,
+        operationId: 'OP1',
+        points: [
+          {
+            batchId: 'B1',
+            batchDate: '2024-05-22T12:00:00Z',
+            subgroupMean: 10.5,
+            subgroupRange: null,
+            sampleCount: 1,
+            lslSpec: 9.0,
+            uslSpec: 11.0,
+          },
+        ],
+        lockedLimits: null,
+        capabilityAvailable: false,
+        nelsonStoredFlagsAvailable: false,
+        signalsClientSideOnly: true,
+      }
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockSubgroupResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.unitOfMeasure).toBeNull()
+        // Must NOT default to invented units.
+        expect(result.data.unitOfMeasure).not.toBe('KG')
+        expect(result.data.unitOfMeasure).not.toBe('')
+      }
+    })
+
+    it('point status remains not-evaluated for every subgroup point (no in-control collapse)', async () => {
+      const mockSubgroupResponse = {
+        materialId: 'MAT1',
+        plantId: 'P1',
+        micId: 'MIC1',
+        micName: null,
+        operationId: 'OP1',
+        points: [
+          {
+            batchId: 'B1',
+            batchDate: '2024-05-22T12:00:00Z',
+            subgroupMean: 10.0,
+            subgroupRange: null,
+            sampleCount: 5,
+            lslSpec: null,
+            uslSpec: null,
+          },
+          {
+            batchId: 'B2',
+            batchDate: '2024-05-23T12:00:00Z',
+            subgroupMean: 10.2,
+            subgroupRange: null,
+            sampleCount: 5,
+            lslSpec: null,
+            uslSpec: null,
+          },
+          {
+            batchId: 'B3',
+            batchDate: '2024-05-24T12:00:00Z',
+            subgroupMean: 9.9,
+            subgroupRange: null,
+            sampleCount: 5,
+            lslSpec: null,
+            uslSpec: null,
+          },
+        ],
+        lockedLimits: null,
+        capabilityAvailable: false,
+        nelsonStoredFlagsAvailable: false,
+        signalsClientSideOnly: true,
+      }
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockSubgroupResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.points).toHaveLength(3)
+        for (const point of result.data.points) {
+          expect(point.status).toBe('not-evaluated')
+          // Point MUST NOT be auto-promoted to 'in-control' or
+          // 'out-of-control' — those decisions require a governed signal source.
+          expect(point.status).not.toBe('in-control')
+          expect(point.status).not.toBe('out-of-control')
+          expect(point.status).not.toBe('warning')
+          // signalIds stay empty until the client-side calculation engine
+          // populates them.
+          expect(point.signalIds).toEqual([])
+        }
       }
     })
 

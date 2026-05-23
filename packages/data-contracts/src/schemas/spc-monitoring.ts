@@ -42,7 +42,10 @@ export const MonitoredSPCCharacteristicSchema = z.object({
   hasActiveSignal: z.boolean().describe('[classification: source-derived]'),
   highestSignalSeverity: SeveritySchema.optional().describe('[classification: source-derived]'),
   operationId: z.string().optional().describe('[classification: source-field]'),
-  chartTypeSource: z.enum(['heuristic', 'override', 'manual']).optional().describe('[classification: application-heuristic]'),
+  chartTypeSource: z
+    .enum(['heuristic', 'override', 'manual'])
+    .optional()
+    .describe('[classification: application-heuristic]'),
 })
 
 export type MonitoredSPCCharacteristic = z.infer<typeof MonitoredSPCCharacteristicSchema>
@@ -111,7 +114,9 @@ export const SPCSignalSchema = z.object({
   samplePointId: z.string().describe('[classification: source-field]'),
   resultValue: z.number().describe('[classification: source-field]'),
   recommendedAction: z.string().describe('[classification: application-heuristic]'),
-  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']).describe('[classification: application-heuristic]'),
+  status: z
+    .enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive'])
+    .describe('[classification: application-heuristic]'),
 })
 
 export type SPCSignal = z.infer<typeof SPCSignalSchema>
@@ -164,7 +169,11 @@ export const ControlChartSeriesSchema = z.object({
   lowerControlLimit: z.number().optional().describe('[classification: source-derived]'),
   upperSpecLimit: z.number().optional().describe('[classification: source-field]'),
   lowerSpecLimit: z.number().optional().describe('[classification: source-field]'),
-  unitOfMeasure: z.string().describe('[classification: source-field]'),
+  // Source-truthful: when the upstream view (e.g. SPCSubgroupResponse
+  // slice 1) does not expose a UOM column, the adapter MUST emit
+  // `null` rather than an invented empty string. Relaxed from the
+  // previous required-string contract in PR 8.
+  unitOfMeasure: z.string().nullable().optional().describe('[classification: source-field]'),
   confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
   limitProvenance: LimitProvenanceSchema.optional().describe('[classification: source-derived]'),
   approvalState: ApprovalStateSchema.optional().describe('[classification: governance-pending]'),
@@ -190,7 +199,9 @@ export const CharacteristicCapabilitySchema = z.object({
   mean: z.number().describe('[classification: source-derived]'),
   standardDeviation: z.number().min(0).describe('[classification: source-derived]'),
   confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
-  interpretation: z.enum(['capable', 'marginal', 'not-capable', 'insufficient-data']).describe('[classification: application-heuristic]'),
+  interpretation: z
+    .enum(['capable', 'marginal', 'not-capable', 'insufficient-data'])
+    .describe('[classification: application-heuristic]'),
   limitProvenance: LimitProvenanceSchema.optional().describe('[classification: source-derived]'),
   approvalState: ApprovalStateSchema.optional().describe('[classification: governance-pending]'),
 })
@@ -208,7 +219,9 @@ export const SPCAlarmHistoryItemSchema = z.object({
   rule: z.string().describe('[classification: source-derived]'),
   ruleCode: z.string().optional().describe('[classification: source-derived]'),
   severity: SeveritySchema.describe('[classification: source-derived]'),
-  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']).describe('[classification: application-heuristic]'),
+  status: z
+    .enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive'])
+    .describe('[classification: application-heuristic]'),
   acknowledgedBy: z.string().optional().describe('[classification: source-field]'),
   acknowledgedAt: z.string().datetime().optional().describe('[classification: source-field]'),
   linkedBatchId: z.string().optional().describe('[classification: source-field]'),
@@ -224,9 +237,13 @@ export const SPCRelatedBatchSchema = z.object({
   batchId: z.string().describe('[classification: source-field]'),
   materialId: z.string().describe('[classification: source-field]'),
   plantId: z.string().describe('[classification: source-field]'),
-  status: z.enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review']).describe('[classification: application-heuristic]'),
+  status: z
+    .enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review'])
+    .describe('[classification: application-heuristic]'),
   relatedSignalCount: z.number().int().min(0).describe('[classification: source-derived]'),
-  releaseImpact: z.enum(['blocking', 'risk', 'none']).describe('[classification: application-heuristic]'),
+  releaseImpact: z
+    .enum(['blocking', 'risk', 'none'])
+    .describe('[classification: application-heuristic]'),
   drillThroughTarget: z.string().optional().describe('[classification: application-derived]'),
 })
 
