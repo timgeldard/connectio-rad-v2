@@ -20,7 +20,7 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | # | Data product | Pattern | Maturity | Status |
 |---|---|---|---|---|
 | 1 | [SPCSubgroupSeries](#1-spcsubgroupseries) | evidence-pack | L4 | browser-UAT-pending |
-| 2 | [SPCChartDataSeries](#2-spcchartdataseries) | evidence-pack | L3/L4 | governance-pending (locked limits, signals) |
+| 2 | [SPCChartDataSeries](#2-spcchartdataseries) | evidence-pack | L4 | mapper-tested, governance-pending (locked-limits approval, signals) |
 | 3 | [BatchQualityPassport](#3-batchqualitypassport) | evidence-pack | L3 | mapper-test-pending, browser-UAT-pending |
 | 4 | [MassBalanceLedger](#4-massbalanceledger) | evidence-pack | L3/L4 | reconciliation governance-pending |
 | 5 | [TraceGraph](#5-tracegraph) | evidence-pack | L3 | mapper-test-pending |
@@ -71,17 +71,18 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 | Source objects | `gold.spc_quality_metric_subgroup_mv`, `gold.spc_locked_limits` |
 | Field classifications | Yes — `ControlChartPoint.status` is `application-heuristic` and now accepts `'not-evaluated'` as the source-truthful default |
 | `response_model` enforced | Yes |
-| Mapper tests | Not found |
-| Maturity | L3/L4 — Native databricks-api adapter wired post-PR #82; lots of caveats |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `governance-pending` (locked limits, signal source) |
+| Mapper tests | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_chart_adapter.py::TestLockedLimitsBranch` (+ `TestNoLockedLimitsBranch`, `TestGuardrailsRegardlessOfInput`) |
+| Maturity | L4 — mapper-tested; governance-pending on locked-limits approval source |
+| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `governance-pending` (locked-limits approval source, signal source) |
 
 **Known caveats**
 
 - Native databricks-api adapter (in `domain-integrations/spc/src/adapters/spc-monitoring-databricks-api-adapter.ts`) intentionally emits `status: 'not-evaluated'` for every point — no governed signal engine exists yet. UI must NOT collapse `not-evaluated` into `in-control`.
-- Locked-limits slice (`spc_locked_limits` integration) deferred to slice 2 per `spc-native-route-prerequisite-plan.md`.
+- When a row is found in `spc_locked_limits`, the mapper exposes the numeric `centerLine` / `upperControlLimit` / `lowerControlLimit` and surfaces `lockedBy` for traceability — but **does not** treat `locked_by` as governed approval. `approvalState` stays `pending-validation`, `limitProvenance` stays `unknown`, and the response carries a caveat warning. Promotion to `imported-from-approved-source` / `approved` requires a separate governance decision.
 - Route is also fronted by a legacy V1 proxy in `apps/api/routes/spc.py` for backwards compatibility.
+- The chart-data route currently skips the locked-limits query when the request omits `chartType` (the SQL binds `:resolved_chart_type`). Frontend callers should send the resolved chart type to surface locked limits.
 
-**Next action** — Slice 2: wire locked limits with provenance + approval state, with full mapper tests covering the live-vs-locked combination.
+**Next action** — Governance decision on what `spc_locked_limits` rows mean: do they imply governed approval (and therefore promotion to `imported-from-approved-source` + `approved`), or do they stay `unknown` / `pending-validation`?
 
 ---
 
@@ -328,7 +329,7 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 | Priority | Action | Affects |
 |---|---|---|
-| P0 | Add direct mapper unit tests for the remaining products without them (5 of 11 now have direct mapper coverage: 1, 4, 5, 6, 7; 3 has tests in unmerged PR) | 2, 8, 9, 10, 11 |
+| P0 | Add direct mapper unit tests for the remaining products without them (6 of 11 now have direct mapper coverage: 1, 2, 4, 5, 6, 7; 3 has tests in unmerged PR) | 8, 9, 10, 11 |
 | P0 | Browser-UAT runbook + evidence capture for SPC and Trace App routes | 1, 2, 3, 4, 5, 6, 7 |
 | P1 | Source-verification PRs for `gold_warehouse_inventory`, supplier-risk source, governed recall-rule engine | 7, 10, 6 |
 | P1 | Governance decisions on `recommendationStatus`, `reconciliationSource`, lot-vs-batch usage-decision aggregation | 4, 6, 9 |
