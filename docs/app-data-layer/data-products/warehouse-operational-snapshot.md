@@ -11,15 +11,15 @@
 
 ## 1. At a glance
 
-| Aspect | Value |
-|---|---|
-| Business object | **Plant warehouse operational state** (cross-batch, cross-material aggregates and exception lists) |
-| Data product pattern | `Snapshot` (state at a specific point in time; see [`data-product-patterns.md`](../data-product-patterns.md)) |
-| Owner domain | Warehouse / Inventory |
-| Lifecycle | `concept-lab` (effective — contract exists, but route is misaligned with source) |
-| Maturity (today) | **L1/L2** — source mapping partial, contract diverged from mapper, response_model intentionally disabled, sibling routes broken |
-| Production readiness | **Blocked at the gate** — see [§7](#7-prerequisite-gate-must-close-before-l3-implementation-work) |
-| Read-only | Yes — no SAP write-back, no replenishment trigger, no goods-movement posting |
+| Aspect               | Value                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Business object      | **Plant warehouse operational state** (cross-batch, cross-material aggregates and exception lists)                              |
+| Data product pattern | `Snapshot` (state at a specific point in time; see [`data-product-patterns.md`](../data-product-patterns.md))                   |
+| Owner domain         | Warehouse / Inventory                                                                                                           |
+| Lifecycle            | `concept-lab` (effective — contract exists, but route is misaligned with source)                                                |
+| Maturity (today)     | **L1/L2** — source mapping partial, contract diverged from mapper, response_model intentionally disabled, sibling routes broken |
+| Production readiness | **Blocked at the gate** — see [§7](#7-prerequisite-gate-must-close-before-l3-implementation-work)                               |
+| Read-only            | Yes — no SAP write-back, no replenishment trigger, no goods-movement posting                                                    |
 
 ## 2. Why this data product exists
 
@@ -39,6 +39,7 @@ File: `packages/data-contracts/src/schemas/warehouse-360-overview.ts`
 Symbol: `Warehouse360OverviewSchema`
 
 13 fields:
+
 - Identifiers: `plantId`, `warehouseId` (both required strings)
 - 9 KPI counts: `inboundDueCount`, `inboundOverdueCount`,
   `outboundDueCount`, `outboundOverdueCount`, `stagingOpenCount`,
@@ -53,13 +54,13 @@ respective sibling routes.
 
 ### 3.2 Route — broken in 4 places
 
-| Method · path | Status | Problem |
-|---|---|---|
-| `GET /api/warehouse360/overview` | Returns V1 KPI shape | Mapper emits `ordersTotal`/`trsOpen`/`binsBlocked` etc.; frontend silently maps every count → 0 |
-| `GET /api/warehouse360/inbound` | **HTTP 500 against live Databricks** | Adapter SQL references columns that don't exist in `wh360_inbound_v` (`DOCUMENT_TYPE`, `PURCHASE_ORDER_ID`, `WAREHOUSE_NUMBER`, etc.). Live source uses `po_id`, `doc_type`, `delivery_date`, … |
-| `GET /api/warehouse360/staging` | **HTTP 500 against live Databricks** | Adapter references `connected_plant_uat.wh360.staging_orders_v` which **does not exist**. Closest available view is `wh360_process_orders_v` |
-| `GET /api/warehouse360/exceptions` | **HTTP 500 against live Databricks** | Adapter references `wh360_imwm_exceptions_v` which **does not exist**. Correct view name is `imwm_exceptions_v` (no `wh360_` prefix) |
-| `GET /api/warehouse360/outbound` | Probably works | View `wh360_deliveries_v` exists with the right shape; not yet end-to-end verified |
+| Method · path                      | Status                               | Problem                                                                                                                                                                                         |
+| ---------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/warehouse360/overview`   | Returns V1 KPI shape                 | Mapper emits `ordersTotal`/`trsOpen`/`binsBlocked` etc.; frontend silently maps every count → 0                                                                                                 |
+| `GET /api/warehouse360/inbound`    | **HTTP 500 against live Databricks** | Adapter SQL references columns that don't exist in `wh360_inbound_v` (`DOCUMENT_TYPE`, `PURCHASE_ORDER_ID`, `WAREHOUSE_NUMBER`, etc.). Live source uses `po_id`, `doc_type`, `delivery_date`, … |
+| `GET /api/warehouse360/staging`    | **HTTP 500 against live Databricks** | Adapter references `connected_plant_uat.wh360.staging_orders_v` which **does not exist**. Closest available view is `wh360_process_orders_v`                                                    |
+| `GET /api/warehouse360/exceptions` | **HTTP 500 against live Databricks** | Adapter references `wh360_imwm_exceptions_v` which **does not exist**. Correct view name is `imwm_exceptions_v` (no `wh360_` prefix)                                                            |
+| `GET /api/warehouse360/outbound`   | Probably works                       | View `wh360_deliveries_v` exists with the right shape; not yet end-to-end verified                                                                                                              |
 
 The audit recorded all four problems live against UAT in
 [`docs/data-layer/warehouse360-overview-contract-alignment.md`](../../data-layer/warehouse360-overview-contract-alignment.md)
@@ -81,21 +82,21 @@ closes — re-enabling earlier would 500 every request.
 Once the gate clears, the overview field-by-field mapping is **already
 identified** (per `warehouse360-overview-contract-alignment.md`).
 
-| Contract field | Target source view | Derivation | Confidence |
-|---|---|---|---|
-| `plantId` | request parameter | Echo back from request | code-inferred |
-| `warehouseId` | request parameter | Echo back from request | code-inferred |
-| `inboundDueCount` | `wh360_inbound_v` | `COUNT(*) WHERE delivery_date >= CURRENT_DATE AND delivery_complete != 'Y' AND open_qty > 0 AND plant_id = :plant_id` | DDL-confirmed; business rule **governance-pending** |
-| `inboundOverdueCount` | `wh360_inbound_v` | Same with `delivery_date < CURRENT_DATE` | DDL-confirmed; **governance-pending** |
-| `outboundDueCount` | `wh360_deliveries_v` | `COUNT(DISTINCT delivery_id) WHERE shipped = false AND delivery_date >= CURRENT_DATE AND plant_id = :plant_id` | DDL-confirmed; **governance-pending** |
-| `outboundOverdueCount` | `wh360_deliveries_v` | Same with `planned_gi_date < CURRENT_DATE` | DDL-confirmed; **governance-pending** |
-| `stagingOpenCount` | `wh360_process_orders_v` | `COUNT(*) WHERE staging_pct < 1 AND plant_id = :plant_id` | DDL-confirmed; **governance-pending** |
-| `stagingOverdueCount` | `wh360_process_orders_v` | `COUNT(*) WHERE sched_start < CURRENT_DATE AND staging_pct < 1 AND plant_id = :plant_id` | DDL-confirmed; **governance-pending** |
-| `nearExpiryCount` | `wh360_near_expiry_batches_v` | `COUNT(*) WHERE days_to_expiry BETWEEN 0 AND ?` | **Blocked — threshold unknown** |
-| `reconciliationExceptionCount` | `imwm_exceptions_v` | `COUNT(*) WHERE plant_id = :plant_id [AND exception_type IN …]` | **Blocked — exception-type filter unconfirmed** |
-| `blockedStockCount` | `imwm_stock_comparison_v` | `COUNT(*) WHERE blocked_qty > 0 AND plant_id = :plant_id` | DDL-confirmed and semantically clear |
-| `source` | adapter constant | Hardcode `"databricks-api"` | code-inferred |
-| `warnings` | adapter constant | Empty array unless aggregation degrades | code-inferred |
+| Contract field                 | Target source view            | Derivation                                                                                                            | Confidence                                          |
+| ------------------------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `plantId`                      | request parameter             | Echo back from request                                                                                                | code-inferred                                       |
+| `warehouseId`                  | request parameter             | Echo back from request                                                                                                | code-inferred                                       |
+| `inboundDueCount`              | `wh360_inbound_v`             | `COUNT(*) WHERE delivery_date >= CURRENT_DATE AND delivery_complete != 'Y' AND open_qty > 0 AND plant_id = :plant_id` | DDL-confirmed; business rule **governance-pending** |
+| `inboundOverdueCount`          | `wh360_inbound_v`             | Same with `delivery_date < CURRENT_DATE`                                                                              | DDL-confirmed; **governance-pending**               |
+| `outboundDueCount`             | `wh360_deliveries_v`          | `COUNT(DISTINCT delivery_id) WHERE shipped = false AND delivery_date >= CURRENT_DATE AND plant_id = :plant_id`        | DDL-confirmed; **governance-pending**               |
+| `outboundOverdueCount`         | `wh360_deliveries_v`          | Same with `planned_gi_date < CURRENT_DATE`                                                                            | DDL-confirmed; **governance-pending**               |
+| `stagingOpenCount`             | `wh360_process_orders_v`      | `COUNT(*) WHERE staging_pct < 1 AND plant_id = :plant_id`                                                             | DDL-confirmed; **governance-pending**               |
+| `stagingOverdueCount`          | `wh360_process_orders_v`      | `COUNT(*) WHERE sched_start < CURRENT_DATE AND staging_pct < 1 AND plant_id = :plant_id`                              | DDL-confirmed; **governance-pending**               |
+| `nearExpiryCount`              | `wh360_near_expiry_batches_v` | `COUNT(*) WHERE days_to_expiry BETWEEN 0 AND ?`                                                                       | **Blocked — threshold unknown**                     |
+| `reconciliationExceptionCount` | `imwm_exceptions_v`           | `COUNT(*) WHERE plant_id = :plant_id [AND exception_type IN …]`                                                       | **Blocked — exception-type filter unconfirmed**     |
+| `blockedStockCount`            | `imwm_stock_comparison_v`     | `COUNT(*) WHERE blocked_qty > 0 AND plant_id = :plant_id`                                                             | DDL-confirmed and semantically clear                |
+| `source`                       | adapter constant              | Hardcode `"databricks-api"`                                                                                           | code-inferred                                       |
+| `warnings`                     | adapter constant              | Empty array unless aggregation degrades                                                                               | code-inferred                                       |
 
 **7 of 9 counts are derivable from already-DDL-confirmed views.** Two
 (`nearExpiryCount`, `reconciliationExceptionCount`) require governance
@@ -144,7 +145,7 @@ The seven derivable counts use date comparisons against `CURRENT_DATE`.
   null? The current draft SQL excludes them — confirm with the
   Inventory team.
 - Is "open" measured by `open_qty > 0` (line-level) or `delivery_complete
-  != 'Y'` (header-level)? Mixing both is OK; using only one needs
+!= 'Y'` (header-level)? Mixing both is OK; using only one needs
   governance.
 
 These are tractable governance questions. None is a blocker once the
@@ -154,12 +155,12 @@ business owner records the rule.
 
 The four sibling routes feed into the snapshot's drill-throughs:
 
-| Route | Sibling contract | Target source | Status |
-|---|---|---|---|
-| `GET /api/warehouse360/inbound` | `Warehouse360InboundItem` | `wh360_inbound_v` | **SQL column-name mismatch** — broken |
-| `GET /api/warehouse360/outbound` | `Warehouse360OutboundItem` | `wh360_deliveries_v` | Probably works; unverified end-to-end |
-| `GET /api/warehouse360/staging` | `Warehouse360StagingItem` | `wh360_process_orders_v` (intended) or non-existent `staging_orders_v` (actual SQL) | **View missing** — broken |
-| `GET /api/warehouse360/exceptions` | `Warehouse360ExceptionItem` | `imwm_exceptions_v` (intended) or non-existent `wh360_imwm_exceptions_v` (actual SQL) | **View missing** — broken |
+| Route                              | Sibling contract            | Target source                                                                         | Status                                |
+| ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------- |
+| `GET /api/warehouse360/inbound`    | `Warehouse360InboundItem`   | `wh360_inbound_v`                                                                     | **SQL column-name mismatch** — broken |
+| `GET /api/warehouse360/outbound`   | `Warehouse360OutboundItem`  | `wh360_deliveries_v`                                                                  | Probably works; unverified end-to-end |
+| `GET /api/warehouse360/staging`    | `Warehouse360StagingItem`   | `wh360_process_orders_v` (intended) or non-existent `staging_orders_v` (actual SQL)   | **View missing** — broken             |
+| `GET /api/warehouse360/exceptions` | `Warehouse360ExceptionItem` | `imwm_exceptions_v` (intended) or non-existent `wh360_imwm_exceptions_v` (actual SQL) | **View missing** — broken             |
 
 The data product is the snapshot. The four sibling routes are **drill-through evidence**, not the data product themselves. They must be repaired in lock-step with the snapshot route — a snapshot count whose drill-through is broken is worse than no snapshot at all.
 
@@ -170,13 +171,13 @@ data-platform request). No SQL rewrite, no contract change, no
 `response_model` re-enablement, no UI wiring may proceed until **all
 five** close.
 
-| # | Gate | Owner | Action to close |
-|---|---|---|---|
-| 1 | **Fix `wh360_inbound_v` column-name mismatch** | Data platform OR backend | Either update `wh360_inbound_v` to expose `DOCUMENT_TYPE` / `PURCHASE_ORDER_ID` / `WAREHOUSE_NUMBER` / `EXPECTED_DATE` / `QUANTITY` / `UNIT_OF_MEASURE` / `STATUS` / `EXCEPTION_REASON`, **or** rewrite the inbound adapter SQL to use the actual columns (`po_id`, `doc_type`, `delivery_date`, `open_qty`, …). Update the inbound contract field names accordingly. |
-| 2 | **Create or alias `staging_orders_v`** | Data platform OR backend | Either create `connected_plant_uat.wh360.staging_orders_v` with the expected shape, **or** rewrite the staging adapter SQL to use `wh360_process_orders_v` with correct column mapping. |
-| 3 | **Create or alias `wh360_imwm_exceptions_v`** | Data platform OR backend | Either rename `imwm_exceptions_v` to `wh360_imwm_exceptions_v`, **or** update the exceptions adapter SQL to reference the actual name (`imwm_exceptions_v`). |
-| 4 | **Confirm `nearExpiryCount` threshold** | Inventory team (business) | Record the threshold (e.g. "30 days" / "60 days") in an ADR or backlog entry. Update the schema if the threshold becomes a request parameter. |
-| 5 | **Confirm `reconciliationExceptionCount` filter** | Inventory team (business) | Record which `exception_type` values count toward this KPI. Confirm whether `EXPIRED_BATCH_WITH_STOCK` is included or excluded. |
+| #   | Gate                                              | Status                                                                                                                                                                                        | Owner                                                                  | Action to close                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Fix `wh360_inbound_v` column-name mismatch**    | **verified-backend-adapt** (with 2 sub-items pending source / governance — see [`warehouse360-inbound-source-verification.md`](../../data-layer/warehouse360-inbound-source-verification.md)) | Backend (adapter rewrite) + Inventory team for STO + status governance | Rewrite `get_warehouse_inbound_spec` SQL + `map_warehouse_inbound_rows` to consume the actual `wh360_inbound_v` columns (`po_id`, `doc_type`, `delivery_date`, `open_qty`, …) per the source-verification mapping table. Update `Warehouse360InboundItemSchema`: make `warehouseNumber` nullable, drop `exceptionReason`, classify derived `status` as `application-heuristic`. Two unresolved sub-items (STO document source, governed `status` taxonomy) are documented as data-platform / business follow-ups. |
+| 2   | **Create or alias `staging_orders_v`**            | open                                                                                                                                                                                          | Data platform OR backend                                               | Either create `connected_plant_uat.wh360.staging_orders_v` with the expected shape, **or** rewrite the staging adapter SQL to use `wh360_process_orders_v` with correct column mapping.                                                                                                                                                                                                                                                                                                                           |
+| 3   | **Create or alias `wh360_imwm_exceptions_v`**     | open                                                                                                                                                                                          | Data platform OR backend                                               | Either rename `imwm_exceptions_v` to `wh360_imwm_exceptions_v`, **or** update the exceptions adapter SQL to reference the actual name (`imwm_exceptions_v`).                                                                                                                                                                                                                                                                                                                                                      |
+| 4   | **Confirm `nearExpiryCount` threshold**           | open                                                                                                                                                                                          | Inventory team (business)                                              | Record the threshold (e.g. "30 days" / "60 days") in an ADR or backlog entry. Update the schema if the threshold becomes a request parameter.                                                                                                                                                                                                                                                                                                                                                                     |
+| 5   | **Confirm `reconciliationExceptionCount` filter** | open                                                                                                                                                                                          | Inventory team (business)                                              | Record which `exception_type` values count toward this KPI. Confirm whether `EXPIRED_BATCH_WITH_STOCK` is included or excluded.                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## 8. Forbidden until gate closes
 
