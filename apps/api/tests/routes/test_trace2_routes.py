@@ -154,6 +154,106 @@ class TestBatchHeaderDatabricksMode:
 
 
 # ---------------------------------------------------------------------------
+# Batch header — response_model contract enforcement
+# ---------------------------------------------------------------------------
+
+class TestBatchHeaderResponseModel:
+    """Prove that POST /api/trace2/batch-header is enforced through the
+    generated BatchHeaderSummary contract. Each test exercises a single
+    contract constraint."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import BatchHeaderSummary
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        assert response.status_code == 200
+        # The raw response dict must round-trip through the generated model
+        # with extra='forbid' — any extra/unaliased field would raise here.
+        # ValidationError on this line means response_model enforcement broke.
+        BatchHeaderSummary.model_validate(response.json())
+
+    async def test_response_uses_camelcase_aliases(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        data = response.json()
+        # Required camelCase keys.
+        for key in (
+            "materialId", "materialDescription", "batchId", "plantId",
+            "plantName", "batchStatus", "stockStatus", "qualityStatus",
+            "releaseStatus",
+        ):
+            assert key in data, f"missing required contract field: {key}"
+        # No snake_case keys leaked through.
+        for snake in ("material_id", "batch_id", "plant_id", "batch_status"):
+            assert snake not in data
+
+    async def test_status_enums_match_contract(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        data = response.json()
+        assert data["batchStatus"] in {"active", "archived", "blocked", "deleted", "unknown"}
+        assert data["stockStatus"] in {
+            "unrestricted", "quality-inspection", "blocked", "restricted", "returns", "transit",
+        }
+        assert data["qualityStatus"] in {
+            "accepted", "rejected", "pending", "conditional", "not-applicable", "unknown",
+        }
+        assert data["releaseStatus"] in {"released", "blocked", "restricted", "not-released", "unknown"}
+
+    async def test_source_truthful_defaults_when_columns_absent(self, monkeypatch) -> None:
+        """When gold_batch_summary_v does not return batch_status / process_order_id
+        (which is the documented SQL — see the spec docstring), the response must
+        carry 'unknown' status values rather than reassuring defaults like
+        'released' / 'accepted' / 'safe'.
+        """
+        _databricks_env(monkeypatch)
+        # _FAKE_BATCH_HEADER_ROW already omits batch_status — same shape the SQL returns.
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        data = response.json()
+        # batch_status is not in the SQL SELECT, so it must surface as 'unknown'
+        # rather than being inferred as 'active'.
+        assert data["batchStatus"] == "unknown"
+        # No QM usage-decision column, so quality must stay 'unknown' — never
+        # 'accepted' or 'released'.
+        assert data["qualityStatus"] == "unknown"
+        assert data["releaseStatus"] == "unknown"
+
+    async def test_no_unsafe_release_or_approval_claims(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_HEADER_URL, json=_BATCH_HEADER_BODY, headers=_HEADERS_WITH_TOKEN
+                )
+        data = response.json()
+        # No invented fields outside the contract.
+        assert "recallRecommended" not in data
+        assert "supplierRisk" not in data
+        assert "safe" not in data
+        assert "approved" not in data
+        # And the contract's release/quality fields stay source-truthful.
+        assert data["releaseStatus"] != "released"
+        assert data["qualityStatus"] != "accepted"
+
+
+# ---------------------------------------------------------------------------
 # Wrong adapter mode
 # ---------------------------------------------------------------------------
 

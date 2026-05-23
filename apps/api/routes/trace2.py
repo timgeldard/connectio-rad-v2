@@ -57,6 +57,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     map_trace_graph,
 )
 from contracts.generated import (
+    BatchHeaderSummary,
     BatchQualityPassport,
     CustomerExposureSummary,
     HoldsLedger,
@@ -115,14 +116,14 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
     return response.json()
 
 
-@router.post("/trace2/batch-header")
+@router.post("/trace2/batch-header", response_model=BatchHeaderSummary)
 async def batch_header(
     body: BatchRequest,
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
-) -> dict:
+):
     if os.getenv("BACKEND_ADAPTER_MODE", "") == "databricks-api":
         host, warehouse_id = require_databricks_config()
         identity = build_user_identity(
