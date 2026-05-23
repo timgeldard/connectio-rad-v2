@@ -384,7 +384,7 @@ class TestOrderHeaderResponseModel:
         }
         assert data["orderStatus"] in {
             "created", "released", "in-process", "confirmed",
-            "partially-confirmed", "closed", "cancelled",
+            "partially-confirmed", "closed", "cancelled", "unknown",
         }
 
     async def test_no_unsafe_release_or_completion_claims(self, monkeypatch) -> None:
@@ -410,8 +410,10 @@ class TestOrderHeaderResponseModel:
         # No invented fields outside the contract.
         for forbidden in ("safe", "approved", "released", "complete", "onTime", "onTrack", "recallRecommended"):
             assert forbidden not in data
-        # Empty STATUS must not auto-promote to 'confirmed' / 'closed'.
-        assert data["orderStatus"] not in {"confirmed", "partially-confirmed", "closed"}
+        # Empty STATUS must not auto-promote to 'confirmed' / 'closed' /
+        # 'created' (the old reassuring default). Source-truthful: 'unknown'.
+        assert data["orderStatus"] == "unknown"
+        assert data["orderStatus"] not in {"confirmed", "partially-confirmed", "closed", "created"}
 
     async def test_inspection_lot_id_is_stripped_from_response(self, monkeypatch) -> None:
         """The SQL fetches INSPECTION_LOT_ID but ProcessOrderHeader does not
