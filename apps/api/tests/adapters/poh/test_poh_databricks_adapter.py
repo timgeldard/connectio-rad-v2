@@ -290,16 +290,25 @@ class TestMapProcessOrderHeaderRows:
         assert result is not None
         assert result["confirmedQuantity"] == 0.0
 
-    def test_inspection_lot_id_included_when_present(self) -> None:
+    def test_inspection_lot_id_not_in_process_order_header_output(self) -> None:
+        """inspection_lot_id is fetched by the SQL but MUST NOT appear in the
+        ProcessOrderHeader contract output. Inspection-lot evidence belongs
+        to the OrderQualityContext contract (see process-order-review.ts),
+        not here. Emitting it would fail response_model validation
+        (ProcessOrderHeader has extra='forbid').
+        """
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert result.get("inspectionLotId") == "LOT001"
-
-    def test_inspection_lot_id_absent_when_none(self) -> None:
-        row = {**self._full_row(), "inspection_lot_id": None}
-        result = map_process_order_header_rows([row])
-        assert result is not None
         assert "inspectionLotId" not in result
+
+    def test_inspection_lot_id_absent_regardless_of_source_value(self) -> None:
+        for raw in ("LOT001", None, ""):
+            row = {**self._full_row(), "inspection_lot_id": raw}
+            result = map_process_order_header_rows([row])
+            assert result is not None
+            assert "inspectionLotId" not in result, (
+                f"inspectionLotId leaked into ProcessOrderHeader output for inspection_lot_id={raw!r}"
+            )
 
 
 # ---------------------------------------------------------------------------
