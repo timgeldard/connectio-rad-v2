@@ -117,33 +117,37 @@ class TestSpcChartDataQuerySafety:
 
 class TestSpcChartDataLockedLimitsSemantics:
     async def test_locked_limits_warning_and_approval(self, monkeypatch):
+        # The route only fetches spc_locked_limits when chart_type is set
+        # (the WHERE clause binds :resolved_chart_type). Supply it explicitly
+        # so the locked-limits branch in map_spc_chart_response is exercised.
         _databricks_env(monkeypatch)
-        payload = _valid_payload()
-        
-        # We need to simulate the execution of two queries: subgroups and limits
-        call_count = 0
+        payload = _valid_payload({"chartType": "xbar-r"})
+
         async def _mock(self_obj, spec, identity):
-            nonlocal call_count
-            call_count += 1
             if "locked_limits" in spec.name:
                 return [{
-                    "cl": 10.0, "ucl": 12.0, "lcl": 8.0, 
+                    "cl": 10.0, "ucl": 12.0, "lcl": 8.0,
                     "ucl_r": None, "lcl_r": None, "sigma_within": None,
                     "locked_by": "user1", "locked_at": "2025-01-01T00:00:00Z",
                     "baseline_from": "2024-01-01", "baseline_to": "2024-12-31",
                     "locking_note": "governance approval pending"
                 }]
             return []
-            
+
         with patch("shared.query_service.query_executor.QueryExecutor.execute", _mock):
             async with _make_client() as client:
                 response = await client.post("/api/spc/chart-data", json=payload, headers=_HEADERS_WITH_TOKEN)
-                
+
         assert response.status_code == 200
         data = response.json()
         assert data["controlLimits"]["lockedLimits"] is True
         assert data["controlLimits"]["lockedBy"] == "user1"
+        # locked_by is exposed but MUST NOT be treated as governed approval.
+        assert data["controlLimits"]["approvalState"] != "approved"
         assert data["controlLimits"]["approvalState"] == "pending-validation"
+        # Provenance must not be calculated-from-sample when values come from
+        # spc_locked_limits — nothing was calculated from a sample.
+        assert data["controlLimits"]["limitProvenance"] != "calculated-from-sample"
         assert data["controlLimits"]["limitProvenance"] == "unknown"
         assert len(data["warnings"]) == 1
         assert "locked_by is not treated as approval" in data["warnings"][0]
