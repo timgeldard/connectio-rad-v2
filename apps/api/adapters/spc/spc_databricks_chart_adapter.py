@@ -171,6 +171,8 @@ def map_spc_chart_response(
         "lockingNote": None,
     }
 
+    warnings_list = []
+
     if limit_rows:
         lr = limit_rows[0]
         control_limits.update({
@@ -180,7 +182,7 @@ def map_spc_chart_response(
             "uclR": _float_or_none(lr.get("ucl_r")),
             "lclR": _float_or_none(lr.get("lcl_r")),
             "sigmaWithin": _float_or_none(lr.get("sigma_within")),
-            "limitProvenance": "calculated-from-sample",
+            "limitProvenance": "unknown",
             "approvalState": "pending-validation",
             "lockedLimits": True,
             "lockedFrom": str(lr.get("baseline_from")) if lr.get("baseline_from") else None,
@@ -189,7 +191,7 @@ def map_spc_chart_response(
             "lockedAt": str(lr.get("locked_at")) if lr.get("locked_at") else None,
             "lockingNote": str(lr.get("locking_note")) if lr.get("locking_note") else None,
         })
-        # Note: warning UAT fixture only would be added to response warnings if we wanted
+        warnings_list.append("Locked limits source row found, but approval semantics are governance-pending; locked_by is not treated as approval.")
 
     # Spec limits from first point
     lsl, usl = None, None
@@ -235,7 +237,7 @@ def map_spc_chart_response(
         "capabilitySource": "unavailable",
         "excludedRowCount": excluded_count,
         "excludedReasons": list(excluded_reasons),
-        "warnings": [],
+        "warnings": warnings_list,
         "queriedAt": queried_at,
         "sourceDataAsOf": None,
     }

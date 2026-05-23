@@ -227,6 +227,28 @@ async def spc_chart_data(
         if body.plant_id == _P999_SENTINEL:
             raise HTTPException(status_code=422, detail="P999 is a test sentinel and cannot be used in production queries.")
             
+        if not body.material_id or not body.plant_id or not body.mic_id or not body.operation_id:
+            raise HTTPException(status_code=422, detail="material_id, plant_id, mic_id, and operation_id are required and cannot be blank.")
+            
+        if not body.date_from or not body.date_to:
+            raise HTTPException(status_code=422, detail="date_from and date_to are required.")
+            
+        try:
+            d_from = datetime.fromisoformat(body.date_from).date()
+            d_to = datetime.fromisoformat(body.date_to).date()
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid date format. Expected YYYY-MM-DD.")
+            
+        if d_from > d_to:
+            raise HTTPException(status_code=422, detail="date_from must be on or before date_to.")
+            
+        if (d_to - d_from).days > _MAX_DATE_WINDOW_DAYS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Date window exceeds maximum of {_MAX_DATE_WINDOW_DAYS} days. "
+                       "Narrow the date range to prevent broad scans of the source MV.",
+            )
+
         host, warehouse_id = require_databricks_config()
         identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
         

@@ -1,3 +1,15 @@
+"""
+Manual Pydantic contracts for SPC Native Routes.
+
+WARNING: This is a temporary bridge. The canonical source of truth for these
+contracts is packages/data-contracts/src/schemas/spc-monitoring.ts. 
+Currently the generated contracts pipeline does not fully support the complex
+nested structures needed for the native chart data response. 
+
+TODO: Move these models into the standard export-json-schema.ts / datamodel-codegen
+pipeline once it supports these shapes.
+"""
+
 from typing import List, Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -179,7 +191,7 @@ class SpcChartDataRequest(BaseModel):
     chart_type: Optional[ChartType] = Field(None, alias='chartType')
     date_from: Optional[str] = Field(None, alias='dateFrom')
     date_to: Optional[str] = Field(None, alias='dateTo')
-    max_rows: Optional[int] = Field(None, alias='maxRows', ge=1, le=200_000)
+    max_rows: Optional[int] = Field(None, alias='maxRows', ge=1, le=200)
 
 class SpcChartLimitsBlock(BaseModel):
     center_line: Optional[float] = Field(None, alias='centerLine')
