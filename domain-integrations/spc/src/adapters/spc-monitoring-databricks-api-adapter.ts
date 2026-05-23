@@ -178,13 +178,11 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
         upperSpecLimit: usl,
         lowerSpecLimit: lsl,
         // gold_batch_quality_result_v exposes UNIT_OF_MEASURE but the
-        // /api/spc/subgroups slice 1 response does NOT include it. Empty
-        // string is the contract's only allowed sentinel today (the schema
-        // is `z.string()` non-optional). The UI MUST render "source units"
-        // / blank when this is empty — it MUST NOT invent a value.
-        // Tracked: relax ControlChartSeriesSchema.unitOfMeasure to nullable
-        // alongside a UOM-bearing subgroup-response slice.
-        unitOfMeasure: '',
+        // /api/spc/subgroups slice 1 response does NOT include it.
+        // Source-truthful: emit `null` so the UI can render an explicit
+        // "source units" / unknown indicator. The contract was relaxed
+        // to `z.string().nullable().optional()` in PR 8.
+        unitOfMeasure: null,
         // No control-limit calculation source — limits are derived by the
         // client-side calculation engine.
         limitProvenance: 'unknown',
