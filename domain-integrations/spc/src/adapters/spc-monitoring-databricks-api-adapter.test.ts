@@ -142,6 +142,105 @@ describe('SPCMonitoringDatabricksApiAdapter', () => {
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.error.code).toBe('invalid-data')
+        // The error message must surface the schema field that failed so
+        // operators can diagnose route-shape drift without attaching a
+        // debugger.
+        expect(result.error.message).toMatch(/SPCSubgroupResponse schema violation at "/)
+      }
+    })
+
+    it('surfaces the specific Zod issue path when one expected field is missing', async () => {
+      // Valid except missing the `points` array — exercise the path
+      // reporting in the schema-violation message.
+      const almostValid = {
+        materialId: 'MAT1',
+        plantId: 'P1',
+        micId: 'MIC1',
+        micName: 'Test MIC',
+        operationId: 'OP1',
+        // points: missing on purpose
+        lockedLimits: null,
+        capabilityAvailable: false,
+        nelsonStoredFlagsAvailable: false,
+        signalsClientSideOnly: true,
+      }
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(almostValid),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe('invalid-data')
+        expect(result.error.message).toContain('"points"')
+      }
+    })
+
+    it('emits a stable pointId composed from batchId + batchDate', async () => {
+      const mockSubgroupResponse = {
+        materialId: 'MAT1',
+        plantId: 'P1',
+        micId: 'MIC1',
+        micName: 'Test MIC',
+        operationId: 'OP1',
+        points: [
+          {
+            batchId: 'B-001',
+            batchDate: '2024-05-22T12:00:00Z',
+            subgroupMean: 10.5,
+            subgroupRange: 1.2,
+            sampleCount: 5,
+            lslSpec: null,
+            uslSpec: null,
+          },
+          {
+            batchId: 'B-002',
+            batchDate: '2024-05-23T12:00:00Z',
+            subgroupMean: 10.7,
+            subgroupRange: 1.1,
+            sampleCount: 5,
+            lslSpec: null,
+            uslSpec: null,
+          },
+        ],
+        lockedLimits: null,
+        capabilityAvailable: false,
+        nelsonStoredFlagsAvailable: false,
+        signalsClientSideOnly: true,
+      }
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockSubgroupResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.points[0].pointId).toBe('B-001::2024-05-22T12:00:00Z')
+        expect(result.data.points[1].pointId).toBe('B-002::2024-05-23T12:00:00Z')
+        // IDs must be unique even if batches happen to share a date.
+        expect(result.data.points[0].pointId).not.toBe(result.data.points[1].pointId)
       }
     })
 

@@ -119,11 +119,17 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
 
       const parsed = SPCSubgroupResponseSchema.safeParse(raw)
       if (!parsed.success) {
+        // Surface the first Zod issue so debugging doesn't require attaching
+        // a debugger — the route shape is contract-policed and any drift
+        // here is a real defect the operator needs to see.
+        const firstIssue = parsed.error.issues[0]
+        const issuePath = firstIssue?.path.join('.') ?? '(unknown)'
+        const issueMessage = firstIssue?.message ?? 'unknown validation error'
         return {
           ok: false,
           error: {
-            code: 'invalid-data' as any, // fallback to any if invalid-data is not in union
-            message: 'Invalid backend response from Databricks API',
+            code: 'invalid-data',
+            message: `SPCSubgroupResponse schema violation at "${issuePath}": ${issueMessage}`,
             retryable: false,
           },
           displayState: 'error',
@@ -132,14 +138,18 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
       }
       const data = parsed.data
 
-      const points: ControlChartPoint[] = data.points.map((p, idx) => ({
-        pointId: `pt-${idx}-${p.batchId}`,
+      const points: ControlChartPoint[] = data.points.map((p) => ({
+        // pointId is composed from the source batch + date so consumers can
+        // build stable references without depending on array index ordering.
+        pointId: `${p.batchId}::${p.batchDate}`,
         timestamp: p.batchDate,
         value: p.subgroupMean,
         batchId: p.batchId,
-        sampleId: undefined, // Not provided by subgroups view
-        signalIds: [], // Hard-coded empty, signals are calculated client-side
-        status: 'not-evaluated' as const, // Deliberately avoiding 'in-control' claim
+        sampleId: undefined, // Not provided by subgroups view (slice 1).
+        signalIds: [], // Source-truthful: no governed signal engine exists.
+        // 'not-evaluated' is the source-truthful default added in PR #82.
+        // The UI MUST NOT collapse this into 'in-control'.
+        status: 'not-evaluated' as const,
       }))
 
       // Pick specs from first point (they are identical per batch if not changed)
@@ -162,15 +172,24 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
         characteristicId: data.micId ?? request.characteristicId,
         characteristicName: data.micName ?? request.characteristicId,
         points,
-        centerLine: undefined, // Client-side calculation handles this
+        centerLine: undefined, // Client-side calculation handles this.
         upperControlLimit: undefined,
         lowerControlLimit: undefined,
         upperSpecLimit: usl,
         lowerSpecLimit: lsl,
-        unitOfMeasure: '', // UOM is unavailable in slice 1 Databricks response
-        limitProvenance: 'unknown', // Limits are not calculated or returned by the adapter
+        // gold_batch_quality_result_v exposes UNIT_OF_MEASURE but the
+        // /api/spc/subgroups slice 1 response does NOT include it. Empty
+        // string is the contract's only allowed sentinel today (the schema
+        // is `z.string()` non-optional). The UI MUST render "source units"
+        // / blank when this is empty — it MUST NOT invent a value.
+        // Tracked: relax ControlChartSeriesSchema.unitOfMeasure to nullable
+        // alongside a UOM-bearing subgroup-response slice.
+        unitOfMeasure: '',
+        // No control-limit calculation source — limits are derived by the
+        // client-side calculation engine.
+        limitProvenance: 'unknown',
         approvalState: 'not-approved',
-        lockedLimits: false, // Locked limits deferred to Slice 2
+        lockedLimits: false, // Locked-limits join deferred to Slice 2.
         confidence: 1.0,
       }
 
