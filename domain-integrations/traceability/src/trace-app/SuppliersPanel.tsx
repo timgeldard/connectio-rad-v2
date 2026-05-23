@@ -33,6 +33,9 @@ const RISK_TONES = {
   low: { bg: 'var(--jade, #44CF93)20', fg: '#1a8454' },
   medium: { bg: 'var(--sunrise, #F9C20A)20', fg: '#8a6b00' },
   high: { bg: 'var(--sunset, #F24A00)20', fg: 'var(--sunset, #F24A00)' },
+  // `unknown` is the source-truthful default added in PR #82 — surface as a
+  // neutral pill so the UI does NOT imply a risk classification.
+  unknown: { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' },
 } as const
 
 export function SuppliersPanel({ request }: SuppliersPanelProps) {
