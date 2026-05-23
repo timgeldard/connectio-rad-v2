@@ -105,7 +105,7 @@ def get_spc_locked_limits_spec(request: SpcChartDataRequest) -> QuerySpec:
             "plant_id": request.plant_id,
             "mic_id": request.mic_id,
             "operation_id": request.operation_id,
-            "resolved_chart_type": request.chart_type or "xbar-r",
+            "resolved_chart_type": request.chart_type,
         },
         cache_policy=CacheTier.PER_USER_60S,
         tags=["spc", "chart-data", "locked-limits"],

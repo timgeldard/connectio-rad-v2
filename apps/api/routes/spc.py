@@ -236,6 +236,8 @@ async def spc_chart_data(
         try:
             d_from = datetime.fromisoformat(body.date_from).date()
             d_to = datetime.fromisoformat(body.date_to).date()
+            body.date_from = d_from.isoformat()
+            body.date_to = d_to.isoformat()
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid date format. Expected YYYY-MM-DD.")
             
@@ -256,6 +258,8 @@ async def spc_chart_data(
             return await run_query(lambda: get_spc_chart_subgroups_spec(body), identity, host, warehouse_id)
             
         async def fetch_limits():
+            if not body.chart_type:
+                return [], None
             return await run_query(lambda: get_spc_locked_limits_spec(body), identity, host, warehouse_id)
 
         (subgroups_rows, subgroups_spec), (limits_rows, limits_spec) = await asyncio.gather(fetch_subgroups(), fetch_limits())
