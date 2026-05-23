@@ -22,12 +22,21 @@ UD_LABELS = {
     "": "Pending — lot open, stock in QI, no decision taken",
 }
 
-@dataclass
+@dataclass(kw_only=True)
 class QualityUsageDecisionQuerySpec(QuerySpec):
+    """QuerySpec subclass that carries the usage-decision request identifiers
+    as typed attributes.
+
+    Uses ``kw_only=True`` so the subclass-added required fields don't have to
+    appear *before* the parent's defaulted fields in the generated ``__init__``.
+    All callers therefore MUST construct the spec via keyword arguments
+    (which `get_quality_usage_decision_spec` already does).
+    """
+
     material_id: str
     batch_id: str
     plant_id: Optional[str] = None
-    
+
     def cache_key(self) -> str:
         return f"quality_ud:{self.material_id}:{self.batch_id}:{self.plant_id or 'none'}"
 
@@ -72,11 +81,16 @@ def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: O
         sql += " AND udr.PLANT_ID = :plant_id"
 
     return QualityUsageDecisionQuerySpec(
+        name="quality.get_usage_decision",
+        module="quality",
+        endpoint="/api/quality/read-only-evidence",
         sql=sql,
         params={"material_id": material_id, "batch_id": batch_id, "plant_id": plant_id},
+        source_badge="view:gold_inspection_usage_decision",
+        tags=["quality", "usage-decision", "lot-level-evidence"],
         material_id=material_id,
         batch_id=batch_id,
-        plant_id=plant_id
+        plant_id=plant_id,
     )
 
 def map_quality_usage_decision_rows(rows: list[dict], queried_at: str) -> tuple[list[QualityInspectionLotEvidence], QualityEvidenceSummary]:
