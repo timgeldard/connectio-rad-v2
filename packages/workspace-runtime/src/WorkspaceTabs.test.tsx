@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -27,9 +27,7 @@ vi.mock('@connectio/design-system', () => ({
     </TabsCtx.Provider>
   ),
 
-  TabsList: ({ children }: { children: React.ReactNode }) => (
-    <div role="tablist">{children}</div>
-  ),
+  TabsList: ({ children }: { children: React.ReactNode }) => <div role="tablist">{children}</div>,
 
   TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => {
     const { onValueChange, activeValue } = useContext(TabsCtx)
@@ -64,26 +62,20 @@ const makeView = (
 describe('WorkspaceTabs', () => {
   it('renders a tab for each navigable view', () => {
     const views = [makeView('v1', 'Overview'), makeView('v2', 'Details')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />)
     expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Details' })).toBeInTheDocument()
   })
 
   it('marks the active tab with aria-selected true', () => {
     const views = [makeView('v1', 'Overview'), makeView('v2', 'Details')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />)
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('marks inactive tabs with aria-selected false', () => {
     const views = [makeView('v1', 'Overview'), makeView('v2', 'Details')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />)
     expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'false')
   })
 
@@ -91,9 +83,7 @@ describe('WorkspaceTabs', () => {
     const user = userEvent.setup()
     const onViewChange = vi.fn()
     const views = [makeView('v1', 'Overview'), makeView('v2', 'Details')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={onViewChange} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={onViewChange} />)
 
     await user.click(screen.getByRole('tab', { name: 'Details' }))
 
@@ -103,17 +93,13 @@ describe('WorkspaceTabs', () => {
 
   it('filters out deprecated views', () => {
     const views = [makeView('v1', 'Overview', 'live'), makeView('v2', 'Legacy', 'deprecated')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />)
     expect(screen.queryByRole('tab', { name: 'Legacy' })).toBeNull()
   })
 
   it('filters out hidden views', () => {
     const views = [makeView('v1', 'Overview', 'live'), makeView('v2', 'Internal', 'hidden')]
-    render(
-      <WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />,
-    )
+    render(<WorkspaceTabs views={views} activeViewId="v1" onViewChange={() => undefined} />)
     expect(screen.queryByRole('tab', { name: 'Internal' })).toBeNull()
   })
 

@@ -4,7 +4,7 @@ import { OperationsActionQueuePanel } from '../panels/operations-action-queue-pa
 // TODO: Move cross-domain panels to a shared UI package to resolve circularity
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { QualityBlockersPanel, ReleaseHoldImpactPanel } from '@connectio/di-quality'
-// eslint-disable-next-line @nx/enforce-module-boundaries
+
 import { MaintenanceConstraintPanel } from '@connectio/di-maintenance'
 import type {
   OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
@@ -26,7 +26,11 @@ const GRID: React.CSSProperties = {
   alignItems: 'start',
 }
 
-export function CriticalBlockersView({ opsRequest, qualityRequest, maintenanceRequest }: CriticalBlockersViewProps) {
+export function CriticalBlockersView({
+  opsRequest,
+  qualityRequest,
+  maintenanceRequest,
+}: CriticalBlockersViewProps) {
   return (
     <div style={GRID}>
       <PlanRiskSummaryPanel request={opsRequest} />

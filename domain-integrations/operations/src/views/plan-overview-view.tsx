@@ -6,7 +6,7 @@ import { OperationsActionQueuePanel } from '../panels/operations-action-queue-pa
 // TODO: Move cross-domain panels to a shared UI package to resolve circularity
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { QualityBlockersPanel } from '@connectio/di-quality'
-// eslint-disable-next-line @nx/enforce-module-boundaries
+
 import { WarehouseStagingStatusPanel } from '@connectio/di-warehouse'
 import type {
   OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest,
@@ -28,7 +28,11 @@ const GRID: React.CSSProperties = {
   alignItems: 'start',
 }
 
-export function PlanOverviewView({ opsRequest, qualityRequest, warehouseRequest }: PlanOverviewViewProps) {
+export function PlanOverviewView({
+  opsRequest,
+  qualityRequest,
+  warehouseRequest,
+}: PlanOverviewViewProps) {
   return (
     <div style={GRID}>
       <PlanRiskSummaryPanel request={opsRequest} />

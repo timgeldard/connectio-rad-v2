@@ -3,7 +3,7 @@ import { YieldVariancePanel } from '../panels/yield-variance-panel.js'
 import { ScheduleAdherencePanel } from '../panels/schedule-adherence-panel.js'
 import { LateOrdersPanel } from '../panels/late-orders-panel.js'
 // TODO: Move cross-domain panels to a shared UI package to resolve circularity
-// eslint-disable-next-line @nx/enforce-module-boundaries
+
 import { MaintenanceConstraintPanel } from '@connectio/di-maintenance'
 import type { OperationsEvidenceAdapterRequest as OperationsPlanRiskAdapterRequest } from '@connectio/data-contracts'
 import type { MaintenanceConstraintsAdapterRequest } from '@connectio/di-maintenance'
@@ -21,7 +21,10 @@ const GRID: React.CSSProperties = {
   alignItems: 'start',
 }
 
-export function LineResourceRiskView({ opsRequest, maintenanceRequest }: LineResourceRiskViewProps) {
+export function LineResourceRiskView({
+  opsRequest,
+  maintenanceRequest,
+}: LineResourceRiskViewProps) {
   return (
     <div style={GRID}>
       <LineStatusPanel request={opsRequest} />
