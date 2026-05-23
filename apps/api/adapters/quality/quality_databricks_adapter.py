@@ -95,22 +95,35 @@ def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: O
 
 def map_quality_usage_decision_rows(rows: list[dict], queried_at: str) -> tuple[list[QualityInspectionLotEvidence], QualityEvidenceSummary]:
     inspection_lots = []
-    
+
     for row in rows:
         lot_id = row.get("INSPECTION_LOT_ID")
         if not lot_id:
             continue
-            
-        raw_code = row.get("USAGE_DECISION_CODE")
-        if raw_code is None:
-            raw_code = ""
 
-        governed_label = UD_LABELS.get(raw_code, f"Unknown ({raw_code})")
-        
+        raw_code = row.get("USAGE_DECISION_CODE")
+        # Mapping-status taxonomy (spec §7):
+        #   verified    — code matched the governed UD_LABELS dictionary
+        #   unverified  — code present but absent from UD_LABELS (needs governance)
+        #   not-mapped  — UD code is NULL / empty; lot is in QI / pending
+        # 'source-only' and 'unavailable' are route-level concerns, not mapper.
+        if raw_code is None or raw_code == "":
+            normalised_code = ""
+            governed_label = UD_LABELS[""]
+            mapping_status = "not-mapped"
+        elif raw_code in UD_LABELS:
+            normalised_code = raw_code
+            governed_label = UD_LABELS[raw_code]
+            mapping_status = "verified"
+        else:
+            normalised_code = raw_code
+            governed_label = f"Unknown ({raw_code})"
+            mapping_status = "unverified"
+
         created_dt = row.get("USAGE_DECISION_CREATED_DATE")
         # Format date as ISO string if present
         created_str = str(created_dt) if created_dt else None
-        
+
         lot_evidence = QualityInspectionLotEvidence(
             inspectionLotId=str(lot_id),
             materialId=str(row.get("MATERIAL_ID")) if row.get("MATERIAL_ID") else None,
@@ -118,9 +131,9 @@ def map_quality_usage_decision_rows(rows: list[dict], queried_at: str) -> tuple[
             plantId=str(row.get("PLANT_ID")) if row.get("PLANT_ID") else None,
             processOrderId=str(row.get("PROCESS_ORDER_ID")) if row.get("PROCESS_ORDER_ID") else None,
             source='databricks-api',
-            usageDecisionCode=str(raw_code),
+            usageDecisionCode=str(normalised_code),
             usageDecisionText=governed_label,
-            usageDecisionMappingStatus='verified',
+            usageDecisionMappingStatus=mapping_status,
             usageDecisionCreatedAt=created_str
         )
         inspection_lots.append(lot_evidence)
