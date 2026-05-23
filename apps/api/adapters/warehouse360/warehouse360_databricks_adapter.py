@@ -208,45 +208,58 @@ def map_warehouse_overview_rows(rows: list[dict], request: WarehouseOverviewRequ
 def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
     """Return QuerySpec for Inbound POs & STOs.
 
-    Source view: wh360_inbound_v
+    Source view: wh360_inbound_v (connected_plant_uat, verified 2026-05-19 in
+    docs/data-layer/warehouse360-inbound-source-verification.md).
+
+    Actual columns: po_id, po_item, doc_type, doc_cat, vendor_id, vendor_name,
+    plant_id, storage_loc, material_id, material_name, ordered_qty, gr_qty,
+    uom, delivery_date, po_date, delivery_complete, open_qty, qa_lot_id,
+    qa_status. No LGNUM/WAREHOUSE_NUMBER, no STO id, no exception_reason —
+    those contract fields are emitted as null by the mapper.
+
+    The request still carries warehouse_id for backwards-compatibility, but
+    the SQL does NOT filter on it (the view does not expose LGNUM). A
+    follow-up will reintroduce the filter once a LGNUM-bearing source is
+    confirmed.
     """
     view = resolve_domain_object("wh360", "wh360_inbound_v")
-    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
-    params = {"warehouse_id": request.warehouse_id}
+    where_clauses: list[str] = []
+    params: dict[str, object] = {}
 
     if request.plant_id:
-        where_clauses.append("PLANT_ID = :plant_id")
+        where_clauses.append("plant_id = :plant_id")
         params["plant_id"] = request.plant_id
     if request.date_from:
-        where_clauses.append("EXPECTED_DATE >= :date_from")
+        where_clauses.append("delivery_date >= :date_from")
         params["date_from"] = request.date_from
     if request.date_to:
-        where_clauses.append("EXPECTED_DATE <= :date_to")
+        where_clauses.append("delivery_date <= :date_to")
         params["date_to"] = request.date_to
 
-    where_str = " AND ".join(where_clauses)
+    where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     sql = f"""
     SELECT
-        DOCUMENT_TYPE             AS document_type,
-        PURCHASE_ORDER_ID         AS purchase_order_id,
-        STOCK_TRANSPORT_ORDER_ID  AS stock_transport_order_id,
-        ITEM_ID                   AS item_id,
-        VENDOR_ID                 AS vendor_id,
-        SUPPLYING_PLANT_ID        AS supplying_plant_id,
-        MATERIAL_ID               AS material_id,
-        MATERIAL_DESCRIPTION      AS material_description,
-        BATCH_ID                  AS batch_id,
-        PLANT_ID                  AS plant_id,
-        STORAGE_LOCATION          AS storage_location,
-        WAREHOUSE_NUMBER          AS warehouse_number,
-        EXPECTED_DATE             AS expected_date,
-        RECEIVED_DATE             AS received_date,
-        QUANTITY                  AS quantity,
-        UNIT_OF_MEASURE           AS unit_of_measure,
-        STATUS                    AS status,
-        EXCEPTION_REASON          AS exception_reason
+        po_id,
+        po_item,
+        doc_type,
+        doc_cat,
+        vendor_id,
+        vendor_name,
+        plant_id,
+        storage_loc,
+        material_id,
+        material_name,
+        ordered_qty,
+        gr_qty,
+        open_qty,
+        uom,
+        delivery_date,
+        po_date,
+        delivery_complete,
+        qa_lot_id,
+        qa_status
     FROM {view}
-    WHERE {where_str}
+    {where_str}
     LIMIT {request.limit}
     """
     return QuerySpec(
@@ -260,37 +273,96 @@ def get_warehouse_inbound_spec(request: WarehouseInboundRequest) -> QuerySpec:
     )
 
 
+def _derive_inbound_document_type(doc_type: object) -> str:
+    """Normalise wh360_inbound_v.doc_type to the contract enum.
+
+    The source value is a free-text SAP code; we map known PO/STO patterns
+    and default everything else to 'unknown' rather than guessing.
+    """
+    raw = str(doc_type or "").upper().strip()
+    if not raw:
+        return "unknown"
+    if "STO" in raw or "TRANS" in raw:
+        return "STO"
+    if "PO" in raw or "PURCHASE" in raw or raw.startswith("Z"):
+        return "PO"
+    return "unknown"
+
+
+def _derive_inbound_document_status(row: dict) -> Optional[str]:
+    """Derive a coarse document status from delivery_complete + open_qty.
+
+    [classification: application-heuristic]
+
+    The view has no dedicated document-status column. We expose:
+      - 'received' when delivery_complete == 'Y'
+      - 'open'     when delivery_complete != 'Y' and open_qty > 0
+      - None       otherwise (e.g. delivery_complete='Y' AND open_qty=0
+                   are both consistent with 'received'; we already covered)
+
+    `qa_status` carries QA lot disposition and is NOT a document status —
+    it is exposed in the dedicated `status` field only as derived inbound
+    state. A future contract split may add a `qaStatus` field; until then
+    qa_status is intentionally not surfaced here to avoid relabelling QA
+    decisions as document state.
+    """
+    complete = str(row.get("delivery_complete") or "").strip().upper()
+    if complete == "Y":
+        return "received"
+    open_qty = _safe_float(row.get("open_qty"))
+    if open_qty > 0:
+        return "open"
+    return None
+
+
 def map_warehouse_inbound_rows(rows: list[dict]) -> list[dict]:
-    """Map raw inbound rows to Warehouse360InboundItem schema."""
+    """Map raw inbound rows to Warehouse360InboundItem schema.
+
+    Source columns documented in
+    docs/data-layer/warehouse360-inbound-source-verification.md §3.
+
+    Source-truthful guardrails:
+      - warehouseNumber, stockTransportOrderId, supplyingPlantId,
+        exceptionReason are absent from wh360_inbound_v; the mapper emits
+        null rather than empty strings or invented values.
+      - unitOfMeasure echoes uom verbatim (no KG default).
+      - quantity maps to open_qty (still-due quantity) — the contract has
+        only one quantity field today.
+      - status is a coarse heuristic; classified as application-heuristic.
+      - receivedDate is delivery_date only when delivery_complete='Y'.
+    """
     result = []
     for row in rows:
-        # Document Type normalisation
-        doc_type = "unknown"
-        raw_doc_type = str(row.get("document_type") or "").upper().strip()
-        if "PURCHASE" in raw_doc_type or "PO" in raw_doc_type or raw_doc_type == "PO":
-            doc_type = "PO"
-        elif "TRANS" in raw_doc_type or "STO" in raw_doc_type or raw_doc_type == "STO":
-            doc_type = "STO"
+        document_status = _derive_inbound_document_status(row)
+        is_complete = str(row.get("delivery_complete") or "").strip().upper() == "Y"
 
         result.append({
-            "documentType": doc_type,
-            "purchaseOrderId": str(row.get("purchase_order_id") or ""),
-            "stockTransportOrderId": str(row.get("stock_transport_order_id") or ""),
-            "itemId": str(row.get("item_id") or ""),
-            "vendorId": str(row.get("vendor_id") or ""),
-            "supplyingPlantId": str(row.get("supplying_plant_id") or ""),
+            "documentType": _derive_inbound_document_type(row.get("doc_type")),
+            "purchaseOrderId": str(row["po_id"]) if row.get("po_id") else None,
+            # STO identifier is absent in wh360_inbound_v — see source-verification doc §3.
+            "stockTransportOrderId": None,
+            "itemId": str(row["po_item"]) if row.get("po_item") is not None else None,
+            "vendorId": str(row["vendor_id"]) if row.get("vendor_id") else None,
+            # Supplying plant for STOs is absent in this view.
+            "supplyingPlantId": None,
             "materialId": str(row.get("material_id") or ""),
-            "materialDescription": str(row.get("material_description") or ""),
-            "batchId": str(row.get("batch_id") or ""),
-            "plantId": str(row.get("plant_id") or ""),
-            "storageLocation": str(row.get("storage_location") or ""),
-            "warehouseNumber": str(row.get("warehouse_number") or ""),
-            "expectedDate": _format_datetime(row.get("expected_date")),
-            "receivedDate": _format_datetime(row.get("received_date")),
-            "quantity": _safe_float(row.get("quantity")),
-            "unitOfMeasure": str(row.get("unit_of_measure") or ""),
-            "status": str(row.get("status") or ""),
-            "exceptionReason": str(row.get("exception_reason") or ""),
+            "materialDescription": str(row["material_name"]) if row.get("material_name") else None,
+            # Inbound PO lines have no GR-batch until receipt happens; null is source-truthful.
+            "batchId": None,
+            "plantId": str(row["plant_id"]) if row.get("plant_id") else None,
+            "storageLocation": str(row["storage_loc"]) if row.get("storage_loc") else None,
+            # LGNUM/warehouse number is absent in wh360_inbound_v.
+            "warehouseNumber": None,
+            "expectedDate": _format_datetime(row.get("delivery_date")) or None,
+            # receivedDate is the delivery_date only when the line is complete.
+            "receivedDate": (
+                _format_datetime(row.get("delivery_date")) or None if is_complete else None
+            ),
+            "quantity": _safe_float(row.get("open_qty")) if row.get("open_qty") is not None else None,
+            "unitOfMeasure": str(row["uom"]) if row.get("uom") else None,
+            "status": document_status,
+            # No exception_reason column in the source view.
+            "exceptionReason": None,
         })
     return result
 

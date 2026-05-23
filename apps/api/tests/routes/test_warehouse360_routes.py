@@ -113,26 +113,29 @@ class TestWarehouseInboundRoute:
         assert response.status_code == 401
 
     async def test_returns_200_with_mapped_inbound_items(self, wh360_databricks_env) -> None:
+        # Row shape matches actual wh360_inbound_v columns
+        # (verified in docs/data-layer/warehouse360-inbound-source-verification.md).
         fake_rows = [
             {
-                "document_type": "Purchase Order",
-                "purchase_order_id": "0045001234",
-                "stock_transport_order_id": "",
-                "item_id": "00010",
+                "po_id": "0045001234",
+                "po_item": "00010",
+                "doc_type": "PO",
+                "doc_cat": "F",
                 "vendor_id": "0008100123",
-                "supplying_plant_id": "",
-                "material_id": "000000000000821034",
-                "material_description": "Raw Milk",
-                "batch_id": "0000123456",
+                "vendor_name": "Dairy Supplier Ltd",
                 "plant_id": "IE10",
-                "storage_location": "SL01",
-                "warehouse_number": "WH01",
-                "expected_date": "2026-05-18",
-                "received_date": None,
-                "quantity": 25000.0,
-                "unit_of_measure": "L",
-                "status": "OPEN",
-                "exception_reason": "",
+                "storage_loc": "SL01",
+                "material_id": "000000000000821034",
+                "material_name": "Raw Milk",
+                "ordered_qty": 25000.0,
+                "gr_qty": 0.0,
+                "open_qty": 25000.0,
+                "uom": "L",
+                "delivery_date": "2026-05-18",
+                "po_date": "2026-05-10",
+                "delivery_complete": "N",
+                "qa_lot_id": None,
+                "qa_status": None,
             }
         ]
 
@@ -152,9 +155,20 @@ class TestWarehouseInboundRoute:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 1
-        assert data[0]["documentType"] == "PO"
-        assert data[0]["purchaseOrderId"] == "0045001234"
-        assert data[0]["materialId"] == "000000000000821034"
+        item = data[0]
+        assert item["documentType"] == "PO"
+        assert item["purchaseOrderId"] == "0045001234"
+        assert item["materialId"] == "000000000000821034"
+        assert item["quantity"] == 25000.0
+        assert item["unitOfMeasure"] == "L"
+        # Document status derived from delivery_complete (not invented).
+        assert item["status"] == "open"
+        # Source-truthful absence of fields the view does not carry.
+        assert item["warehouseNumber"] is None
+        assert item["stockTransportOrderId"] is None
+        assert item["supplyingPlantId"] is None
+        assert item["exceptionReason"] is None
+        assert item["batchId"] is None
         assert response.headers.get("x-query-name") == "warehouse360.get_inbound"
 
 
