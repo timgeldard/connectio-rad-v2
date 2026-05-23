@@ -9,6 +9,7 @@
 ## P0 — Could Mislead Recall or Exposure Decisions
 
 ### TRACE-P0-001 — Null customerExposure silently shows Low Risk severity
+
 **Status:** Fixed (PR #24, commits 74f4b5c + 1612703)
 **Affected:** `InvestigationSummary.tsx`, overview view
 **Evidence:** When the delivery data source fails or is unavailable, `customerExposure === null` fell through to the LOW severity branch, displaying "Low Risk" and implying the batch was contained. An investigator could conclude no recall action was needed when exposure was simply unknown.
@@ -17,6 +18,7 @@
 **Requires UAT:** Yes — confirm UNKNOWN banner renders correctly in deployed app when delivery API is down.
 
 ### TRACE-P0-002 — No link-type discrimination on trace graph edges
+
 **Status:** Code fixed by PR #26 (linkType passthrough added to `TraceEdgeSchema`, expanded `relationshipType` enum with `vendor-receipt` and `consumed-by`, VENDOR_RECEIPT/CONSUMPTION discrimination added in graph mapper). Live Databricks `LINK_TYPE` value validation required before UAT sign-off.
 **Affected:** `trace-graph-panel.tsx`, `trace2-graph-mapper.ts`, `TraceGraphEdge` schema
 **Evidence:** `TraceGraphEdge` had no `linkType` field. The reference SQL engine distinguishes PRODUCTION / BATCH_TRANSFER / STO_TRANSFER / VENDOR_RECEIPT — without this, V2 could not separate internal batch moves from vendor receipts, making supplier exposure analysis unreliable.
@@ -25,6 +27,7 @@
 **Requires UAT:** Yes — live Databricks `LINK_TYPE` column values must be verified against mock fixture assumptions before UAT sign-off.
 
 ### TRACE-P0-003 — Severity tiering is binary, not depth-based
+
 **Status:** Partially addressed (2026-05-20) — lineage-only first slice populates `maxExposureDepth` from gold_batch_lineage; DELIVERY-edge population and LINK_TYPE='DELIVERY' live value require UAT validation before depth-aware severity is trustworthy
 **Affected:** `InvestigationSummary.tsx` severity logic, `CustomerExposureSummarySchema`
 **Evidence:** V2 assigns CRITICAL based on `shippedQuantity > 0` only. The reference engine (`fetch_recall_readiness()`) uses depth: depth=1 → CRITICAL, depth=2+ with shipments → HIGH, depth=2 no shipments → MEDIUM. A multi-hop indirect exposure at depth 2 with no direct shipments gets LOW in V2 but HIGH in the reference engine.
@@ -37,6 +40,7 @@
 ## P1 — Blocks Credible UAT Use
 
 ### TRACE-P1-004 — Individual stock bucket quantities not surfaced in batch header
+
 **Status:** Fixed (2026-05-20, `feature/traceability-functional-parity-plan`)
 **Affected:** `BatchHeaderSummarySchema`, `map_batch_header_rows`, `BatchHeaderPanel`
 **Evidence:** V1 showed UNRESTRICTED, BLOCKED, QUALITY_INSPECTION, RESTRICTED, TRANSIT as separate KPIs on the batch header. V2 fetched all 6 columns from `gold_batch_stock_v` (confirmed live 2026-05-19) but surfaced only `total_stock` as the single `quantity` field. An investigator could not determine whether stock was blocked, in QI hold, or unrestricted without drill-through.
@@ -45,6 +49,7 @@
 **Requires UAT:** Yes — confirm bucket values are populated from live `gold_batch_stock_v` and match values shown in V1 batch header.
 
 ### TRACE-P1-008 — Batch header multi-plant ambiguity when plant_id absent
+
 **Status:** Fixed (2026-05-20, `feature/traceability-functional-parity-plan`)
 **Affected:** `Trace2BatchHeaderRequest`, `get_batch_header_summary_spec`, `BatchRequest`, `trace2-legacy-api-adapter.ts`
 **Evidence:** `gold_batch_stock_v` returns one row per plant for a given material/batch combination. Without plant filtering, the mapper silently returned data for whichever plant sorts first alphabetically by PLANT_ID. UAT inputs include `plantId`, making the ambiguity avoidable.
@@ -52,6 +57,7 @@
 **Requires UAT:** Yes — confirm single-plant result when `plant_id = C061` is passed for the reference candidate.
 
 ### TRACE-P1-010 — Mass balance MOVEMENT_CATEGORY mapping incomplete; live SAP categories fall through to "adjustment"
+
 **Status:** Open — surfaced to investigators via `unresolvedMovements` and panel disclaimer; verified business mapping pending
 **Affected:** `_MOVEMENT_CATEGORY_MAP` in `trace2_databricks_adapter.py`, `MassBalancePanel`
 **Evidence:** Live frequency-ordered distinct MOVEMENT_CATEGORY values from `gold_batch_mass_balance_v` include `Other (261)` (65M rows), `STO Transfer` (15M), `STO Receipt` (12M), `Other (Z01)` (10M), `Other (Z61)` (8M), `Other (321)` (7M), `Shipment` (6M), `Write-Off` (379k) and many more. Only `Production` and `Shipment` match the current uppercase keys in `_MOVEMENT_CATEGORY_MAP`. Everything else maps to `"adjustment"` and is treated as output by the mapper. STO Receipt is an inbound movement — the current direction is wrong, but no business-verified category-to-direction map exists in V2 yet. See `mass-balance-source-mapping.md` for the full table.
@@ -61,6 +67,7 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-011 — Mass balance BALANCE_QTY appears not to be a per-batch running tally
+
 **Status:** Open — passed through to `runningBalance` as observed; source semantics pending verification
 **Affected:** `map_mass_balance_rows()` `runningBalance`, MassBalancePanel "Balance" column
 **Evidence:** For the UAT candidate `MATERIAL_ID=20035129 / BATCH_ID=8000049668` (which has 30+ movement rows in `gold_batch_mass_balance_v`), every single observed `BALANCE_QTY` value is `0.000` across STO Receipt, STO Transfer, Production, and consumption movements. A per-batch running balance cannot be flat zero across a real production lifecycle — this column appears to be a different concept (possibly a stock snapshot, possibly a placeholder, possibly only populated for specific movement-type subsets).
@@ -70,6 +77,7 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-009 — gold_batch_delivery_v WHERE key column names unverified (DEF-TRACE-006)
+
 **Status:** Fixed (2026-05-20) — DESCRIBE TABLE executed live against connected_plant_uat
 **Affected:** `get_customer_delivery_spec()`, `POST /api/trace2/customer-deliveries`
 **Evidence:** DESCRIBE TABLE confirmed all 17 columns: MATERIAL_ID, BATCH_ID, PLANT_ID, CUSTOMER_ID, CUSTOMER_NAME, STREET, CITY, POSTCODE, COUNTRY_ID, COUNTRY_NAME, DELIVERY, SALES_ORDER_ID, QUANTITY (signed), ABS_QUANTITY, UOM, POSTING_DATE, MOVEMENT_TYPE. WHERE keys MATERIAL_ID + BATCH_ID confirmed. TODO comments removed from SQL. UOM and COUNTRY_NAME added to SELECT and mapper. SQL and adapter tests updated.
@@ -77,6 +85,7 @@
 **Requires UAT:** Yes — CD-1 through CD-6 scenarios in DEF-TRACE-006 (uat-validation-ledger.md) remain as the live execution gate
 
 ### TRACE-P1-005 — Mass balance not wired to a live Databricks route
+
 **Status:** Fixed (2026-05-20) — live route wired; 11 columns verified via DESCRIBE TABLE; legacy-api adapter override calls /api/trace2/mass-balance; panel surfaces movements
 **Affected:** `mass-balance-view.tsx`, `get_mass_balance_spec`, `apps/api/routes/trace2.py`, `trace2-legacy-api-adapter.ts`
 **Evidence:** V1 provided a full per-day movement timeline via `POST /api/mass-balance`. V2 now has live `POST /api/trace2/mass-balance` backed by `gold_batch_mass_balance_v` (11 columns verified live 2026-05-20 — see `mass-balance-source-mapping.md`). Zero rows → 404 with "do not interpret as balanced" message.
@@ -85,6 +94,7 @@
 **Requires UAT:** Yes — CD-style scenarios for mass balance (200 / 404 / 503 / unresolved-movement panel banner)
 
 ### TRACE-P1-006 — Supplier exposure panel has no live Databricks slice
+
 **Status:** Fixed (2026-05-21) — `POST /api/trace2/supplier-exposure` wired against `gold_batch_lineage` (VENDOR_RECEIPT) ⋈ `gold_supplier`; per-supplier `suppliers[]` array added to `SupplierExposureSummary`
 **Affected:** `MaterialSupplierExposurePanel`, `get_supplier_exposure_spec`, `Trace2LegacyApiAdapter`
 **Evidence:** V1 `/api/supplier-risk` provided a per-supplier table (supplier ID, name, country, received quantity, batch count, quality failure rate) via upstream walk. V2 now has the equivalent for the core fields: supplier ID, name, country, received quantity, receipt count, last-receipt date, UoM. Quality failure rate is intentionally **not** populated — see TRACE-P1-012.
@@ -93,6 +103,7 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-007 — Production history panel missing
+
 **Status:** Fixed (2026-05-21) — `POST /api/trace2/production-history` wired against `gold_batch_production_history_v`; new `ProductionHistoryPanel` shows recent 24 batches
 **Affected:** Investigation cockpit, `ProductionHistoryPanel`, `get_production_history_spec`, `Trace2LegacyApiAdapter`
 **Evidence:** V1 provided a production history page showing recent batches for the same material. V2 now has the equivalent at material-only filter (no plant filter — V1 parity for isolated-vs-systemic assessment), 24 most-recent by default, ordered POSTING_DATE DESC. 8 columns confirmed in `gold_batch_production_history_v`. Quality status mapped: Pass → 'pass', Fail → 'fail', anything else → 'unknown'.
@@ -101,6 +112,7 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-012 — QM usage-decision source not wired (blocks accurate supplier risk + production history release evidence)
+
 **Status:** Closed — schema/grain/join verified 2026-05-21; code/text semantics governance (Option A: Strict Lot-Level Evidence) confirmed 2026-05-22.
 **Affected:** `MaterialSupplierExposurePanel` (openSupplierActions, highestRiskSupplier), `ProductionHistoryPanel` (release-decision interpretation), `BatchHeaderPanel` (qualityStatus)
 **Evidence:** Source object `gold_inspection_usage_decision` verified live 2026-05-21 via Databricks CLI (warehouse `connected_plant_uat / e76480b94bea6ed5`): 13 columns, 15,473,693 rows, grain = `(INSPECTION_LOT_ID, USAGE_DECISION_COUNTER)` (0 duplicates confirmed). Historical source — USAGE_DECISION_COUNTER is STRING; blank = first decision, then '1', '2', ... Use `CAST(NULLIF(USAGE_DECISION_COUNTER,'') AS INT)` to get latest per lot, not `MAX()` on the raw string. No MATERIAL_ID/BATCH_ID/PLANT_ID in the UD table — join to batch requires two hops: UD → `gold_inspection_lot` → material/batch/plant. Join to `gold_inspection_lot` confirmed; `USAGE_DECISION_LONG_TEXT` is in `gold_inspection_lot`, not in the UD table. UAT candidate (MATERIAL_ID=20052009, BATCH_ID=0008602411, PLANT_ID=C061) matched to lot 030005059533, code=A, date=2024-08-27. 9 distinct usage-decision codes observed: A (90.3%), AE (7.5%), AC (1.2%), R (0.6%), ACE (0.2%), RE (0.2%), A9, RR, '' empty (269 rows). `gold_batch_production_history_v.quality_status` exposes 'Pass'/'Fail' labels but these are not the SAP QM release decision.
@@ -112,6 +124,7 @@
 **Requires UAT:** Yes
 
 ### TRACE-P1-001 — Truncation state not surfaced in trace graph UI
+
 **Status:** Code-fixed — live validation pending
 **Affected:** `trace-graph-panel.tsx`, `TraceGraph.truncated` schema field
 **Evidence:** `TraceGraph.truncated` exists in the Zod schema but the mock always sets it to `false` and the panel had no truncation warning banner. An investigator viewing a depth-limited graph has no signal that upstream exposure may extend beyond what is shown.
@@ -120,6 +133,7 @@
 **Requires UAT:** Yes — confirm banner renders on a live Databricks graph that reaches depth/edge limit.
 
 ### TRACE-P1-002 — No README or entry-point documentation for the domain
+
 **Status:** Fixed (PR #25 — `README.md` added to `domain-integrations/traceability/`)
 **Affected:** `domain-integrations/traceability/`
 **Evidence:** No `README.md` existed. A developer onboarding to this domain had no documented entry point, no explanation of the adapter pattern, and no pointers to the UAT docs.
@@ -128,6 +142,7 @@
 **Requires UAT:** No
 
 ### TRACE-P1-003 — Invalid batch input has no documented graceful error state
+
 **Status:** Code-fixed — live validation pending
 **Affected:** `overview-view.tsx` cockpit header; individual panel error states are handled by EvidencePanel runtime
 **Evidence:** The adapter returns `{ ok: false, error, displayState }` for failed queries. Without a cockpit-level guard, a not-found or unauthorized batch header response produced a silent null `batchHeader` and the InvestigationSummary showed "Loading material..." indefinitely.
@@ -141,6 +156,7 @@
 ## P2 — Improves Trust or Usability
 
 ### TRACE-P2-001 — Plant ID not displayed on trace graph nodes
+
 **Status:** Fixed (2026-05-21) — plantId rendered as a third line on the node card itself; already present on selected-node detail
 **Affected:** `trace-graph-panel.tsx` `TraceNodeCard`, selected-node detail
 **Evidence:** `TraceNodeSchema` has `plantId?: z.string().optional()`. The Databricks graph mapper populates it from `gold_batch_lineage` PARENT/CHILD_PLANT_ID. Selected-node detail panel was already showing it. The node card itself now shows it as a small monospaced chip beneath `batchId` for at-a-glance scanning during cross-plant investigations.
@@ -148,6 +164,7 @@
 **Requires UAT:** Yes — verify plant chip and per-relationship-type edge colours render on a live Databricks graph
 
 ### TRACE-P2-002 — Data freshness metadata absent
+
 **Status:** Phase 1 fixed (2026-05-21) — `QueriedAtLabel` added to all live panels showing query-fetch time + "source refresh time unavailable" notice. Phase 2 (verified `_updated_at` column from gold views) remains open.
 **Affected:** `BatchHeaderPanel`, `TraceGraphPanel`, `CustomerImpactPanel`, `MaterialSupplierExposurePanel`, `MassBalancePanel` (inline in `mass-balance-view.tsx`)
 **Evidence:** The reference engine attached `data_freshness_seconds` from Databricks gold view materialisation timestamps. V2 has no equivalent column verified yet (see `data-freshness-plan.md` Approach A). Phase 1 was to surface query-fetch time so investigators at least see when the panel data was retrieved, with an explicit statement that source refresh time is not available.
@@ -156,11 +173,13 @@
 **Requires UAT:** Yes — confirm the "Queried at" line renders correctly across all panels in the deployed app
 
 ### TRACE-P2-003 — "across 0 countries" shown for confirmed zero-shipment batches
+
 **Status:** Fixed (PR #24, commit 74f4b5c) for the `InvestigationSummary` cockpit header
 **Affected:** `InvestigationSummary.tsx` — fixed; `customer-impact-panel.tsx` — not affected (uses `{data.countries.length > 0 && ...}` guard)
 **Notes:** No further action required.
 
 ### TRACE-P2-004 — Evidence confidence grade thresholds not documented for users
+
 **Status:** Fixed (2026-05-21) — `ScoringRules` section added to the `EvidenceConfidenceBadge` tooltip
 **Affected:** `EvidenceConfidenceBadge`, `EvidencePackReadiness`
 **Evidence:** Grade thresholds (COMPLETE = 100pts and 0 gaps, PARTIAL ≥ 50, etc.) were not explained to the user. An investigator seeing "Partial (78%)" did not know what 78 means or why it is not COMPLETE.
@@ -173,13 +192,16 @@
 ## P3 — Future Enhancement
 
 ### TRACE-P3-001 — Cycle detection metadata not exposed
+
 **Affects:** `TraceGraph.unresolvedNodeCount` — schema exists, never set from a real cycle-detection walk
 **Notes:** Deferred until recursive CTE results are wired from live Databricks.
 
 ### TRACE-P3-002 — No mass-balance drill-down to individual movement lines
+
 **Affects:** `mass-balance-view.tsx`
 **Notes:** Summary variance is shown; line-level movement table (MB51-style) not in scope for Phase 1.
 
 ### TRACE-P3-003 — No cross-link from investigation cockpit to related SAP transactions
+
 **Affects:** Quick-links row in `InvestigationSummary.tsx`
 **Notes:** Currently links to internal views only. Links to SAP GUI / Fiori transactions are a Phase 2 / deep-link requirement.

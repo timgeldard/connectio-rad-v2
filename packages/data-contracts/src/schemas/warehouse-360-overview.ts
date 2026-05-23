@@ -5,14 +5,14 @@ import { z } from 'zod'
 // ---------------------------------------------------------------------------
 
 export const Warehouse360OverviewContextSchema = z.object({
-  warehouseId: z.string(),
-  warehouseName: z.string(),
-  plantId: z.string(),
-  totalStockLines: z.number().int().min(0),
-  holdPercent: z.number().min(0).max(100),
-  openTransfers: z.number().int().min(0),
-  capacityUtilizationPercent: z.number().min(0).max(100),
-  lastUpdatedAt: z.string().datetime(),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  warehouseName: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  totalStockLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  holdPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  openTransfers: z.number().int().min(0).describe('[classification: source-derived]'),
+  capacityUtilizationPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  lastUpdatedAt: z.string().datetime().describe('[classification: source-field]'),
 })
 
 export type Warehouse360OverviewContext = z.infer<typeof Warehouse360OverviewContextSchema>
@@ -22,17 +22,17 @@ export type Warehouse360OverviewContext = z.infer<typeof Warehouse360OverviewCon
 // ---------------------------------------------------------------------------
 
 export const Warehouse360SummarySchema = z.object({
-  warehouseId: z.string(),
-  totalStockLines: z.number().int().min(0),
-  unrestrictedLines: z.number().int().min(0),
-  holdLines: z.number().int().min(0),
-  qualityInspectionLines: z.number().int().min(0),
-  openGoodsReceipts: z.number().int().min(0),
-  openGoodsIssues: z.number().int().min(0),
-  openTransfers: z.number().int().min(0),
-  capacityUtilizationPercent: z.number().min(0).max(100),
-  activeReplenishmentNeeds: z.number().int().min(0),
-  confidence: z.number().min(0).max(1),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  totalStockLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  unrestrictedLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  holdLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  qualityInspectionLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  openGoodsReceipts: z.number().int().min(0).describe('[classification: source-derived]'),
+  openGoodsIssues: z.number().int().min(0).describe('[classification: source-derived]'),
+  openTransfers: z.number().int().min(0).describe('[classification: source-derived]'),
+  capacityUtilizationPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  activeReplenishmentNeeds: z.number().int().min(0).describe('[classification: source-derived]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
 })
 
 export type Warehouse360Summary = z.infer<typeof Warehouse360SummarySchema>
@@ -42,22 +42,22 @@ export type Warehouse360Summary = z.infer<typeof Warehouse360SummarySchema>
 // ---------------------------------------------------------------------------
 
 export const StockZoneSchema = z.object({
-  zoneId: z.string(),
-  zoneName: z.string(),
-  zoneType: z.enum(['ambient', 'chilled', 'frozen', 'hazardous', 'bulk', 'staging']),
-  stockLines: z.number().int().min(0),
-  capacityPercent: z.number().min(0).max(100),
-  holdPercent: z.number().min(0).max(100),
+  zoneId: z.string().describe('[classification: source-field]'),
+  zoneName: z.string().describe('[classification: source-field]'),
+  zoneType: z.enum(['ambient', 'chilled', 'frozen', 'hazardous', 'bulk', 'staging']).describe('[classification: source-field]'),
+  stockLines: z.number().int().min(0).describe('[classification: source-derived]'),
+  capacityPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  holdPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
 })
 
 export type StockZone = z.infer<typeof StockZoneSchema>
 
 export const StockOverviewSchema = z.object({
-  warehouseId: z.string(),
+  warehouseId: z.string().describe('[classification: source-field]'),
   zones: z.array(StockZoneSchema),
-  totalStorageLocations: z.number().int().min(0),
-  occupiedLocations: z.number().int().min(0),
-  blockedLocations: z.number().int().min(0),
+  totalStorageLocations: z.number().int().min(0).describe('[classification: source-derived]'),
+  occupiedLocations: z.number().int().min(0).describe('[classification: source-derived]'),
+  blockedLocations: z.number().int().min(0).describe('[classification: source-derived]'),
 })
 
 export type StockOverview = z.infer<typeof StockOverviewSchema>
@@ -67,18 +67,18 @@ export type StockOverview = z.infer<typeof StockOverviewSchema>
 // ---------------------------------------------------------------------------
 
 export const OpenHoldItemSchema = z.object({
-  holdId: z.string(),
-  batchId: z.string().optional(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  storageLocationId: z.string(),
-  holdReason: z.enum(['quality-hold', 'customer-hold', 'production-hold', 'regulatory-hold', 'damaged', 'expired', 'investigation']),
-  holdQuantity: z.number().min(0),
-  uom: z.string(),
-  raisedAt: z.string().datetime(),
-  raisedBy: z.string().optional(),
-  ageHours: z.number().min(0),
-  linkedWorkspaceId: z.string().optional(),
+  holdId: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  storageLocationId: z.string().describe('[classification: source-field]'),
+  holdReason: z.enum(['quality-hold', 'customer-hold', 'production-hold', 'regulatory-hold', 'damaged', 'expired', 'investigation']).describe('[classification: source-field]'),
+  holdQuantity: z.number().min(0).describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  raisedAt: z.string().datetime().describe('[classification: source-field]'),
+  raisedBy: z.string().optional().describe('[classification: source-field]'),
+  ageHours: z.number().min(0).describe('[classification: application-derived]'),
+  linkedWorkspaceId: z.string().optional().describe('[classification: application-derived]'),
 })
 
 export type OpenHoldItem = z.infer<typeof OpenHoldItemSchema>
@@ -88,18 +88,18 @@ export type OpenHoldItem = z.infer<typeof OpenHoldItemSchema>
 // ---------------------------------------------------------------------------
 
 export const GoodsMovementEventSchema = z.object({
-  movementId: z.string(),
-  timestamp: z.string().datetime(),
-  movementType: z.enum(['goods-receipt', 'goods-issue', 'transfer-order', 'stock-transfer', 'return', 'adjustment']),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string().optional(),
-  quantity: z.number(),
-  uom: z.string(),
-  sourceLocation: z.string().optional(),
-  destinationLocation: z.string().optional(),
-  referenceDocument: z.string().optional(),
-  postedBy: z.string().optional(),
+  movementId: z.string().describe('[classification: source-field]'),
+  timestamp: z.string().datetime().describe('[classification: source-field]'),
+  movementType: z.enum(['goods-receipt', 'goods-issue', 'transfer-order', 'stock-transfer', 'return', 'adjustment']).describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  quantity: z.number().describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  sourceLocation: z.string().optional().describe('[classification: source-field]'),
+  destinationLocation: z.string().optional().describe('[classification: source-field]'),
+  referenceDocument: z.string().optional().describe('[classification: source-field]'),
+  postedBy: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type GoodsMovementEvent = z.infer<typeof GoodsMovementEventSchema>
@@ -109,17 +109,17 @@ export type GoodsMovementEvent = z.infer<typeof GoodsMovementEventSchema>
 // ---------------------------------------------------------------------------
 
 export const ReplenishmentNeedSchema = z.object({
-  needId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  storageLocationId: z.string(),
-  currentStockQuantity: z.number().min(0),
-  reorderPoint: z.number().min(0),
-  targetQuantity: z.number().min(0),
-  uom: z.string(),
-  urgency: z.enum(['critical', 'high', 'medium', 'low']),
-  openPurchaseOrderId: z.string().optional(),
-  expectedDelivery: z.string().datetime().optional(),
+  needId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  storageLocationId: z.string().describe('[classification: source-field]'),
+  currentStockQuantity: z.number().min(0).describe('[classification: source-field]'),
+  reorderPoint: z.number().min(0).describe('[classification: source-field]'),
+  targetQuantity: z.number().min(0).describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  urgency: z.enum(['critical', 'high', 'medium', 'low']).describe('[classification: application-heuristic]'),
+  openPurchaseOrderId: z.string().optional().describe('[classification: source-field]'),
+  expectedDelivery: z.string().datetime().optional().describe('[classification: source-field]'),
 })
 
 export type ReplenishmentNeed = z.infer<typeof ReplenishmentNeedSchema>
@@ -129,16 +129,16 @@ export type ReplenishmentNeed = z.infer<typeof ReplenishmentNeedSchema>
 // ---------------------------------------------------------------------------
 
 export const LocationCapacitySchema = z.object({
-  locationId: z.string(),
-  locationName: z.string(),
-  zoneId: z.string(),
-  zoneName: z.string(),
-  totalCapacityUnits: z.number().min(0),
-  usedCapacityUnits: z.number().min(0),
-  utilizationPercent: z.number().min(0).max(100),
-  locationType: z.enum(['bin', 'shelf', 'rack', 'floor', 'bulk-area', 'staging-lane']),
-  isBlocked: z.boolean(),
-  blockReason: z.string().optional(),
+  locationId: z.string().describe('[classification: source-field]'),
+  locationName: z.string().describe('[classification: source-field]'),
+  zoneId: z.string().describe('[classification: source-field]'),
+  zoneName: z.string().describe('[classification: source-field]'),
+  totalCapacityUnits: z.number().min(0).describe('[classification: source-derived]'),
+  usedCapacityUnits: z.number().min(0).describe('[classification: source-derived]'),
+  utilizationPercent: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  locationType: z.enum(['bin', 'shelf', 'rack', 'floor', 'bulk-area', 'staging-lane']).describe('[classification: source-field]'),
+  isBlocked: z.boolean().describe('[classification: source-field]'),
+  blockReason: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type LocationCapacity = z.infer<typeof LocationCapacitySchema>
@@ -148,16 +148,16 @@ export type LocationCapacity = z.infer<typeof LocationCapacitySchema>
 // ---------------------------------------------------------------------------
 
 export const NearExpiryBatchSchema = z.object({
-  batchId: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  storageLocationId: z.string(),
-  expiryDate: z.string().datetime(),
-  daysUntilExpiry: z.number(),
-  quantity: z.number().min(0),
-  uom: z.string(),
-  urgency: z.enum(['expired', 'critical', 'warning', 'caution']),
-  holdStatus: z.enum(['unrestricted', 'quality-hold', 'blocked']),
+  batchId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  storageLocationId: z.string().describe('[classification: source-field]'),
+  expiryDate: z.string().datetime().describe('[classification: source-field]'),
+  daysUntilExpiry: z.number().describe('[classification: application-derived]'),
+  quantity: z.number().min(0).describe('[classification: source-field]'),
+  uom: z.string().describe('[classification: source-field]'),
+  urgency: z.enum(['expired', 'critical', 'warning', 'caution']).describe('[classification: application-heuristic]'),
+  holdStatus: z.enum(['unrestricted', 'quality-hold', 'blocked']).describe('[classification: application-heuristic]'),
 })
 
 export type NearExpiryBatch = z.infer<typeof NearExpiryBatchSchema>
@@ -167,7 +167,7 @@ export type NearExpiryBatch = z.infer<typeof NearExpiryBatchSchema>
 // ---------------------------------------------------------------------------
 
 export const WarehouseReconciliationExceptionSchema = z.object({
-  exceptionId: z.string(),
+  exceptionId: z.string().describe('[classification: source-field]'),
   exceptionType: z.enum([
     'quantity-mismatch',
     'location-mismatch',
@@ -175,19 +175,19 @@ export const WarehouseReconciliationExceptionSchema = z.object({
     'missing-in-wms',
     'missing-in-im',
     'duplicate-posting',
-  ]),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string().optional(),
-  storageLocationId: z.string(),
-  imQuantity: z.number().optional(),
-  wmsQuantity: z.number().optional(),
-  discrepancyQuantity: z.number().optional(),
-  uom: z.string(),
-  detectedAt: z.string().datetime(),
-  ageHours: z.number().min(0),
-  severity: z.enum(['critical', 'high', 'medium', 'low']),
-  resolution: z.enum(['open', 'in-progress', 'resolved', 'escalated']),
+  ]).describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  storageLocationId: z.string().describe('[classification: source-field]'),
+  imQuantity: z.number().optional().describe('[classification: source-field]'),
+  wmsQuantity: z.number().optional().describe('[classification: source-field]'),
+  discrepancyQuantity: z.number().optional().describe('[classification: source-derived]'),
+  uom: z.string().describe('[classification: source-field]'),
+  detectedAt: z.string().datetime().describe('[classification: source-field]'),
+  ageHours: z.number().min(0).describe('[classification: application-derived]'),
+  severity: z.enum(['critical', 'high', 'medium', 'low']).describe('[classification: source-field]'),
+  resolution: z.enum(['open', 'in-progress', 'resolved', 'escalated']).describe('[classification: source-field]'),
 })
 
 export type WarehouseReconciliationException = z.infer<typeof WarehouseReconciliationExceptionSchema>
@@ -197,19 +197,19 @@ export type WarehouseReconciliationException = z.infer<typeof WarehouseReconcili
 // ---------------------------------------------------------------------------
 
 export const Warehouse360OverviewSchema = z.object({
-  plantId: z.string(),
-  warehouseId: z.string(),
-  inboundDueCount: z.number().int().min(0),
-  inboundOverdueCount: z.number().int().min(0),
-  outboundDueCount: z.number().int().min(0),
-  outboundOverdueCount: z.number().int().min(0),
-  stagingOpenCount: z.number().int().min(0),
-  stagingOverdueCount: z.number().int().min(0),
-  nearExpiryCount: z.number().int().min(0),
-  reconciliationExceptionCount: z.number().int().min(0),
-  blockedStockCount: z.number().int().min(0),
-  source: z.string().optional(),
-  warnings: z.array(z.string()).optional(),
+  plantId: z.string().describe('[classification: source-field]'),
+  warehouseId: z.string().describe('[classification: source-field]'),
+  inboundDueCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  inboundOverdueCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  outboundDueCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  outboundOverdueCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  stagingOpenCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  stagingOverdueCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  nearExpiryCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  reconciliationExceptionCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  blockedStockCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  source: z.string().optional().describe('[classification: source-field]'),
+  warnings: z.array(z.string()).optional().describe('[classification: application-derived]'),
 })
 
 export type Warehouse360Overview = z.infer<typeof Warehouse360OverviewSchema>
@@ -219,24 +219,24 @@ export type Warehouse360Overview = z.infer<typeof Warehouse360OverviewSchema>
 // ---------------------------------------------------------------------------
 
 export const Warehouse360InboundItemSchema = z.object({
-  documentType: z.enum(['PO', 'STO', 'unknown']),
-  purchaseOrderId: z.string().nullable().optional(),
-  stockTransportOrderId: z.string().nullable().optional(),
-  itemId: z.string().nullable().optional(),
-  vendorId: z.string().nullable().optional(),
-  supplyingPlantId: z.string().nullable().optional(),
-  materialId: z.string(),
-  materialDescription: z.string().nullable().optional(),
-  batchId: z.string().nullable().optional(),
-  plantId: z.string().nullable().optional(),
-  storageLocation: z.string().nullable().optional(),
-  warehouseNumber: z.string().nullable().optional(),
-  expectedDate: z.string().nullable().optional(),
-  receivedDate: z.string().nullable().optional(),
-  quantity: z.number().nullable().optional(),
-  unitOfMeasure: z.string().nullable().optional(),
-  status: z.string().nullable().optional(),
-  exceptionReason: z.string().nullable().optional(),
+  documentType: z.enum(['PO', 'STO', 'unknown']).describe('[classification: source-field]'),
+  purchaseOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  stockTransportOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  itemId: z.string().nullable().optional().describe('[classification: source-field]'),
+  vendorId: z.string().nullable().optional().describe('[classification: source-field]'),
+  supplyingPlantId: z.string().nullable().optional().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().nullable().optional().describe('[classification: source-field]'),
+  batchId: z.string().nullable().optional().describe('[classification: source-field]'),
+  plantId: z.string().nullable().optional().describe('[classification: source-field]'),
+  storageLocation: z.string().nullable().optional().describe('[classification: source-field]'),
+  warehouseNumber: z.string().nullable().optional().describe('[classification: source-field]'),
+  expectedDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  receivedDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  quantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  unitOfMeasure: z.string().nullable().optional().describe('[classification: source-field]'),
+  status: z.string().nullable().optional().describe('[classification: source-field]'),
+  exceptionReason: z.string().nullable().optional().describe('[classification: source-field]'),
 })
 
 export type Warehouse360InboundItem = z.infer<typeof Warehouse360InboundItemSchema>
@@ -246,22 +246,22 @@ export type Warehouse360InboundItem = z.infer<typeof Warehouse360InboundItemSche
 // ---------------------------------------------------------------------------
 
 export const Warehouse360OutboundItemSchema = z.object({
-  deliveryId: z.string().nullable().optional(),
-  deliveryItemId: z.string().nullable().optional(),
-  customerId: z.string().nullable().optional(),
-  salesOrderId: z.string().nullable().optional(),
-  materialId: z.string(),
-  materialDescription: z.string().nullable().optional(),
-  batchId: z.string().nullable().optional(),
-  plantId: z.string().nullable().optional(),
-  storageLocation: z.string().nullable().optional(),
-  warehouseNumber: z.string().nullable().optional(),
-  plannedGoodsIssueDate: z.string().nullable().optional(),
-  actualGoodsIssueDate: z.string().nullable().optional(),
-  quantity: z.number().nullable().optional(),
-  unitOfMeasure: z.string().nullable().optional(),
-  status: z.string().nullable().optional(),
-  exceptionReason: z.string().nullable().optional(),
+  deliveryId: z.string().nullable().optional().describe('[classification: source-field]'),
+  deliveryItemId: z.string().nullable().optional().describe('[classification: source-field]'),
+  customerId: z.string().nullable().optional().describe('[classification: source-field]'),
+  salesOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().nullable().optional().describe('[classification: source-field]'),
+  batchId: z.string().nullable().optional().describe('[classification: source-field]'),
+  plantId: z.string().nullable().optional().describe('[classification: source-field]'),
+  storageLocation: z.string().nullable().optional().describe('[classification: source-field]'),
+  warehouseNumber: z.string().nullable().optional().describe('[classification: source-field]'),
+  plannedGoodsIssueDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  actualGoodsIssueDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  quantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  unitOfMeasure: z.string().nullable().optional().describe('[classification: source-field]'),
+  status: z.string().nullable().optional().describe('[classification: source-field]'),
+  exceptionReason: z.string().nullable().optional().describe('[classification: source-field]'),
 })
 
 export type Warehouse360OutboundItem = z.infer<typeof Warehouse360OutboundItemSchema>
@@ -271,22 +271,22 @@ export type Warehouse360OutboundItem = z.infer<typeof Warehouse360OutboundItemSc
 // ---------------------------------------------------------------------------
 
 export const Warehouse360StagingItemSchema = z.object({
-  processOrderId: z.string().nullable().optional(),
-  reservationId: z.string().nullable().optional(),
-  reservationItemId: z.string().nullable().optional(),
-  materialId: z.string(),
-  materialDescription: z.string().nullable().optional(),
-  batchId: z.string().nullable().optional(),
-  plantId: z.string().nullable().optional(),
-  storageLocation: z.string().nullable().optional(),
-  warehouseNumber: z.string().nullable().optional(),
-  requirementDate: z.string().nullable().optional(),
-  requiredQuantity: z.number().nullable().optional(),
-  stagedQuantity: z.number().nullable().optional(),
-  openQuantity: z.number().nullable().optional(),
-  unitOfMeasure: z.string().nullable().optional(),
-  stagingStatus: z.string().nullable().optional(),
-  exceptionReason: z.string().nullable().optional(),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  reservationId: z.string().nullable().optional().describe('[classification: source-field]'),
+  reservationItemId: z.string().nullable().optional().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().nullable().optional().describe('[classification: source-field]'),
+  batchId: z.string().nullable().optional().describe('[classification: source-field]'),
+  plantId: z.string().nullable().optional().describe('[classification: source-field]'),
+  storageLocation: z.string().nullable().optional().describe('[classification: source-field]'),
+  warehouseNumber: z.string().nullable().optional().describe('[classification: source-field]'),
+  requirementDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  requiredQuantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  stagedQuantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  openQuantity: z.number().nullable().optional().describe('[classification: source-derived]'),
+  unitOfMeasure: z.string().nullable().optional().describe('[classification: source-field]'),
+  stagingStatus: z.string().nullable().optional().describe('[classification: source-field]'),
+  exceptionReason: z.string().nullable().optional().describe('[classification: source-field]'),
 })
 
 export type Warehouse360StagingItem = z.infer<typeof Warehouse360StagingItemSchema>
@@ -296,24 +296,23 @@ export type Warehouse360StagingItem = z.infer<typeof Warehouse360StagingItemSche
 // ---------------------------------------------------------------------------
 
 export const Warehouse360ExceptionItemSchema = z.object({
-  exceptionType: z.string().nullable().optional(),
-  severity: z.enum(['critical', 'high', 'medium', 'low']).nullable().optional(),
-  materialId: z.string(),
-  batchId: z.string().nullable().optional(),
-  plantId: z.string().nullable().optional(),
-  storageLocation: z.string().nullable().optional(),
-  warehouseNumber: z.string().nullable().optional(),
-  quantity: z.number().nullable().optional(),
-  unitOfMeasure: z.string().nullable().optional(),
-  expiryDate: z.string().nullable().optional(),
-  daysToExpiry: z.number().nullable().optional(),
-  documentId: z.string().nullable().optional(),
-  processOrderId: z.string().nullable().optional(),
-  deliveryId: z.string().nullable().optional(),
-  purchaseOrderId: z.string().nullable().optional(),
-  reason: z.string().nullable().optional(),
-  recommendedReviewAction: z.string().nullable().optional(),
+  exceptionType: z.string().nullable().optional().describe('[classification: source-field]'),
+  severity: z.enum(['critical', 'high', 'medium', 'low']).nullable().optional().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  batchId: z.string().nullable().optional().describe('[classification: source-field]'),
+  plantId: z.string().nullable().optional().describe('[classification: source-field]'),
+  storageLocation: z.string().nullable().optional().describe('[classification: source-field]'),
+  warehouseNumber: z.string().nullable().optional().describe('[classification: source-field]'),
+  quantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  unitOfMeasure: z.string().nullable().optional().describe('[classification: source-field]'),
+  expiryDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  daysToExpiry: z.number().nullable().optional().describe('[classification: application-derived]'),
+  documentId: z.string().nullable().optional().describe('[classification: source-field]'),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  deliveryId: z.string().nullable().optional().describe('[classification: source-field]'),
+  purchaseOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  reason: z.string().nullable().optional().describe('[classification: source-field]'),
+  recommendedReviewAction: z.string().nullable().optional().describe('[classification: application-heuristic]'),
 })
 
 export type Warehouse360ExceptionItem = z.infer<typeof Warehouse360ExceptionItemSchema>
-

@@ -33,16 +33,16 @@ const ApprovalStateSchema = z.enum([
 // ---------------------------------------------------------------------------
 
 export const MonitoredSPCCharacteristicSchema = z.object({
-  characteristicId: z.string(),
-  characteristicName: z.string(),
-  micId: z.string().optional(),
-  chartType: ChartTypeSchema,
-  batchCount: z.number().int().min(0),
-  avgSamplesPerBatch: z.number().optional(),
-  hasActiveSignal: z.boolean(),
-  highestSignalSeverity: SeveritySchema.optional(),
-  operationId: z.string().optional(),
-  chartTypeSource: z.enum(['heuristic', 'override', 'manual']).optional(),
+  characteristicId: z.string().describe('[classification: source-field]'),
+  characteristicName: z.string().describe('[classification: source-field]'),
+  micId: z.string().optional().describe('[classification: source-field]'),
+  chartType: ChartTypeSchema.describe('[classification: source-field]'),
+  batchCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  avgSamplesPerBatch: z.number().optional().describe('[classification: source-derived]'),
+  hasActiveSignal: z.boolean().describe('[classification: source-derived]'),
+  highestSignalSeverity: SeveritySchema.optional().describe('[classification: source-derived]'),
+  operationId: z.string().optional().describe('[classification: source-field]'),
+  chartTypeSource: z.enum(['heuristic', 'override', 'manual']).optional().describe('[classification: application-heuristic]'),
 })
 
 export type MonitoredSPCCharacteristic = z.infer<typeof MonitoredSPCCharacteristicSchema>
@@ -52,25 +52,25 @@ export type MonitoredSPCCharacteristic = z.infer<typeof MonitoredSPCCharacterist
 // ---------------------------------------------------------------------------
 
 export const SPCMonitoringContextSchema = z.object({
-  plantId: z.string(),
-  plantName: z.string(),
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string().optional(),
+  plantId: z.string().describe('[classification: source-field]'),
+  plantName: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
   // workCentreId remains for legacy-bridge compatibility. The verified SPC
   // source has no SAP work-centre column; operationId below carries the
   // verified `operation_id` (sequential inspection-operation identifier).
   // See domain-integrations/spc/docs/spc-native-contract-alignment-audit.md
   // items 2.1, 2.2 and spc-v2-contract-mapping.md §5.
-  workCentreId: z.string().optional(),
-  operationId: z.string().optional(),
-  characteristicId: z.string().optional(),
-  chartType: ChartTypeSchema.optional(),
-  activeSignals: z.number().int().min(0),
-  highestSeverity: SeveritySchema,
-  lastUpdatedAt: z.string().datetime(),
-  activeScope: z.string().optional(),
-  activeView: z.string().optional(),
+  workCentreId: z.string().optional().describe('[classification: source-field]'),
+  operationId: z.string().optional().describe('[classification: source-field]'),
+  characteristicId: z.string().optional().describe('[classification: source-field]'),
+  chartType: ChartTypeSchema.optional().describe('[classification: source-field]'),
+  activeSignals: z.number().int().min(0).describe('[classification: source-derived]'),
+  highestSeverity: SeveritySchema.describe('[classification: source-derived]'),
+  lastUpdatedAt: z.string().datetime().describe('[classification: source-field]'),
+  activeScope: z.string().optional().describe('[classification: application-derived]'),
+  activeView: z.string().optional().describe('[classification: application-derived]'),
 })
 
 export type SPCMonitoringContext = z.infer<typeof SPCMonitoringContextSchema>
@@ -80,14 +80,14 @@ export type SPCMonitoringContext = z.infer<typeof SPCMonitoringContextSchema>
 // ---------------------------------------------------------------------------
 
 export const SPCSummarySchema = z.object({
-  chartsMonitored: z.number().int().min(0),
-  activeSignals: z.number().int().min(0),
-  outOfControlSignals: z.number().int().min(0),
-  warningSignals: z.number().int().min(0),
-  characteristicsAtRisk: z.number().int().min(0),
-  highestSeverity: SeveritySchema,
-  recommendedAction: z.string(),
-  confidence: z.number().min(0).max(1),
+  chartsMonitored: z.number().int().min(0).describe('[classification: source-derived]'),
+  activeSignals: z.number().int().min(0).describe('[classification: source-derived]'),
+  outOfControlSignals: z.number().int().min(0).describe('[classification: source-derived]'),
+  warningSignals: z.number().int().min(0).describe('[classification: source-derived]'),
+  characteristicsAtRisk: z.number().int().min(0).describe('[classification: source-derived]'),
+  highestSeverity: SeveritySchema.describe('[classification: source-derived]'),
+  recommendedAction: z.string().describe('[classification: application-heuristic]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
 })
 
 export type SPCSummary = z.infer<typeof SPCSummarySchema>
@@ -97,21 +97,21 @@ export type SPCSummary = z.infer<typeof SPCSummarySchema>
 // ---------------------------------------------------------------------------
 
 export const SPCSignalSchema = z.object({
-  signalId: z.string(),
-  characteristicId: z.string(),
-  characteristicName: z.string(),
-  materialId: z.string(),
-  batchId: z.string(),
-  plantId: z.string(),
-  chartType: ChartTypeSchema,
-  rule: z.string(),
-  ruleCode: z.string().optional().nullable(),
-  severity: SeveritySchema,
-  detectedAt: z.string().datetime(),
-  samplePointId: z.string(),
-  resultValue: z.number(),
-  recommendedAction: z.string(),
-  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']),
+  signalId: z.string().describe('[classification: source-field]'),
+  characteristicId: z.string().describe('[classification: source-field]'),
+  characteristicName: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  batchId: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  chartType: ChartTypeSchema.describe('[classification: source-field]'),
+  rule: z.string().describe('[classification: source-derived]'),
+  ruleCode: z.string().optional().nullable().describe('[classification: source-derived]'),
+  severity: SeveritySchema.describe('[classification: source-derived]'),
+  detectedAt: z.string().datetime().describe('[classification: source-field]'),
+  samplePointId: z.string().describe('[classification: source-field]'),
+  resultValue: z.number().describe('[classification: source-field]'),
+  recommendedAction: z.string().describe('[classification: application-heuristic]'),
+  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']).describe('[classification: application-heuristic]'),
 })
 
 export type SPCSignal = z.infer<typeof SPCSignalSchema>
@@ -121,13 +121,13 @@ export type SPCSignal = z.infer<typeof SPCSignalSchema>
 // ---------------------------------------------------------------------------
 
 export const ControlChartPointSchema = z.object({
-  pointId: z.string(),
-  timestamp: z.string().datetime(),
-  value: z.number(),
-  batchId: z.string().optional(),
-  sampleId: z.string().optional(),
-  signalIds: z.array(z.string()),
-  status: z.enum(['in-control', 'warning', 'out-of-control', 'not-evaluated']),
+  pointId: z.string().describe('[classification: source-field]'),
+  timestamp: z.string().datetime().describe('[classification: source-field]'),
+  value: z.number().describe('[classification: source-field]'),
+  batchId: z.string().optional().describe('[classification: source-field]'),
+  sampleId: z.string().optional().describe('[classification: source-field]'),
+  signalIds: z.array(z.string()).describe('[classification: source-derived]'),
+  status: z.enum(['in-control', 'warning', 'out-of-control']).describe('[classification: application-heuristic]'),
 })
 
 export type ControlChartPoint = z.infer<typeof ControlChartPointSchema>
@@ -137,23 +137,23 @@ export type ControlChartPoint = z.infer<typeof ControlChartPointSchema>
 // ---------------------------------------------------------------------------
 
 export const ControlChartSeriesSchema = z.object({
-  chartId: z.string(),
-  chartType: ChartTypeSchema,
-  characteristicId: z.string(),
-  characteristicName: z.string(),
+  chartId: z.string().describe('[classification: source-field]'),
+  chartType: ChartTypeSchema.describe('[classification: source-field]'),
+  characteristicId: z.string().describe('[classification: source-field]'),
+  characteristicName: z.string().describe('[classification: source-field]'),
   points: z.array(ControlChartPointSchema),
-  centerLine: z.number().optional(),
-  upperControlLimit: z.number().optional(),
-  lowerControlLimit: z.number().optional(),
-  upperSpecLimit: z.number().optional(),
-  lowerSpecLimit: z.number().optional(),
-  unitOfMeasure: z.string(),
-  confidence: z.number().min(0).max(1),
-  limitProvenance: LimitProvenanceSchema.optional(),
-  approvalState: ApprovalStateSchema.optional(),
-  lockedLimits: z.boolean().optional(),
-  lockedFrom: z.string().datetime().optional(),
-  lockedTo: z.string().datetime().optional(),
+  centerLine: z.number().optional().describe('[classification: source-derived]'),
+  upperControlLimit: z.number().optional().describe('[classification: source-derived]'),
+  lowerControlLimit: z.number().optional().describe('[classification: source-derived]'),
+  upperSpecLimit: z.number().optional().describe('[classification: source-field]'),
+  lowerSpecLimit: z.number().optional().describe('[classification: source-field]'),
+  unitOfMeasure: z.string().describe('[classification: source-field]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
+  limitProvenance: LimitProvenanceSchema.optional().describe('[classification: source-derived]'),
+  approvalState: ApprovalStateSchema.optional().describe('[classification: governance-pending]'),
+  lockedLimits: z.boolean().optional().describe('[classification: source-field]'),
+  lockedFrom: z.string().datetime().optional().describe('[classification: source-field]'),
+  lockedTo: z.string().datetime().optional().describe('[classification: source-field]'),
 })
 
 export type ControlChartSeries = z.infer<typeof ControlChartSeriesSchema>
@@ -163,19 +163,19 @@ export type ControlChartSeries = z.infer<typeof ControlChartSeriesSchema>
 // ---------------------------------------------------------------------------
 
 export const CharacteristicCapabilitySchema = z.object({
-  characteristicId: z.string(),
-  characteristicName: z.string(),
-  cp: z.number(),
-  cpk: z.number(),
-  pp: z.number(),
-  ppk: z.number(),
-  sampleCount: z.number().int().min(0),
-  mean: z.number(),
-  standardDeviation: z.number().min(0),
-  confidence: z.number().min(0).max(1),
-  interpretation: z.enum(['capable', 'marginal', 'not-capable', 'insufficient-data']),
-  limitProvenance: LimitProvenanceSchema.optional(),
-  approvalState: ApprovalStateSchema.optional(),
+  characteristicId: z.string().describe('[classification: source-field]'),
+  characteristicName: z.string().describe('[classification: source-field]'),
+  cp: z.number().describe('[classification: source-derived]'),
+  cpk: z.number().describe('[classification: source-derived]'),
+  pp: z.number().describe('[classification: source-derived]'),
+  ppk: z.number().describe('[classification: source-derived]'),
+  sampleCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  mean: z.number().describe('[classification: source-derived]'),
+  standardDeviation: z.number().min(0).describe('[classification: source-derived]'),
+  confidence: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
+  interpretation: z.enum(['capable', 'marginal', 'not-capable', 'insufficient-data']).describe('[classification: application-heuristic]'),
+  limitProvenance: LimitProvenanceSchema.optional().describe('[classification: source-derived]'),
+  approvalState: ApprovalStateSchema.optional().describe('[classification: governance-pending]'),
 })
 
 export type CharacteristicCapability = z.infer<typeof CharacteristicCapabilitySchema>
@@ -185,16 +185,16 @@ export type CharacteristicCapability = z.infer<typeof CharacteristicCapabilitySc
 // ---------------------------------------------------------------------------
 
 export const SPCAlarmHistoryItemSchema = z.object({
-  alarmId: z.string(),
-  timestamp: z.string().datetime(),
-  characteristicId: z.string(),
-  rule: z.string(),
-  ruleCode: z.string().optional(),
-  severity: SeveritySchema,
-  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']),
-  acknowledgedBy: z.string().optional(),
-  acknowledgedAt: z.string().datetime().optional(),
-  linkedBatchId: z.string().optional(),
+  alarmId: z.string().describe('[classification: source-field]'),
+  timestamp: z.string().datetime().describe('[classification: source-field]'),
+  characteristicId: z.string().describe('[classification: source-field]'),
+  rule: z.string().describe('[classification: source-derived]'),
+  ruleCode: z.string().optional().describe('[classification: source-derived]'),
+  severity: SeveritySchema.describe('[classification: source-derived]'),
+  status: z.enum(['active', 'acknowledged', 'investigating', 'resolved', 'false-positive']).describe('[classification: application-heuristic]'),
+  acknowledgedBy: z.string().optional().describe('[classification: source-field]'),
+  acknowledgedAt: z.string().datetime().optional().describe('[classification: source-field]'),
+  linkedBatchId: z.string().optional().describe('[classification: source-field]'),
 })
 
 export type SPCAlarmHistoryItem = z.infer<typeof SPCAlarmHistoryItemSchema>
@@ -204,13 +204,13 @@ export type SPCAlarmHistoryItem = z.infer<typeof SPCAlarmHistoryItemSchema>
 // ---------------------------------------------------------------------------
 
 export const SPCRelatedBatchSchema = z.object({
-  batchId: z.string(),
-  materialId: z.string(),
-  plantId: z.string(),
-  status: z.enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review']),
-  relatedSignalCount: z.number().int().min(0),
-  releaseImpact: z.enum(['blocking', 'risk', 'none']),
-  drillThroughTarget: z.string().optional(),
+  batchId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  status: z.enum(['released', 'on-hold', 'rejected', 'under-review', 'awaiting-review']).describe('[classification: application-heuristic]'),
+  relatedSignalCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  releaseImpact: z.enum(['blocking', 'risk', 'none']).describe('[classification: application-heuristic]'),
+  drillThroughTarget: z.string().optional().describe('[classification: application-derived]'),
 })
 
 export type SPCRelatedBatch = z.infer<typeof SPCRelatedBatchSchema>
@@ -227,28 +227,28 @@ export type SPCRelatedBatch = z.infer<typeof SPCRelatedBatchSchema>
 // ---------------------------------------------------------------------------
 
 export const SPCSubgroupPointSchema = z.object({
-  batchId: z.string(),
-  batchDate: z.string(),
-  subgroupMean: z.number(),
-  subgroupRange: z.number().nullable(),
-  sampleCount: z.number().int().min(1),
-  lslSpec: z.number().nullable(),
-  uslSpec: z.number().nullable(),
+  batchId: z.string().describe('[classification: source-field]'),
+  batchDate: z.string().describe('[classification: source-field]'),
+  subgroupMean: z.number().describe('[classification: source-derived]'),
+  subgroupRange: z.number().nullable().describe('[classification: source-derived]'),
+  sampleCount: z.number().int().min(1).describe('[classification: source-derived]'),
+  lslSpec: z.number().nullable().describe('[classification: source-field]'),
+  uslSpec: z.number().nullable().describe('[classification: source-field]'),
 })
 
 export type SPCSubgroupPoint = z.infer<typeof SPCSubgroupPointSchema>
 
 export const SPCSubgroupResponseSchema = z.object({
-  materialId: z.string(),
-  plantId: z.string(),
-  micId: z.string(),
-  micName: z.string().nullable(),
-  operationId: z.string(),
+  materialId: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  micId: z.string().describe('[classification: source-field]'),
+  micName: z.string().nullable().describe('[classification: source-field]'),
+  operationId: z.string().describe('[classification: source-field]'),
   points: z.array(SPCSubgroupPointSchema),
-  lockedLimits: z.null(),
-  capabilityAvailable: z.literal(false),
-  nelsonStoredFlagsAvailable: z.literal(false),
-  signalsClientSideOnly: z.literal(true),
+  lockedLimits: z.null().describe('[classification: unavailable]'),
+  capabilityAvailable: z.literal(false).describe('[classification: unavailable]'),
+  nelsonStoredFlagsAvailable: z.literal(false).describe('[classification: unavailable]'),
+  signalsClientSideOnly: z.literal(true).describe('[classification: application-derived]'),
 })
 
 export type SPCSubgroupResponse = z.infer<typeof SPCSubgroupResponseSchema>

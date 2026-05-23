@@ -17,7 +17,7 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
     this.baseUrl = baseUrl.replace(/\/$/, '')
   }
 
-   /**
+  /**
    * Tier: legacy-api — wired to V1 POH order-header endpoint.
    * Returns an error AdapterResult on network or proxy failure.
    */
@@ -33,7 +33,10 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ process_order_id: request.processOrderId, plant_id: request.plantId }),
+        body: JSON.stringify({
+          process_order_id: request.processOrderId,
+          plant_id: request.plantId,
+        }),
       })
 
       if (!response.ok) {
@@ -45,7 +48,11 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
               : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'legacy-api',
         }
@@ -61,7 +68,8 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
         batchId: raw.batch_id ?? raw.batchId,
         plantId: raw.plant_id ?? raw.plantId ?? request.plantId ?? '',
         plannedQuantity: raw.planned_qty ?? raw.planned_quantity ?? raw.plannedQuantity ?? 0,
-        confirmedQuantity: raw.confirmed_qty ?? raw.confirmed_quantity ?? raw.confirmedQuantity ?? 0,
+        confirmedQuantity:
+          raw.confirmed_qty ?? raw.confirmed_quantity ?? raw.confirmedQuantity ?? 0,
         uom: raw.uom ?? raw.base_uom ?? '',
         plannedStart: raw.planned_start ?? raw.plannedStart ?? new Date().toISOString(),
         plannedFinish: raw.planned_finish ?? raw.plannedFinish ?? new Date().toISOString(),

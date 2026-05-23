@@ -6,30 +6,30 @@ import { z } from 'zod'
  * (dispatch), 701 = stock adjustment, Z01 = company-specific extension.
  */
 export const MassBalanceEventSchema = z.object({
-  d: z.number().int(),
-  date: z.string().nullable().optional(),
-  delta: z.number(),
-  cum: z.number(),
-  code: z.enum(['101', '261', '601', '701', 'Z01']),
-  label: z.string(),
+  d: z.number().int().describe('[classification: source-field]'),
+  date: z.string().nullable().optional().describe('[classification: source-field]'),
+  delta: z.number().describe('[classification: source-derived]'),
+  cum: z.number().describe('[classification: source-derived]'),
+  code: z.enum(['101', '261', '601', '701', 'Z01']).describe('[classification: source-field]'),
+  label: z.string().describe('[classification: application-derived]'),
 })
 export type MassBalanceEvent = z.infer<typeof MassBalanceEventSchema>
 
 export const MassBalancePostingsSchema = z.object({
-  production: z.number().int(),
-  consumption: z.number().int(),
-  dispatch: z.number().int(),
-  adjustment: z.number().int(),
+  production: z.number().int().describe('[classification: source-derived]'),
+  consumption: z.number().int().describe('[classification: source-derived]'),
+  dispatch: z.number().int().describe('[classification: source-derived]'),
+  adjustment: z.number().int().describe('[classification: source-derived]'),
 })
 
 export const MassBalanceKpiSchema = z.object({
-  produced: z.number(),
-  consumed: z.number(),
-  shipped: z.number(),
-  adjusted: z.number(),
-  current: z.number(),
-  variance: z.number(),
-  uom: z.string(),
+  produced: z.number().describe('[classification: source-derived]'),
+  consumed: z.number().describe('[classification: source-derived]'),
+  shipped: z.number().describe('[classification: source-derived]'),
+  adjusted: z.number().describe('[classification: source-derived]'),
+  current: z.number().describe('[classification: source-derived]'),
+  variance: z.number().describe('[classification: source-derived]'),
+  uom: z.string().describe('[classification: source-field]'),
   postings: MassBalancePostingsSchema,
 })
 
@@ -55,13 +55,13 @@ export const MassBalanceKpiSchema = z.object({
 export const MassBalanceLedgerSchema = z.object({
   kpi: MassBalanceKpiSchema,
   events: z.array(MassBalanceEventSchema),
-  dateStart: z.string(),
-  dateEnd: z.string(),
+  dateStart: z.string().describe('[classification: source-field]'),
+  dateEnd: z.string().describe('[classification: source-field]'),
   /**
    * Whether the variance has been reconciled by a governed rule. ALWAYS
    * `application-heuristic` until a governed reconciliation engine is
    * wired. `governed` is reserved for future use.
    */
-  reconciliationSource: z.enum(['application-heuristic', 'governed']),
+  reconciliationSource: z.enum(['application-heuristic', 'governed']).describe('[classification: application-heuristic]'),
 })
 export type MassBalanceLedger = z.infer<typeof MassBalanceLedgerSchema>
