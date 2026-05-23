@@ -37,6 +37,15 @@ from adapters.spc.spc_databricks_adapter import (
     map_spc_subgroup_rows,
 )
 from contracts.generated import SPCSubgroupResponse
+from contracts.spc import SpcChartDataRequest, SpcChartDataResponse
+from adapters.spc.spc_databricks_chart_adapter import (
+    get_spc_chart_subgroups_spec,
+    get_spc_locked_limits_spec,
+    map_spc_chart_response,
+)
+import asyncio
+from datetime import datetime
+
 from routes._databricks import (
     build_user_identity,
     require_databricks_config,
@@ -120,18 +129,7 @@ async def _forward_post(path: str, body: dict, token: str | None) -> dict | list
 # ---------------------------------------------------------------------------
 
 
-class ChartDataRequest(BaseModel):
-    """Body for POST /spc/chart-data.
 
-    Maps to V1 spc_backend router_charts.py chart-data endpoint.
-    material_id and mic_id are required; plant_id and operation_id are optional
-    but strongly recommended for index efficiency in V1 gold views.
-    """
-    material_id: str
-    mic_id: str
-    plant_id: Optional[str] = None
-    operation_id: Optional[str] = None
-    chart_type: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -217,20 +215,37 @@ async def spc_capability(
 
 @router.post("/spc/chart-data")
 async def spc_chart_data(
-    body: ChartDataRequest,
+    body: SpcChartDataRequest,
+    response: Response = None,
     x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
 ) -> dict | list:
-    """Fetch subgroup chart data for a material/MIC combination.
+    """Fetch subgroup chart data for a material/MIC combination."""
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode == "databricks-api":
+        if body.plant_id == _P999_SENTINEL:
+            raise HTTPException(status_code=422, detail="P999 is a test sentinel and cannot be used in production queries.")
+            
+        host, warehouse_id = require_databricks_config()
+        identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+        
+        async def fetch_subgroups():
+            return await run_query(lambda: get_spc_chart_subgroups_spec(body), identity, host, warehouse_id)
+            
+        async def fetch_limits():
+            return await run_query(lambda: get_spc_locked_limits_spec(body), identity, host, warehouse_id)
 
-    Proxies to V1 POST /api/spc/chart-data — queries spc_quality_metric_subgroup_v.
-    Returns raw subgroup points; control limits are computed client-side in the
-    V2 frontend (matching V1's calculations.runtime.ts strategy).
+        (subgroups_rows, subgroups_spec), (limits_rows, limits_spec) = await asyncio.gather(fetch_subgroups(), fetch_limits())
+        
+        set_databricks_response_headers(response, subgroups_spec)
+        
+        queried_at = datetime.utcnow().isoformat() + "Z"
+        result = map_spc_chart_response(subgroups_rows, limits_rows, body, queried_at)
+        return SpcChartDataResponse.model_validate(result).model_dump(by_alias=True)
 
-    NOT YET BROWSER-VERIFIED: route is wired but has not been tested against
-    a live V1 SPC UAT deployment.
-    """
     _ensure_legacy_mode()
-    return await _forward_post("/api/spc/chart-data", body.model_dump(exclude_none=True), x_forwarded_access_token)
+    return await _forward_post("/api/spc/chart-data", body.model_dump(by_alias=False, exclude_none=True), x_forwarded_access_token)
 
 
 # ---------------------------------------------------------------------------
