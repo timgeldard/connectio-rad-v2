@@ -14,13 +14,19 @@ import { buildUsageDecisionDisplay } from '../lib/usage-decision-display.js'
 const registration: EvidencePanelRegistration = {
   panelId: 'quality-readonly-evidence',
   displayName: 'Read-Only Quality Evidence',
-  description: 'Inspection lot, MIC result, usage-decision, and CoA-like evidence readiness for future native Quality UAT.',
+  description:
+    'Inspection lot, MIC result, usage-decision, and CoA-like evidence readiness for future native Quality UAT.',
   ownerDomain: 'quality',
   sourceOwnership: { domainId: 'quality', systemName: 'sap-qm', legacyAppId: 'connectedquality' },
   lifecycle: 'pilot',
   allowedConsumerWorkspaces: ['quality-batch-release'],
   requiredContext: [{ contextKey: 'batchId', scopeLevel: 'batch', required: false }],
-  freshnessPolicy: { staleAfterSeconds: 180, errorAfterSeconds: 600, refreshOnFocus: false, pollIntervalSeconds: null },
+  freshnessPolicy: {
+    staleAfterSeconds: 180,
+    errorAfterSeconds: 600,
+    refreshOnFocus: false,
+    pollIntervalSeconds: null,
+  },
   confidencePolicy: { level: 0.2, hidden: false },
   requiredPermissions: [{ permissionId: 'quality.read', displayName: 'Quality Read' }],
 }
@@ -32,8 +38,6 @@ export interface QualityReadOnlyEvidencePanelProps {
 function formatStatusLabel(value: string) {
   return value.replace(/-/g, ' ')
 }
-
-
 
 export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidencePanelProps) {
   const { data: result, isLoading } = useQualityReadOnlyEvidence(request)
@@ -56,7 +60,8 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
   const data: QualityEvidenceResponse | null = result?.ok ? result.data : null
   const lotCount = data?.summary.lotCount ?? data?.summary.inspectionLotCount ?? 0
   const isLiveWired = result?.source === 'databricks-api' || result?.source === 'legacy-api'
-  const evidenceState = data?.summary.evidenceState ?? data?.summary.status ?? 'pending-source-verification'
+  const evidenceState =
+    data?.summary.evidenceState ?? data?.summary.status ?? 'pending-source-verification'
 
   return (
     <EvidencePanel
@@ -67,29 +72,51 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
     >
       {data && (
         <div style={{ padding: '12px 16px', display: 'grid', gap: 12 }}>
-
           {/* Evidence status header */}
-          <div style={{ padding: 10, border: '1px solid #D97706', borderRadius: 6, background: 'rgba(217,119,6,0.08)', color: 'var(--shell-fg)', fontSize: 12, lineHeight: 1.45 }}>
+          <div
+            style={{
+              padding: 10,
+              border: '1px solid #D97706',
+              borderRadius: 6,
+              background: 'rgba(217,119,6,0.08)',
+              color: 'var(--shell-fg)',
+              fontSize: 12,
+              lineHeight: 1.45,
+            }}
+          >
             <strong>Read-only Quality evidence is not yet source-verified in V2.</strong>
             <div style={{ marginTop: 4 }}>
-              Missing usage-decision, CoA, or deviation evidence must not be interpreted as accepted, released, or no issue.
+              Missing usage-decision, CoA, or deviation evidence must not be interpreted as
+              accepted, released, or no issue.
             </div>
-            <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div
+              style={{
+                marginTop: 6,
+                display: 'flex',
+                gap: 8,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
               <SourceBadge
                 state={evidenceState}
                 source={result?.source}
                 isLiveWired={isLiveWired}
               />
               {!isLiveWired && (
-                <span style={{ fontSize: 11, color: '#D97706' }}>
-                  Live source wiring pending
-                </span>
+                <span style={{ fontSize: 11, color: '#D97706' }}>Live source wiring pending</span>
               )}
             </div>
           </div>
 
           {/* Metrics row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: 8,
+            }}
+          >
             <Metric label="Inspection lots" value={lotCount} />
             <Metric label="MIC results" value={data.summary.micResultCount} />
             <Metric label="CoA-like rows" value={data.summary.coaResultCount} />
@@ -151,7 +178,8 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
               </div>
             )}
             <div style={noteStyle}>
-              MIC result valuation is not a release decision. Specification limits are not SPC control limits.
+              MIC result valuation is not a release decision. Specification limits are not SPC
+              control limits.
             </div>
           </section>
 
@@ -160,7 +188,8 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
             <div style={eyebrowStyle}>CoA-like result evidence</div>
             {data.coaResults.length === 0 ? (
               <div style={noRecordStyle}>
-                CoA-like result evidence pending source verification. Do not interpret as no CoA evidence.
+                CoA-like result evidence pending source verification. Do not interpret as no CoA
+                evidence.
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 4, marginTop: 6 }}>
@@ -179,7 +208,8 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
             <div style={warningBoxStyle} role="alert">
               <strong>Deviation source unavailable.</strong>
               <div style={{ marginTop: 4 }}>
-                Do not interpret this as no deviations. No deviation or nonconformance source has been verified for V2.
+                Do not interpret this as no deviations. No deviation or nonconformance source has
+                been verified for V2.
               </div>
             </div>
           )}
@@ -190,7 +220,9 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
               <div style={eyebrowStyle}>Unavailable evidence</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 {data.summary.unavailableEvidence.map((item) => (
-                  <span key={item} style={chipStyle}>{formatStatusLabel(item)}</span>
+                  <span key={item} style={chipStyle}>
+                    {formatStatusLabel(item)}
+                  </span>
                 ))}
               </div>
             </div>
@@ -199,21 +231,30 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
           {/* Source-truthfulness footer */}
           <div style={{ borderTop: '1px solid var(--shell-line)', paddingTop: 10 }}>
             <div style={eyebrowStyle}>Source boundaries</div>
-            <ul style={{ margin: '6px 0 0 18px', padding: 0, color: 'var(--shell-fg-2)', fontSize: 12, lineHeight: 1.5 }}>
+            <ul
+              style={{
+                margin: '6px 0 0 18px',
+                padding: 0,
+                color: 'var(--shell-fg-2)',
+                fontSize: 12,
+                lineHeight: 1.5,
+              }}
+            >
               {data.summary.warnings.map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
               <li>Specification limits are not SPC control limits.</li>
               <li>MIC result valuation is not a release decision.</li>
               <li>
-                Read-only Quality evidence. This panel does not authorise release, rejection, or SAP posting.
+                Read-only Quality evidence. This panel does not authorise release, rejection, or SAP
+                posting.
               </li>
               <li>
-                Usage decision codes are displayed as source evidence only. A single batch-level release decision is not derived.
+                Usage decision codes are displayed as source evidence only. A single batch-level
+                release decision is not derived.
               </li>
             </ul>
           </div>
-
         </div>
       )}
     </EvidencePanel>
@@ -239,16 +280,18 @@ function SourceBadge({
       ? 'Simulation'
       : 'Route pending'
   return (
-    <span style={{
-      border: '1px solid #D97706',
-      borderRadius: 999,
-      padding: '2px 8px',
-      fontSize: 10,
-      fontWeight: 700,
-      color: '#D97706',
-      textTransform: 'uppercase',
-      letterSpacing: '0.06em',
-    }}>
+    <span
+      style={{
+        border: '1px solid #D97706',
+        borderRadius: 999,
+        padding: '2px 8px',
+        fontSize: 10,
+        fontWeight: 700,
+        color: '#D97706',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+      }}
+    >
       {label}
     </span>
   )
@@ -264,8 +307,23 @@ function InspectionLotRow({ lot }: { lot: QualityInspectionLotEvidence }) {
   })
 
   return (
-    <div style={{ border: '1px solid var(--shell-line)', borderRadius: 6, padding: 10, display: 'grid', gap: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+    <div
+      style={{
+        border: '1px solid var(--shell-line)',
+        borderRadius: 6,
+        padding: 10,
+        display: 'grid',
+        gap: 6,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 8,
+        }}
+      >
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--shell-fg)' }}>
             Lot {lot.inspectionLotId}
@@ -276,9 +334,7 @@ function InspectionLotRow({ lot }: { lot: QualityInspectionLotEvidence }) {
             </span>
           )}
         </div>
-        {lot.inspectionLotStatus && (
-          <span style={chipStyle}>{lot.inspectionLotStatus}</span>
-        )}
+        {lot.inspectionLotStatus && <span style={chipStyle}>{lot.inspectionLotStatus}</span>}
       </div>
 
       {/* Per-lot usage decision */}
@@ -315,33 +371,46 @@ function UsageDecisionSection({
 }) {
   const firstLot = inspectionLots[0]
   const udDisplay = buildUsageDecisionDisplay({
-    inspectionLotId: usageDecision
-      ? (firstLot?.inspectionLotId ?? 'lot-present')
-      : null,
+    inspectionLotId: usageDecision ? (firstLot?.inspectionLotId ?? 'lot-present') : null,
     usageDecisionCode: usageDecision?.usageDecisionCode,
     usageDecisionText: usageDecision?.usageDecisionText,
     createdAt: usageDecision?.createdAt,
     source: usageDecision?.source,
     mappingStatus:
-      usageDecision?.mappingStatus === 'source-only' ? 'raw-only' :
-      usageDecision?.mappingStatus === 'verified' ? 'governed-label' :
-      'governance-pending',
+      usageDecision?.mappingStatus === 'source-only'
+        ? 'raw-only'
+        : usageDecision?.mappingStatus === 'verified'
+          ? 'governed-label'
+          : 'governance-pending',
   })
 
   return (
     <div style={{ marginTop: 6, display: 'grid', gap: 8 }}>
       {lotCount > 1 && (
         <div style={warningBoxStyle} role="alert">
-          Multiple lots detected. Usage decision shown is for the primary lot only. Per-lot decisions are shown in the inspection lot section above.
+          Multiple lots detected. Usage decision shown is for the primary lot only. Per-lot
+          decisions are shown in the inspection lot section above.
         </div>
       )}
 
       {usageDecision ? (
-        <div style={{ border: '1px solid var(--shell-line)', borderRadius: 6, padding: 10, display: 'grid', gap: 6 }}>
+        <div
+          style={{
+            border: '1px solid var(--shell-line)',
+            borderRadius: 6,
+            padding: 10,
+            display: 'grid',
+            gap: 6,
+          }}
+        >
           <div style={{ fontSize: 11 }}>
             <span style={{ fontWeight: 700, color: 'var(--shell-fg)' }}>Raw code: </span>
             <span style={{ fontFamily: 'monospace', color: 'var(--shell-fg)' }}>
-              {udDisplay.rawCode === null ? 'null' : udDisplay.rawCode === '' ? '(empty string)' : udDisplay.rawCode}
+              {udDisplay.rawCode === null
+                ? 'null'
+                : udDisplay.rawCode === ''
+                  ? '(empty string)'
+                  : udDisplay.rawCode}
             </span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--shell-fg-2)' }}>
@@ -356,28 +425,39 @@ function UsageDecisionSection({
           )}
         </div>
       ) : (
-        <div style={noRecordStyle}>
-          {udDisplay.displayLabel}
-        </div>
+        <div style={noRecordStyle}>{udDisplay.displayLabel}</div>
       )}
 
       {/* Release authority block — always shown */}
       <div style={{ fontSize: 11, color: '#D97706', fontStyle: 'italic', padding: '6px 0' }}>
-        Usage decision codes are source evidence only. Release authority is not derived from this panel.
+        Usage decision codes are source evidence only. Release authority is not derived from this
+        panel.
       </div>
     </div>
   )
 }
 
 function MicResultRow({ mic }: { mic: QualityMicResultEvidence }) {
-  const statusColor = mic.resultStatus === 'pass'
-    ? 'var(--shell-good)'
-    : mic.resultStatus === 'fail'
-      ? 'var(--shell-error, #dc2626)'
-      : 'var(--shell-warn)'
+  const statusColor =
+    mic.resultStatus === 'pass'
+      ? 'var(--shell-good)'
+      : mic.resultStatus === 'fail'
+        ? 'var(--shell-error, #dc2626)'
+        : 'var(--shell-warn)'
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', border: '1px solid var(--shell-line)', borderRadius: 4, fontSize: 11, gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '6px 8px',
+        border: '1px solid var(--shell-line)',
+        borderRadius: 4,
+        fontSize: 11,
+        gap: 8,
+      }}
+    >
       <div>
         <span style={{ fontWeight: 700, color: 'var(--shell-fg)' }}>
           {mic.micCode ?? mic.micName ?? mic.micId ?? 'Unknown'}
@@ -402,7 +482,18 @@ function MicResultRow({ mic }: { mic: QualityMicResultEvidence }) {
 
 function CoaResultRow({ coa }: { coa: QualityCoaResultEvidence }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', border: '1px solid var(--shell-line)', borderRadius: 4, fontSize: 11, gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '6px 8px',
+        border: '1px solid var(--shell-line)',
+        borderRadius: 4,
+        fontSize: 11,
+        gap: 8,
+      }}
+    >
       <div>
         <span style={{ fontWeight: 700, color: 'var(--shell-fg)' }}>
           {coa.micCode ?? coa.micName ?? 'Unknown'}
@@ -413,11 +504,17 @@ function CoaResultRow({ coa }: { coa: QualityCoaResultEvidence }) {
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {coa.actualResult !== null && coa.actualResult !== undefined && (
-          <span style={{ color: 'var(--shell-fg)' }}>
-            Result: {coa.actualResult}
-          </span>
+          <span style={{ color: 'var(--shell-fg)' }}>Result: {coa.actualResult}</span>
         )}
-        <span style={{ fontSize: 10, color: '#D97706', border: '1px solid #D97706', borderRadius: 999, padding: '1px 6px' }}>
+        <span
+          style={{
+            fontSize: 10,
+            color: '#D97706',
+            border: '1px solid #D97706',
+            borderRadius: 999,
+            padding: '1px 6px',
+          }}
+        >
           CoA doc: {coa.documentStatus}
         </span>
       </div>
@@ -427,9 +524,13 @@ function CoaResultRow({ coa }: { coa: QualityCoaResultEvidence }) {
 
 function Metric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div style={{ border: '1px solid var(--shell-line)', borderRadius: 6, padding: 8, minHeight: 52 }}>
+    <div
+      style={{ border: '1px solid var(--shell-line)', borderRadius: 6, padding: 8, minHeight: 52 }}
+    >
       <div style={eyebrowStyle}>{label}</div>
-      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: 'var(--shell-fg)' }}>{value}</div>
+      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700, color: 'var(--shell-fg)' }}>
+        {value}
+      </div>
     </div>
   )
 }
