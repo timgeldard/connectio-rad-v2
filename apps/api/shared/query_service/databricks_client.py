@@ -114,8 +114,14 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
         for scheme in ("https://", "http://"):
             if h.lower().startswith(scheme):
                 h = h[len(scheme):]
-                break
         self._host = h.rstrip("/")
+        self._shared_clients: dict[int, httpx.AsyncClient] = {}
+
+    def _get_client(self, timeout_seconds: int) -> httpx.AsyncClient:
+        # Cache clients by timeout so we can reuse HTTP connections efficiently
+        if timeout_seconds not in self._shared_clients:
+            self._shared_clients[timeout_seconds] = httpx.AsyncClient(timeout=timeout_seconds + 10)
+        return self._shared_clients[timeout_seconds]
 
     async def execute(
         self,
@@ -158,8 +164,7 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
         url = f"https://{self._host}/api/2.0/sql/statements"
 
         try:
-            async with httpx.AsyncClient(timeout=timeout_seconds + 10) as client:
-                response = await client.post(url, headers=headers, json=body)
+            response = await self._get_client(timeout_seconds).post(url, headers=headers, json=body)
         except httpx.TimeoutException as exc:
             raise DatabricksQueryTimeoutError(query_name) from exc
         except httpx.HTTPError as exc:

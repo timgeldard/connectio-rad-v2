@@ -112,14 +112,11 @@ def _make_statement_response(
     return mock
 
 
-def _make_http_client_mock(response: MagicMock) -> MagicMock:
-    """Wrap a mock response in an async context-manager mock for httpx.AsyncClient."""
+def _make_http_client_mock(response: MagicMock) -> AsyncMock:
+    """Return a mock httpx.AsyncClient with a configured post method."""
     http_client = AsyncMock()
     http_client.post = AsyncMock(return_value=response)
-    ctx = MagicMock()
-    ctx.__aenter__ = AsyncMock(return_value=http_client)
-    ctx.__aexit__ = AsyncMock(return_value=False)
-    return ctx
+    return http_client
 
 
 # ---------------------------------------------------------------------------
@@ -230,11 +227,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="test.databricks.com")
             await client.execute(**self._BASE_KWARGS)
 
@@ -252,11 +245,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="test.databricks.com")
             await client.execute(
                 sql="SELECT 1",
@@ -285,11 +274,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="test.databricks.com")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -310,11 +295,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="test.databricks.com/")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -335,11 +316,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="test.databricks.com")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -361,11 +338,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="https://myworkspace.azuredatabricks.net")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -386,11 +359,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="http://myworkspace.azuredatabricks.net")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -410,11 +379,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="myworkspace.azuredatabricks.net")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",
@@ -435,11 +400,7 @@ class TestStatementApiDatabricksClient:
             return response
 
         http_client.post = capture_post
-        ctx = MagicMock()
-        ctx.__aenter__ = AsyncMock(return_value=http_client)
-        ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("httpx.AsyncClient", return_value=ctx):
+        with patch("httpx.AsyncClient", return_value=http_client):
             client = StatementApiDatabricksClient(host="  myworkspace.azuredatabricks.net  ")
             await client.execute(
                 sql="SELECT 1", params={}, oauth_token="tok",

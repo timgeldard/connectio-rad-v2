@@ -57,6 +57,7 @@ class QueryBuilder:
     order_by: Optional[str] = None
     limit: Optional[int] = None
     offset: Optional[int] = None
+    group_by_columns: list[str] = field(default_factory=list)
     clustering_columns: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -110,6 +111,24 @@ class QueryBuilder:
         self.order_by = order_by
         return self
 
+    def with_group_by(self, *columns: str) -> "QueryBuilder":
+        """Set GROUP BY clause.
+
+        Args:
+            *columns: Column identifiers to group by.
+
+        Returns:
+            Self, for method chaining.
+
+        Raises:
+            ValueError: When any column contains unsafe characters.
+        """
+        for col in columns:
+            if not _is_safe_identifier(col):
+                raise ValueError(f"Invalid GROUP BY identifier: {col!r}")
+        self.group_by_columns.extend(columns)
+        return self
+
     def with_clustering_hint(self, *columns: str) -> "QueryBuilder":
         """Add optimizer-hint column names.
 
@@ -136,12 +155,28 @@ class QueryBuilder:
             Tuple of ``(sql_statement, params_list)``.
 
         Raises:
-            ValueError: When any column in ``self.columns`` is unsafe.
+            ValueError: When any column in ``self.columns`` is unsafe, or when
+                        aggregations violate data grouping rules.
         """
         for col in self.columns:
             if col != "*" and not _is_safe_identifier(col):
-                raise ValueError(f"Invalid column identifier: {col!r}")
+                if not ("(" in col and ")" in col):  # basic exception for aggregate functions like MAX(val)
+                    raise ValueError(f"Invalid column identifier: {col!r}")
         cols = ", ".join(self.columns)
+
+        # Enforce MIC grouping rule if aggregations or GROUP BY are used
+        is_aggregated = bool(self.group_by_columns) or any("(" in c and ")" in c for c in self.columns)
+        if is_aggregated:
+            query_text = (cols + " " + " ".join(self.filters) + " " + " ".join(self.group_by_columns)).lower()
+            if "mic" in query_text:
+                has_plant = "plant_id" in query_text
+                has_plan = "operation_id" in query_text or "inspection_lot_id" in query_text or "inspection_plan" in query_text
+                if not (has_plant and has_plan):
+                    raise ValueError(
+                        "Severe cross-plant contamination risk: Aggregations on MICs MUST be scoped to a local "
+                        "Plant and Inspection Plan. Please include plant_id AND operation_id/inspection_lot_id "
+                        "in your grouping or filters."
+                    )
 
         hints = ""
         if self.clustering_columns:
@@ -151,6 +186,9 @@ class QueryBuilder:
 
         if self.filters:
             sql += "\nWHERE " + " AND ".join(self.filters)
+
+        if self.group_by_columns:
+            sql += f"\nGROUP BY {', '.join(self.group_by_columns)}"
 
         if self.order_by:
             sql += f"\nORDER BY {self.order_by}"
