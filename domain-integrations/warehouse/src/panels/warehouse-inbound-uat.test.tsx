@@ -1,0 +1,29 @@
+import { describe, it, expect, vi } from 'vitest'
+import { render } from '@testing-library/react'
+import { InboundOutboundSummaryPanel } from './inbound-outbound-summary-panel.js'
+import { expectNoForbiddenClaims } from '@connectio/evidence-panel-runtime/test-utils'
+import * as queries from '../adapters/warehouse-360-queries.js'
+
+vi.mock('../adapters/warehouse-360-queries.js', () => ({
+  useGoodsMovements: vi.fn(),
+}))
+
+describe('Warehouse inbound (Offline UAT Smoke Check)', () => {
+  it('renders truthfully and prevents forbidden claims', () => {
+    vi.mocked(queries.useGoodsMovements).mockReturnValue({
+      data: {
+        ok: true,
+        data: [], // Empty for now, just checking baseline
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+      },
+      isLoading: false,
+    } as any)
+
+    const { container } = render(
+      <InboundOutboundSummaryPanel request={{ warehouseId: 'WH01', plantId: 'P001' }} />,
+    )
+
+    expectNoForbiddenClaims(container)
+  })
+})
