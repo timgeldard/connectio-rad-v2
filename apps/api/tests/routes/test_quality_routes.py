@@ -227,3 +227,79 @@ class TestQualityReadOnlyEvidenceResponseModel:
             )
         # 502 from run_query's translation. Must NOT be 200 with mock-shaped data.
         assert response.status_code == 502
+
+
+# ---------------------------------------------------------------------------
+# Lot identifier wire-shape (PR 6 — identifier preservation)
+# ---------------------------------------------------------------------------
+
+
+class TestQualityLotIdentifiersOnWire:
+    """Verify that materialId, batchId, plantId, processOrderId are
+    preserved on the wire when source rows carry them. These identifiers
+    are the traceability anchors between the inspection lot and the batch
+    under investigation."""
+
+    def test_lot_identifiers_on_wire(self, mock_run_query, monkeypatch):
+        _databricks_env(monkeypatch)
+        mock_run_query.return_value = (
+            [
+                {
+                    "INSPECTION_LOT_ID": "LOT-FULL",
+                    "USAGE_DECISION_CODE": "A",
+                    "MATERIAL_ID": "000000000020582002",
+                    "BATCH_ID": "0008898869",
+                    "PLANT_ID": "C351",
+                    "PROCESS_ORDER_ID": "PO-2024-03-0847",
+                    "USAGE_DECISION_CREATED_DATE": "2024-03-09T11:42:00",
+                }
+            ],
+            None,
+        )
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "000000000020582002", "batchId": "0008898869", "plantId": "C351"},
+        )
+        assert response.status_code == 200
+        lot = response.json()["inspectionLots"][0]
+        assert lot["inspectionLotId"] == "LOT-FULL"
+        assert lot["materialId"] == "000000000020582002"
+        assert lot["batchId"] == "0008898869"
+        assert lot["plantId"] == "C351"
+        assert lot["processOrderId"] == "PO-2024-03-0847"
+
+    def test_no_snake_case_keys_in_lots(self, mock_run_query, monkeypatch):
+        """All lot keys on the wire must use camelCase aliases — no snake_case leak."""
+        _databricks_env(monkeypatch)
+        mock_run_query.return_value = (
+            [{"INSPECTION_LOT_ID": "LOT-1", "USAGE_DECISION_CODE": "A"}],
+            None,
+        )
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+        )
+        assert response.status_code == 200
+        lot = response.json()["inspectionLots"][0]
+        for snake in (
+            "inspection_lot_id", "material_id", "batch_id", "plant_id",
+            "process_order_id", "usage_decision_code", "usage_decision_text",
+            "usage_decision_mapping_status", "usage_decision_created_at",
+        ):
+            assert snake not in lot, f"snake_case key leaked to wire: {snake}"
+
+    def test_missing_lot_warning_on_empty_result(self, mock_run_query, monkeypatch):
+        """When Databricks returns zero rows, the summary must carry
+        missingLotWarning so the UI cannot silently show 'no lots' as
+        a clean/cleared state."""
+        _databricks_env(monkeypatch)
+        mock_run_query.return_value = ([], None)
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+        )
+        assert response.status_code == 200
+        summary = response.json()["summary"]
+        assert summary["missingLotWarning"] is not None
+        assert summary["status"] == "no-records"
+        assert summary["usageDecisionStatus"] == "not-found"
