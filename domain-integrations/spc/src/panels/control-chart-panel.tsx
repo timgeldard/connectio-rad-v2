@@ -125,6 +125,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 <LegendItem color={STATUS_COLOR['in-control']} label="No signals returned" />
                 <LegendItem color={STATUS_COLOR['warning']} label="Warning" />
                 <LegendItem color={STATUS_COLOR['out-of-control']} label="Active SPC signal" />
+                <LegendItem color={STATUS_COLOR['not-evaluated']} label="Not evaluated" />
               </div>
             </>
           )}
@@ -138,6 +139,7 @@ const STATUS_COLOR: Record<string, string> = {
   'out-of-control': 'var(--shell-bad, #C73315)',
   'warning': 'var(--shell-warn, #C7821C)',
   'in-control': 'var(--shell-good, #1F8B4C)',
+  'not-evaluated': 'var(--shell-fg-3, #888)',
 }
 
 function ChartStat({ label, value, color }: { label: string; value: string; color: string }) {
@@ -159,9 +161,9 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 function formatPointDate(ts: string | null | undefined): string {
-  if (!ts) return 'N/A'
+  if (!ts) return '—'
   const d = new Date(ts)
-  if (isNaN(d.getTime())) return 'N/A'
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
@@ -209,15 +211,15 @@ function ChartPlaceholder({ series }: { series: ControlChartSeries }) {
   for (let i = 0; i < n; i += labelStep) xLabelSet.add(i)
   if (n > 0) xLabelSet.add(n - 1)
 
-  const uclText = series.upperControlLimit != null ? `UCL ${series.upperControlLimit.toFixed(1)}` : 'UCL N/A'
-  const clText = series.centerLine != null ? `CL ${series.centerLine.toFixed(1)}` : 'CL N/A'
-  const lclText = series.lowerControlLimit != null ? `LCL ${series.lowerControlLimit.toFixed(1)}` : 'LCL N/A'
+  const uclText = series.upperControlLimit != null ? `UCL ${series.upperControlLimit.toFixed(1)}` : 'UCL —'
+  const clText = series.centerLine != null ? `CL ${series.centerLine.toFixed(1)}` : 'CL —'
+  const lclText = series.lowerControlLimit != null ? `LCL ${series.lowerControlLimit.toFixed(1)}` : 'LCL —'
 
   return (
     <div
       style={{ background: 'var(--shell-surface-2)', borderRadius: 4, overflowX: 'auto' }}
       role="img"
-      aria-label={`Control chart for ${series.characteristicName} — ${n} data points, UCL ${series.upperControlLimit?.toFixed(2) ?? 'N/A'}, CL ${series.centerLine?.toFixed(2) ?? 'N/A'}, LCL ${series.lowerControlLimit?.toFixed(2) ?? 'N/A'}`}
+      aria-label={`Control chart for ${series.characteristicName} — ${n} data points, UCL ${series.upperControlLimit?.toFixed(2) ?? '—'}, CL ${series.centerLine?.toFixed(2) ?? '—'}, LCL ${series.lowerControlLimit?.toFixed(2) ?? '—'}`}
     >
       <svg width={W} height={H} style={{ display: 'block' }}>
         {/* Y-axis grid lines and value labels */}
