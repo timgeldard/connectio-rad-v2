@@ -310,6 +310,40 @@ class TestWarehouseRowMappers:
         assert res["ordersTotal"] == 0
         assert res["binUtilPct"] == 0.0
 
+    def test_map_overview_near_expiry_count_not_in_output(self) -> None:
+        """nearExpiryCount requires a governed near-expiry business rule (Gate 4).
+        Must not be defaulted to zero — absent means governance-pending."""
+        rows = [{
+            "orders_total": 24, "orders_red": 0, "orders_amber": 0,
+            "trs_open": 0, "tos_open": 0, "deliveries_today": 0,
+            "deliveries_at_risk": 0, "inbound_open": 0,
+            "bins_blocked": 0, "bins_total": 0, "bin_util_pct": 0.0,
+        }]
+        res = map_warehouse_overview_rows(rows, WarehouseOverviewRequest("WH01"))
+        assert "nearExpiryCount" not in res
+
+    def test_map_overview_reconciliation_exception_count_not_in_output(self) -> None:
+        """reconciliationExceptionCount requires governed IM/WM reconciliation rules (Gate 5).
+        Must not be defaulted to zero — absent means governance-pending."""
+        rows = [{
+            "orders_total": 24, "orders_red": 0, "orders_amber": 0,
+            "trs_open": 0, "tos_open": 0, "deliveries_today": 0,
+            "deliveries_at_risk": 0, "inbound_open": 0,
+            "bins_blocked": 0, "bins_total": 0, "bin_util_pct": 0.0,
+        }]
+        res = map_warehouse_overview_rows(rows, WarehouseOverviewRequest("WH01"))
+        assert "reconciliationExceptionCount" not in res
+
+    def test_map_overview_empty_rows_near_expiry_count_not_defaulted_to_zero(self) -> None:
+        """Even in the no-data default shape, nearExpiryCount must not appear as zero."""
+        res = map_warehouse_overview_rows([], WarehouseOverviewRequest("WH01"))
+        assert "nearExpiryCount" not in res
+
+    def test_map_overview_empty_rows_reconciliation_exception_count_not_defaulted_to_zero(self) -> None:
+        """Even in the no-data default shape, reconciliationExceptionCount must not appear as zero."""
+        res = map_warehouse_overview_rows([], WarehouseOverviewRequest("WH01"))
+        assert "reconciliationExceptionCount" not in res
+
     def test_map_inbound_rows_preserves_sap_ids(self) -> None:
         # Row shape matches actual wh360_inbound_v columns.
         rows = [{
