@@ -328,3 +328,73 @@ class TestUsageDecisionEvidenceSourceTruth:
         lots, _ = map_quality_usage_decision_rows(rows, "2026-05-22T00:00:00Z")
         assert lots[0].usage_decision_text == UD_LABELS["A9"]
         assert lots[0].usage_decision_text == "Accepted — batch restricted"
+
+
+# ---------------------------------------------------------------------------
+# Lot identifier preservation (spec §3)
+# ---------------------------------------------------------------------------
+
+
+class TestLotIdentifierPreservation:
+    """Each lot evidence record must carry all source identifiers intact.
+    These are the traceability anchors — dropping or defaulting any of them
+    breaks the evidential chain from inspection lot back to batch and plant.
+    """
+
+    _FULL_ROW = {
+        "INSPECTION_LOT_ID": "LOT-FULL",
+        "USAGE_DECISION_CODE": "A",
+        "MATERIAL_ID": "000000000020582002",
+        "BATCH_ID": "0008898869",
+        "PLANT_ID": "C351",
+        "PROCESS_ORDER_ID": "PO-2024-03-0847",
+        "USAGE_DECISION_CREATED_DATE": "2024-03-09T11:42:00",
+    }
+
+    def test_inspection_lot_id_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].inspection_lot_id == "LOT-FULL"
+
+    def test_material_id_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].material_id == "000000000020582002"
+
+    def test_batch_id_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].batch_id == "0008898869"
+
+    def test_plant_id_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].plant_id == "C351"
+
+    def test_process_order_id_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].process_order_id == "PO-2024-03-0847"
+
+    def test_usage_decision_created_at_preserved(self):
+        lots, _ = map_quality_usage_decision_rows([self._FULL_ROW], "2026-05-22T00:00:00Z")
+        assert lots[0].usage_decision_created_at == "2024-03-09T11:42:00"
+
+    def test_null_material_id_becomes_none(self):
+        """NULL MATERIAL_ID from a LEFT JOIN must not be invented — it stays None."""
+        row = {**self._FULL_ROW, "MATERIAL_ID": None}
+        lots, _ = map_quality_usage_decision_rows([row], "2026-05-22T00:00:00Z")
+        assert lots[0].material_id is None
+
+    def test_null_plant_id_becomes_none(self):
+        """A lot matched without a plant filter yields no PLANT_ID — must stay None."""
+        row = {**self._FULL_ROW, "PLANT_ID": None}
+        lots, _ = map_quality_usage_decision_rows([row], "2026-05-22T00:00:00Z")
+        assert lots[0].plant_id is None
+
+    def test_null_process_order_id_becomes_none(self):
+        """Inspection lots may not be linked to a process order — None must stay None."""
+        row = {**self._FULL_ROW, "PROCESS_ORDER_ID": None}
+        lots, _ = map_quality_usage_decision_rows([row], "2026-05-22T00:00:00Z")
+        assert lots[0].process_order_id is None
+
+    def test_null_created_at_becomes_none(self):
+        """A lot with no usage decision has no USAGE_DECISION_CREATED_DATE — must stay None."""
+        row = {**self._FULL_ROW, "USAGE_DECISION_CREATED_DATE": None}
+        lots, _ = map_quality_usage_decision_rows([row], "2026-05-22T00:00:00Z")
+        assert lots[0].usage_decision_created_at is None

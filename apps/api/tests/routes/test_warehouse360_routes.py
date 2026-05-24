@@ -98,6 +98,63 @@ class TestWarehouseOverviewRoute:
         assert response.headers.get("x-adapter-mode") == "databricks-api"
         assert "warehouse360.get_overview" in response.headers.get("x-query-name", "")
 
+    async def test_returns_503_in_legacy_mode(self, monkeypatch) -> None:
+        """Overview is databricks-api only — returns 503 when mode is legacy-api."""
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.get(
+                "/api/warehouse360/overview",
+                params={"warehouse_id": "WH01"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 503
+
+    async def test_near_expiry_count_not_in_overview_response(self, wh360_databricks_env) -> None:
+        """nearExpiryCount requires a governed near-expiry rule (Gate 4) — must not
+        appear as zero in the live response."""
+        fake_row = {
+            "orders_total": 10, "orders_red": 0, "orders_amber": 0,
+            "trs_open": 0, "tos_open": 0, "deliveries_today": 0,
+            "deliveries_at_risk": 0, "inbound_open": 0,
+            "bins_blocked": 0, "bins_total": 0, "bin_util_pct": 0.0,
+        }
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[fake_row],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/warehouse360/overview",
+                    params={"warehouse_id": "WH01"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        assert "nearExpiryCount" not in response.json()
+
+    async def test_reconciliation_exception_count_not_in_overview_response(self, wh360_databricks_env) -> None:
+        """reconciliationExceptionCount requires governed IM/WM reconciliation rules (Gate 5)
+        — must not appear as zero in the live response."""
+        fake_row = {
+            "orders_total": 10, "orders_red": 0, "orders_amber": 0,
+            "trs_open": 0, "tos_open": 0, "deliveries_today": 0,
+            "deliveries_at_risk": 0, "inbound_open": 0,
+            "bins_blocked": 0, "bins_total": 0, "bin_util_pct": 0.0,
+        }
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=[fake_row],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    "/api/warehouse360/overview",
+                    params={"warehouse_id": "WH01"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        assert "reconciliationExceptionCount" not in response.json()
+
 
 # ---------------------------------------------------------------------------
 # Inbound Endpoint Tests

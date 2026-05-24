@@ -19,6 +19,8 @@ from adapters.trace2.trace2_databricks_adapter import (
     build_batch_quality_passport,
     map_customer_delivery_rows,
     map_investigation_timeline_rows,
+    map_supplier_batch_view,
+    map_supplier_exposure_rows,
 )
 
 
@@ -896,3 +898,282 @@ class TestMapCustomerDeliveryRows:
         result = map_customer_delivery_rows([_cd_row()])
         assert result is not None
         assert result["highestSeverity"] == "medium"
+
+
+# ---------------------------------------------------------------------------
+# Supplier exposure mapper tests (PR 8 — spec §8 / source-truth guardrails)
+# ---------------------------------------------------------------------------
+
+
+def _se_row(**overrides) -> dict:
+    """Minimal supplier exposure row matching aggregated SQL output shape."""
+    base = {
+        "supplier_id": "SUPP-001",
+        "supplier_name": "Kerry Ingredients Ltd",
+        "country_id": "IE",
+        "country_name": "Ireland",
+        "received_quantity": 1000.0,
+        "receipt_count": 2,
+        "upstream_material_count": 1,
+        "uom": "KG",
+        "last_receipt_date": "2024-03-08",
+    }
+    base.update(overrides)
+    return base
+
+
+class TestMapSupplierExposureRows:
+    """map_supplier_exposure_rows — source-truthful guardrails (PR 8)."""
+
+    def test_empty_rows_returns_zero_supplier_summary_not_none(self) -> None:
+        """Empty rows → zero-supplier summary dict, not None.
+        Distinct from customer-exposure None: a production-only batch
+        genuinely has zero supplier inputs."""
+        result = map_supplier_exposure_rows([])
+        assert result is not None
+        assert isinstance(result, dict)
+        assert result["supplierCount"] == 0
+        assert result["supplierLots"] == 0
+        assert result["upstreamMaterials"] == 0
+        assert result["suppliers"] == []
+
+    def test_empty_open_supplier_actions_is_zero_not_invented(self) -> None:
+        """openSupplierActions MUST be 0 (no QM source). Not defaulted from
+        evidence, not invented — pinned per TRACE-P1-012."""
+        result = map_supplier_exposure_rows([_se_row()])
+        assert result["openSupplierActions"] == 0
+
+    def test_supplier_id_preserved(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(supplier_id="SUPP-XYZ")])
+        assert result["suppliers"][0]["supplierId"] == "SUPP-XYZ"
+
+    def test_supplier_name_preserved_when_present(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(supplier_name="Acme Ingredients")])
+        assert result["suppliers"][0]["supplierName"] == "Acme Ingredients"
+
+    def test_supplier_name_absent_when_null(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(supplier_name=None)])
+        assert "supplierName" not in result["suppliers"][0]
+
+    def test_country_id_preserved_when_present(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(country_id="DE")])
+        assert result["suppliers"][0]["countryId"] == "DE"
+
+    def test_country_id_absent_when_null(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(country_id=None)])
+        assert "countryId" not in result["suppliers"][0]
+
+    def test_received_quantity_preserved(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(received_quantity=500.0)])
+        assert result["suppliers"][0]["receivedQuantity"] == 500.0
+
+    def test_uom_preserved_when_present(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(uom="KG")])
+        assert result["suppliers"][0]["uom"] == "KG"
+
+    def test_uom_absent_when_null(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(uom=None)])
+        assert "uom" not in result["suppliers"][0]
+
+    def test_uom_not_defaulted_to_kg_or_ea(self) -> None:
+        """UOM must come from source. Null → absent. NEVER default to KG/EA."""
+        result = map_supplier_exposure_rows([_se_row(uom=None)])
+        supplier = result["suppliers"][0]
+        assert supplier.get("uom") not in ("KG", "EA", "kg", "ea")
+
+    def test_supplier_count_matches_distinct_valid_suppliers(self) -> None:
+        rows = [_se_row(supplier_id="S1"), _se_row(supplier_id="S2")]
+        result = map_supplier_exposure_rows(rows)
+        assert result["supplierCount"] == 2
+        assert len(result["suppliers"]) == 2
+
+    def test_null_supplier_id_row_is_dropped(self) -> None:
+        """A row without supplier_id is not valid supplier evidence."""
+        rows = [
+            _se_row(supplier_id=None),
+            _se_row(supplier_id=""),
+            _se_row(supplier_id="SUPP-OK"),
+        ]
+        result = map_supplier_exposure_rows(rows)
+        assert result["supplierCount"] == 1
+        assert result["suppliers"][0]["supplierId"] == "SUPP-OK"
+
+    def test_no_risk_field_in_summary(self) -> None:
+        """supplierRisk / risk MUST NOT appear in the supplier exposure summary —
+        no governed risk source exists (TRACE-P1-012)."""
+        result = map_supplier_exposure_rows([_se_row()])
+        for forbidden in ("risk", "supplierRisk", "highestRisk"):
+            assert forbidden not in result
+
+    def test_no_risk_field_in_supplier_detail(self) -> None:
+        """Individual supplier detail MUST NOT carry a risk field."""
+        result = map_supplier_exposure_rows([_se_row()])
+        supplier = result["suppliers"][0]
+        for forbidden in ("risk", "supplierRisk", "cleared", "approved", "safe"):
+            assert forbidden not in supplier
+
+    def test_no_recall_recommended_field(self) -> None:
+        result = map_supplier_exposure_rows([_se_row()])
+        assert "recallRecommended" not in result
+
+    def test_no_safe_approved_released_fields(self) -> None:
+        result = map_supplier_exposure_rows([_se_row()])
+        for forbidden in ("safe", "approved", "released", "cleared"):
+            assert forbidden not in result
+
+    def test_last_receipt_date_preserved_when_present(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(last_receipt_date="2024-03-08")])
+        assert result["suppliers"][0]["lastReceiptDate"] == "2024-03-08"
+
+    def test_last_receipt_date_absent_when_null(self) -> None:
+        result = map_supplier_exposure_rows([_se_row(last_receipt_date=None)])
+        assert "lastReceiptDate" not in result["suppliers"][0]
+
+    def test_supplier_lots_aggregated_from_receipt_count(self) -> None:
+        rows = [_se_row(receipt_count=3), _se_row(supplier_id="S2", receipt_count=2)]
+        result = map_supplier_exposure_rows(rows)
+        assert result["supplierLots"] == 5
+
+    def test_upstream_materials_aggregated(self) -> None:
+        rows = [
+            _se_row(upstream_material_count=2),
+            _se_row(supplier_id="S2", upstream_material_count=1),
+        ]
+        result = map_supplier_exposure_rows(rows)
+        assert result["upstreamMaterials"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Supplier batch view mapper tests (PR 8 — risk guardrail pinning)
+# ---------------------------------------------------------------------------
+
+
+def _consumed_row(**overrides) -> dict:
+    """Minimal consumed lot row from gold_batch_lineage."""
+    base = {
+        "supplier_id": "SUPP-001",
+        "vendor_batch": "VB-2024-001",
+        "parent_material_id": "000000000020052009",
+        "posting_date": "2024-03-08",
+        "quantity": -500.0,
+        "uom": "KG",
+    }
+    base.update(overrides)
+    return base
+
+
+def _sibling_row(**overrides) -> dict:
+    """Minimal sibling batch row from cross-plant lineage query."""
+    base = {
+        "plant_id": "C061",
+        "batch_id": "0008602411",
+        "posting_date": "2024-03-08",
+        "quantity": -300.0,
+        "vendor_batch": "VB-2024-001",
+    }
+    base.update(overrides)
+    return base
+
+
+class TestMapSupplierBatchView:
+    """map_supplier_batch_view — risk guardrail and source-truth pinning (PR 8)."""
+
+    def test_empty_rows_returns_valid_empty_view(self) -> None:
+        """Empty consumed/sibling lists → valid dict with empty arrays.
+        A batch with no vendor receipts is a legitimate production-only batch."""
+        result = map_supplier_batch_view([], [])
+        assert isinstance(result, dict)
+        assert result["consumedLots"] == []
+        assert result["siblingBatches"] == []
+
+    def test_risk_is_always_unknown_on_consumed_lots(self) -> None:
+        """risk MUST be 'unknown' — no governed supplier-risk source wired yet.
+        This is the primary guardrail: the field must be present but never
+        optimistic (low/medium/high)."""
+        result = map_supplier_batch_view([_consumed_row()], [])
+        assert result["consumedLots"][0]["risk"] == "unknown"
+
+    def test_risk_unknown_for_multiple_consumed_lots(self) -> None:
+        rows = [_consumed_row(), _consumed_row(vendor_batch="VB-2024-002")]
+        result = map_supplier_batch_view(rows, [])
+        for lot in result["consumedLots"]:
+            assert lot["risk"] == "unknown"
+
+    def test_risk_never_low_without_governed_source(self) -> None:
+        """Exhaustive check: no consumed lot may carry risk='low', 'medium',
+        or 'high' until a governed source is wired."""
+        rows = [_consumed_row(supplier_id=f"S{i}") for i in range(5)]
+        result = map_supplier_batch_view(rows, [])
+        for lot in result["consumedLots"]:
+            assert lot["risk"] not in ("low", "medium", "high")
+
+    def test_coa_is_none_not_invented(self) -> None:
+        """CoA reference not on gold_batch_lineage — must be None, not empty
+        string or a default value."""
+        result = map_supplier_batch_view([_consumed_row()], [])
+        assert result["consumedLots"][0]["coa"] is None
+
+    def test_vendor_preserved_from_supplier_id_when_no_lookup(self) -> None:
+        result = map_supplier_batch_view([_consumed_row(supplier_id="SUPP-ABC")], [])
+        assert result["consumedLots"][0]["vendor"] == "SUPP-ABC"
+
+    def test_vendor_name_from_lookup_when_provided(self) -> None:
+        lookup = {"SUPP-001": "Kerry Ingredients Ltd"}
+        result = map_supplier_batch_view([_consumed_row()], [], vendor_name_lookup=lookup)
+        assert result["consumedLots"][0]["vendor"] == "Kerry Ingredients Ltd"
+
+    def test_vendor_batch_preserved(self) -> None:
+        result = map_supplier_batch_view([_consumed_row(vendor_batch="VB-PINNED")], [])
+        assert result["consumedLots"][0]["vendorBatch"] == "VB-PINNED"
+
+    def test_material_preserved(self) -> None:
+        result = map_supplier_batch_view(
+            [_consumed_row(parent_material_id="000000000020582002")], []
+        )
+        assert result["consumedLots"][0]["material"] == "000000000020582002"
+
+    def test_consumed_quantity_is_absolute_value(self) -> None:
+        """Quantities from lineage edges are negative (CHILD perspective).
+        The mapper must abs() them so the UI sees positive consumed amounts."""
+        result = map_supplier_batch_view([_consumed_row(quantity=-400.0)], [])
+        assert result["consumedLots"][0]["consumed"] == 400.0
+
+    def test_uom_preserved_from_source(self) -> None:
+        result = map_supplier_batch_view([_consumed_row(uom="MT")], [])
+        assert result["consumedLots"][0]["uom"] == "MT"
+
+    def test_no_recall_or_safety_fields_on_consumed_lot(self) -> None:
+        result = map_supplier_batch_view([_consumed_row()], [])
+        lot = result["consumedLots"][0]
+        for forbidden in ("recallRecommended", "safe", "approved", "released",
+                          "cleared", "signoff"):
+            assert forbidden not in lot
+
+    def test_no_recall_or_safety_fields_on_view(self) -> None:
+        result = map_supplier_batch_view([_consumed_row()], [_sibling_row()])
+        for forbidden in ("recallRecommended", "safe", "approved", "released",
+                          "cleared", "signoff"):
+            assert forbidden not in result
+
+    def test_sibling_batch_id_preserved(self) -> None:
+        result = map_supplier_batch_view([], [_sibling_row(batch_id="SIB-BATCH-001")])
+        assert result["siblingBatches"][0]["batchId"] == "SIB-BATCH-001"
+
+    def test_sibling_plant_id_preserved(self) -> None:
+        result = map_supplier_batch_view([], [_sibling_row(plant_id="C351")])
+        assert result["siblingBatches"][0]["plantId"] == "C351"
+
+    def test_sibling_qty_is_absolute_value(self) -> None:
+        result = map_supplier_batch_view([], [_sibling_row(quantity=-200.0)])
+        assert result["siblingBatches"][0]["qty"] == 200.0
+
+    def test_sibling_vendor_batch_preserved(self) -> None:
+        result = map_supplier_batch_view([], [_sibling_row(vendor_batch="VB-SIB-999")])
+        assert result["siblingBatches"][0]["vendorBatch"] == "VB-SIB-999"
+
+    def test_multiple_consumed_and_siblings(self) -> None:
+        consumed = [_consumed_row(), _consumed_row(vendor_batch="VB-2")]
+        siblings = [_sibling_row(), _sibling_row(batch_id="SIB-2")]
+        result = map_supplier_batch_view(consumed, siblings)
+        assert len(result["consumedLots"]) == 2
+        assert len(result["siblingBatches"]) == 2
