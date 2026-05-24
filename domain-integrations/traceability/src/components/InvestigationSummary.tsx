@@ -75,10 +75,10 @@ export function InvestigationSummary({
   // Populated from live Databricks data (TRACE-P0-003); undefined in mock mode.
   const maxExposureDepth = customerExposure?.maxExposureDepth
 
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'LOW'
+  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'UNKNOWN' = 'UNKNOWN'
   let severityLabel = ''
-  let alertMessage = 'Unrestricted stock remains fully contained. No risk signals returned from current source.'
-  let actionGuidance = 'Review batch details & inventory balance.'
+  let alertMessage = 'No exposure signals returned from current source. Containment status is not independently verified — do not assume containment.'
+  let actionGuidance = 'Review batch details and delivery data before concluding on containment status.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
   let bannerBorder = '1px solid rgba(31, 139, 76, 0.25)'
 
@@ -132,11 +132,10 @@ export function InvestigationSummary({
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   }
 
-  const severityLabels = {
+  const severityLabels: Record<typeof severity, string> = {
     CRITICAL: 'Critical Exposure',
     HIGH: 'Near Expiry',
     MEDIUM: 'Medium Risk',
-    LOW: 'Low Risk',
     UNKNOWN: 'Exposure Unknown',
   }
   // Use reason-specific label if set (e.g. depth-based HIGH), otherwise fall back to severity map.
@@ -242,7 +241,7 @@ export function InvestigationSummary({
             letterSpacing: '0.12em',
             fontWeight: 700,
             textTransform: 'uppercase',
-            color: severity === 'LOW' ? 'var(--shell-good, #1F8B4C)' : severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
+            color: severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
             background: 'rgba(255, 255, 255, 0.5)',
             padding: '2px 6px',
             borderRadius: 3,
