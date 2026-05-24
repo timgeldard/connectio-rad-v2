@@ -123,10 +123,10 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
             <Metric label="UD status" value={formatStatusLabel(data.summary.usageDecisionStatus)} />
           </div>
 
-          {/* Multiple lots warning */}
-          {lotCount > 1 && (
+          {/* Multiple lots warning — driven by actual lot array length, not summary count which may be null */}
+          {data.inspectionLots.length > 1 && (
             <div style={warningBoxStyle} role="alert">
-              <strong>Multiple inspection lots found ({lotCount}).</strong>
+              <strong>Multiple inspection lots found ({data.inspectionLots.length}).</strong>
               <div style={{ marginTop: 4 }}>
                 {data.summary.multipleLotsWarning ??
                   'Per-lot usage decisions are shown individually. A batch-level release decision is not derived from individual lot decisions.'}
