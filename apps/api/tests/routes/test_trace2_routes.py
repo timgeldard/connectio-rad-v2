@@ -1437,3 +1437,343 @@ class TestSupplierExposureResponseModel:
         data = response.json()
         for forbidden in ("safe", "approved", "released", "cleared", "recallRecommended", "delivered"):
             assert forbidden not in data
+
+
+# ---------------------------------------------------------------------------
+# TraceGraph — generated contract enforcement (PR 5)
+# ---------------------------------------------------------------------------
+
+
+class TestTraceGraphResponseModel:
+    """Pin POST /api/trace2/trace-graph against the generated TraceGraph
+    contract. Extra='forbid' on every nested model means any leaked
+    unmodelled key (e.g. rootCause, recallRecommended) fails here."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import TraceGraph
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_LINEAGE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        TraceGraph.model_validate(response.json())
+
+    async def test_empty_graph_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import TraceGraph
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        TraceGraph.model_validate(response.json())
+
+    async def test_required_top_level_identifiers_present(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_LINEAGE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for required in (
+            "nodes", "edges", "direction", "depth",
+            "rootBatch", "upstreamCount", "downstreamCount",
+            "unresolvedNodeCount", "warnings", "truncated",
+        ):
+            assert required in data, f"missing required contract field: {required}"
+
+    async def test_nodes_use_camelcase_wire_shape(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_LINEAGE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for node in data["nodes"]:
+            assert "materialId" in node
+            assert "batchId" in node
+            assert "isAnchor" in node
+            # No snake_case keys leaked.
+            assert "material_id" not in node
+            assert "batch_id" not in node
+            assert "is_anchor" not in node
+
+    async def test_edges_use_camelcase_wire_shape(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_LINEAGE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for edge in data["edges"]:
+            assert "id" in edge
+            assert "source" in edge
+            assert "target" in edge
+            # No snake_case keys leaked.
+            assert "link_type" not in edge
+            assert "process_order_id" not in edge
+
+    async def test_no_unsafe_investigation_claims(self, monkeypatch) -> None:
+        """TraceGraph must never emit recall decisions, root cause, or
+        approval/safety claims — these require governed sources."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_LINEAGE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for forbidden in ("recallRecommended", "rootCause", "safe", "approved", "released", "cleared"):
+            assert forbidden not in data
+
+    async def test_empty_graph_warnings_not_no_issue_found(self, monkeypatch) -> None:
+        """An empty lineage result is explicit empty evidence. The warnings
+        list must carry machine-readable codes, not a user-facing 'no issue
+        found' claim which would be a false safety assurance."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_URL, json=_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        warnings = data.get("warnings", [])
+        assert "no_edges_found" in warnings
+        # Must not conflate "no edges in lineage source" with "no issue".
+        assert "no issue found" not in str(warnings).lower()
+        assert "no_issue" not in str(warnings)
+
+
+# ---------------------------------------------------------------------------
+# InvestigationTimeline route tests (POST /api/trace2/investigation-timeline)
+# ---------------------------------------------------------------------------
+
+_IT_URL = "/api/trace2/investigation-timeline"
+
+_IT_VALID_BODY = {
+    "material_id": "000000000020052009",
+    "batch_id": "0008602411",
+    "plant_id": "C061",
+}
+
+_FAKE_TIMELINE_ROW = {
+    "ts": "2024-03-08T06:00:00",
+    "event_type": "production",
+    "label": "GR · PO-100001",
+    "actor": "SAP · auto",
+    "detail": "17050 KG produced",
+    "tone": "good",
+    "source_system": "SAP",
+}
+
+_FAKE_QC_ROW = {
+    "ts": "2024-03-09T11:42:00",
+    "event_type": "qc",
+    "label": "Inspection LOT-2024-3-08-A · Lab MIC + retain",
+    "actor": "Lab · auto",
+    "detail": "Accepted",
+    "tone": "good",
+    "source_system": "LIMS",
+}
+
+_FAKE_DISPATCH_ROW = {
+    "ts": "2024-03-10T00:00:00",
+    "event_type": "dispatch",
+    "label": "Delivery DEL-001 · IE",
+    "actor": "SAP · auto",
+    "detail": "4280.0 KG → Kerry Ingredients",
+    "tone": "brand",
+    "source_system": "SAP",
+}
+
+
+class TestInvestigationTimelineWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_mode_is_absent(self, monkeypatch) -> None:
+        monkeypatch.delenv("BACKEND_ADAPTER_MODE", raising=False)
+        async with _make_client() as client:
+            response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_does_not_call_databricks_in_wrong_mode(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        called: list[bool] = []
+
+        async def _mock_execute(*args, **kwargs):
+            called.append(True)
+            return []
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock_execute,
+        ):
+            async with _make_client() as client:
+                await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert called == []
+
+
+class TestInvestigationTimelineSuccess:
+    async def test_200_returns_timeline_events(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW, _FAKE_QC_ROW, _FAKE_DISPATCH_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert "events" in data
+        assert len(data["events"]) == 3
+
+    async def test_empty_result_returns_200_with_empty_events(self, monkeypatch) -> None:
+        """Empty timeline is NOT a 404 — the batch may have no inspections
+        or dispatches yet. This is explicit empty evidence, not 'no issue found'."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        assert response.json()["events"] == []
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_missing_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {k: v for k, v in _IT_VALID_BODY.items() if k != "material_id"}
+        async with _make_client() as client:
+            response = await client.post(_IT_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_material_id_returns_422(self, monkeypatch) -> None:
+        """Blank identifiers must be rejected before they reach Databricks."""
+        _databricks_env(monkeypatch)
+        body = {**_IT_VALID_BODY, "material_id": "   "}
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_batch_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_IT_VALID_BODY, "batch_id": ""}
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_sets_x_data_source_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        badge = response.headers.get("x-data-source", "")
+        assert "mass_balance_v" in badge or "quality_lot_v" in badge or "delivery_v" in badge
+
+    async def test_does_not_fall_back_on_databricks_error(self, monkeypatch) -> None:
+        """On Databricks error, must return HTTP error — never fall back to mock."""
+        from shared.query_service.errors import DatabricksQueryError
+
+        _databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksQueryError("trace2.get_investigation_timeline", "SQL error"),
+        ):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 502
+        assert "events" not in response.json()
+
+
+class TestInvestigationTimelineResponseModel:
+    """Pin POST /api/trace2/investigation-timeline against the generated
+    InvestigationTimeline contract."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import InvestigationTimeline
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW, _FAKE_QC_ROW, _FAKE_DISPATCH_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        InvestigationTimeline.model_validate(response.json())
+
+    async def test_empty_timeline_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import InvestigationTimeline
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        InvestigationTimeline.model_validate(response.json())
+
+    async def test_events_use_camelcase_wire_shape(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for event in data["events"]:
+            assert "ts" in event
+            assert "type" in event
+            assert "label" in event
+            assert "actor" in event
+            assert "detail" in event
+            assert "tone" in event
+            # sourceSystem is the camelCase alias — no snake_case leak.
+            assert "sourceSystem" in event
+            assert "source_system" not in event
+
+    async def test_no_root_cause_or_signoff_fields_on_wire(self, monkeypatch) -> None:
+        """InvestigationTimeline must never emit root-cause conclusions,
+        approval claims, or signoff status — these require governed sources
+        the timeline UNION does not have."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW, _FAKE_QC_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for forbidden in ("rootCause", "recallRecommended", "safe", "approved", "released",
+                          "cleared", "signoff", "eSignature"):
+            assert forbidden not in data
+        for event in data["events"]:
+            for forbidden in ("rootCause", "recallRecommended", "safe", "approved"):
+                assert forbidden not in event
+
+    async def test_source_timestamps_and_types_preserved(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_TIMELINE_ROW, _FAKE_QC_ROW, _FAKE_DISPATCH_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        events = response.json()["events"]
+        types = [e["type"] for e in events]
+        assert "production" in types
+        assert "qc" in types
+        assert "dispatch" in types
+        sources = [e["sourceSystem"] for e in events]
+        assert "SAP" in sources
+        assert "LIMS" in sources
+
+    async def test_unknown_event_type_coerced_to_note_not_rejected(self, monkeypatch) -> None:
+        """SQL may add a new event_type the mapper hasn't seen. Route must
+        NOT 500 — the mapper coerces to 'note' and the response stays valid."""
+        drift_row = {**_FAKE_TIMELINE_ROW, "event_type": "new-unrecognised-event-type"}
+        _databricks_env(monkeypatch)
+        with _patch_executor([drift_row]):
+            async with _make_client() as client:
+                response = await client.post(_IT_URL, json=_IT_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        events = response.json()["events"]
+        assert events[0]["type"] == "note"
