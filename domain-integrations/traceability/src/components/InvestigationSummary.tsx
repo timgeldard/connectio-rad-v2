@@ -114,15 +114,16 @@ export function InvestigationSummary({
       severity = 'HIGH'
       severityLabel = 'High Indirect Exposure'
       alertMessage =
-        'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
+        'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review may be required based on governed process.'
       actionGuidance = 'Assess scope of indirect exposure and initiate recall review.'
       bannerBg = 'rgba(199, 130, 28, 0.08)'
       bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
     } else {
       severity = 'CRITICAL'
       alertMessage =
-        'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
-      actionGuidance = 'Activate product recall and containment protocol.'
+        'Critical Alert: Shipped stock has reached customer sites. Immediate review is recommended with the responsible owner.'
+      actionGuidance =
+        'Review exposure with the responsible quality/recall owner before initiating any governed process.'
       bannerBg = 'rgba(199, 51, 21, 0.08)'
       bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
     }
@@ -143,7 +144,7 @@ export function InvestigationSummary({
   } else if (hasUnrestrictedStock) {
     severity = 'MEDIUM'
     alertMessage =
-      'Action Required: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
+      'Review recommended: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
     actionGuidance = 'Monitor stock position and adjacent production batches.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
@@ -558,7 +559,8 @@ export function InvestigationSummary({
             )}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            released: {batchHeader?.releaseStatus ? batchHeader.releaseStatus : <UnknownValue />}
+            source release status:{' '}
+            {batchHeader?.releaseStatus ? batchHeader.releaseStatus : <UnknownValue />}
           </div>
         </div>
       </div>
@@ -577,7 +579,7 @@ export function InvestigationSummary({
       >
         <span>
           💡 <strong>Auditing checklist:</strong> ensure all data sectors match the physical SAP
-          delivery notes before signing release forms.
+          delivery notes before completing governed release processes outside this app.
         </span>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <span>Explore views:</span>

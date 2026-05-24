@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "devDependencies": {
+    "@connectio/test-support": "*"
+  },
   "dependencies": {
     "@connectio/data-contracts": "*",
     "@connectio/evidence-panel-runtime": "*",

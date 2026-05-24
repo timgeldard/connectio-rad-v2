@@ -62,6 +62,7 @@
     "apps/web",
     "packages/product-model",
     "packages/data-contracts",
+    "packages/test-support",
     "packages/design-system",
     "packages/workspace-runtime",
     "packages/evidence-panel-runtime",

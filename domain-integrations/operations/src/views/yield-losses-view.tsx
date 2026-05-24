@@ -49,8 +49,8 @@ function yieldColor(pct: number): string {
 function YieldSummaryCard({ header }: { header: ProcessOrderHeader }) {
   const confirmed = header.confirmedQuantity ?? 0
   const planned = header.plannedQuantity
-  const yieldPct = planned > 0 ? (confirmed / planned) * 100 : 0
-  const variance = planned - confirmed
+  const yieldPct = (planned ?? 0) > 0 ? ((confirmed ?? 0) / (planned ?? 1)) * 100 : 0
+  const variance = (planned ?? 0) - (confirmed ?? 0)
   const color = yieldColor(yieldPct)
 
   return (
@@ -88,7 +88,7 @@ function YieldSummaryCard({ header }: { header: ProcessOrderHeader }) {
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         <YieldStat label="Confirmed" value={`${confirmed.toLocaleString()} ${header.uom}`} />
-        <YieldStat label="Planned" value={`${planned.toLocaleString()} ${header.uom}`} />
+        <YieldStat label="Planned" value={`${(planned ?? 0).toLocaleString()} ${header.uom}`} />
         <YieldStat
           label="Variance"
           value={variance !== 0 ? `${variance > 0 ? '-' : '+'}${Math.abs(variance).toLocaleString()} ${header.uom}` : '—'}

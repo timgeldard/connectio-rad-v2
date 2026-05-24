@@ -128,7 +128,7 @@ function summariseOperations(operations: readonly ProcessOrderOperation[]): stri
 function summariseConfirmations(confirmations: readonly ProcessOrderConfirmation[]): string {
   const finalCount = confirmations.filter(confirmation => confirmation.isFinalConfirmation).length
   const partialCount = confirmations.length - finalCount
-  const totalYield = confirmations.reduce((sum, confirmation) => sum + confirmation.confirmedYield, 0)
+  const totalYield = confirmations.reduce((sum, confirmation) => sum + confirmation.confirmedYield ?? 0, 0)
   const uoms = Array.from(new Set(confirmations.map(confirmation => confirmation.uom).filter(Boolean)))
   const yieldSummary = uoms.length === 1
     ? `${totalYield.toLocaleString()} ${uoms[0]} total confirmed yield`
@@ -213,7 +213,7 @@ function buildApprovedReply(intent: PohGenieIntent, snapshot: PohGenieSnapshot):
         text: buildAssistantReply({
           intro: `Based on ${headerCitation} for process order ${snapshot.processOrderId}:`,
           details: [
-            `${snapshot.header.data.materialDescription} (${snapshot.header.data.materialId}) is currently ${formatOrderStatus(snapshot.header.data.orderStatus)} with ${snapshot.header.data.confirmedQuantity.toLocaleString()} ${snapshot.header.data.uom} confirmed against ${snapshot.header.data.plannedQuantity.toLocaleString()} ${snapshot.header.data.uom} planned.`,
+            `${snapshot.header.data.materialDescription} (${snapshot.header.data.materialId}) is currently ${formatOrderStatus(snapshot.header.data.orderStatus)} with ${(snapshot.header.data.confirmedQuantity ?? 0).toLocaleString()} ${snapshot.header.data.uom} confirmed against ${(snapshot.header.data.plannedQuantity ?? 0).toLocaleString()} ${snapshot.header.data.uom} planned.`,
           ],
           citations: [headerCitation],
           scopeNote: 'Scope note: the header slice is conditional in the current POH pilot and should not be used to infer blocked topics outside the approved pack.',

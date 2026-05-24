@@ -99,7 +99,7 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
                           {mov.materialDescription}
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--shell-fg-2)', marginTop: 1 }}>
-                          {mov.quantity.toLocaleString()} {mov.uom}
+                          {(mov.quantity ?? 0).toLocaleString()} {mov.uom}
                           {mov.batchId && <span style={{ fontFamily: 'monospace', marginLeft: 4 }}>{mov.batchId}</span>}
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginTop: 1 }}>
