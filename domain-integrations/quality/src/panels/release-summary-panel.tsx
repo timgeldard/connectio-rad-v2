@@ -145,10 +145,12 @@ export function ReleaseSummaryPanel({ request }: ReleaseSummaryPanelProps) {
             </div>
             {showAdvisories && (
               <div style={{ display: 'grid', gap: 6 }}>
-                <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
-                  <strong>UAT Sandbox:</strong>
-                  <span>This panel uses simulated data for validation. Usage decisions do not write back to SAP QM.</span>
-                </div>
+                {result?.source === 'mock' && (
+                  <div style={{ display: 'flex', gap: 4, padding: '4px 6px', background: 'rgba(217,119,6,0.06)', borderLeft: '3px solid #D97706', borderRadius: 4 }}>
+                    <strong>Mock data only:</strong>
+                    <span>This panel is showing simulated data. Usage decisions do not write back to SAP QM.</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 4 }}>
                   <strong>Trust Notice:</strong>
                   <span>Unavailable evidence panels must not be interpreted as zero exposure. No risk signals returned from current source.</span>
