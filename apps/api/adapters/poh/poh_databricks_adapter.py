@@ -173,13 +173,21 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
 
 
 def _map_order_status(raw: object) -> str:
+    """Map SAP STATUS text to the ProcessOrderHeader.orderStatus enum.
+
+    Empty / null / unrecognised values surface as 'unknown' rather than
+    the previous reassuring default of 'created'. The orderStatus enum
+    was extended to include 'unknown' (see
+    packages/data-contracts/src/schemas/process-order-review.ts) so the
+    mapper can be source-truthful without inventing process-order state.
+    """
     if not raw:
-        return "created"
+        return "unknown"
     raw_upper = str(raw).upper()
     for key, val in _ORDER_STATUS_MAP.items():
         if key in raw_upper:
             return val
-    return "created"
+    return "unknown"
 
 
 def _safe_float(value: object) -> float:

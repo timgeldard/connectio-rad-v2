@@ -344,11 +344,21 @@ class TestMapOrderStatus:
     def test_teco_maps_to_closed(self) -> None:
         assert _map_order_status("TECO") == "closed"
 
-    def test_none_defaults_to_created(self) -> None:
-        assert _map_order_status(None) == "created"
+    def test_none_returns_unknown(self) -> None:
+        """Empty/null SAP STATUS surfaces as 'unknown' (source-truthful) —
+        not as 'created'. The orderStatus enum was extended to include
+        'unknown' so the mapper does not have to invent a process-order
+        state when the source is silent."""
+        assert _map_order_status(None) == "unknown"
 
-    def test_unknown_defaults_to_created(self) -> None:
-        assert _map_order_status("UNKNOWN_STATUS") == "created"
+    def test_empty_string_returns_unknown(self) -> None:
+        assert _map_order_status("") == "unknown"
+
+    def test_unrecognised_status_returns_unknown(self) -> None:
+        """SAP STATUS that does not match any known token surfaces as
+        'unknown', not 'created'."""
+        assert _map_order_status("UNKNOWN_STATUS") == "unknown"
+        assert _map_order_status("MYSTERY") == "unknown"
 
 
 class TestFormatDatetime:
