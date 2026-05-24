@@ -3,7 +3,16 @@ import type {
   CustomerExposureSummary,
   SupplierExposureSummary,
 } from '@connectio/data-contracts'
-import { StatusBadge, Button, SourceConfidenceStrip, type EvidenceStatus, type ExtendedSourceMode } from '@connectio/design-system'
+import {
+  StatusBadge,
+  Button,
+  SourceConfidenceStrip,
+  UnknownValue,
+  UnavailableValue,
+  type EvidenceStatus,
+  type ExtendedSourceMode,
+} from '@connectio/design-system'
+import { EvidenceCaveatList } from '@connectio/evidence-panel-runtime'
 import { EvidenceConfidenceBadge, type ConfidenceResult } from './EvidenceConfidence.js'
 
 const mapConfidenceToStatus = (grade: string): EvidenceStatus => {
@@ -77,8 +86,10 @@ export function InvestigationSummary({
 
   let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'UNKNOWN' = 'UNKNOWN'
   let severityLabel = ''
-  let alertMessage = 'No exposure signals returned from current source. Containment status is not independently verified — do not assume containment.'
-  let actionGuidance = 'Review batch details and delivery data before concluding on containment status.'
+  let alertMessage =
+    'No exposure signals returned from current source. Containment status is not independently verified — do not assume containment.'
+  let actionGuidance =
+    'Review batch details and delivery data before concluding on containment status.'
   let bannerBg = 'rgba(31, 139, 76, 0.08)'
   let bannerBorder = '1px solid rgba(31, 139, 76, 0.25)'
 
@@ -90,8 +101,10 @@ export function InvestigationSummary({
     bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
   } else if (customerDataUnavailable) {
     severity = 'UNKNOWN'
-    alertMessage = 'Customer delivery data is unavailable. Downstream exposure cannot be assessed — do not assume containment.'
-    actionGuidance = 'Verify delivery data source connectivity before concluding on containment status.'
+    alertMessage =
+      'Customer delivery data is unavailable. Downstream exposure cannot be assessed — do not assume containment.'
+    actionGuidance =
+      'Verify delivery data source connectivity before concluding on containment status.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   } else if (hasShippedExposure) {
@@ -100,13 +113,15 @@ export function InvestigationSummary({
     if (maxExposureDepth != null && maxExposureDepth >= 2) {
       severity = 'HIGH'
       severityLabel = 'High Indirect Exposure'
-      alertMessage = 'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
+      alertMessage =
+        'Warning: Shipped stock has reached customer sites via indirect (multi-hop) lineage. Recall review required.'
       actionGuidance = 'Assess scope of indirect exposure and initiate recall review.'
       bannerBg = 'rgba(199, 130, 28, 0.08)'
       bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
     } else {
       severity = 'CRITICAL'
-      alertMessage = 'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
+      alertMessage =
+        'Critical Alert: Shipped stock has reached customer sites. Immediate action is required.'
       actionGuidance = 'Activate product recall and containment protocol.'
       bannerBg = 'rgba(199, 51, 21, 0.08)'
       bannerBorder = '1px solid rgba(199, 51, 21, 0.25)'
@@ -114,7 +129,8 @@ export function InvestigationSummary({
   } else if (maxExposureDepth != null && maxExposureDepth >= 2) {
     // Indirect multi-hop lineage with no confirmed shipments — reference engine: MEDIUM.
     severity = 'MEDIUM'
-    alertMessage = 'Warning: Indirect lineage exposure detected at depth 2 or beyond. No direct shipments confirmed.'
+    alertMessage =
+      'Warning: Indirect lineage exposure detected at depth 2 or beyond. No direct shipments confirmed.'
     actionGuidance = 'Review multi-hop lineage for downstream risk before concluding containment.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
@@ -126,7 +142,8 @@ export function InvestigationSummary({
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
   } else if (hasUnrestrictedStock) {
     severity = 'MEDIUM'
-    alertMessage = 'Action Required: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
+    alertMessage =
+      'Action Required: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
     actionGuidance = 'Monitor stock position and adjacent production batches.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
     bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
@@ -165,31 +182,40 @@ export function InvestigationSummary({
         }}
       >
         <div>
-            <SourceConfidenceStrip
-              mode={adapterMode}
-              status={mapConfidenceToStatus(confidence.grade)}
-              fetchedAt={fetchedAt ?? undefined}
-              className=""
-              style={{ marginBottom: '12px' }}
+          <SourceConfidenceStrip
+            mode={adapterMode}
+            status={mapConfidenceToStatus(confidence.grade)}
+            fetchedAt={fetchedAt ?? undefined}
+            className=""
+            style={{ marginBottom: '12px' }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: 10,
+                color: 'var(--shell-fg-3, #7A8A75)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+              }}
+            >
+              Batch Investigation Cockpit
+            </span>
+            <span
+              style={{
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                background: 'var(--shell-line, #DAD9C9)',
+              }}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono, monospace)',
-                  fontSize: 10,
-                  color: 'var(--shell-fg-3, #7A8A75)',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  fontWeight: 600,
-                }}
-              >
-                Batch Investigation Cockpit
-              </span>
-              <span style={{ width: 4, height: 4, borderRadius: 2, background: 'var(--shell-line, #DAD9C9)' }} />
-              <EvidenceConfidenceBadge result={confidence} />
-            </div>
+            <EvidenceConfidenceBadge result={confidence} />
+          </div>
 
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--shell-fg, #0E1F0A)' }}>
+          <h2
+            style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--shell-fg, #0E1F0A)' }}
+          >
             {batchHeader?.materialDescription || 'Loading material...'}
             <span
               style={{
@@ -241,18 +267,18 @@ export function InvestigationSummary({
             letterSpacing: '0.12em',
             fontWeight: 700,
             textTransform: 'uppercase',
-            color: severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
+            color:
+              severity === 'CRITICAL' ? 'var(--shell-bad, #C73315)' : 'var(--shell-warn, #C7821C)',
             background: 'rgba(255, 255, 255, 0.5)',
             padding: '2px 6px',
             borderRadius: 3,
             border: '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          {severityLabel}
+          {severity === 'UNKNOWN' ? <UnknownValue /> : severityLabel}
         </span>
         <div style={{ flex: 1 }}>
-          <strong>Action Recommended:</strong> {alertMessage} <br />
-          <span style={{ fontSize: 11.5, color: 'var(--shell-fg-2, #4A5C45)' }}>{actionGuidance}</span>
+          <EvidenceCaveatList caveats={[`Action Recommended: ${alertMessage}`, actionGuidance]} />
         </div>
       </div>
 
@@ -270,71 +296,220 @@ export function InvestigationSummary({
         }}
       >
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Stock Position
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--shell-fg, #0E1F0A)' }}>
-            {batchHeader?.quantity !== undefined ? batchHeader.quantity.toLocaleString() : '—'}
-            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
+            {batchHeader?.quantity !== undefined ? (
+              batchHeader.quantity.toLocaleString()
+            ) : (
+              <UnavailableValue />
+            )}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 400,
+                color: 'var(--shell-fg-2, #4A5C45)',
+                marginLeft: 4,
+              }}
+            >
               {batchHeader?.uom || ''}
             </span>
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2, textTransform: 'capitalize' }}>
-            {batchHeader?.stockStatus || 'Not assessed'}
+          <div
+            style={{
+              fontSize: 10.5,
+              color: 'var(--shell-fg-2, #4A5C45)',
+              marginTop: 2,
+              textTransform: 'capitalize',
+            }}
+          >
+            {batchHeader?.stockStatus || <UnknownValue />}
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Total Shipped
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: customerDataUnavailable ? 'var(--shell-warn, #C7821C)' : hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
-            {customerDataUnavailable ? '?' : customerExposure.shippedQuantity !== undefined ? customerExposure.shippedQuantity.toLocaleString() : '—'}
-            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: customerDataUnavailable
+                ? 'var(--shell-warn, #C7821C)'
+                : hasShippedExposure
+                  ? 'var(--shell-bad, #C73315)'
+                  : 'var(--shell-fg, #0E1F0A)',
+            }}
+          >
+            {customerDataUnavailable ? (
+              <UnknownValue />
+            ) : customerExposure.shippedQuantity !== undefined ? (
+              customerExposure.shippedQuantity.toLocaleString()
+            ) : (
+              <UnavailableValue />
+            )}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 400,
+                color: 'var(--shell-fg-2, #4A5C45)',
+                marginLeft: 4,
+              }}
+            >
               {batchHeader?.uom || ''}
             </span>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            {customerDataUnavailable ? 'data unavailable' : customerExposure.affectedDeliveries !== undefined ? `${customerExposure.affectedDeliveries} deliveries` : '—'}
+            {customerDataUnavailable ? (
+              'data unavailable'
+            ) : customerExposure.affectedDeliveries !== undefined ? (
+              `${customerExposure.affectedDeliveries} deliveries`
+            ) : (
+              <UnavailableValue />
+            )}
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Downstream Exposure
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: customerDataUnavailable ? 'var(--shell-warn, #C7821C)' : hasShippedExposure ? 'var(--shell-bad, #C73315)' : 'var(--shell-fg, #0E1F0A)' }}>
-            {customerDataUnavailable ? '?' : customerExposure.affectedCustomers !== undefined ? customerExposure.affectedCustomers : '—'}
-            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: customerDataUnavailable
+                ? 'var(--shell-warn, #C7821C)'
+                : hasShippedExposure
+                  ? 'var(--shell-bad, #C73315)'
+                  : 'var(--shell-fg, #0E1F0A)',
+            }}
+          >
+            {customerDataUnavailable ? (
+              <UnknownValue />
+            ) : customerExposure.affectedCustomers !== undefined ? (
+              customerExposure.affectedCustomers
+            ) : (
+              <UnavailableValue />
+            )}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 400,
+                color: 'var(--shell-fg-2, #4A5C45)',
+                marginLeft: 4,
+              }}
+            >
               customers
             </span>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            {customerDataUnavailable ? 'data unavailable' : `across ${customerExposure.countries?.length || 0} countries`}
+            {customerDataUnavailable
+              ? 'data unavailable'
+              : `across ${customerExposure.countries?.length || 0} countries`}
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Upstream Lineage
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--shell-fg, #0E1F0A)' }}>
-            {supplierExposure?.supplierCount !== undefined ? supplierExposure.supplierCount : '—'}
-            <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--shell-fg-2, #4A5C45)', marginLeft: 4 }}>
+            {supplierExposure?.supplierCount !== undefined ? (
+              supplierExposure.supplierCount
+            ) : (
+              <UnavailableValue />
+            )}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 400,
+                color: 'var(--shell-fg-2, #4A5C45)',
+                marginLeft: 4,
+              }}
+            >
               suppliers
             </span>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            {supplierExposure?.supplierLots !== undefined ? `${supplierExposure.supplierLots} lots` : '—'}
+            {supplierExposure?.supplierLots !== undefined ? (
+              `${supplierExposure.supplierLots} lots`
+            ) : (
+              <UnavailableValue />
+            )}
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Shelf Life
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: !hasExpiry ? 'var(--shell-fg-3, #7A8A75)' : isExpired ? 'var(--shell-bad, #C73315)' : isNearExpiry ? 'var(--shell-warn, #C7821C)' : 'var(--shell-good, #1F8B4C)' }}>
-            {!hasExpiry ? '—' : isExpired ? 'Expired' : `${daysToExpiry} days`}
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: !hasExpiry
+                ? 'var(--shell-fg-3, #7A8A75)'
+                : isExpired
+                  ? 'var(--shell-bad, #C73315)'
+                  : isNearExpiry
+                    ? 'var(--shell-warn, #C7821C)'
+                    : 'var(--shell-good, #1F8B4C)',
+            }}
+          >
+            {!hasExpiry ? <UnavailableValue /> : isExpired ? 'Expired' : `${daysToExpiry} days`}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
             {!hasExpiry ? 'No expiry date' : `expires ${formattedExpiryDate}`}
@@ -342,10 +517,29 @@ export function InvestigationSummary({
         </div>
 
         <div>
-          <div style={{ fontSize: 9, color: 'var(--shell-fg-3, #7A8A75)', textTransform: 'uppercase', fontFamily: 'var(--font-mono, monospace)', marginBottom: 4, letterSpacing: '0.05em', fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--shell-fg-3, #7A8A75)',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono, monospace)',
+              marginBottom: 4,
+              letterSpacing: '0.05em',
+              fontWeight: 600,
+            }}
+          >
             Quality Status
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--shell-fg, #0E1F0A)', display: 'flex', alignItems: 'center', minHeight: 22 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: 'var(--shell-fg, #0E1F0A)',
+              display: 'flex',
+              alignItems: 'center',
+              minHeight: 22,
+            }}
+          >
             {batchHeader?.qualityStatus ? (
               <StatusBadge
                 label={batchHeader.qualityStatus}
@@ -353,18 +547,18 @@ export function InvestigationSummary({
                   batchHeader.qualityStatus === 'accepted'
                     ? 'good'
                     : batchHeader.qualityStatus === 'rejected'
-                    ? 'bad'
-                    : batchHeader.qualityStatus === 'pending'
-                    ? 'warn'
-                    : 'neutral'
+                      ? 'bad'
+                      : batchHeader.qualityStatus === 'pending'
+                        ? 'warn'
+                        : 'neutral'
                 }
               />
             ) : (
-              '—'
+              <UnavailableValue />
             )}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--shell-fg-2, #4A5C45)', marginTop: 2 }}>
-            released: {batchHeader?.releaseStatus || 'unknown'}
+            released: {batchHeader?.releaseStatus ? batchHeader.releaseStatus : <UnknownValue />}
           </div>
         </div>
       </div>
@@ -382,7 +576,8 @@ export function InvestigationSummary({
         }}
       >
         <span>
-          💡 <strong>Auditing checklist:</strong> ensure all data sectors match the physical SAP delivery notes before signing release forms.
+          💡 <strong>Auditing checklist:</strong> ensure all data sectors match the physical SAP
+          delivery notes before signing release forms.
         </span>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <span>Explore views:</span>

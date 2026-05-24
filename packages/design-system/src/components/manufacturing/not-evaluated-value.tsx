@@ -16,7 +16,7 @@ export function NotEvaluatedValue({ className }: NotEvaluatedValueProps) {
         fontSize: 'inherit',
       }}
     >
-      Not Evaluated
+      Not evaluated
     </span>
   )
 }

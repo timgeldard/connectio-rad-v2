@@ -9,5 +9,5 @@ export interface ApplicationHeuristicBadgeProps {
  * not read directly from the source system (classification: application-heuristic).
  */
 export function ApplicationHeuristicBadge({ className }: ApplicationHeuristicBadgeProps) {
-  return <StatusBadge label="App Heuristic" variant="info" className={className} />
+  return <StatusBadge label="Application-heuristic" variant="info" className={className} />
 }

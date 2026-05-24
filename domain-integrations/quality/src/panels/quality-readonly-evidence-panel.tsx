@@ -1,5 +1,9 @@
 import { useEffect } from 'react'
-import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
+import {
+  EvidencePanel,
+  useEvidencePanel,
+  EvidenceCaveatList,
+} from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type {
   QualityEvidenceResponse,
@@ -10,6 +14,7 @@ import type {
 import { useQualityReadOnlyEvidence } from '../adapters/quality-readonly-evidence-queries.js'
 import type { QualityReadOnlyEvidenceAdapterRequest } from '../adapters/quality-readonly-evidence-adapter.js'
 import { buildUsageDecisionDisplay } from '../lib/usage-decision-display.js'
+import { UnknownValue } from '@connectio/design-system'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'quality-readonly-evidence',
@@ -125,13 +130,13 @@ export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidenc
 
           {/* Multiple lots warning — driven by actual lot array length, not summary count which may be null */}
           {data.inspectionLots.length > 1 && (
-            <div style={warningBoxStyle} role="alert">
-              <strong>Multiple inspection lots found ({data.inspectionLots.length}).</strong>
-              <div style={{ marginTop: 4 }}>
-                {data.summary.multipleLotsWarning ??
-                  'Per-lot usage decisions are shown individually. A batch-level release decision is not derived from individual lot decisions.'}
-              </div>
-            </div>
+            <EvidenceCaveatList
+              caveats={[
+                `Multiple inspection lots found (${data.inspectionLots.length}).`,
+                data.summary.multipleLotsWarning ??
+                  'Per-lot usage decisions are shown individually. A batch-level release decision is not derived from individual lot decisions.',
+              ]}
+            />
           )}
 
           {/* Inspection lot section */}
@@ -348,7 +353,9 @@ function InspectionLotRow({ lot }: { lot: QualityInspectionLotEvidence }) {
             <span style={{ color: 'var(--shell-fg-2)' }}>— {udDisplay.displayLabel}</span>
           </>
         ) : (
-          <span style={{ color: '#D97706' }}>{udDisplay.displayLabel}</span>
+          <span style={{ color: '#D97706' }}>
+            <UnknownValue />
+          </span>
         )}
       </div>
 
@@ -387,10 +394,11 @@ function UsageDecisionSection({
   return (
     <div style={{ marginTop: 6, display: 'grid', gap: 8 }}>
       {lotCount > 1 && (
-        <div style={warningBoxStyle} role="alert">
-          Multiple lots detected. Usage decision shown is for the primary lot only. Per-lot
-          decisions are shown in the inspection lot section above.
-        </div>
+        <EvidenceCaveatList
+          caveats={[
+            'Multiple lots detected. Usage decision shown is for the primary lot only. Per-lot decisions are shown in the inspection lot section above.',
+          ]}
+        />
       )}
 
       {usageDecision ? (
@@ -425,7 +433,9 @@ function UsageDecisionSection({
           )}
         </div>
       ) : (
-        <div style={noRecordStyle}>{udDisplay.displayLabel}</div>
+        <div style={noRecordStyle}>
+          <UnknownValue />
+        </div>
       )}
 
       {/* Release authority block — always shown */}
