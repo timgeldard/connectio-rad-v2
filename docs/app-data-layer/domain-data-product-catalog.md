@@ -14,40 +14,53 @@ needed to advance it.
 Maturity levels reference [`data-product-maturity-model.md`](./data-product-maturity-model.md).
 Field classification markers reference [`field-classification-standard.md`](./field-classification-standard.md).
 Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
+Browser UAT readiness references
+[`browser-uat-evidence-standard.md`](./browser-uat-evidence-standard.md)
+and the per-app checklists under
+[`browser-uat-checklists/`](./browser-uat-checklists/).
+
+> **Browser UAT status.** Every data product below remains
+> `browser-uat-pending` until evidence is captured under
+> `docs/app-data-layer/evidence/YYYY-MM-DD/<app-or-data-product>/`.
+> No data product in this catalog is asserted to be browser-UAT
+> captured or production-ready by virtue of appearing here. Production
+> readiness requires the full set of gates in
+> [`route-readiness-standard.md`](./route-readiness-standard.md), of
+> which browser UAT evidence is only one.
 
 ## Index
 
-| # | Data product | Pattern | Maturity | Status |
-|---|---|---|---|---|
-| 1 | [SPCSubgroupSeries](#1-spcsubgroupseries) | evidence-pack | L4 | browser-UAT-pending |
-| 2 | [SPCChartDataSeries](#2-spcchartdataseries) | evidence-pack | L4 | mapper-tested, governance-pending (locked-limits approval, signals) |
-| 3 | [BatchQualityPassport](#3-batchqualitypassport) | evidence-pack | L3 | mapper-test-pending, browser-UAT-pending |
-| 4 | [MassBalanceLedger](#4-massbalanceledger) | evidence-pack | L3/L4 | reconciliation governance-pending |
-| 5 | [TraceGraph](#5-tracegraph) | evidence-pack | L3 | mapper-test-pending |
-| 6 | [CustomerExposureEvidence](#6-customerexposureevidence) | evidence-pack | L3 | governance-pending (recall recommendation) |
-| 7 | [SupplierExposureEvidence](#7-supplierexposureevidence) | evidence-pack | L3 | source-coverage-pending (no QM source) |
-| 8 | [ProcessOrderExecutionEvidence](#8-processorderexecutionevidence) | evidence-pack | L3/L4 | partially-classified (legacy-bridge fields) |
-| 9 | [QualityUsageDecisionEvidence](#9-qualityusagedecisionevidence) | evidence-pack | L3 | governance-pending (lot vs batch level) |
-| 10 | [WarehouseOperationalSnapshot](#10-warehouseoperationalsnapshot) | read-model | L1/L2 | source-coverage-pending |
-| 11 | [EnvMonSwabResultEvidence](#11-envmonswabresultevidence) | evidence-pack | L3 | mapper-test-pending |
+| #   | Data product                                                      | Pattern       | Maturity | Status                                                              |
+| --- | ----------------------------------------------------------------- | ------------- | -------- | ------------------------------------------------------------------- |
+| 1   | [SPCSubgroupSeries](#1-spcsubgroupseries)                         | evidence-pack | L4       | browser-UAT-pending                                                 |
+| 2   | [SPCChartDataSeries](#2-spcchartdataseries)                       | evidence-pack | L4       | mapper-tested, governance-pending (locked-limits approval, signals) |
+| 3   | [BatchQualityPassport](#3-batchqualitypassport)                   | evidence-pack | L3       | mapper-test-pending, browser-UAT-pending                            |
+| 4   | [MassBalanceLedger](#4-massbalanceledger)                         | evidence-pack | L3/L4    | reconciliation governance-pending                                   |
+| 5   | [TraceGraph](#5-tracegraph)                                       | evidence-pack | L3       | mapper-test-pending                                                 |
+| 6   | [CustomerExposureEvidence](#6-customerexposureevidence)           | evidence-pack | L3       | governance-pending (recall recommendation)                          |
+| 7   | [SupplierExposureEvidence](#7-supplierexposureevidence)           | evidence-pack | L3       | source-coverage-pending (no QM source)                              |
+| 8   | [ProcessOrderExecutionEvidence](#8-processorderexecutionevidence) | evidence-pack | L3/L4    | partially-classified (legacy-bridge fields)                         |
+| 9   | [QualityUsageDecisionEvidence](#9-qualityusagedecisionevidence)   | evidence-pack | L3       | governance-pending (lot vs batch level)                             |
+| 10  | [WarehouseOperationalSnapshot](#10-warehouseoperationalsnapshot)  | read-model    | L1/L2    | source-coverage-pending                                             |
+| 11  | [EnvMonSwabResultEvidence](#11-envmonswabresultevidence)          | evidence-pack | L3       | mapper-test-pending                                                 |
 
 ---
 
 ## 1. SPCSubgroupSeries
 
-| Aspect | Value |
-|---|---|
-| Business object | SPC subgroup measurement series for a material / MIC / plant / operation context |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/spc-monitoring.ts` — `SPCSubgroupResponseSchema` |
-| Route | `GET /api/spc/subgroups` in `apps/api/routes/spc.py` |
-| Mapper | `map_spc_subgroup_rows` in `apps/api/adapters/spc/spc_databricks_adapter.py` |
-| Source objects | `gold.spc_quality_metric_subgroup_mv` |
-| Field classifications | Yes — `[classification: source-field]`, `[classification: source-derived]`, `[classification: unavailable]` |
-| `response_model` enforced | Yes |
-| Mapper tests | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_adapter.py::TestMapSpcSubgroupRows` |
-| Maturity | L4 — direct mapper tests + route-level tests present; browser-UAT pending |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending` |
+| Aspect                    | Value                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Business object           | SPC subgroup measurement series for a material / MIC / plant / operation context                                 |
+| Pattern                   | `evidence-pack`                                                                                                  |
+| Contract                  | `packages/data-contracts/src/schemas/spc-monitoring.ts` — `SPCSubgroupResponseSchema`                            |
+| Route                     | `GET /api/spc/subgroups` in `apps/api/routes/spc.py`                                                             |
+| Mapper                    | `map_spc_subgroup_rows` in `apps/api/adapters/spc/spc_databricks_adapter.py`                                     |
+| Source objects            | `gold.spc_quality_metric_subgroup_mv`                                                                            |
+| Field classifications     | Yes — `[classification: source-field]`, `[classification: source-derived]`, `[classification: unavailable]`      |
+| `response_model` enforced | Yes                                                                                                              |
+| Mapper tests              | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_adapter.py::TestMapSpcSubgroupRows`                           |
+| Maturity                  | L4 — direct mapper tests + route-level tests present; browser-UAT pending                                        |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending` |
 
 **Known caveats**
 
@@ -61,19 +74,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 2. SPCChartDataSeries
 
-| Aspect | Value |
-|---|---|
-| Business object | Quantitative control-chart series (subgroup means + points + locked limits) for a material / MIC |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/spc-monitoring.ts` — `ControlChartSeriesSchema` / `ControlChartPointSchema` |
-| Route | `POST /api/spc/chart-data` in `apps/api/routes/spc.py` |
-| Mapper | `map_spc_chart_response` in `apps/api/adapters/spc/spc_databricks_chart_adapter.py` |
-| Source objects | `gold.spc_quality_metric_subgroup_mv`, `gold.spc_locked_limits` |
-| Field classifications | Yes — `ControlChartPoint.status` is `application-heuristic` and now accepts `'not-evaluated'` as the source-truthful default |
-| `response_model` enforced | Yes |
-| Mapper tests | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_chart_adapter.py::TestLockedLimitsBranch` (+ `TestNoLockedLimitsBranch`, `TestGuardrailsRegardlessOfInput`) |
-| Maturity | L4 — mapper-tested; governance-pending on locked-limits approval source |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `governance-pending` (locked-limits approval source, signal source) |
+| Aspect                    | Value                                                                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Quantitative control-chart series (subgroup means + points + locked limits) for a material / MIC                                                               |
+| Pattern                   | `evidence-pack`                                                                                                                                                |
+| Contract                  | `packages/data-contracts/src/schemas/spc-monitoring.ts` — `ControlChartSeriesSchema` / `ControlChartPointSchema`                                               |
+| Route                     | `POST /api/spc/chart-data` in `apps/api/routes/spc.py`                                                                                                         |
+| Mapper                    | `map_spc_chart_response` in `apps/api/adapters/spc/spc_databricks_chart_adapter.py`                                                                            |
+| Source objects            | `gold.spc_quality_metric_subgroup_mv`, `gold.spc_locked_limits`                                                                                                |
+| Field classifications     | Yes — `ControlChartPoint.status` is `application-heuristic` and now accepts `'not-evaluated'` as the source-truthful default                                   |
+| `response_model` enforced | Yes                                                                                                                                                            |
+| Mapper tests              | ✓ `apps/api/tests/adapters/spc/test_spc_databricks_chart_adapter.py::TestLockedLimitsBranch` (+ `TestNoLockedLimitsBranch`, `TestGuardrailsRegardlessOfInput`) |
+| Maturity                  | L4 — mapper-tested; governance-pending on locked-limits approval source                                                                                        |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `governance-pending` (locked-limits approval source, signal source) |
 
 **Known caveats**
 
@@ -88,19 +101,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 3. BatchQualityPassport
 
-| Aspect | Value |
-|---|---|
-| Business object | Consolidated quality identity card for a batch (identity + CoA + stock + production + lot history + mass-balance variance + usage-decision evidence) |
-| Pattern | `evidence-pack` (composite — fans out across 5+ source queries) |
-| Contract | `packages/data-contracts/src/schemas/batch-quality-passport.ts` — `BatchQualityPassportSchema` |
-| Route | `POST /api/trace2/batch-quality-passport` in `apps/api/routes/trace2.py` |
-| Mapper | `build_batch_quality_passport` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` (composes 5 specs) |
-| Source objects | `gold.gold_batch_summary_v`, `gold.gold_batch_stock_v`, `gold.gold_material`, `gold.gold_batch_production_history_v`, `gold.gold_batch_quality_result_v`, `gold.gold_inspection_usage_decision` |
-| Field classifications | Yes — every nested schema carries `[classification: ...]` markers including `application-heuristic` for confidence + status and `source-field` for identity / stock |
-| `response_model` enforced | Yes |
-| Mapper tests | ✓ `apps/api/tests/adapters/trace2/test_trace_app_mappers.py::TestBuildBatchQualityPassport` (open in `test/trace-app-mapper-hardening`) |
-| Maturity | L3 → L4 once the mapper-hardening PR merges |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `browser-uat-pending` (mapper-tested once PR lands) |
+| Aspect                    | Value                                                                                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Consolidated quality identity card for a batch (identity + CoA + stock + production + lot history + mass-balance variance + usage-decision evidence)                                            |
+| Pattern                   | `evidence-pack` (composite — fans out across 5+ source queries)                                                                                                                                 |
+| Contract                  | `packages/data-contracts/src/schemas/batch-quality-passport.ts` — `BatchQualityPassportSchema`                                                                                                  |
+| Route                     | `POST /api/trace2/batch-quality-passport` in `apps/api/routes/trace2.py`                                                                                                                        |
+| Mapper                    | `build_batch_quality_passport` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` (composes 5 specs)                                                                                    |
+| Source objects            | `gold.gold_batch_summary_v`, `gold.gold_batch_stock_v`, `gold.gold_material`, `gold.gold_batch_production_history_v`, `gold.gold_batch_quality_result_v`, `gold.gold_inspection_usage_decision` |
+| Field classifications     | Yes — every nested schema carries `[classification: ...]` markers including `application-heuristic` for confidence + status and `source-field` for identity / stock                             |
+| `response_model` enforced | Yes                                                                                                                                                                                             |
+| Mapper tests              | ✓ `apps/api/tests/adapters/trace2/test_trace_app_mappers.py::TestBuildBatchQualityPassport` (open in `test/trace-app-mapper-hardening`)                                                         |
+| Maturity                  | L3 → L4 once the mapper-hardening PR merges                                                                                                                                                     |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `browser-uat-pending` (mapper-tested once PR lands)                                                                   |
 
 **Known caveats**
 
@@ -115,19 +128,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 4. MassBalanceLedger
 
-| Aspect | Value |
-|---|---|
-| Business object | SAP MSEG-style movement ledger for a batch with KPI rollups and running on-hand |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/mass-balance-ledger.ts` — `MassBalanceLedgerSchema` |
-| Route | `POST /api/trace2/mass-balance-ledger` in `apps/api/routes/trace2.py` |
-| Mapper | `map_mass_balance_ledger_rows` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` |
-| Source objects | `gold.gold_batch_mass_balance_v` |
-| Field classifications | Yes — `[classification: source-field]` / `[classification: source-derived]` / `[classification: application-heuristic]` |
-| `response_model` enforced | Yes |
-| Mapper tests | `apps/api/tests/routes/test_trace_app_routes.py::TestMovementTypeBucketing` + `::TestMassBalanceLedgerMapping` (movement bucketing, signed quantities, reversal preservation, reconciliation source) |
-| Maturity | L3/L4 |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `governance-pending` (reconciliation) |
+| Aspect                    | Value                                                                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | SAP MSEG-style movement ledger for a batch with KPI rollups and running on-hand                                                                                                                      |
+| Pattern                   | `evidence-pack`                                                                                                                                                                                      |
+| Contract                  | `packages/data-contracts/src/schemas/mass-balance-ledger.ts` — `MassBalanceLedgerSchema`                                                                                                             |
+| Route                     | `POST /api/trace2/mass-balance-ledger` in `apps/api/routes/trace2.py`                                                                                                                                |
+| Mapper                    | `map_mass_balance_ledger_rows` in `apps/api/adapters/trace2/trace2_databricks_adapter.py`                                                                                                            |
+| Source objects            | `gold.gold_batch_mass_balance_v`                                                                                                                                                                     |
+| Field classifications     | Yes — `[classification: source-field]` / `[classification: source-derived]` / `[classification: application-heuristic]`                                                                              |
+| `response_model` enforced | Yes                                                                                                                                                                                                  |
+| Mapper tests              | `apps/api/tests/routes/test_trace_app_routes.py::TestMovementTypeBucketing` + `::TestMassBalanceLedgerMapping` (movement bucketing, signed quantities, reversal preservation, reconciliation source) |
+| Maturity                  | L3/L4                                                                                                                                                                                                |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `governance-pending` (reconciliation)                                                                     |
 
 **Known caveats**
 
@@ -141,19 +154,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 5. TraceGraph
 
-| Aspect | Value |
-|---|---|
-| Business object | Upstream + downstream lineage graph for a batch (nodes + edges + traversal metadata) |
-| Pattern | `evidence-pack` (recursive CTE) |
-| Contract | `packages/data-contracts/src/schemas/trace-investigation.ts` — `TraceGraphSchema` |
-| Route | `POST /api/trace2/trace-graph` in `apps/api/routes/trace2.py` |
-| Mapper | `map_trace_graph` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` |
-| Source objects | `gold.gold_batch_lineage`, `gold.gold_material` |
-| Field classifications | Yes — nodes/edges carry `[classification: source-field]`, `[classification: source-derived]`, `[classification: application-derived]`, `[classification: application-heuristic]` |
-| `response_model` enforced | Yes |
-| Mapper tests | ✓ `apps/api/tests/adapters/trace2/test_trace2_databricks_adapter.py::TestMapTraceGraph` |
-| Maturity | L4 — direct mapper tests + route-level tests present; browser-UAT pending |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending` |
+| Aspect                    | Value                                                                                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Upstream + downstream lineage graph for a batch (nodes + edges + traversal metadata)                                                                                             |
+| Pattern                   | `evidence-pack` (recursive CTE)                                                                                                                                                  |
+| Contract                  | `packages/data-contracts/src/schemas/trace-investigation.ts` — `TraceGraphSchema`                                                                                                |
+| Route                     | `POST /api/trace2/trace-graph` in `apps/api/routes/trace2.py`                                                                                                                    |
+| Mapper                    | `map_trace_graph` in `apps/api/adapters/trace2/trace2_databricks_adapter.py`                                                                                                     |
+| Source objects            | `gold.gold_batch_lineage`, `gold.gold_material`                                                                                                                                  |
+| Field classifications     | Yes — nodes/edges carry `[classification: source-field]`, `[classification: source-derived]`, `[classification: application-derived]`, `[classification: application-heuristic]` |
+| `response_model` enforced | Yes                                                                                                                                                                              |
+| Mapper tests              | ✓ `apps/api/tests/adapters/trace2/test_trace2_databricks_adapter.py::TestMapTraceGraph`                                                                                          |
+| Maturity                  | L4 — direct mapper tests + route-level tests present; browser-UAT pending                                                                                                        |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-tested`, `browser-uat-pending`                                                                 |
 
 **Known caveats**
 
@@ -167,19 +180,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 6. CustomerExposureEvidence
 
-| Aspect | Value |
-|---|---|
-| Business object | Downstream customer / delivery exposure summary for a batch |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/trace-investigation.ts` — `CustomerExposureSummarySchema`; AND `packages/data-contracts/src/schemas/recall-readiness.ts` — `RecallReadinessSchema` |
-| Route | `POST /api/trace2/customer-exposure`, `POST /api/trace2/customer-deliveries`, `POST /api/trace2/recall-readiness` |
-| Mapper | `map_customer_exposure_rows`, `map_customer_delivery_rows`, `map_recall_readiness_rows` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` |
-| Source objects | `gold.gold_batch_lineage` (DELIVERY edges), `gold.gold_batch_delivery_v` |
-| Field classifications | Yes — `maxExposureDepth`, `recallRecommended`/`recommendationStatus`, `deliveryEvidenceSource`, `uom` all carry markers |
-| `response_model` enforced | Yes |
-| Mapper tests | `apps/api/tests/routes/test_trace_app_routes.py::TestRecallReadinessMapping` (recommendation not hardcoded, delivery status truthful, country aggregation) |
-| Maturity | L3 |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `governance-pending` (recall recommendation) |
+| Aspect                    | Value                                                                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Downstream customer / delivery exposure summary for a batch                                                                                                                             |
+| Pattern                   | `evidence-pack`                                                                                                                                                                         |
+| Contract                  | `packages/data-contracts/src/schemas/trace-investigation.ts` — `CustomerExposureSummarySchema`; AND `packages/data-contracts/src/schemas/recall-readiness.ts` — `RecallReadinessSchema` |
+| Route                     | `POST /api/trace2/customer-exposure`, `POST /api/trace2/customer-deliveries`, `POST /api/trace2/recall-readiness`                                                                       |
+| Mapper                    | `map_customer_exposure_rows`, `map_customer_delivery_rows`, `map_recall_readiness_rows` in `apps/api/adapters/trace2/trace2_databricks_adapter.py`                                      |
+| Source objects            | `gold.gold_batch_lineage` (DELIVERY edges), `gold.gold_batch_delivery_v`                                                                                                                |
+| Field classifications     | Yes — `maxExposureDepth`, `recallRecommended`/`recommendationStatus`, `deliveryEvidenceSource`, `uom` all carry markers                                                                 |
+| `response_model` enforced | Yes                                                                                                                                                                                     |
+| Mapper tests              | `apps/api/tests/routes/test_trace_app_routes.py::TestRecallReadinessMapping` (recommendation not hardcoded, delivery status truthful, country aggregation)                              |
+| Maturity                  | L3                                                                                                                                                                                      |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `governance-pending` (recall recommendation)                                                                  |
 
 **Known caveats**
 
@@ -194,19 +207,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 7. SupplierExposureEvidence
 
-| Aspect | Value |
-|---|---|
-| Business object | Upstream vendor / supplier exposure summary + cross-plant sibling batches |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/trace-investigation.ts` — `SupplierExposureSummarySchema`; AND `packages/data-contracts/src/schemas/supplier-batch-view.ts` — `SupplierBatchViewSchema` |
-| Route | `POST /api/trace2/supplier-exposure`, `POST /api/trace2/supplier-batches` |
-| Mapper | `map_supplier_exposure_rows`, `map_supplier_batch_view` in `apps/api/adapters/trace2/trace2_databricks_adapter.py` |
-| Source objects | `gold.gold_batch_lineage` (VENDOR_RECEIPT edges), `gold.gold_supplier` |
-| Field classifications | Yes — `SupplierLotRisk` now includes `'unknown'`; per-lot risk classification source markers in place |
-| `response_model` enforced | Yes |
-| Mapper tests | `apps/api/tests/routes/test_trace_app_routes.py::TestSupplierBatchViewMapping` (abs(consumed), risk-default, empty handling, cross-plant siblings) |
-| Maturity | L3 |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `source-coverage-pending` (no governed QM risk source) |
+| Aspect                    | Value                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Upstream vendor / supplier exposure summary + cross-plant sibling batches                                                                                                                    |
+| Pattern                   | `evidence-pack`                                                                                                                                                                              |
+| Contract                  | `packages/data-contracts/src/schemas/trace-investigation.ts` — `SupplierExposureSummarySchema`; AND `packages/data-contracts/src/schemas/supplier-batch-view.ts` — `SupplierBatchViewSchema` |
+| Route                     | `POST /api/trace2/supplier-exposure`, `POST /api/trace2/supplier-batches`                                                                                                                    |
+| Mapper                    | `map_supplier_exposure_rows`, `map_supplier_batch_view` in `apps/api/adapters/trace2/trace2_databricks_adapter.py`                                                                           |
+| Source objects            | `gold.gold_batch_lineage` (VENDOR_RECEIPT edges), `gold.gold_supplier`                                                                                                                       |
+| Field classifications     | Yes — `SupplierLotRisk` now includes `'unknown'`; per-lot risk classification source markers in place                                                                                        |
+| `response_model` enforced | Yes                                                                                                                                                                                          |
+| Mapper tests              | `apps/api/tests/routes/test_trace_app_routes.py::TestSupplierBatchViewMapping` (abs(consumed), risk-default, empty handling, cross-plant siblings)                                           |
+| Maturity                  | L3                                                                                                                                                                                           |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `source-coverage-pending` (no governed QM risk source)                                                             |
 
 **Known caveats**
 
@@ -220,19 +233,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 8. ProcessOrderExecutionEvidence
 
-| Aspect | Value |
-|---|---|
-| Business object | Process-order execution history (header + operations + confirmations + goods movements) |
-| Pattern | `evidence-pack` (multi-endpoint composite) |
-| Contract | `packages/data-contracts/src/schemas/process-order-review.ts` — `ProcessOrderHeaderSchema` + `ProcessOrderOperationSchema` + `ProcessOrderConfirmationSchema` + `ProcessOrderGoodsMovementSchema` |
-| Route | Multiple under `/api/process-order/*` in `apps/api/routes/process_order.py` |
-| Mapper | `map_process_order_header_rows`, `map_order_operations_rows`, `map_order_confirmations_rows`, `map_order_goods_movements_rows` in `apps/api/adapters/poh/poh_databricks_adapter.py` |
-| Source objects | `gold.vw_gold_process_order`, `gold.vw_gold_process_order_phase`, `gold.vw_gold_confirmation`, `gold.vw_gold_adp_movement` |
-| Field classifications | Partial — markers include `application-heuristic` and `governance-pending` |
-| `response_model` enforced | Per-route (each segment has its own model) |
-| Mapper tests | Not found |
-| Maturity | L3/L4 |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `legacy-bridge-pending` (workCentreId), `mapper-test-pending` |
+| Aspect                    | Value                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Process-order execution history (header + operations + confirmations + goods movements)                                                                                                           |
+| Pattern                   | `evidence-pack` (multi-endpoint composite)                                                                                                                                                        |
+| Contract                  | `packages/data-contracts/src/schemas/process-order-review.ts` — `ProcessOrderHeaderSchema` + `ProcessOrderOperationSchema` + `ProcessOrderConfirmationSchema` + `ProcessOrderGoodsMovementSchema` |
+| Route                     | Multiple under `/api/process-order/*` in `apps/api/routes/process_order.py`                                                                                                                       |
+| Mapper                    | `map_process_order_header_rows`, `map_order_operations_rows`, `map_order_confirmations_rows`, `map_order_goods_movements_rows` in `apps/api/adapters/poh/poh_databricks_adapter.py`               |
+| Source objects            | `gold.vw_gold_process_order`, `gold.vw_gold_process_order_phase`, `gold.vw_gold_confirmation`, `gold.vw_gold_adp_movement`                                                                        |
+| Field classifications     | Partial — markers include `application-heuristic` and `governance-pending`                                                                                                                        |
+| `response_model` enforced | Per-route (each segment has its own model)                                                                                                                                                        |
+| Mapper tests              | Not found                                                                                                                                                                                         |
+| Maturity                  | L3/L4                                                                                                                                                                                             |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `legacy-bridge-pending` (workCentreId), `mapper-test-pending`                                                           |
 
 **Known caveats**
 
@@ -247,19 +260,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 > **Spec:** [`data-products/quality-usage-decision-evidence.md`](./data-products/quality-usage-decision-evidence.md) — Option A governance (Strict Lot-Level Evidence), 9-code governed label dictionary, contract reconciliation (`QualityInspectionLotEvidence` canonical vs `PassportUsageDecisionEvidence` derived), mapping-status taxonomy, forbidden claims, production-readiness gate.
 
-| Aspect | Value |
-|---|---|
-| Business object | SAP usage-decision evidence at inspection-lot level (lot ID + decision text + valuator + timestamp) |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/batch-quality-passport.ts` — `PassportUsageDecisionEvidenceSchema`; AND `packages/data-contracts/src/schemas/quality-readonly-evidence.ts` — `QualityInspectionLotEvidenceSchema` |
-| Route | `POST /api/quality/read-only-evidence` in `apps/api/routes/quality.py` (also referenced from `POST /api/trace2/batch-quality-passport` composite) |
-| Mapper | `map_quality_usage_decision_rows` in `apps/api/adapters/quality/quality_databricks_adapter.py` |
-| Source objects | `gold.gold_inspection_usage_decision`, `gold.gold_inspection_lot` |
-| Field classifications | Yes — `usageDecisionCode`, `usageDecisionText`, `usageDecisionMappingStatus` all carry `[classification: ...]` markers |
-| `response_model` enforced | Yes (`QualityEvidenceResponse`) |
-| Mapper tests | Not found |
-| Maturity | L3 — Route implemented; mapper unit tests absent |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `governance-pending` |
+| Aspect                    | Value                                                                                                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | SAP usage-decision evidence at inspection-lot level (lot ID + decision text + valuator + timestamp)                                                                                                                    |
+| Pattern                   | `evidence-pack`                                                                                                                                                                                                        |
+| Contract                  | `packages/data-contracts/src/schemas/batch-quality-passport.ts` — `PassportUsageDecisionEvidenceSchema`; AND `packages/data-contracts/src/schemas/quality-readonly-evidence.ts` — `QualityInspectionLotEvidenceSchema` |
+| Route                     | `POST /api/quality/read-only-evidence` in `apps/api/routes/quality.py` (also referenced from `POST /api/trace2/batch-quality-passport` composite)                                                                      |
+| Mapper                    | `map_quality_usage_decision_rows` in `apps/api/adapters/quality/quality_databricks_adapter.py`                                                                                                                         |
+| Source objects            | `gold.gold_inspection_usage_decision`, `gold.gold_inspection_lot`                                                                                                                                                      |
+| Field classifications     | Yes — `usageDecisionCode`, `usageDecisionText`, `usageDecisionMappingStatus` all carry `[classification: ...]` markers                                                                                                 |
+| `response_model` enforced | Yes (`QualityEvidenceResponse`)                                                                                                                                                                                        |
+| Mapper tests              | Not found                                                                                                                                                                                                              |
+| Maturity                  | L3 — Route implemented; mapper unit tests absent                                                                                                                                                                       |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `governance-pending`                                                                                                                         |
 
 **Known caveats**
 
@@ -274,20 +287,20 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 > **Spec:** [`data-products/warehouse-operational-snapshot.md`](./data-products/warehouse-operational-snapshot.md) — gating document. 3 of 4 sibling routes are broken against live Databricks (overview returns V1 KPI shape silently mapped to 0; inbound/staging/exceptions 500 on UAT). Spec lists the 5-item prerequisite gate that MUST close before any L3+ implementation work proceeds.
 
-| Aspect | Value |
-|---|---|
-| Business object | Cross-batch warehouse operational state for a plant / region (overview + inbound + outbound + staging + exceptions) |
-| Pattern | `read-model` (rolling snapshot) |
-| Contract | `packages/data-contracts/src/schemas/warehouse-360-overview.ts` — `Warehouse360OverviewSchema` + 12 nested schemas |
-| Route | `GET /api/warehouse360/overview`, `/inbound`, `/outbound`, `/staging`, `/exceptions` in `apps/api/routes/warehouse360.py` |
-| Mapper | `map_warehouse_overview_rows` in `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py` |
-| Source objects (actual adapter SQL) | `wh360_kpi_snapshot_v` (overview — returns 11 V1 KPI cols, NOT the contract fields); `wh360_inbound_v` (inbound — adapter SQL references non-existent columns); `wh360_deliveries_v` (outbound — likely works); `staging_orders_v` (staging — **view does not exist** in UAT); `wh360_imwm_exceptions_v` (exceptions — **view does not exist**; correct name is `imwm_exceptions_v`) |
-| Source objects (target after gate closes) | `wh360_inbound_v`, `wh360_deliveries_v`, `wh360_process_orders_v`, `wh360_near_expiry_batches_v`, `imwm_exceptions_v`, `imwm_stock_comparison_v` |
-| Field classifications | Yes — but partial coverage |
-| `response_model` enforced | **Deliberately disabled** on `/overview` (mapper output diverges from contract); ✓ on the 4 sibling routes (3 of which return HTTP 500 against live UAT) |
-| Mapper tests | Not found |
-| Maturity | L1/L2 — contract diverged from mapper; 3 of 4 sibling routes broken in production |
-| Readiness | `code-fixed`, `contract-defined`, `route-implemented`, `source-coverage-pending`, `mapper-test-pending`, `production-blocked` |
+| Aspect                                    | Value                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Business object                           | Cross-batch warehouse operational state for a plant / region (overview + inbound + outbound + staging + exceptions)                                                                                                                                                                                                                                                                  |
+| Pattern                                   | `read-model` (rolling snapshot)                                                                                                                                                                                                                                                                                                                                                      |
+| Contract                                  | `packages/data-contracts/src/schemas/warehouse-360-overview.ts` — `Warehouse360OverviewSchema` + 12 nested schemas                                                                                                                                                                                                                                                                   |
+| Route                                     | `GET /api/warehouse360/overview`, `/inbound`, `/outbound`, `/staging`, `/exceptions` in `apps/api/routes/warehouse360.py`                                                                                                                                                                                                                                                            |
+| Mapper                                    | `map_warehouse_overview_rows` in `apps/api/adapters/warehouse360/warehouse360_databricks_adapter.py`                                                                                                                                                                                                                                                                                 |
+| Source objects (actual adapter SQL)       | `wh360_kpi_snapshot_v` (overview — returns 11 V1 KPI cols, NOT the contract fields); `wh360_inbound_v` (inbound — adapter SQL references non-existent columns); `wh360_deliveries_v` (outbound — likely works); `staging_orders_v` (staging — **view does not exist** in UAT); `wh360_imwm_exceptions_v` (exceptions — **view does not exist**; correct name is `imwm_exceptions_v`) |
+| Source objects (target after gate closes) | `wh360_inbound_v`, `wh360_deliveries_v`, `wh360_process_orders_v`, `wh360_near_expiry_batches_v`, `imwm_exceptions_v`, `imwm_stock_comparison_v`                                                                                                                                                                                                                                     |
+| Field classifications                     | Yes — but partial coverage                                                                                                                                                                                                                                                                                                                                                           |
+| `response_model` enforced                 | **Deliberately disabled** on `/overview` (mapper output diverges from contract); ✓ on the 4 sibling routes (3 of which return HTTP 500 against live UAT)                                                                                                                                                                                                                             |
+| Mapper tests                              | Not found                                                                                                                                                                                                                                                                                                                                                                            |
+| Maturity                                  | L1/L2 — contract diverged from mapper; 3 of 4 sibling routes broken in production                                                                                                                                                                                                                                                                                                    |
+| Readiness                                 | `code-fixed`, `contract-defined`, `route-implemented`, `source-coverage-pending`, `mapper-test-pending`, `production-blocked`                                                                                                                                                                                                                                                        |
 
 **Known caveats**
 
@@ -301,19 +314,19 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## 11. EnvMonSwabResultEvidence
 
-| Aspect | Value |
-|---|---|
-| Business object | Environmental-monitoring (swab) inspection result for a sample point |
-| Pattern | `evidence-pack` |
-| Contract | `packages/data-contracts/src/schemas/environmental-monitoring.ts` — `EnvMonNativeSwabResultSchema` + `EnvMonSwabResultSchema` (enriched) |
-| Route | `GET /api/envmon/swab-results` in `apps/api/routes/envmon.py` (sibling routes: `/site-summary`, `/alerts`, `/zones`) |
-| Mapper | `map_swab_result_rows` in `apps/api/adapters/envmon/envmon_databricks_adapter.py` |
-| Source objects | `gold.gold_inspection_lot`, `gold.gold_inspection_point`, `gold.gold_batch_quality_result_v` |
-| Field classifications | Yes — `[classification: source-field]` for raw columns; `[classification: application-heuristic]` for derived `status` |
-| `response_model` enforced | Yes |
-| Mapper tests | Not found |
-| Maturity | L3 |
-| Readiness | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-test-pending` |
+| Aspect                    | Value                                                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Business object           | Environmental-monitoring (swab) inspection result for a sample point                                                                     |
+| Pattern                   | `evidence-pack`                                                                                                                          |
+| Contract                  | `packages/data-contracts/src/schemas/environmental-monitoring.ts` — `EnvMonNativeSwabResultSchema` + `EnvMonSwabResultSchema` (enriched) |
+| Route                     | `GET /api/envmon/swab-results` in `apps/api/routes/envmon.py` (sibling routes: `/site-summary`, `/alerts`, `/zones`)                     |
+| Mapper                    | `map_swab_result_rows` in `apps/api/adapters/envmon/envmon_databricks_adapter.py`                                                        |
+| Source objects            | `gold.gold_inspection_lot`, `gold.gold_inspection_point`, `gold.gold_batch_quality_result_v`                                             |
+| Field classifications     | Yes — `[classification: source-field]` for raw columns; `[classification: application-heuristic]` for derived `status`                   |
+| `response_model` enforced | Yes                                                                                                                                      |
+| Mapper tests              | Not found                                                                                                                                |
+| Maturity                  | L3                                                                                                                                       |
+| Readiness                 | `code-fixed`, `source-verified`, `contract-defined`, `route-implemented`, `mapper-test-pending`                                          |
 
 **Known caveats**
 
@@ -327,10 +340,10 @@ Patterns reference [`data-product-patterns.md`](./data-product-patterns.md).
 
 ## Cross-cutting follow-on actions
 
-| Priority | Action | Affects |
-|---|---|---|
-| P0 | Add direct mapper unit tests for the remaining products without them (6 of 11 now have direct mapper coverage: 1, 2, 4, 5, 6, 7; 3 has tests in unmerged PR) | 8, 9, 10, 11 |
-| P0 | Browser-UAT runbook + evidence capture for SPC and Trace App routes | 1, 2, 3, 4, 5, 6, 7 |
-| P1 | Source-verification PRs for `gold_warehouse_inventory`, supplier-risk source, governed recall-rule engine | 7, 10, 6 |
-| P1 | Governance decisions on `recommendationStatus`, `reconciliationSource`, lot-vs-batch usage-decision aggregation | 4, 6, 9 |
-| P2 | Resolve `MOVEMENT_CATEGORY` direction and `BALANCE_QTY` semantics | 4 |
+| Priority | Action                                                                                                                                                       | Affects             |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| P0       | Add direct mapper unit tests for the remaining products without them (6 of 11 now have direct mapper coverage: 1, 2, 4, 5, 6, 7; 3 has tests in unmerged PR) | 8, 9, 10, 11        |
+| P0       | Browser-UAT runbook + evidence capture for SPC and Trace App routes                                                                                          | 1, 2, 3, 4, 5, 6, 7 |
+| P1       | Source-verification PRs for `gold_warehouse_inventory`, supplier-risk source, governed recall-rule engine                                                    | 7, 10, 6            |
+| P1       | Governance decisions on `recommendationStatus`, `reconciliationSource`, lot-vs-batch usage-decision aggregation                                              | 4, 6, 9             |
+| P2       | Resolve `MOVEMENT_CATEGORY` direction and `BALANCE_QTY` semantics                                                                                            | 4                   |
