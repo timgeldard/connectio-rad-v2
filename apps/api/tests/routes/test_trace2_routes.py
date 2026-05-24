@@ -1250,3 +1250,183 @@ class TestTraceGraphArchitectureGuardrails:
 
         assert response.status_code == 503
         assert called == [], "Databricks must not be called when mode is wrong"
+
+
+# ---------------------------------------------------------------------------
+# Exposure routes — response_model contract enforcement (PR 6)
+# ---------------------------------------------------------------------------
+
+
+class TestCustomerExposureResponseModel:
+    """Pin POST /api/trace2/customer-exposure against the generated
+    CustomerExposureSummary contract on the wire."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import CustomerExposureSummary
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        # Round-trip the wire response through the generated model — any
+        # leaked unmodeled key would fail validation here.
+        CustomerExposureSummary.model_validate(response.json())
+
+    async def test_response_uses_camelcase_aliases(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for required in (
+            "affectedCustomers", "affectedDeliveries", "shippedQuantity",
+            "countries", "highestSeverity", "blockedDeliveries", "recallRecommended",
+        ):
+            assert required in data
+        for snake in ("affected_customers", "affected_deliveries", "shipped_quantity",
+                      "highest_severity", "blocked_deliveries", "recall_recommended"):
+            assert snake not in data
+
+    async def test_severity_enum_in_governance_safe_set(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert data["highestSeverity"] in {"none", "low", "medium", "high", "critical"}
+
+    async def test_recall_recommended_is_governance_pending(self, monkeypatch) -> None:
+        """The contract today requires `recallRecommended: bool` (classified
+        as `governance-pending` in the schema). The mapper emits `False` with
+        a "rules not yet defined" caveat in its docstring.
+
+        Source-truthfulness rule from PR 6 brief says no `recallRecommended:
+        false` without governed source — but the contract type forces a bool
+        today. This test pins the CURRENT behaviour (False) so a regression
+        toward True is caught, AND documents the gap. Fix forward in a
+        contract-relaxation PR (mirror of PR 8's UOM pattern) — out of scope
+        here.
+        """
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        # Must NOT be True (would imply a governed recall recommendation).
+        assert data["recallRecommended"] is not True
+        # Current behaviour: False (pre-existing governance gap, tracked).
+        assert data["recallRecommended"] is False
+
+    async def test_no_invented_release_or_safety_fields(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for forbidden in ("safe", "approved", "released", "cleared", "supplierRisk", "delivered"):
+            assert forbidden not in data
+
+
+class TestCustomerDeliveriesResponseModel:
+    """Pin POST /api/trace2/customer-deliveries against the same generated
+    CustomerExposureSummary contract."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import CustomerExposureSummary
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        CustomerExposureSummary.model_validate(response.json())
+
+    async def test_delivery_evidence_source_marks_inventory_movements(self, monkeypatch) -> None:
+        """The customer-deliveries route sources from gold_batch_delivery_v
+        (inventory movements), distinct from the customer-exposure
+        lineage path. The contract field deliveryEvidenceSource must
+        surface that distinction so the UI does not conflate the two."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert data["deliveryEvidenceSource"] == "inventory-movements"
+
+    async def test_no_status_delivered_field_on_wire(self, monkeypatch) -> None:
+        """CustomerExposureSummary has no `status` field. PR 6 brief
+        forbids a `status: 'delivered'` claim — this test pins that the
+        field does not appear at all (absence is the source-truthful default)."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert "status" not in data
+        # And no invented business fields.
+        for forbidden in ("delivered", "safe", "approved", "released", "cleared"):
+            assert forbidden not in data
+
+
+class TestSupplierExposureResponseModel:
+    """Pin POST /api/trace2/supplier-exposure against the generated
+    SupplierExposureSummary contract."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import SupplierExposureSummary
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        SupplierExposureSummary.model_validate(response.json())
+
+    async def test_response_uses_camelcase_aliases(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for required in ("supplierCount", "supplierLots", "upstreamMaterials", "openSupplierActions"):
+            assert required in data
+        for snake in ("supplier_count", "supplier_lots", "upstream_materials", "open_supplier_actions"):
+            assert snake not in data
+
+    async def test_no_supplier_risk_field_on_wire(self, monkeypatch) -> None:
+        """SupplierExposureSummary contract has no `supplierRisk` field.
+        PR 6 brief forbids `supplierRisk: low` without a governed source.
+        Absence of the field is the source-truthful default — this test
+        pins that absence so a future regression cannot introduce a
+        heuristic value."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert "supplierRisk" not in data
+        # Per-supplier rows also stay risk-free until governance lands.
+        for supplier in data.get("suppliers", []):
+            assert "risk" not in supplier
+            assert "riskLevel" not in supplier
+
+    async def test_open_supplier_actions_default_zero_without_qm_source(self, monkeypatch) -> None:
+        """openSupplierActions is `0` until a verified QM source is wired
+        (per the contract docstring TRACE-P1-012). Pin the zero default so
+        a regression toward inventing actions is caught. Zero here means
+        "no QM source verified yet" — UI must surface the caveat."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.json()["openSupplierActions"] == 0
+
+    async def test_no_invented_release_or_safety_fields(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_SUPPLIER_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SE_URL, json=_SE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for forbidden in ("safe", "approved", "released", "cleared", "recallRecommended", "delivered"):
+            assert forbidden not in data
