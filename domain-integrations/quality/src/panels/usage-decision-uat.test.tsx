@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { QualityReadonlyEvidencePanel } from './quality-readonly-evidence-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { render } from '@testing-library/react'
+import { QualityReadOnlyEvidencePanel } from './quality-readonly-evidence-panel.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import * as queries from '../adapters/quality-readonly-evidence-queries.js'
 
 vi.mock('../adapters/quality-readonly-evidence-queries.js', () => ({
@@ -38,10 +38,11 @@ describe('Quality usage decision evidence (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
-      <QualityReadonlyEvidencePanel request={{ investigationId: 'INV-1', batchId: 'BATCH-001' }} />,
+      <QualityReadOnlyEvidencePanel request={{ inspectionLotId: '1000123' }} />,
     )
 
     // Verify it doesn't leak forbidden claims like "safe" or "approved"

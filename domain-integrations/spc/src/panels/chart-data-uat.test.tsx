@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { ControlChartPanel } from './control-chart-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import * as queries from '../adapters/spc-monitoring-queries.js'
 
 vi.mock('../adapters/spc-monitoring-queries.js', () => ({
@@ -43,10 +43,13 @@ describe('SPC chart data (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
-      <ControlChartPanel request={{ characteristicId: 'CHAR-1', plantId: 'P001' }} />,
+      <ControlChartPanel
+        request={{ characteristicId: 'CHAR-1', plantId: 'P001', materialId: 'MAT-1' }}
+      />,
     )
 
     // Verify it doesn't leak forbidden claims like "safe", "approved", or "in control"

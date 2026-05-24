@@ -31,3 +31,7 @@ The offline pre-UAT smoke checks cover the following first-wave journeys:
 6. Warehouse inbound
 7. Warehouse staging
 8. Warehouse exceptions
+
+## Shared Assertions
+
+A shared test-only utility, `expectNoForbiddenClaims`, is provided by `@connectio/test-support` to centralize forbidden-claim checks across all domain offline UAT tests.

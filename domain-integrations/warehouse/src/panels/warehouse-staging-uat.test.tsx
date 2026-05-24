@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { StagingReadinessSummaryPanel } from './staging-readiness-summary-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import * as queries from '../adapters/production-staging-queries.js'
 
 vi.mock('../adapters/production-staging-queries.js', () => ({
@@ -26,6 +26,7 @@ describe('Warehouse staging (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(<StagingReadinessSummaryPanel request={{ plantId: 'P001' }} />)

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BatchHeaderPanel } from './batch-header-panel.js'
 import { CustomerExposureNetworkPanel } from './customer-exposure-network-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import type { BatchHeaderSummary, CustomerExposureSummary } from '@connectio/data-contracts'
 import * as queries from '../adapters/trace2-queries.js'
 
@@ -31,6 +31,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
     vi.mocked(queries.useBatchHeaderSummary).mockReturnValue({
       data: { ok: true, data: mockData, fetchedAt: new Date().toISOString(), source: 'mock' },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
@@ -58,6 +59,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
     vi.mocked(queries.useCustomerExposureSummary).mockReturnValue({
       data: { ok: true, data: mockData, fetchedAt: new Date().toISOString(), source: 'mock' },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
@@ -79,6 +81,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     render(<BatchHeaderPanel request={{ investigationId: 'INV-1', batchId: 'BATCH-001' }} />)
