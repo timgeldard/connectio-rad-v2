@@ -144,8 +144,8 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
 
     Field coverage (2026-05-17): vw_gold_process_order provides PROCESS_ORDER_ID,
     STATUS, MATERIAL_ID, MATERIAL_DESCRIPTION, PLANT_ID, INSPECTION_LOT_ID only.
-    Fields not in the view (orderType, quantities, dates, batchId, productionLine)
-    return empty/zero defaults. These will be populated once a richer view is available.
+    Fields not in the view (quantities, uom, dates, batchId, productionLine)
+    return None until a richer view is confirmed. orderType defaults to 'process-order'.
 
     INSPECTION_LOT_ID is fetched by the SQL but is NOT part of the
     ProcessOrderHeader contract (contract has extra='forbid'). Inspection-lot
@@ -163,9 +163,9 @@ def map_process_order_header_rows(rows: list[dict]) -> dict | None:
         "materialId": str(row.get("material_id") or ""),
         "materialDescription": str(row.get("material_description") or ""),
         "plantId": str(row.get("plant_id") or ""),
-        "plannedQuantity": 0.0,   # not in view
-        "confirmedQuantity": 0.0, # not in view
-        "uom": "",                # not in view
+        "plannedQuantity": None,  # not in view
+        "confirmedQuantity": None, # not in view
+        "uom": None,              # not in view
         "plannedStart": None,       # not in view
         "plannedFinish": None,      # not in view
         "orderStatus": _map_order_status(row.get("order_status_raw")),
@@ -297,10 +297,10 @@ def map_order_operations_rows(rows: list[dict]) -> list[dict]:
             "operationId": str(row.get("operation_id") or ""),
             "operationNumber": str(row.get("operation_number") or ""),
             "operationText": str(row.get("operation_text") or ""),
-            "workCentre": "",              # not in view
+            "workCentre": None,            # not in view
             "plannedStart": None,            # not in view
             "plannedFinish": None,           # not in view
-            "plannedDurationMinutes": 0,   # not in view
+            "plannedDurationMinutes": None, # not in view
             "status": status,
             "confirmationStatus": confirmation_status,
             "confirmed": confirmed,
@@ -373,8 +373,8 @@ def map_order_confirmations_rows(rows: list[dict]) -> list[dict]:
         item: dict[str, object] = {
             "confirmationId": str(row.get("confirmation_id") or ""),
             "operationId": str(row.get("operation_id") or ""),
-            "confirmedYield": _safe_float(row.get("confirmed_yield")),
-            "uom": str(row.get("uom") or ""),
+            "confirmedYield": float(raw_yield) if (raw_yield := row.get("confirmed_yield")) is not None else None,
+            "uom": row.get("uom"),
             "confirmedAt": _format_datetime(row.get("confirmed_at")),
         }
 
@@ -494,8 +494,8 @@ def map_order_goods_movements_rows(rows: list[dict]) -> list[dict]:
             "movementType": movement_type,
             "direction": direction,
             "materialId": str(row.get("material_id") or ""),
-            "quantity": _safe_float(row.get("quantity")),
-            "uom": str(row.get("uom") or ""),
+            "quantity": float(raw_qty) if (raw_qty := row.get("quantity")) is not None else None,
+            "uom": row.get("uom"),
             "postedAt": _format_datetime(row.get("posted_at")),
         }
 

@@ -58,10 +58,10 @@ export const ProcessOrderHeaderSchema = z.object({
   batchId: z.string().optional().describe('[classification: source-field]'),
   plantId: z.string().describe('[classification: source-field]'),
   productionLine: z.string().optional().describe('[classification: source-field]'),
-  plannedQuantity: z.number().min(0).describe('[classification: source-field]'),
-  confirmedQuantity: z.number().min(0).describe('[classification: source-field]'),
+  plannedQuantity: z.number().min(0).nullable().describe('[classification: source-field]'),
+  confirmedQuantity: z.number().min(0).nullable().describe('[classification: source-field]'),
   scrapQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
-  uom: z.string().describe('[classification: source-field]'),
+  uom: z.string().nullable().describe('[classification: source-field]'),
   plannedStart: z
     .string()
     .datetime()
@@ -232,7 +232,7 @@ export const ProcessOrderOperationSchema = z.object({
   operationId: z.string().describe('[classification: source-field]'),
   operationNumber: z.string().describe('[classification: source-field]'),
   operationText: z.string().describe('[classification: source-field]'),
-  workCentre: z.string().describe('[classification: source-field]'),
+  workCentre: z.string().nullable().describe('[classification: source-field]'),
   resource: z.string().optional().describe('[classification: source-field]'),
   plannedStart: z
     .string()
@@ -261,7 +261,7 @@ export const ProcessOrderOperationSchema = z.object({
   status: z
     .enum(['pending', 'in-progress', 'confirmed', 'skipped'])
     .describe('[classification: source-field]'),
-  plannedDurationMinutes: z.number().min(0).describe('[classification: source-derived]'),
+  plannedDurationMinutes: z.number().min(0).nullable().describe('[classification: source-derived]'),
   actualDurationMinutes: z.number().min(0).optional().describe('[classification: source-derived]'),
   confirmationStatus: z
     .enum(['unconfirmed', 'partially-confirmed', 'final-confirmed'])
@@ -281,10 +281,10 @@ export const ProcessOrderConfirmationSchema = z.object({
   operationId: z.string().describe('[classification: source-field]'),
   // Not in vw_gold_confirmation — re-require once gold view exposes PHASE_DESCRIPTION join (2026-05-17)
   operationText: z.string().optional().describe('[classification: source-field]'),
-  confirmedYield: z.number().min(0).describe('[classification: source-field]'),
+  confirmedYield: z.number().min(0).nullable().describe('[classification: source-field]'),
   scrapQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
   reworkQuantity: z.number().min(0).optional().describe('[classification: source-field]'),
-  uom: z.string().describe('[classification: source-field]'),
+  uom: z.string().nullable().describe('[classification: source-field]'),
   confirmedAt: z
     .string()
     .datetime()
@@ -314,8 +314,8 @@ export const ProcessOrderGoodsMovementSchema = z.object({
   // Not in vw_gold_adp_movement — re-require once material master join is available (2026-05-17)
   materialDescription: z.string().optional().describe('[classification: source-field]'),
   batchId: z.string().optional().describe('[classification: source-field]'),
-  quantity: z.number().describe('[classification: source-field]'),
-  uom: z.string().describe('[classification: source-field]'),
+  quantity: z.number().nullable().describe('[classification: source-field]'),
+  uom: z.string().nullable().describe('[classification: source-field]'),
   postedAt: z.string().datetime().nullable().optional().describe('[classification: source-field]'),
   postedBy: z.string().optional().describe('[classification: source-field]'),
   referenceDocument: z.string().optional().describe('[classification: source-field]'),
