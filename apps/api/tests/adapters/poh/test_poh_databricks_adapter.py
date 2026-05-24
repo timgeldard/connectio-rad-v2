@@ -280,15 +280,20 @@ class TestMapProcessOrderHeaderRows:
         assert result is not None
         assert result["plannedFinish"] is None
 
-    def test_planned_quantity_defaults_to_zero(self) -> None:
+    def test_planned_quantity_is_none_when_not_in_view(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert result["plannedQuantity"] == 0.0
+        assert result["plannedQuantity"] is None
 
-    def test_confirmed_quantity_defaults_to_zero(self) -> None:
+    def test_confirmed_quantity_is_none_when_not_in_view(self) -> None:
         result = map_process_order_header_rows([self._full_row()])
         assert result is not None
-        assert result["confirmedQuantity"] == 0.0
+        assert result["confirmedQuantity"] is None
+
+    def test_uom_is_none_when_not_in_view(self) -> None:
+        result = map_process_order_header_rows([self._full_row()])
+        assert result is not None
+        assert result["uom"] is None
 
     def test_inspection_lot_id_not_in_process_order_header_output(self) -> None:
         """inspection_lot_id is fetched by the SQL but MUST NOT appear in the
@@ -424,9 +429,9 @@ class TestMapOrderOperationsRows:
         result = map_order_operations_rows([row])
         assert result[0]["operationId"] == "000000000001"
 
-    def test_work_centre_defaults_to_empty(self) -> None:
+    def test_work_centre_is_none_when_not_in_view(self) -> None:
         result = map_order_operations_rows([self._full_row()])
-        assert result[0]["workCentre"] == ""
+        assert result[0]["workCentre"] is None
 
     def test_planned_start_defaults_to_none(self) -> None:
         result = map_order_operations_rows([self._full_row()])
@@ -436,9 +441,9 @@ class TestMapOrderOperationsRows:
         result = map_order_operations_rows([self._full_row()])
         assert result[0]["plannedFinish"] is None
 
-    def test_planned_duration_defaults_to_zero(self) -> None:
+    def test_planned_duration_is_none_when_not_in_view(self) -> None:
         result = map_order_operations_rows([self._full_row()])
-        assert result[0]["plannedDurationMinutes"] == 0
+        assert result[0]["plannedDurationMinutes"] is None
 
     def test_has_exception_defaults_to_false(self) -> None:
         result = map_order_operations_rows([self._full_row()])
@@ -673,16 +678,17 @@ class TestMapOrderConfirmationsRows:
         result = map_order_confirmations_rows([row])
         assert result[0]["confirmationId"] == ""
 
-    def test_null_uom_returns_empty_string(self) -> None:
-        """Null UOM must not default to a fabricated unit like 'KG'."""
+    def test_null_uom_returns_none(self) -> None:
+        """Null UOM must not default to a fabricated unit like 'KG' or ''."""
         row = {**self._full_row(), "uom": None}
         result = map_order_confirmations_rows([row])
-        assert result[0]["uom"] == ""
+        assert result[0]["uom"] is None
 
-    def test_null_confirmed_yield_returns_zero(self) -> None:
+    def test_null_confirmed_yield_returns_none(self) -> None:
+        """Null confirmed yield must not appear as real zero."""
         row = {**self._full_row(), "confirmed_yield": None}
         result = map_order_confirmations_rows([row])
-        assert result[0]["confirmedYield"] == 0.0
+        assert result[0]["confirmedYield"] is None
 
     def test_null_confirmed_at_returns_none(self) -> None:
         row = {**self._full_row(), "confirmed_at": None}
@@ -885,17 +891,23 @@ class TestMapOrderGoodsMovementsRows:
         result = map_order_goods_movements_rows([self._full_row()])
         assert "materialDescription" not in result[0]
 
-    def test_null_uom_returns_empty_string(self) -> None:
-        """Null UOM must not default to a fabricated unit like 'KG'."""
+    def test_null_uom_returns_none(self) -> None:
+        """Null UOM must not default to a fabricated unit like 'KG' or ''."""
         row = {**self._full_row(), "uom": None}
         result = map_order_goods_movements_rows([row])
-        assert result[0]["uom"] == ""
+        assert result[0]["uom"] is None
 
     def test_negative_quantity_preserved(self) -> None:
-        """Reversal movements carry negative quantities — _safe_float must not zero them."""
+        """Reversal movements carry negative quantities — must not be zeroed."""
         row = {**self._full_row(), "quantity": -250.0}
         result = map_order_goods_movements_rows([row])
         assert result[0]["quantity"] == -250.0
+
+    def test_null_quantity_returns_none(self) -> None:
+        """Null quantity must not appear as real zero."""
+        row = {**self._full_row(), "quantity": None}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["quantity"] is None
 
     def test_null_movement_type_produces_empty_string_and_unknown_direction(self) -> None:
         """Null MOVEMENT_TYPE from the view must yield movementType='' and direction='unknown'."""

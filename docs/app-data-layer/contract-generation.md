@@ -58,9 +58,13 @@ If drift is detected, the diff shows exactly which lines changed. Commit the reg
 
 ## Python compatibility caveat
 
-The generation pipeline uses `datamodel-code-generator` with `--target-python-version 3.11`. The FastAPI backend targets Python 3.11 and the generated models must remain compatible with it.
+The generation pipeline uses `datamodel-code-generator` with `--target-python-version 3.11` and `--no-use-union-operator`. The backend targets Python 3.11 and generated models must remain compatible with it.
 
-If you see `datamodel-code-generator` output that uses syntax unavailable in Python 3.11 (e.g., `X | Y` union syntax without `from __future__ import annotations`), check whether the `--target-python-version` flag is set correctly in `apps/api/scripts/sync_contracts.py`.
+### Why `--no-use-union-operator` is required
+
+`datamodel-code-generator` ≥ 0.25.0 defaults `use_union_operator` to `True`, generating `"ForwardRef" | None` syntax for recursive models. Python 3.11 cannot evaluate `"string" | None` in class inheritance subscripts at import time — only actual type objects support `|`, not string literals. The `--no-use-union-operator` flag forces `Union["ForwardRef", None]` / `Optional["ForwardRef"]` syntax which is safe in Python 3.11.
+
+Do not remove `--no-use-union-operator` from `sync_contracts.py` unless you have verified the generated output does not contain `"string" | None` in class base subscripts.
 
 ---
 

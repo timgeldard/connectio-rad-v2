@@ -27,6 +27,7 @@ def main():
         "--target-python-version", "3.11",
         "--allow-population-by-field-name",
         "--use-standard-primitive-types",
+        "--no-use-union-operator",
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
