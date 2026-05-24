@@ -186,3 +186,60 @@ describe('ProcessOrderReviewLegacyApiAdapter.getProcessOrderHeader', () => {
     expect(result.data.processOrderId).toBe('PO-240308-3847')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Source-truthful unavailable defaults (PR #110)
+// ---------------------------------------------------------------------------
+
+describe('ProcessOrderReviewLegacyApiAdapter source-truthful defaults', () => {
+  it('falls back orderStatus to "unknown" (NOT "released") when V1 omits the field', async () => {
+    const noStatus = { ...V1_ORDER_HEADER_OK }
+    delete (noStatus as Record<string, unknown>).order_status
+    vi.stubGlobal('fetch', mockFetch(200, noStatus))
+    const result = await adapter.getProcessOrderHeader(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.orderStatus).not.toBe('released')
+    expect(result.data.orderStatus).toBe('unknown')
+  })
+
+  it('preserves plannedStart=null when V1 omits planned_start (no synthetic now() default)', async () => {
+    const noStart = { ...V1_ORDER_HEADER_OK }
+    delete (noStart as Record<string, unknown>).planned_start
+    vi.stubGlobal('fetch', mockFetch(200, noStart))
+    const result = await adapter.getProcessOrderHeader(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.plannedStart).toBeNull()
+  })
+
+  it('preserves plannedFinish=null when V1 omits planned_finish (no synthetic now() default)', async () => {
+    const noFinish = { ...V1_ORDER_HEADER_OK }
+    delete (noFinish as Record<string, unknown>).planned_finish
+    vi.stubGlobal('fetch', mockFetch(200, noFinish))
+    const result = await adapter.getProcessOrderHeader(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.plannedFinish).toBeNull()
+  })
+
+  it('preserves actualStart/actualFinish=null when V1 omits both fields', async () => {
+    const noActuals = { ...V1_ORDER_HEADER_OK }
+    delete (noActuals as Record<string, unknown>).actual_start
+    delete (noActuals as Record<string, unknown>).actual_finish
+    vi.stubGlobal('fetch', mockFetch(200, noActuals))
+    const result = await adapter.getProcessOrderHeader(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.actualStart).toBeNull()
+    expect(result.data.actualFinish).toBeNull()
+  })
+
+  it('propagates orderStatus="unknown" verbatim when V1 returns it explicitly', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, { ...V1_ORDER_HEADER_OK, order_status: 'unknown' }))
+    const result = await adapter.getProcessOrderHeader(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data.orderStatus).toBe('unknown')
+  })
+})

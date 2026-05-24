@@ -71,11 +71,17 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
         confirmedQuantity:
           raw.confirmed_qty ?? raw.confirmed_quantity ?? raw.confirmedQuantity ?? 0,
         uom: raw.uom ?? raw.base_uom ?? '',
-        plannedStart: raw.planned_start ?? raw.plannedStart ?? new Date().toISOString(),
-        plannedFinish: raw.planned_finish ?? raw.plannedFinish ?? new Date().toISOString(),
-        actualStart: raw.actual_start ?? raw.actualStart,
-        actualFinish: raw.actual_finish ?? raw.actualFinish,
-        orderStatus: raw.order_status ?? raw.orderStatus ?? 'released',
+        // plannedStart / plannedFinish are .nullable().optional() — preserve
+        // source `null` instead of inventing a current-timestamp default. A
+        // synthetic "now" value would be indistinguishable from a real plan.
+        plannedStart: raw.planned_start ?? raw.plannedStart ?? null,
+        plannedFinish: raw.planned_finish ?? raw.plannedFinish ?? null,
+        actualStart: raw.actual_start ?? raw.actualStart ?? null,
+        actualFinish: raw.actual_finish ?? raw.actualFinish ?? null,
+        // orderStatus enum now includes 'unknown' (PR #102). Falling back to
+        // 'released' was source-untruthful — the order is not actually known
+        // to be released. 'unknown' is the source-truthful no-info value.
+        orderStatus: raw.order_status ?? raw.orderStatus ?? 'unknown',
       }
 
       return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
