@@ -3,6 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OrderConfirmationsPanel } from './order-confirmations-panel.js'
 import type { ProcessOrderReviewAdapterRequest } from '../adapters/process-order-review-adapter.js'
+import * as queries from '../adapters/process-order-review-queries.js'
+
+vi.mock('../adapters/process-order-review-queries.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../adapters/process-order-review-queries.js')>()
+  return {
+    ...actual,
+    useOrderConfirmations: vi.fn((req) => actual.useOrderConfirmations(req)),
+  }
+})
 
 function makeQueryClient() {
   return new QueryClient({
@@ -11,11 +21,7 @@ function makeQueryClient() {
 }
 
 function Wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={makeQueryClient()}>
-      {children}
-    </QueryClientProvider>
-  )
+  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>
 }
 
 const request: ProcessOrderReviewAdapterRequest = {
@@ -28,7 +34,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       const panel = document.querySelector('[data-testid="evidence-panel-order-confirmations"]')
@@ -40,7 +46,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       expect(screen.getByText('Confirmations')).toBeInTheDocument()
@@ -51,7 +57,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       expect(screen.getByText(/2 open confirmations/)).toBeInTheDocument()
@@ -62,7 +68,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       expect(screen.getByText(/Milk Standardisation/)).toBeInTheDocument()
@@ -73,7 +79,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       const scrapElements = screen.getAllByText(/scrap:/)
@@ -85,7 +91,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       const varianceElements = screen.getAllByText(/vs plan/)
@@ -97,7 +103,7 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       const finalBadges = screen.getAllByText('final')
@@ -109,11 +115,57 @@ describe('OrderConfirmationsPanel', () => {
     render(
       <Wrapper>
         <OrderConfirmationsPanel request={request} />
-      </Wrapper>
+      </Wrapper>,
     )
     await waitFor(() => {
       const partialBadges = screen.getAllByText('partial')
       expect(partialBadges.length).toBe(2)
     })
+  })
+
+  it('renders unavailable wording instead of 0 when confirmed yield is null', async () => {
+    vi.mocked(queries.useOrderConfirmations).mockReturnValue({
+      data: {
+        ok: true,
+        data: [
+          {
+            confirmationId: 'CONF-NULL',
+            processOrderId: 'PO-240308-3847',
+            operationId: 'OP-050',
+            operationDescription: 'Test Op',
+            confirmationType: 'final',
+            isReversed: false,
+            // Critical: confirmedYield is null
+            confirmedYield: null,
+            confirmedScrap: null,
+            confirmedRework: null,
+            uom: 'KG',
+            executionStart: '2026-03-08T08:00:00Z',
+            executionFinish: '2026-03-08T09:00:00Z',
+            personnelId: 'EMP-1',
+            createdAt: '2026-03-08T09:00:00Z',
+          },
+        ],
+        fetchedAt: new Date().toISOString(),
+        source: 'mock',
+      },
+      isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    render(
+      <Wrapper>
+        <OrderConfirmationsPanel request={request} />
+      </Wrapper>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/partial/i)).toBeInTheDocument()
+    })
+
+    const textContent = document.body.textContent || ''
+    expect(textContent).not.toContain('yield: 0')
+    expect(textContent).not.toContain('0 KG')
+    expect(textContent).toContain('—') // Or however unavailable is rendered
   })
 })

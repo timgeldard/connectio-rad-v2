@@ -66,7 +66,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.getByText('Kerry Cheddar Cheese Powder')).not.toBeNull()
@@ -84,7 +84,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={onSimMock}
-      />
+      />,
     )
 
     const btn = screen.getByRole('button', { name: 'Simulate Recall' })
@@ -101,7 +101,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.getByText('Critical Exposure')).not.toBeNull()
@@ -117,7 +117,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.getByText('Stock Position')).not.toBeNull()
@@ -137,7 +137,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.getByText('Exposure Unknown')).not.toBeNull()
@@ -156,11 +156,15 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.queryByText('Critical Exposure')).toBeNull()
-    expect(screen.queryByText('Low Risk')).toBeNull()
+    expect(screen.queryByText('Critical Exposure')).toBeNull()
+    expect(screen.queryByText(/Low Risk/i)).toBeNull()
+    const textContent = document.body.textContent?.toLowerCase() || ''
+    expect(textContent).not.toContain('fully contained')
+    expect(textContent).not.toContain('recall not required')
   })
 
   it('shows Low Risk severity when customer data is present with no shipments', () => {
@@ -182,7 +186,7 @@ describe('InvestigationSummary', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
 
     expect(screen.getByText('Low Risk')).not.toBeNull()
@@ -231,27 +235,42 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
     render(
       <InvestigationSummary
         batchHeader={mockBatchHeader}
-        customerExposure={{ ...baseExposure, shippedQuantity: 500, affectedCustomers: 1, maxExposureDepth: 1 }}
+        customerExposure={{
+          ...baseExposure,
+          shippedQuantity: 500,
+          affectedCustomers: 1,
+          maxExposureDepth: 1,
+        }}
         supplierExposure={null}
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
     expect(screen.getByText('Critical Exposure')).not.toBeNull()
-    expect(screen.getByText(/Shipped stock has reached customer sites\. Immediate action/)).not.toBeNull()
+    expect(screen.getByText('Critical Exposure')).not.toBeNull()
+    expect(screen.getByText(/Shipped stock has reached customer sites/)).not.toBeNull()
+    const textContent = document.body.textContent?.toLowerCase() || ''
+    expect(textContent).not.toContain('activate product recall')
+    // We expect wording around review/owner/governed-process rather than automated decision
+    expect(textContent).toContain('review')
   })
 
   it('shows "High Indirect Exposure" (not "Near Expiry") when maxExposureDepth=2 and stock has shipped', () => {
     render(
       <InvestigationSummary
         batchHeader={mockBatchHeader}
-        customerExposure={{ ...baseExposure, shippedQuantity: 500, affectedCustomers: 1, maxExposureDepth: 2 }}
+        customerExposure={{
+          ...baseExposure,
+          shippedQuantity: 500,
+          affectedCustomers: 1,
+          maxExposureDepth: 2,
+        }}
         supplierExposure={null}
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
     expect(screen.getByText('High Indirect Exposure')).not.toBeNull()
     expect(screen.queryByText('Near Expiry')).toBeNull()
@@ -267,7 +286,7 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
     expect(screen.getByText('Medium Risk')).not.toBeNull()
     expect(screen.getByText(/Indirect lineage exposure/)).not.toBeNull()
@@ -287,7 +306,7 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
     expect(screen.getByText('Near Expiry')).not.toBeNull()
     expect(screen.queryByText('High Indirect Exposure')).toBeNull()
@@ -302,9 +321,11 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
         confidence={mockConfidence}
         sim={false}
         onSim={() => {}}
-      />
+      />,
     )
     expect(screen.getByText('Critical Exposure')).not.toBeNull()
-    expect(screen.getByText(/Shipped stock has reached customer sites\. Immediate action/)).not.toBeNull()
+    expect(
+      screen.getByText(/Shipped stock has reached customer sites\. Immediate action/),
+    ).not.toBeNull()
   })
 })
