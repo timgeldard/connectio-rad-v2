@@ -1492,7 +1492,6 @@ class TestTraceGraphResponseModel:
             assert "materialId" in node
             assert "batchId" in node
             assert "isAnchor" in node
-            # No snake_case keys leaked.
             assert "material_id" not in node
             assert "batch_id" not in node
             assert "is_anchor" not in node
@@ -1507,7 +1506,6 @@ class TestTraceGraphResponseModel:
             assert "id" in edge
             assert "source" in edge
             assert "target" in edge
-            # No snake_case keys leaked.
             assert "link_type" not in edge
             assert "process_order_id" not in edge
 
@@ -1533,7 +1531,6 @@ class TestTraceGraphResponseModel:
         data = response.json()
         warnings = data.get("warnings", [])
         assert "no_edges_found" in warnings
-        # Must not conflate "no edges in lineage source" with "no issue".
         assert "no issue found" not in str(warnings).lower()
         assert "no_issue" not in str(warnings)
 
@@ -1732,7 +1729,6 @@ class TestInvestigationTimelineResponseModel:
             assert "actor" in event
             assert "detail" in event
             assert "tone" in event
-            # sourceSystem is the camelCase alias — no snake_case leak.
             assert "sourceSystem" in event
             assert "source_system" not in event
 
@@ -1777,3 +1773,207 @@ class TestInvestigationTimelineResponseModel:
         assert response.status_code == 200
         events = response.json()["events"]
         assert events[0]["type"] == "note"
+
+
+# ---------------------------------------------------------------------------
+# Supplier batches route tests (POST /api/trace2/supplier-batches) — PR 8
+# ---------------------------------------------------------------------------
+
+_SB_URL = "/api/trace2/supplier-batches"
+
+_SB_VALID_BODY = {
+    "material_id": "000000000020052009",
+    "batch_id": "0008602411",
+}
+
+# Consumed lot row shape from gold_batch_lineage (VENDOR_RECEIPT edges)
+_FAKE_CONSUMED_ROW = {
+    "supplier_id": "SUPP-001",
+    "vendor_batch": "VB-2024-001",
+    "parent_material_id": "000000000020052009",
+    "posting_date": "2024-03-08",
+    "quantity": -500.0,
+    "uom": "KG",
+}
+
+
+@pytest.mark.asyncio
+class TestSupplierBatchesWrongMode:
+    async def test_returns_503_when_mode_is_legacy_api(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_returns_503_when_mode_is_absent(self, monkeypatch) -> None:
+        monkeypatch.delenv("BACKEND_ADAPTER_MODE", raising=False)
+        async with _make_client() as client:
+            response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+
+    async def test_does_not_call_databricks_in_wrong_mode(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        with _patch_executor([_FAKE_CONSUMED_ROW]) as mock_exec:
+            async with _make_client() as client:
+                await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        mock_exec.assert_not_called()
+
+
+@pytest.mark.asyncio
+class TestSupplierBatchesSuccess:
+    async def test_200_returns_consumed_lots_and_siblings(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert "consumedLots" in data
+        assert "siblingBatches" in data
+        assert len(data["consumedLots"]) == 1
+
+    async def test_empty_result_returns_200_with_empty_arrays(self, monkeypatch) -> None:
+        """No vendor receipts → valid 200 with empty consumedLots and siblingBatches.
+        A batch with no vendor receipts is a legitimate production-only batch."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["consumedLots"] == []
+        assert data["siblingBatches"] == []
+
+    async def test_401_without_oauth_token(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY)
+        assert response.status_code == 401
+
+    async def test_blank_material_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_SB_VALID_BODY, "material_id": ""}
+        async with _make_client() as client:
+            response = await client.post(_SB_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_blank_batch_id_returns_422(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        body = {**_SB_VALID_BODY, "batch_id": ""}
+        async with _make_client() as client:
+            response = await client.post(_SB_URL, json=body, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 422
+
+    async def test_sets_x_adapter_mode_header(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+
+    async def test_does_not_fall_back_on_databricks_error(self, monkeypatch) -> None:
+        """If the Databricks executor raises, the route MUST NOT silently
+        return mock data — it must propagate the upstream failure."""
+        from fastapi import HTTPException
+
+        _databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            side_effect=HTTPException(status_code=502, detail="Databricks unavailable"),
+        ):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 502
+
+
+@pytest.mark.asyncio
+class TestSupplierBatchesResponseModel:
+    """Pin POST /api/trace2/supplier-batches against the generated SupplierBatchView contract."""
+
+    async def test_response_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import SupplierBatchView
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        SupplierBatchView.model_validate(response.json())
+
+    async def test_empty_view_validates_against_generated_contract(self, monkeypatch) -> None:
+        from contracts.generated import SupplierBatchView
+
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 200
+        SupplierBatchView.model_validate(response.json())
+
+    async def test_consumed_lots_use_camelcase_wire_shape(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert len(data["consumedLots"]) > 0
+        lot = data["consumedLots"][0]
+        for required in ("vendor", "vendorBatch", "material", "receipt", "consumed", "uom", "risk"):
+            assert required in lot
+        for snake in ("vendor_batch", "parent_material_id", "posting_date"):
+            assert snake not in lot
+
+    async def test_risk_is_unknown_on_all_consumed_lots(self, monkeypatch) -> None:
+        """risk MUST be 'unknown' until a governed supplier-risk source is wired.
+        This is the primary PR 8 guardrail — pins the wire value so 'low' cannot
+        be introduced by a future mapper change without a failing test."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        for lot in response.json()["consumedLots"]:
+            assert lot["risk"] == "unknown"
+
+    async def test_risk_never_low_medium_high_without_governed_source(self, monkeypatch) -> None:
+        """risk='low' / 'medium' / 'high' MUST NOT appear on the wire until
+        a governed supplier-risk source is verified."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        for lot in response.json()["consumedLots"]:
+            assert lot["risk"] not in ("low", "medium", "high")
+
+    async def test_coa_is_null_not_invented(self, monkeypatch) -> None:
+        """CoA is not on gold_batch_lineage — must be null on the wire, not
+        an empty string or a default path."""
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        for lot in response.json()["consumedLots"]:
+            assert lot["coa"] is None
+
+    async def test_no_recall_recommended_on_wire(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        assert "recallRecommended" not in data
+        for lot in data["consumedLots"]:
+            assert "recallRecommended" not in lot
+
+    async def test_no_safe_approved_released_fields_on_wire(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_CONSUMED_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+        data = response.json()
+        for forbidden in ("safe", "approved", "released", "cleared", "signoff"):
+            assert forbidden not in data
+            for lot in data["consumedLots"]:
+                assert forbidden not in lot
+

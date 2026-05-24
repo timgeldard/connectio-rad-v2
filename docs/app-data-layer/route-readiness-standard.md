@@ -92,6 +92,9 @@ to advance a data product to `production-ready`.
 
 ## Related documents
 
+- [`uat-entry-plan.md`](./uat-entry-plan.md)
+  — defines which data products are allowed into UAT, first-wave
+  candidates, blocked items, allowed caveats, and required evidence.
 - [`browser-uat-evidence-standard.md`](./browser-uat-evidence-standard.md)
   — minimum standard for marking a route or data product as
   browser-UAT captured.
