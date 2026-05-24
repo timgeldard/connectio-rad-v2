@@ -7,14 +7,15 @@ export interface StatusBadgeProps {
   /** Determines which status colour token is applied. */
   variant: StatusBadgeVariant
   className?: string
+  title?: string
 }
 
 /** Map each variant to its CSS custom property token. */
 const variantTokens: Record<StatusBadgeVariant, string> = {
-  good:    'var(--status-good)',
-  warn:    'var(--status-warn)',
-  bad:     'var(--status-bad)',
-  info:    'var(--status-info)',
+  good: 'var(--status-good)',
+  warn: 'var(--status-warn)',
+  bad: 'var(--status-bad)',
+  info: 'var(--status-info)',
   neutral: 'var(--status-neutral)',
 }
 
@@ -22,10 +23,11 @@ const variantTokens: Record<StatusBadgeVariant, string> = {
  * StatusBadge renders a coloured pill for operational status values.
  * Colours are sourced from CSS custom properties defined in tokens.css.
  */
-export function StatusBadge({ label, variant, className }: StatusBadgeProps) {
+export function StatusBadge({ label, variant, className, title }: StatusBadgeProps) {
   return (
     <span
       className={className}
+      title={title}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

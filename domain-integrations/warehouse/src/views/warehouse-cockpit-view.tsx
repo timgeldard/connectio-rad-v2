@@ -1,7 +1,7 @@
 import { useState, useTransition } from 'react'
-import { VerificationStatusBanner } from '@connectio/design-system'
+import { VerificationStatusBanner, GovernancePendingBadge } from '@connectio/design-system'
+import { EvidenceCaveatList } from '@connectio/evidence-panel-runtime'
 import type { CSSProperties } from 'react'
-
 import {
   useWarehouseOverview,
   useWarehouseInbound,
@@ -112,9 +112,18 @@ interface DetailRowProps {
 
 function DetailRow({ label, value }: DetailRowProps) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${COLORS.slate100}` }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '8px 0',
+        borderBottom: `1px solid ${COLORS.slate100}`,
+      }}
+    >
       <span style={{ fontWeight: 500, color: COLORS.slate600, fontSize: 13 }}>{label}</span>
-      <span style={{ fontWeight: 600, color: COLORS.slate800, fontSize: 13 }}>{value !== null && value !== undefined ? String(value) : '—'}</span>
+      <span style={{ fontWeight: 600, color: COLORS.slate800, fontSize: 13 }}>
+        {value !== null && value !== undefined ? String(value) : '—'}
+      </span>
     </div>
   )
 }
@@ -142,7 +151,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
   })
 
   // Selected operational tab
-  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound' | 'staging' | 'exceptions'>('inbound')
+  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound' | 'staging' | 'exceptions'>(
+    'inbound',
+  )
 
   // Selected row inspector details
   const [selectedRow, setSelectedRow] = useState<{
@@ -178,7 +189,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
   const totalExceptionCount = exceptionsData.length
 
   const totalWorkloadEstimate = totalInboundCount + totalOutboundCount + totalStagingCount
-  const criticalExceptionCount = exceptionsData.filter(e => e.severity === 'critical' || e.severity === 'high').length
+  const criticalExceptionCount = exceptionsData.filter(
+    (e) => e.severity === 'critical' || e.severity === 'high',
+  ).length
 
   // Dynamically compute the active API mode
   const activeSources: string[] = []
@@ -190,19 +203,28 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
     if (exceptionsQuery.data?.source) activeSources.push(exceptionsQuery.data.source)
   }
   const uniqueSources = Array.from(new Set(activeSources))
-  const displayedSource = uniqueSources.length === 1 ? uniqueSources[0] : uniqueSources.length > 1 ? 'mixed' : 'mock'
+  const displayedSource =
+    uniqueSources.length === 1 ? uniqueSources[0] : uniqueSources.length > 1 ? 'mixed' : 'mock'
 
   const getSourceBadgeColorAndText = () => {
     switch (displayedSource) {
       case 'databricks-api':
-        return { text: 'API Mode: databricks-api (Executable)', color: '#ffffff', bg: COLORS.success }
+        return {
+          text: 'API Mode: databricks-api (Executable)',
+          color: '#ffffff',
+          bg: COLORS.success,
+        }
       case 'legacy-api':
         return { text: 'API Mode: legacy-api (Proxy)', color: '#ffffff', bg: COLORS.info }
       case 'mixed':
         return { text: 'API Mode: mixed (Hybrid)', color: '#ffffff', bg: COLORS.warning }
       case 'mock':
       default:
-        return { text: 'API Mode: mock (Fixture Data)', color: COLORS.indigoText, bg: COLORS.indigoBg }
+        return {
+          text: 'API Mode: mock (Fixture Data)',
+          color: COLORS.indigoText,
+          bg: COLORS.indigoBg,
+        }
     }
   }
   const sourceBadge = getSourceBadgeColorAndText()
@@ -284,13 +306,28 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
   const getStatusBadgeColor = (status?: string | null) => {
     if (!status) return { bg: COLORS.slate100, text: COLORS.slate600 }
     const low = status.toLowerCase()
-    if (low.includes('completed') || low.includes('received') || low.includes('staged') || low.includes('delivered')) {
+    if (
+      low.includes('completed') ||
+      low.includes('received') ||
+      low.includes('staged') ||
+      low.includes('delivered')
+    ) {
       return { bg: '#d1fae5', text: COLORS.success }
     }
-    if (low.includes('pending') || low.includes('open') || low.includes('inbound') || low.includes('staging')) {
+    if (
+      low.includes('pending') ||
+      low.includes('open') ||
+      low.includes('inbound') ||
+      low.includes('staging')
+    ) {
       return { bg: '#eff6ff', text: COLORS.info }
     }
-    if (low.includes('overdue') || low.includes('exception') || low.includes('hold') || low.includes('shortage')) {
+    if (
+      low.includes('overdue') ||
+      low.includes('exception') ||
+      low.includes('hold') ||
+      low.includes('shortage')
+    ) {
       return { bg: COLORS.dangerBg, text: COLORS.danger }
     }
     return { bg: COLORS.slate100, text: COLORS.slate600 }
@@ -301,7 +338,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       {/* Premium Header / Status Banner */}
       <div style={BANNER_STYLE}>
         <div>
-          <h1 style={{ margin: '0 0 6px 0', fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>
+          <h1
+            style={{ margin: '0 0 6px 0', fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}
+          >
             Warehouse360 Cockpit (Native)
           </h1>
           <p style={{ margin: 0, fontSize: 14, color: '#93c5fd', fontWeight: 500 }}>
@@ -309,19 +348,30 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <div style={{
-            backgroundColor: sourceBadge.bg,
-            color: sourceBadge.color,
-            padding: '6px 12px',
-            borderRadius: 20,
-            fontSize: 12,
-            fontWeight: 700,
-            boxShadow: displayedSource === 'databricks-api' ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: sourceBadge.color, display: 'inline-block' }} />
+          <div
+            style={{
+              backgroundColor: sourceBadge.bg,
+              color: sourceBadge.color,
+              padding: '6px 12px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 700,
+              boxShadow:
+                displayedSource === 'databricks-api' ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: sourceBadge.color,
+                display: 'inline-block',
+              }}
+            />
             {sourceBadge.text}
           </div>
           <span style={{ fontSize: 11, color: '#93c5fd', fontWeight: 500, textAlign: 'right' }}>
@@ -339,38 +389,52 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           'GET /api/warehouse360/inbound',
           'GET /api/warehouse360/outbound',
           'GET /api/warehouse360/staging',
-          'GET /api/warehouse360/exceptions'
+          'GET /api/warehouse360/exceptions',
         ]}
         sourceObjects={[
           'wh360_cockpit_summary_v',
           'wh360_inbound_v',
           'wh360_deliveries_v',
           'staging_orders_v',
-          'wh360_imwm_exceptions_v'
+          'wh360_imwm_exceptions_v',
         ]}
         limitations={[
           'UAT verification pending',
           'No write-back or transactional executions allowed',
-          'Read-only direct query mode against Unity Catalog views'
+          'Read-only direct query mode against Unity Catalog views',
         ]}
         lastVerified="Pending"
       />
 
       {/* Safety Notice Warning */}
-      <div style={{
-        backgroundColor: '#eff6ff',
-        borderLeft: `4px solid ${COLORS.info}`,
-        borderRadius: 8,
-        padding: 16,
-        color: '#1e3a8a',
-        fontSize: 13,
-        fontWeight: 500,
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-      }}>
-        <div style={{ fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div
+        style={{
+          backgroundColor: '#eff6ff',
+          borderLeft: `4px solid ${COLORS.info}`,
+          borderRadius: 8,
+          padding: 16,
+          color: '#1e3a8a',
+          fontSize: 13,
+          fontWeight: 500,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            marginBottom: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           ℹ️ Read-Only Operational Integrity Assurance
         </div>
-        This panel operates entirely in <strong>read-only query mode</strong>. No transactions, postings, or inventory write-backs are possible. Dynamic filter variables are executed securely against confirmed source views: <code>wh360_cockpit_summary_v</code>, <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>, <code>staging_orders_v</code>, and <code>wh360_imwm_exceptions_v</code>.
+        This panel operates entirely in <strong>read-only query mode</strong>. No transactions,
+        postings, or inventory write-backs are possible. Dynamic filter variables are executed
+        securely against confirmed source views: <code>wh360_cockpit_summary_v</code>,{' '}
+        <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>, <code>staging_orders_v</code>
+        , and <code>wh360_imwm_exceptions_v</code>.
       </div>
 
       {/* Filters Form Card */}
@@ -380,35 +444,47 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         </h3>
 
         {formError && (
-          <div style={{
-            backgroundColor: COLORS.dangerBg,
-            color: COLORS.danger,
-            padding: '10px 14px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 600,
-            marginBottom: 16
-          }}>
+          <div
+            style={{
+              backgroundColor: COLORS.dangerBg,
+              color: COLORS.danger,
+              padding: '10px 14px',
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 16,
+            }}
+          >
             ⚠️ {formError}
           </div>
         )}
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 16,
-          alignItems: 'start',
-          marginBottom: 16
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 16,
+            alignItems: 'start',
+            marginBottom: 16,
+          }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 6 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.slate600,
+                marginBottom: 6,
+              }}
+            >
               Warehouse ID <span style={{ color: COLORS.danger }}>*</span>
             </label>
             <input
               type="text"
               placeholder="e.g. WH001"
               value={warehouseId}
-              onChange={e => setWarehouseId(e.target.value)}
+              onChange={(e) => setWarehouseId(e.target.value)}
               style={INPUT_STYLE}
             />
             <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
@@ -417,14 +493,22 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 6 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.slate600,
+                marginBottom: 6,
+              }}
+            >
               Plant ID (Optional)
             </label>
             <input
               type="text"
               placeholder="e.g. C061"
               value={plantId}
-              onChange={e => setPlantId(e.target.value)}
+              onChange={(e) => setPlantId(e.target.value)}
               style={INPUT_STYLE}
             />
             <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
@@ -433,13 +517,21 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 6 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.slate600,
+                marginBottom: 6,
+              }}
+            >
               Date From (Optional)
             </label>
             <input
               type="date"
               value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
+              onChange={(e) => setDateFrom(e.target.value)}
               style={INPUT_STYLE}
             />
             <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
@@ -448,13 +540,21 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 6 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.slate600,
+                marginBottom: 6,
+              }}
+            >
               Date To (Optional)
             </label>
             <input
               type="date"
               value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
+              onChange={(e) => setDateTo(e.target.value)}
               style={INPUT_STYLE}
             />
             <span style={{ display: 'block', fontSize: 11, color: COLORS.slate600, marginTop: 4 }}>
@@ -463,7 +563,15 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 6 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: COLORS.slate600,
+                marginBottom: 6,
+              }}
+            >
               Max Limit (1..500)
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -472,7 +580,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 min="1"
                 max="500"
                 value={limit}
-                onChange={e => setLimit(Number(e.target.value))}
+                onChange={(e) => setLimit(Number(e.target.value))}
                 style={{ flex: 1, accentColor: COLORS.primary }}
               />
               <input
@@ -480,7 +588,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 min="1"
                 max="500"
                 value={limit}
-                onChange={e => setLimit(Number(e.target.value))}
+                onChange={(e) => setLimit(Number(e.target.value))}
                 style={{ ...INPUT_STYLE, width: 65, textAlign: 'center', padding: '6px 4px' }}
               />
             </div>
@@ -490,7 +598,17 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${COLORS.slate100}`, paddingTop: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 12,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: `1px solid ${COLORS.slate100}`,
+            paddingTop: 16,
+          }}
+        >
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               onClick={handleRun}
@@ -498,10 +616,10 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 ...BUTTON_STYLE,
                 backgroundColor: COLORS.primary,
                 color: '#ffffff',
-                boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)'
+                boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)',
               }}
-              onMouseOver={e => (e.currentTarget.style.backgroundColor = COLORS.primaryHover)}
-              onMouseOut={e => (e.currentTarget.style.backgroundColor = COLORS.primary)}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = COLORS.primaryHover)}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = COLORS.primary)}
             >
               🔄 Run Cockpit Queries
             </button>
@@ -511,7 +629,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 ...BUTTON_STYLE,
                 backgroundColor: 'transparent',
                 border: `1px solid ${COLORS.slate400}`,
-                color: COLORS.slate600
+                color: COLORS.slate600,
               }}
             >
               Reset
@@ -527,7 +645,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                   color: COLORS.indigoText,
                   padding: '6px 12px',
                   fontSize: 12,
-                  borderRadius: 20
+                  borderRadius: 20,
                 }}
               >
                 💡 Load demo presets for offline testing
@@ -535,7 +653,10 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             )}
             {warehouseId && (
               <span style={{ fontSize: 12, color: COLORS.slate600, fontWeight: 500 }}>
-                Active Wh ID: <strong style={{ color: COLORS.slate800 }}>{activeFilters.warehouseId || 'None'}</strong>
+                Active Wh ID:{' '}
+                <strong style={{ color: COLORS.slate800 }}>
+                  {activeFilters.warehouseId || 'None'}
+                </strong>
               </span>
             )}
           </div>
@@ -544,21 +665,33 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
       {!isQueryEnabled ? (
         // Blank Welcome Banner
-        <div style={{
-          ...CARD_STYLE,
-          textAlign: 'center',
-          padding: '64px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16
-        }}>
+        <div
+          style={{
+            ...CARD_STYLE,
+            textAlign: 'center',
+            padding: '64px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+          }}
+        >
           <span style={{ fontSize: 48 }}>🏭</span>
           <h2 style={{ margin: 0, color: COLORS.slate800, fontSize: 20, fontWeight: 700 }}>
             Enter a Warehouse ID to Begin Queries
           </h2>
-          <p style={{ margin: 0, color: COLORS.slate600, fontSize: 14, maxWidth: 500, lineHeight: 1.5 }}>
-            To verify native Databricks connectivity in UAT, supply a valid, known warehouse ID (e.g. <code>WH001</code>) and click <strong>Run Cockpit Queries</strong>. All views will execute concurrently against your authenticated end-user OAuth token context.
+          <p
+            style={{
+              margin: 0,
+              color: COLORS.slate600,
+              fontSize: 14,
+              maxWidth: 500,
+              lineHeight: 1.5,
+            }}
+          >
+            To verify native Databricks connectivity in UAT, supply a valid, known warehouse ID
+            (e.g. <code>WH001</code>) and click <strong>Run Cockpit Queries</strong>. All views will
+            execute concurrently against your authenticated end-user OAuth token context.
           </p>
           <button
             onClick={handleSetDemoValues}
@@ -566,7 +699,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               ...BUTTON_STYLE,
               backgroundColor: COLORS.indigoBg,
               color: COLORS.indigoText,
-              boxShadow: 'none'
+              boxShadow: 'none',
             }}
           >
             Or, Click here to auto-fill mock demo values
@@ -575,25 +708,33 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       ) : (
         <>
           {/* Overview KPI Info Banner */}
-          <div style={{
-            backgroundColor: '#fffbeb',
-            borderLeft: `4px solid ${COLORS.warning}`,
-            borderRadius: 8,
-            padding: '12px 16px',
-            color: '#78350f',
-            fontSize: 13,
-            fontWeight: 500,
-            marginBottom: 16,
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-          }}>
-            <strong>⚠️ Global Metrics Notice:</strong> Overview KPIs are site-level and are not filtered by warehouse. Detailed lists in the tabs below are filtered by the active Warehouse ID.
+          <div
+            style={{
+              backgroundColor: '#fffbeb',
+              borderLeft: `4px solid ${COLORS.warning}`,
+              borderRadius: 8,
+              padding: '12px 16px',
+              color: '#78350f',
+              fontSize: 13,
+              fontWeight: 500,
+              marginBottom: 16,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            }}
+          >
+            <strong>⚠️ Global Metrics Notice:</strong> Overview KPIs are site-level and are not
+            filtered by warehouse. Detailed lists in the tabs below are filtered by the active
+            Warehouse ID.
           </div>
 
           {/* Overview Metrics Dashboard Card */}
           <div style={GRID_STATS_STYLE}>
             {/* Metric 1 */}
             <div style={CARD_STYLE}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}>INBOUND OPERATIONS</div>
+              <div
+                style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}
+              >
+                INBOUND OPERATIONS
+              </div>
               {overviewQuery.isLoading ? (
                 <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
               ) : overviewQuery.data?.ok ? (
@@ -601,7 +742,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
                     {overviewQuery.data.data.inboundDueCount}
                   </div>
-                  <div style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}>
+                  <div
+                    style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}
+                  >
                     ⚠️ {overviewQuery.data.data.inboundOverdueCount} Overdue items
                   </div>
                 </div>
@@ -612,7 +755,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
             {/* Metric 2 */}
             <div style={CARD_STYLE}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}>OUTBOUND SHIPMENTS</div>
+              <div
+                style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}
+              >
+                OUTBOUND SHIPMENTS
+              </div>
               {overviewQuery.isLoading ? (
                 <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
               ) : overviewQuery.data?.ok ? (
@@ -620,7 +767,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
                     {overviewQuery.data.data.outboundDueCount}
                   </div>
-                  <div style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}>
+                  <div
+                    style={{ fontSize: 12, color: COLORS.danger, fontWeight: 600, marginTop: 4 }}
+                  >
                     ⚠️ {overviewQuery.data.data.outboundOverdueCount} Overdue items
                   </div>
                 </div>
@@ -631,7 +780,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
             {/* Metric 3 */}
             <div style={CARD_STYLE}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}>PRODUCTION STAGING</div>
+              <div
+                style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}
+              >
+                PRODUCTION STAGING
+              </div>
               {overviewQuery.isLoading ? (
                 <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
               ) : overviewQuery.data?.ok ? (
@@ -639,7 +792,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
                     {overviewQuery.data.data.stagingOpenCount}
                   </div>
-                  <div style={{ fontSize: 12, color: COLORS.warning, fontWeight: 600, marginTop: 4 }}>
+                  <div
+                    style={{ fontSize: 12, color: COLORS.warning, fontWeight: 600, marginTop: 4 }}
+                  >
                     ⚠️ {overviewQuery.data.data.stagingOverdueCount} Overdue items
                   </div>
                 </div>
@@ -649,31 +804,47 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             </div>
 
             {/* Metric 4 — BLOCKED: nearExpiryCount and reconciliationExceptionCount require governance (Gates 4 & 5) */}
-            <div style={{ ...CARD_STYLE, borderLeft: `4px solid ${COLORS.warning}`, background: '#fffbeb' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}>EXCEPTIONS & INVENTORY STATUS</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 6 }}>
-                ⚠️ Overview Blocked — Governance Pending
+            <div
+              style={{
+                ...CARD_STYLE,
+                borderLeft: `4px solid var(--status-warn)`,
+                background: '#fffbeb',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600 }}>
+                EXCEPTIONS & INVENTORY STATUS
               </div>
-              <div style={{ fontSize: 11, color: '#78350f', lineHeight: 1.5 }}>
-                <strong>nearExpiryCount</strong> and <strong>reconciliationExceptionCount</strong> require governed thresholds, inclusion rules, and source owner acceptance before display. Gates 4 and 5 are open.
+              <div>
+                <GovernancePendingBadge reason="Gates 4 and 5 remain blocked for UAT" />
               </div>
-              <div style={{ fontSize: 11, color: COLORS.slate600, marginTop: 8 }}>
+              <EvidenceCaveatList
+                caveats={[
+                  'nearExpiryCount requires governed thresholds and inclusion rules.',
+                  'reconciliationExceptionCount requires source owner acceptance.',
+                ]}
+              />
+              <div style={{ fontSize: 11, color: COLORS.slate600 }}>
                 Drill-through evidence (inbound, staging, exceptions) is accessible below.
               </div>
             </div>
           </div>
 
           {/* Workload Stats Card derived from loaded rows */}
-          <div style={{
-            ...CARD_STYLE,
-            backgroundColor: '#faf5ff',
-            border: '1px solid #f3e8ff',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 16
-          }}>
+          <div
+            style={{
+              ...CARD_STYLE,
+              backgroundColor: '#faf5ff',
+              border: '1px solid #f3e8ff',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 16,
+            }}
+          >
             <div>
               <h4 style={{ margin: '0 0 4px 0', color: '#581c87', fontSize: 14, fontWeight: 700 }}>
                 📊 Active Screen Workload Summary
@@ -684,16 +855,34 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             </div>
             <div style={{ display: 'flex', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: '#581c87' }}>{totalWorkloadEstimate}</span>
+                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: '#581c87' }}>
+                  {totalWorkloadEstimate}
+                </span>
                 <span style={{ fontSize: 11, color: '#7e22ce', fontWeight: 600 }}>Open Rows</span>
               </div>
-              <div style={{ borderLeft: '1px solid #e9d5ff', paddingLeft: 24, textAlign: 'center' }}>
-                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: COLORS.danger }}>{criticalExceptionCount}</span>
-                <span style={{ fontSize: 11, color: COLORS.danger, fontWeight: 600 }}>Critical exceptions</span>
+              <div
+                style={{ borderLeft: '1px solid #e9d5ff', paddingLeft: 24, textAlign: 'center' }}
+              >
+                <span
+                  style={{ display: 'block', fontSize: 20, fontWeight: 800, color: COLORS.danger }}
+                >
+                  {criticalExceptionCount}
+                </span>
+                <span style={{ fontSize: 11, color: COLORS.danger, fontWeight: 600 }}>
+                  Critical exceptions
+                </span>
               </div>
-              <div style={{ borderLeft: '1px solid #e9d5ff', paddingLeft: 24, textAlign: 'center' }}>
-                <span style={{ display: 'block', fontSize: 20, fontWeight: 800, color: COLORS.success }}>{totalExceptionCount}</span>
-                <span style={{ fontSize: 11, color: COLORS.success, fontWeight: 600 }}>Alert Items</span>
+              <div
+                style={{ borderLeft: '1px solid #e9d5ff', paddingLeft: 24, textAlign: 'center' }}
+              >
+                <span
+                  style={{ display: 'block', fontSize: 20, fontWeight: 800, color: COLORS.success }}
+                >
+                  {totalExceptionCount}
+                </span>
+                <span style={{ fontSize: 11, color: COLORS.success, fontWeight: 600 }}>
+                  Alert Items
+                </span>
               </div>
             </div>
           </div>
@@ -702,13 +891,15 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           <div style={{ display: 'flex', gap: 16, flexDirection: 'column' }}>
             <div style={{ ...CARD_STYLE, padding: 0, overflow: 'hidden' }}>
               {/* Tab headers switcher */}
-              <div style={{
-                display: 'flex',
-                borderBottom: `1px solid ${COLORS.slate100}`,
-                backgroundColor: '#ffffff',
-                padding: '0 16px',
-                flexWrap: 'wrap'
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  borderBottom: `1px solid ${COLORS.slate100}`,
+                  backgroundColor: '#ffffff',
+                  padding: '0 16px',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <button
                   onClick={() => setActiveTab('inbound')}
                   style={TAB_STYLE(activeTab === 'inbound')}
@@ -739,32 +930,52 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               {activeTab === 'inbound' && (
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {inboundQuery.isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>🌀 Loading Inbound Receipts from Databricks...</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      🌀 Loading Inbound Receipts from Databricks...
+                    </div>
                   ) : inboundQuery.data?.ok === false ? (
-                    <div style={{
-                      backgroundColor: COLORS.dangerBg,
-                      color: COLORS.danger,
-                      padding: 16,
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500
-                    }}>
+                    <div
+                      style={{
+                        backgroundColor: COLORS.dangerBg,
+                        color: COLORS.danger,
+                        padding: 16,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}
+                    >
                       ❌ Inbound query failed: {inboundQuery.data.error.message}
                       <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
-                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are
+                        valid, or check network connectivity.
                       </div>
                     </div>
                   ) : inboundData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      ℹ️ No inbound receipts found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      ℹ️ No inbound receipts found for Warehouse ID{' '}
+                      <strong>"{activeFilters.warehouseId}"</strong>.
                       <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
-                        If this is unexpected, verify the Warehouse ID exists and that there are active Inbound POs/STOs scheduled.
+                        If this is unexpected, verify the Warehouse ID exists and that there are
+                        active Inbound POs/STOs scheduled.
                       </div>
                     </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: 13,
+                        textAlign: 'left',
+                      }}
+                    >
                       <thead>
-                        <tr style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate600, fontWeight: 700 }}>
+                        <tr
+                          style={{
+                            borderBottom: `2px solid ${COLORS.slate100}`,
+                            color: COLORS.slate600,
+                            fontWeight: 700,
+                          }}
+                        >
                           <th style={{ padding: '10px 8px' }}>Doc Type</th>
                           <th style={{ padding: '10px 8px' }}>PO / STO ID</th>
                           <th style={{ padding: '10px 8px' }}>Item</th>
@@ -778,42 +989,80 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       <tbody>
                         {inboundData.map((row, idx) => {
                           const statusColors = getStatusBadgeColor(row.status)
-                          const docId = row.documentType === 'STO' ? row.stockTransportOrderId : row.purchaseOrderId
+                          const docId =
+                            row.documentType === 'STO'
+                              ? row.stockTransportOrderId
+                              : row.purchaseOrderId
                           return (
                             <tr
                               key={idx}
-                              onClick={() => setSelectedRow({ type: 'inbound', data: row as unknown as Record<string, unknown> })}
+                              onClick={() =>
+                                setSelectedRow({
+                                  type: 'inbound',
+                                  data: row as unknown as Record<string, unknown>,
+                                })
+                              }
                               style={{
                                 borderBottom: `1px solid ${COLORS.slate100}`,
                                 cursor: 'pointer',
                                 transition: 'background-color 0.15s',
-                                backgroundColor: selectedRow?.type === 'inbound' && selectedRow.data.purchaseOrderId === row.purchaseOrderId && selectedRow.data.itemId === row.itemId ? '#f5f3ff' : 'transparent'
+                                backgroundColor:
+                                  selectedRow?.type === 'inbound' &&
+                                  selectedRow.data.purchaseOrderId === row.purchaseOrderId &&
+                                  selectedRow.data.itemId === row.itemId
+                                    ? '#f5f3ff'
+                                    : 'transparent',
                               }}
-                              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                              onMouseOut={e => {
-                                const isSelected = selectedRow?.type === 'inbound' && selectedRow.data.purchaseOrderId === row.purchaseOrderId && selectedRow.data.itemId === row.itemId
-                                e.currentTarget.style.backgroundColor = isSelected ? '#f5f3ff' : 'transparent'
+                              onMouseOver={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'inbound' &&
+                                  selectedRow.data.purchaseOrderId === row.purchaseOrderId &&
+                                  selectedRow.data.itemId === row.itemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
                               }}
                             >
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.documentType}</td>
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontWeight: 600 }}>{docId || '—'}</td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.documentType}
+                              </td>
+                              <td
+                                style={{
+                                  padding: '12px 8px',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {docId || '—'}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>{row.itemId || '—'}</td>
                               <td style={{ padding: '12px 8px' }}>
                                 <div style={{ fontWeight: 600 }}>{row.materialId}</div>
-                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>{row.materialDescription || '—'}</div>
+                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>
+                                  {row.materialDescription || '—'}
+                                </div>
                               </td>
-                              <td style={{ padding: '12px 8px' }}>{row.vendorId || row.supplyingPlantId || '—'}</td>
-                              <td style={{ padding: '12px 8px' }}>{row.expectedDate || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.quantity} {row.unitOfMeasure}</td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span style={{
-                                  backgroundColor: statusColors.bg,
-                                  color: statusColors.text,
-                                  padding: '4px 8px',
-                                  borderRadius: 4,
-                                  fontSize: 11,
-                                  fontWeight: 700
-                                }}>
+                                {row.vendorId || row.supplyingPlantId || '—'}
+                              </td>
+                              <td style={{ padding: '12px 8px' }}>{row.expectedDate || '—'}</td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.quantity} {row.unitOfMeasure}
+                              </td>
+                              <td style={{ padding: '12px 8px' }}>
+                                <span
+                                  style={{
+                                    backgroundColor: statusColors.bg,
+                                    color: statusColors.text,
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                  }}
+                                >
                                   {row.status || '—'}
                                 </span>
                               </td>
@@ -830,32 +1079,52 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               {activeTab === 'outbound' && (
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {outboundQuery.isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>🌀 Loading Outbound Shipments from Databricks...</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      🌀 Loading Outbound Shipments from Databricks...
+                    </div>
                   ) : outboundQuery.data?.ok === false ? (
-                    <div style={{
-                      backgroundColor: COLORS.dangerBg,
-                      color: COLORS.danger,
-                      padding: 16,
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500
-                    }}>
+                    <div
+                      style={{
+                        backgroundColor: COLORS.dangerBg,
+                        color: COLORS.danger,
+                        padding: 16,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}
+                    >
                       ❌ Outbound query failed: {outboundQuery.data.error.message}
                       <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
-                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are
+                        valid, or check network connectivity.
                       </div>
                     </div>
                   ) : outboundData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      ℹ️ No outbound deliveries found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      ℹ️ No outbound deliveries found for Warehouse ID{' '}
+                      <strong>"{activeFilters.warehouseId}"</strong>.
                       <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
-                        If this is unexpected, verify the Warehouse ID exists and that there are active Outbound Deliveries planned.
+                        If this is unexpected, verify the Warehouse ID exists and that there are
+                        active Outbound Deliveries planned.
                       </div>
                     </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: 13,
+                        textAlign: 'left',
+                      }}
+                    >
                       <thead>
-                        <tr style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate600, fontWeight: 700 }}>
+                        <tr
+                          style={{
+                            borderBottom: `2px solid ${COLORS.slate100}`,
+                            color: COLORS.slate600,
+                            fontWeight: 700,
+                          }}
+                        >
                           <th style={{ padding: '10px 8px' }}>Delivery ID</th>
                           <th style={{ padding: '10px 8px' }}>Item</th>
                           <th style={{ padding: '10px 8px' }}>Sales Order</th>
@@ -872,38 +1141,73 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                           return (
                             <tr
                               key={idx}
-                              onClick={() => setSelectedRow({ type: 'outbound', data: row as unknown as Record<string, unknown> })}
+                              onClick={() =>
+                                setSelectedRow({
+                                  type: 'outbound',
+                                  data: row as unknown as Record<string, unknown>,
+                                })
+                              }
                               style={{
                                 borderBottom: `1px solid ${COLORS.slate100}`,
                                 cursor: 'pointer',
                                 transition: 'background-color 0.15s',
-                                backgroundColor: selectedRow?.type === 'outbound' && selectedRow.data.deliveryId === row.deliveryId && selectedRow.data.deliveryItemId === row.deliveryItemId ? '#f5f3ff' : 'transparent'
+                                backgroundColor:
+                                  selectedRow?.type === 'outbound' &&
+                                  selectedRow.data.deliveryId === row.deliveryId &&
+                                  selectedRow.data.deliveryItemId === row.deliveryItemId
+                                    ? '#f5f3ff'
+                                    : 'transparent',
                               }}
-                              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                              onMouseOut={e => {
-                                const isSelected = selectedRow?.type === 'outbound' && selectedRow.data.deliveryId === row.deliveryId && selectedRow.data.deliveryItemId === row.deliveryItemId
-                                e.currentTarget.style.backgroundColor = isSelected ? '#f5f3ff' : 'transparent'
+                              onMouseOver={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'outbound' &&
+                                  selectedRow.data.deliveryId === row.deliveryId &&
+                                  selectedRow.data.deliveryItemId === row.deliveryItemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
                               }}
                             >
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontWeight: 600 }}>{row.deliveryId}</td>
+                              <td
+                                style={{
+                                  padding: '12px 8px',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {row.deliveryId}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>{row.deliveryItemId || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>{row.salesOrderId || '—'}</td>
+                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
+                                {row.salesOrderId || '—'}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>
                                 <div style={{ fontWeight: 600 }}>{row.materialId}</div>
-                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>{row.materialDescription || '—'}</div>
+                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>
+                                  {row.materialDescription || '—'}
+                                </div>
                               </td>
                               <td style={{ padding: '12px 8px' }}>{row.customerId || '—'}</td>
-                              <td style={{ padding: '12px 8px' }}>{row.plannedGoodsIssueDate || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.quantity} {row.unitOfMeasure}</td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span style={{
-                                  backgroundColor: statusColors.bg,
-                                  color: statusColors.text,
-                                  padding: '4px 8px',
-                                  borderRadius: 4,
-                                  fontSize: 11,
-                                  fontWeight: 700
-                                }}>
+                                {row.plannedGoodsIssueDate || '—'}
+                              </td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.quantity} {row.unitOfMeasure}
+                              </td>
+                              <td style={{ padding: '12px 8px' }}>
+                                <span
+                                  style={{
+                                    backgroundColor: statusColors.bg,
+                                    color: statusColors.text,
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                  }}
+                                >
                                   {row.status || '—'}
                                 </span>
                               </td>
@@ -920,32 +1224,52 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               {activeTab === 'staging' && (
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {stagingQuery.isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>🌀 Loading Production Staging from Databricks...</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      🌀 Loading Production Staging from Databricks...
+                    </div>
                   ) : stagingQuery.data?.ok === false ? (
-                    <div style={{
-                      backgroundColor: COLORS.dangerBg,
-                      color: COLORS.danger,
-                      padding: 16,
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500
-                    }}>
+                    <div
+                      style={{
+                        backgroundColor: COLORS.dangerBg,
+                        color: COLORS.danger,
+                        padding: 16,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}
+                    >
                       ❌ Staging query failed: {stagingQuery.data.error.message}
                       <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
-                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are
+                        valid, or check network connectivity.
                       </div>
                     </div>
                   ) : stagingData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      ℹ️ No production staging items found for Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      ℹ️ No production staging items found for Warehouse ID{' '}
+                      <strong>"{activeFilters.warehouseId}"</strong>.
                       <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
-                        If this is unexpected, verify the Warehouse ID exists and that there are active process orders scheduled.
+                        If this is unexpected, verify the Warehouse ID exists and that there are
+                        active process orders scheduled.
                       </div>
                     </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: 13,
+                        textAlign: 'left',
+                      }}
+                    >
                       <thead>
-                        <tr style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate600, fontWeight: 700 }}>
+                        <tr
+                          style={{
+                            borderBottom: `2px solid ${COLORS.slate100}`,
+                            color: COLORS.slate600,
+                            fontWeight: 700,
+                          }}
+                        >
                           <th style={{ padding: '10px 8px' }}>Process Order ID</th>
                           <th style={{ padding: '10px 8px' }}>Reservation</th>
                           <th style={{ padding: '10px 8px' }}>Material</th>
@@ -962,38 +1286,90 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                           return (
                             <tr
                               key={idx}
-                              onClick={() => setSelectedRow({ type: 'staging', data: row as unknown as Record<string, unknown> })}
+                              onClick={() =>
+                                setSelectedRow({
+                                  type: 'staging',
+                                  data: row as unknown as Record<string, unknown>,
+                                })
+                              }
                               style={{
                                 borderBottom: `1px solid ${COLORS.slate100}`,
                                 cursor: 'pointer',
                                 transition: 'background-color 0.15s',
-                                backgroundColor: selectedRow?.type === 'staging' && selectedRow.data.processOrderId === row.processOrderId && selectedRow.data.reservationItemId === row.reservationItemId ? '#f5f3ff' : 'transparent'
+                                backgroundColor:
+                                  selectedRow?.type === 'staging' &&
+                                  selectedRow.data.processOrderId === row.processOrderId &&
+                                  selectedRow.data.reservationItemId === row.reservationItemId
+                                    ? '#f5f3ff'
+                                    : 'transparent',
                               }}
-                              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                              onMouseOut={e => {
-                                const isSelected = selectedRow?.type === 'staging' && selectedRow.data.processOrderId === row.processOrderId && selectedRow.data.reservationItemId === row.reservationItemId
-                                e.currentTarget.style.backgroundColor = isSelected ? '#f5f3ff' : 'transparent'
+                              onMouseOver={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'staging' &&
+                                  selectedRow.data.processOrderId === row.processOrderId &&
+                                  selectedRow.data.reservationItemId === row.reservationItemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
                               }}
                             >
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontWeight: 600 }}>{row.processOrderId}</td>
-                              <td style={{ padding: '12px 8px' }}>{row.reservationId}-{row.reservationItemId}</td>
+                              <td
+                                style={{
+                                  padding: '12px 8px',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {row.processOrderId}
+                              </td>
+                              <td style={{ padding: '12px 8px' }}>
+                                {row.reservationId}-{row.reservationItemId}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>
                                 <div style={{ fontWeight: 600 }}>{row.materialId}</div>
-                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>{row.materialDescription || '—'}</div>
+                                <div style={{ fontSize: 11, color: COLORS.slate600 }}>
+                                  {row.materialDescription || '—'}
+                                </div>
                               </td>
                               <td style={{ padding: '12px 8px' }}>{row.requirementDate || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.requiredQuantity} {row.unitOfMeasure}</td>
-                              <td style={{ padding: '12px 8px', color: COLORS.success, fontWeight: 600 }}>{row.stagedQuantity} {row.unitOfMeasure}</td>
-                              <td style={{ padding: '12px 8px', color: row.openQuantity && row.openQuantity > 0 ? COLORS.danger : COLORS.slate600, fontWeight: 600 }}>{row.openQuantity} {row.unitOfMeasure}</td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.requiredQuantity} {row.unitOfMeasure}
+                              </td>
+                              <td
+                                style={{
+                                  padding: '12px 8px',
+                                  color: COLORS.success,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {row.stagedQuantity} {row.unitOfMeasure}
+                              </td>
+                              <td
+                                style={{
+                                  padding: '12px 8px',
+                                  color:
+                                    row.openQuantity && row.openQuantity > 0
+                                      ? COLORS.danger
+                                      : COLORS.slate600,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {row.openQuantity} {row.unitOfMeasure}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span style={{
-                                  backgroundColor: statusColors.bg,
-                                  color: statusColors.text,
-                                  padding: '4px 8px',
-                                  borderRadius: 4,
-                                  fontSize: 11,
-                                  fontWeight: 700
-                                }}>
+                                <span
+                                  style={{
+                                    backgroundColor: statusColors.bg,
+                                    color: statusColors.text,
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                  }}
+                                >
                                   {row.stagingStatus || '—'}
                                 </span>
                               </td>
@@ -1010,32 +1386,52 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               {activeTab === 'exceptions' && (
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {exceptionsQuery.isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>🌀 Loading Exception Items from Databricks...</div>
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
+                      🌀 Loading Exception Items from Databricks...
+                    </div>
                   ) : exceptionsQuery.data?.ok === false ? (
-                    <div style={{
-                      backgroundColor: COLORS.dangerBg,
-                      color: COLORS.danger,
-                      padding: 16,
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500
-                    }}>
+                    <div
+                      style={{
+                        backgroundColor: COLORS.dangerBg,
+                        color: COLORS.danger,
+                        padding: 16,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}
+                    >
                       ❌ Exception query failed: {exceptionsQuery.data.error.message}
                       <div style={{ fontSize: 12, marginTop: 6, fontWeight: 400 }}>
-                        Please verify the Warehouse ID exists, confirm your OAuth credentials are valid, or check network connectivity.
+                        Please verify the Warehouse ID exists, confirm your OAuth credentials are
+                        valid, or check network connectivity.
                       </div>
                     </div>
                   ) : exceptionsData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      ℹ️ No exception records were returned for this Warehouse ID <strong>"{activeFilters.warehouseId}"</strong>.
+                      ℹ️ No exception records were returned for this Warehouse ID{' '}
+                      <strong>"{activeFilters.warehouseId}"</strong>.
                       <div style={{ fontSize: 12, marginTop: 4, color: COLORS.slate400 }}>
-                        If this is unexpected, verify the warehouse, source coverage, and exception extraction logic before assuming there are no issues.
+                        If this is unexpected, verify the warehouse, source coverage, and exception
+                        extraction logic before assuming there are no issues.
                       </div>
                     </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: 13,
+                        textAlign: 'left',
+                      }}
+                    >
                       <thead>
-                        <tr style={{ borderBottom: `2px solid ${COLORS.slate100}`, color: COLORS.slate600, fontWeight: 700 }}>
+                        <tr
+                          style={{
+                            borderBottom: `2px solid ${COLORS.slate100}`,
+                            color: COLORS.slate600,
+                            fontWeight: 700,
+                          }}
+                        >
                           <th style={{ padding: '10px 8px' }}>Severity</th>
                           <th style={{ padding: '10px 8px' }}>Exception Type</th>
                           <th style={{ padding: '10px 8px' }}>Material</th>
@@ -1052,46 +1448,89 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                           return (
                             <tr
                               key={idx}
-                              onClick={() => setSelectedRow({ type: 'exceptions', data: row as unknown as Record<string, unknown> })}
+                              onClick={() =>
+                                setSelectedRow({
+                                  type: 'exceptions',
+                                  data: row as unknown as Record<string, unknown>,
+                                })
+                              }
                               style={{
                                 borderBottom: `1px solid ${COLORS.slate100}`,
                                 cursor: 'pointer',
                                 transition: 'background-color 0.15s',
-                                backgroundColor: selectedRow?.type === 'exceptions' && selectedRow.data.materialId === row.materialId && selectedRow.data.batchId === row.batchId && selectedRow.data.exceptionType === row.exceptionType ? '#f5f3ff' : 'transparent'
+                                backgroundColor:
+                                  selectedRow?.type === 'exceptions' &&
+                                  selectedRow.data.materialId === row.materialId &&
+                                  selectedRow.data.batchId === row.batchId &&
+                                  selectedRow.data.exceptionType === row.exceptionType
+                                    ? '#f5f3ff'
+                                    : 'transparent',
                               }}
-                              onMouseOver={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                              onMouseOut={e => {
-                                const isSelected = selectedRow?.type === 'exceptions' && selectedRow.data.materialId === row.materialId && selectedRow.data.batchId === row.batchId && selectedRow.data.exceptionType === row.exceptionType
-                                e.currentTarget.style.backgroundColor = isSelected ? '#f5f3ff' : 'transparent'
+                              onMouseOver={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'exceptions' &&
+                                  selectedRow.data.materialId === row.materialId &&
+                                  selectedRow.data.batchId === row.batchId &&
+                                  selectedRow.data.exceptionType === row.exceptionType
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
                               }}
                             >
                               <td style={{ padding: '12px 8px' }}>
-                                <span style={{
-                                  backgroundColor: severityBadge.bg,
-                                  color: severityBadge.text,
-                                  padding: '4px 8px',
-                                  borderRadius: 4,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  textTransform: 'uppercase'
-                                }}>
+                                <span
+                                  style={{
+                                    backgroundColor: severityBadge.bg,
+                                    color: severityBadge.text,
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                  }}
+                                >
                                   {row.severity || 'low'}
                                 </span>
                               </td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.exceptionType || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.materialId}</td>
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>{row.batchId || '—'}</td>
-                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>{row.quantity} {row.unitOfMeasure}</td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.exceptionType || '—'}
+                              </td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.materialId}
+                              </td>
+                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
+                                {row.batchId || '—'}
+                              </td>
+                              <td style={{ padding: '12px 8px', fontWeight: 600 }}>
+                                {row.quantity} {row.unitOfMeasure}
+                              </td>
                               <td style={{ padding: '12px 8px' }}>
                                 <div>{row.expiryDate || '—'}</div>
                                 {row.daysToExpiry !== null && row.daysToExpiry !== undefined && (
-                                  <div style={{ fontSize: 11, color: row.daysToExpiry <= 0 ? COLORS.danger : COLORS.slate600 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color:
+                                        row.daysToExpiry <= 0 ? COLORS.danger : COLORS.slate600,
+                                    }}
+                                  >
                                     ({row.daysToExpiry} days left)
                                   </div>
                                 )}
                               </td>
-                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>{row.documentId || row.processOrderId || row.deliveryId || row.purchaseOrderId || '—'}</td>
-                              <td style={{ padding: '12px 8px', color: COLORS.slate600 }}>{row.reason || '—'}</td>
+                              <td style={{ padding: '12px 8px', fontFamily: 'monospace' }}>
+                                {row.documentId ||
+                                  row.processOrderId ||
+                                  row.deliveryId ||
+                                  row.purchaseOrderId ||
+                                  '—'}
+                              </td>
+                              <td style={{ padding: '12px 8px', color: COLORS.slate600 }}>
+                                {row.reason || '—'}
+                              </td>
                             </tr>
                           )
                         })}
@@ -1105,7 +1544,16 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             {/* Row Detail Inspector Card */}
             {selectedRow && (
               <div style={ROW_DETAIL_STYLE}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                    borderBottom: `1px solid ${COLORS.slate100}`,
+                    paddingBottom: 10,
+                  }}
+                >
                   <h4 style={{ margin: 0, color: COLORS.slate800, fontSize: 15, fontWeight: 700 }}>
                     🔍 Selected Item Inspector Details
                   </h4>
@@ -1116,17 +1564,19 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       backgroundColor: 'transparent',
                       color: COLORS.slate600,
                       cursor: 'pointer',
-                      fontSize: 16
+                      fontSize: 16,
                     }}
                   >
                     ✕ Close
                   </button>
                 </div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '0 24px'
-                }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '0 24px',
+                  }}
+                >
                   <DetailRow label="Source Entity Context" value={selectedRow.type.toUpperCase()} />
                   {Object.entries(selectedRow.data).map(([key, val]) => (
                     <DetailRow key={key} label={key} value={val as string | number | null} />
@@ -1134,25 +1584,64 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 </div>
 
                 {selectedRow.type === 'exceptions' && (
-                  <div style={{
-                    marginTop: 16,
-                    padding: 12,
-                    backgroundColor: '#fffbeb',
-                    borderRadius: 6,
-                    borderLeft: `3px solid ${COLORS.warning}`,
-                    fontSize: 12,
-                    color: '#78350f'
-                  }}>
+                  <div
+                    style={{
+                      marginTop: 16,
+                      padding: 12,
+                      backgroundColor: '#fffbeb',
+                      borderRadius: 6,
+                      borderLeft: `3px solid ${COLORS.warning}`,
+                      fontSize: 12,
+                      color: '#78350f',
+                    }}
+                  >
                     <strong>💡 Exception Diagnostic & Review Guidance:</strong>
                     <div style={{ marginTop: 4, lineHeight: 1.4 }}>
-                       {String(selectedRow.data.exceptionType || '').toLowerCase().includes('shortage') || String(selectedRow.data.description || '').toLowerCase().includes('mismatch') || String(selectedRow.data.reason || '').toLowerCase().includes('mismatch') ? (
-                        <>A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse Management) discrepancies. <strong>Review Guidance:</strong> Review IM/WM reconciliation using appropriate SAP warehouse transactions and confirm physical/bin status before posting corrections.</>
-                      ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('expiry') || String(selectedRow.data.reason || '').toLowerCase().includes('expiry') || Number(selectedRow.data.daysToExpiry) <= 30 ? (
-                        <>Batch is close to or past expiration date. <strong>Review Guidance:</strong> Review batch status and escalate to QA/QM for block, retest, or disposal decision if required.</>
-                      ) : String(selectedRow.data.exceptionType || '').toLowerCase().includes('hold') || String(selectedRow.data.reason || '').toLowerCase().includes('hold') ? (
-                        <>This batch is currently under an active quality or warehouse hold. <strong>Review Guidance:</strong> Review the block reason and release authority in the Quality Batch Release workspace before moving or releasing stock.</>
+                      {String(selectedRow.data.exceptionType || '')
+                        .toLowerCase()
+                        .includes('shortage') ||
+                      String(selectedRow.data.description || '')
+                        .toLowerCase()
+                        .includes('mismatch') ||
+                      String(selectedRow.data.reason || '')
+                        .toLowerCase()
+                        .includes('mismatch') ? (
+                        <>
+                          A quantity mismatch indicates IM (Inventory Management) and WM (Warehouse
+                          Management) discrepancies. <strong>Review Guidance:</strong> Review IM/WM
+                          reconciliation using appropriate SAP warehouse transactions and confirm
+                          physical/bin status before posting corrections.
+                        </>
+                      ) : String(selectedRow.data.exceptionType || '')
+                          .toLowerCase()
+                          .includes('expiry') ||
+                        String(selectedRow.data.reason || '')
+                          .toLowerCase()
+                          .includes('expiry') ||
+                        Number(selectedRow.data.daysToExpiry) <= 30 ? (
+                        <>
+                          Batch is close to or past expiration date.{' '}
+                          <strong>Review Guidance:</strong> Review batch status and escalate to
+                          QA/QM for block, retest, or disposal decision if required.
+                        </>
+                      ) : String(selectedRow.data.exceptionType || '')
+                          .toLowerCase()
+                          .includes('hold') ||
+                        String(selectedRow.data.reason || '')
+                          .toLowerCase()
+                          .includes('hold') ? (
+                        <>
+                          This batch is currently under an active quality or warehouse hold.{' '}
+                          <strong>Review Guidance:</strong> Review the block reason and release
+                          authority in the Quality Batch Release workspace before moving or
+                          releasing stock.
+                        </>
                       ) : (
-                        <>General warehouse exception detected. <strong>Review Guidance:</strong> Review bin assignment history, physical counts, and storage unit status in SAP before making corrections.</>
+                        <>
+                          General warehouse exception detected. <strong>Review Guidance:</strong>{' '}
+                          Review bin assignment history, physical counts, and storage unit status in
+                          SAP before making corrections.
+                        </>
                       )}
                     </div>
                   </div>
@@ -1170,61 +1659,111 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 cursor: 'pointer',
-                userSelect: 'none'
+                userSelect: 'none',
               }}
             >
               <h4 style={{ margin: 0, color: COLORS.slate800, fontSize: 14, fontWeight: 700 }}>
                 🔧 Developer Diagnostic Technical Logs
               </h4>
-              <span style={{ fontSize: 14, transform: techDetailsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+              <span
+                style={{
+                  fontSize: 14,
+                  transform: techDetailsExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}
+              >
                 ▶
               </span>
             </div>
 
             {techDetailsExpanded && (
-              <div style={{ marginTop: 16, borderTop: `1px solid ${COLORS.slate100}`, paddingTop: 16, fontSize: 12, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div
+                style={{
+                  marginTop: 16,
+                  borderTop: `1px solid ${COLORS.slate100}`,
+                  paddingTop: 16,
+                  fontSize: 12,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                }}
+              >
                 <div>
-                  <strong style={{ display: 'block', color: COLORS.slate800, marginBottom: 6 }}>Committed Request Filter Payload:</strong>
-                  <pre style={{
-                    backgroundColor: COLORS.slate100,
-                    padding: 12,
-                    borderRadius: 6,
-                    margin: 0,
-                    fontFamily: 'monospace',
-                    overflowX: 'auto'
-                  }}>
+                  <strong style={{ display: 'block', color: COLORS.slate800, marginBottom: 6 }}>
+                    Committed Request Filter Payload:
+                  </strong>
+                  <pre
+                    style={{
+                      backgroundColor: COLORS.slate100,
+                      padding: 12,
+                      borderRadius: 6,
+                      margin: 0,
+                      fontFamily: 'monospace',
+                      overflowX: 'auto',
+                    }}
+                  >
                     {JSON.stringify(activeFilters, null, 2)}
                   </pre>
                 </div>
 
                 <div>
-                  <strong style={{ display: 'block', color: COLORS.slate800, marginBottom: 8 }}>Generated Endpoint Route Handlers & Mock Diagnostics:</strong>
+                  <strong style={{ display: 'block', color: COLORS.slate800, marginBottom: 8 }}>
+                    Generated Endpoint Route Handlers & Mock Diagnostics:
+                  </strong>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[
-                      { type: 'Overview', path: '/api/warehouse360/overview', query: overviewQuery },
+                      {
+                        type: 'Overview',
+                        path: '/api/warehouse360/overview',
+                        query: overviewQuery,
+                      },
                       { type: 'Inbound', path: '/api/warehouse360/inbound', query: inboundQuery },
-                      { type: 'Outbound', path: '/api/warehouse360/outbound', query: outboundQuery },
+                      {
+                        type: 'Outbound',
+                        path: '/api/warehouse360/outbound',
+                        query: outboundQuery,
+                      },
                       { type: 'Staging', path: '/api/warehouse360/staging', query: stagingQuery },
-                      { type: 'Exceptions', path: '/api/warehouse360/exceptions', query: exceptionsQuery },
+                      {
+                        type: 'Exceptions',
+                        path: '/api/warehouse360/exceptions',
+                        query: exceptionsQuery,
+                      },
                     ].map((endpoint, idx) => {
                       const isSuccess = endpoint.query.data?.ok === true
                       const source = endpoint.query.data?.source
 
                       return (
-                        <div key={idx} style={{
-                          backgroundColor: '#ffffff',
-                          border: `1px solid ${COLORS.slate100}`,
-                          borderRadius: 6,
-                          padding: 12,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: 12
-                        }}>
+                        <div
+                          key={idx}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            border: `1px solid ${COLORS.slate100}`,
+                            borderRadius: 6,
+                            padding: 12,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 12,
+                          }}
+                        >
                           <div>
-                            <span style={{ fontWeight: 700, color: COLORS.slate800, marginRight: 8 }}>{endpoint.type}:</span>
-                            <code style={{ backgroundColor: COLORS.slate100, padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>{endpoint.path}</code>
+                            <span
+                              style={{ fontWeight: 700, color: COLORS.slate800, marginRight: 8 }}
+                            >
+                              {endpoint.type}:
+                            </span>
+                            <code
+                              style={{
+                                backgroundColor: COLORS.slate100,
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {endpoint.path}
+                            </code>
                           </div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <button
@@ -1236,20 +1775,34 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 backgroundColor: '#ffffff',
                                 cursor: 'pointer',
                                 fontSize: 10,
-                                fontWeight: 600
+                                fontWeight: 600,
                               }}
                             >
                               {copiedUrlType === endpoint.type ? '✅ Copied!' : '📋 Copy URL'}
                             </button>
-                            <span style={{
-                              backgroundColor: endpoint.query.isLoading ? COLORS.slate100 : isSuccess ? '#d1fae5' : COLORS.dangerBg,
-                              color: endpoint.query.isLoading ? COLORS.slate600 : isSuccess ? COLORS.success : COLORS.danger,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              fontWeight: 700,
-                              fontSize: 10
-                            }}>
-                              {endpoint.query.isLoading ? 'PENDING' : isSuccess ? `SUCCESS (${source})` : 'FAILED'}
+                            <span
+                              style={{
+                                backgroundColor: endpoint.query.isLoading
+                                  ? COLORS.slate100
+                                  : isSuccess
+                                    ? '#d1fae5'
+                                    : COLORS.dangerBg,
+                                color: endpoint.query.isLoading
+                                  ? COLORS.slate600
+                                  : isSuccess
+                                    ? COLORS.success
+                                    : COLORS.danger,
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                fontWeight: 700,
+                                fontSize: 10,
+                              }}
+                            >
+                              {endpoint.query.isLoading
+                                ? 'PENDING'
+                                : isSuccess
+                                  ? `SUCCESS (${source})`
+                                  : 'FAILED'}
                             </span>
                           </div>
                         </div>
@@ -1259,9 +1812,13 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 </div>
 
                 <div style={{ borderTop: `1px solid ${COLORS.slate100}`, paddingTop: 12 }}>
-                  <span style={{ color: COLORS.slate600, display: 'block', marginBottom: 4 }}>Last Sync Run Clock:</span>
+                  <span style={{ color: COLORS.slate600, display: 'block', marginBottom: 4 }}>
+                    Last Sync Run Clock:
+                  </span>
                   <span style={{ color: COLORS.slate800, fontWeight: 600 }}>
-                    {(overviewQuery.data && overviewQuery.data.ok) ? new Date(overviewQuery.data.fetchedAt).toLocaleString() : 'Never'}
+                    {overviewQuery.data && overviewQuery.data.ok
+                      ? new Date(overviewQuery.data.fetchedAt).toLocaleString()
+                      : 'Never'}
                   </span>
                 </div>
               </div>
