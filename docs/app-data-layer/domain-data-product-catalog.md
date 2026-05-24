@@ -19,6 +19,10 @@ Browser UAT readiness references
 and the per-app checklists under
 [`browser-uat-checklists/`](./browser-uat-checklists/).
 
+> **UAT entry.** UAT entry is governed by
+> [`uat-entry-plan.md`](./uat-entry-plan.md). A data product appearing
+> in this catalogue is not automatically UAT-ready or production-ready.
+
 > **Browser UAT status.** Every data product below remains
 > `browser-uat-pending` until evidence is captured under
 > `docs/app-data-layer/evidence/YYYY-MM-DD/<app-or-data-product>/`.
