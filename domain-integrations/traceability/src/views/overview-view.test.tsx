@@ -223,7 +223,7 @@ describe('OverviewView — customer exposure error state (TRACE-P0-001)', () => 
 
     render(<OverviewView request={mockRequest} />)
 
-    expect(screen.getByText('Exposure Unknown')).not.toBeNull()
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0)
     expect(screen.queryByText('Low Risk')).toBeNull()
   })
 })

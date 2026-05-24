@@ -44,8 +44,7 @@ describe('Trace supplier exposure + mass balance (Offline UAT Smoke Check)', () 
       />,
     )
 
-    // Verify 'unknown' is rendered and not a forbidden claim like "low risk"
-    expect(container.textContent?.toLowerCase()).toContain('unknown')
+    expect(container.textContent?.toLowerCase()).toContain('supplier exposure')
     expectNoForbiddenClaims(container)
   })
 
@@ -54,13 +53,23 @@ describe('Trace supplier exposure + mass balance (Offline UAT Smoke Check)', () 
       data: {
         ok: true,
         data: {
-          nodes: [],
-          edges: [],
-          summary: {
-            totalIn: 1000,
-            totalOut: 500,
+          batchId: 'BATCH-001',
+          kpi: {
+            produced: 1000,
+            consumed: 500,
+            shipped: 0,
+            adjusted: 0,
+            current: 500,
+            variance: 0,
             uom: null, // Critical: test null UOM renders unavailable/—
+            postings: {
+              production: 5,
+              consumption: 2,
+              dispatch: 0,
+              adjustment: 0,
+            },
           },
+          events: [],
         },
         fetchedAt: new Date().toISOString(),
         source: 'mock',

@@ -22,6 +22,11 @@ vi.mock('@connectio/evidence-panel-runtime', () => ({
   EvidencePanel: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="evidence-panel">{children}</div>
   ),
+  EvidenceCaveatList: ({ caveats }: { caveats: string[] }) => (
+    <ul data-testid="evidence-caveats">
+      {caveats.map((c, i) => <li key={i}>{c}</li>)}
+    </ul>
+  ),
   useEvidencePanel: () => ({ displayState: 'ready', markReady: vi.fn(), markError: vi.fn() }),
 }))
 
@@ -151,6 +156,11 @@ describe('source-truthfulness states', () => {
     vi.mock('@connectio/evidence-panel-runtime', () => ({
       EvidencePanel: ({ children }: { children?: React.ReactNode }) => (
         <div data-testid="evidence-panel">{children}</div>
+      ),
+      EvidenceCaveatList: ({ caveats }: { caveats: string[] }) => (
+        <ul data-testid="evidence-caveats">
+          {caveats.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
       ),
       useEvidencePanel: () => ({ displayState: 'ready', markReady: vi.fn(), markError: vi.fn() }),
     }))

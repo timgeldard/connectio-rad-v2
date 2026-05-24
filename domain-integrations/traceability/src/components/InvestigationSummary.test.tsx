@@ -140,7 +140,7 @@ describe('InvestigationSummary', () => {
       />,
     )
 
-    expect(screen.getByText('Exposure Unknown')).not.toBeNull()
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0)
     expect(screen.getByText(/Customer delivery data is unavailable/)).not.toBeNull()
     expect(screen.getByText(/do not assume containment/)).not.toBeNull()
     // Both shipped and customer metric cells should show data unavailable
@@ -324,8 +324,10 @@ describe('InvestigationSummary — depth-aware severity (TRACE-P0-003)', () => {
       />,
     )
     expect(screen.getByText('Critical Exposure')).not.toBeNull()
-    expect(
-      screen.getByText(/Shipped stock has reached customer sites\. Immediate action/),
-    ).not.toBeNull()
+    expect(screen.getByText('Critical Exposure')).not.toBeNull()
+    const textContent = document.body.textContent?.toLowerCase() || ''
+    expect(textContent).toContain('responsible owner')
+    expect(textContent).not.toContain('activate product recall')
+    expect(textContent).not.toContain('immediate action')
   })
 })

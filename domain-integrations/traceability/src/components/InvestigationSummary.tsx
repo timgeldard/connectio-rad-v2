@@ -84,7 +84,7 @@ export function InvestigationSummary({
   // Populated from live Databricks data (TRACE-P0-003); undefined in mock mode.
   const maxExposureDepth = customerExposure?.maxExposureDepth
 
-  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'UNKNOWN' = 'UNKNOWN'
+  let severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' = 'UNKNOWN'
   let severityLabel = ''
   let alertMessage =
     'No exposure signals returned from current source. Containment status is not independently verified — do not assume containment.'
@@ -147,13 +147,19 @@ export function InvestigationSummary({
       'Review recommended: Significant stock remains unrestricted. Restrict batch status to prevent further issues.'
     actionGuidance = 'Monitor stock position and adjacent production batches.'
     bannerBg = 'rgba(199, 130, 28, 0.08)'
-    bannerBorder = '1px solid rgba(199, 130, 28, 0.25)'
+  } else if (!customerDataUnavailable && !hasShippedExposure) {
+    severity = 'LOW'
+    alertMessage = 'No downstream customer shipments detected in available data.'
+    actionGuidance = 'Maintain containment protocol and monitor stock position.'
+    bannerBg = 'rgba(31, 139, 76, 0.08)'
+    bannerBorder = '1px solid rgba(31, 139, 76, 0.25)'
   }
 
   const severityLabels: Record<typeof severity, string> = {
     CRITICAL: 'Critical Exposure',
     HIGH: 'Near Expiry',
     MEDIUM: 'Medium Risk',
+    LOW: 'Low Risk',
     UNKNOWN: 'Exposure Unknown',
   }
   // Use reason-specific label if set (e.g. depth-based HIGH), otherwise fall back to severity map.
