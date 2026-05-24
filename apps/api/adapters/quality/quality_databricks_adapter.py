@@ -41,8 +41,12 @@ class QualityUsageDecisionQuerySpec(QuerySpec):
         return f"quality_ud:{self.material_id}:{self.batch_id}:{self.plant_id or 'none'}"
 
 def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: Optional[str] = None) -> QuerySpec:
-    sql = """
-    WITH usage_decision_ranked AS (
+    from shared.query_service.object_resolver import resolve_domain_object
+    usage_decision_mv = resolve_domain_object("cq", "gold_inspection_usage_decision")
+    inspection_lot_mv = resolve_domain_object("cq", "gold_inspection_lot")
+
+    sql = f"""
+    WITH `usage_decision_ranked` AS (
       SELECT
         ud.INSPECTION_LOT_ID,
         ud.USAGE_DECISION_CODE,
@@ -59,8 +63,8 @@ def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: O
             ud.USAGE_DECISION_CREATED_DATE DESC,
             ud.USAGE_DECISION_UPDATED_TIME DESC
         ) AS rn
-      FROM connected_plant_uat.gold.gold_inspection_usage_decision ud
-      LEFT JOIN connected_plant_uat.gold.gold_inspection_lot il
+      FROM {usage_decision_mv} ud
+      LEFT JOIN {inspection_lot_mv} il
         ON il.INSPECTION_LOT_ID = ud.INSPECTION_LOT_ID
     )
     SELECT
@@ -71,7 +75,7 @@ def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: O
       udr.BATCH_ID,
       udr.PLANT_ID,
       udr.PROCESS_ORDER_ID
-    FROM usage_decision_ranked udr
+    FROM `usage_decision_ranked` udr
     WHERE udr.rn = 1
       AND udr.MATERIAL_ID = :material_id
       AND udr.BATCH_ID = :batch_id

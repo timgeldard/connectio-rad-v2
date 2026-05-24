@@ -7,6 +7,11 @@ from adapters.quality.quality_databricks_adapter import (
     QualityUsageDecisionQuerySpec,
 )
 
+@pytest.fixture(autouse=True)
+def setup_env(monkeypatch):
+    monkeypatch.setenv("CQ_CATALOG", "test_catalog")
+    monkeypatch.setenv("CQ_SCHEMA", "test_schema")
+
 def test_get_quality_usage_decision_spec():
     spec = get_quality_usage_decision_spec(material_id="123", batch_id="456", plant_id="P1")
     assert isinstance(spec, QualityUsageDecisionQuerySpec)

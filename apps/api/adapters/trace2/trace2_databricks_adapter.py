@@ -333,7 +333,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
       CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')
     FROM {tbl} e
-    JOIN ds t
+    JOIN `ds` t
       ON e.PARENT_MATERIAL_ID = t.CHILD_MATERIAL_ID
       AND e.PARENT_BATCH_ID = t.CHILD_BATCH_ID
       AND e.PARENT_PLANT_ID <=> t.CHILD_PLANT_ID
@@ -367,7 +367,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
       CONCAT(t.path, e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')
     FROM {tbl} e
-    JOIN us t
+    JOIN `us` t
       ON e.CHILD_MATERIAL_ID = t.PARENT_MATERIAL_ID
       AND e.CHILD_BATCH_ID = t.PARENT_BATCH_ID
       AND e.CHILD_PLANT_ID <=> t.PARENT_PLANT_ID
@@ -750,7 +750,7 @@ def get_customer_exposure_spec(request: Trace2CustomerExposureRequest) -> QueryS
         e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE,
         CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')
       FROM {tbl} e
-      JOIN ds t
+      JOIN `ds` t
         ON e.PARENT_MATERIAL_ID = t.CHILD_MATERIAL_ID
         AND e.PARENT_BATCH_ID = t.CHILD_BATCH_ID
         AND e.PARENT_PLANT_ID <=> t.CHILD_PLANT_ID
@@ -766,7 +766,7 @@ def get_customer_exposure_spec(request: Trace2CustomerExposureRequest) -> QueryS
       BASE_UNIT_OF_MEASURE AS base_unit_of_measure,  -- confirmed column: gold_batch_lineage
       POSTING_DATE   AS posting_date,     -- confirmed column: gold_batch_lineage
       hop_depth                           -- from recursive CTE above
-    FROM ds
+    FROM `ds`
     WHERE LINK_TYPE = 'DELIVERY'          -- Medium confidence: from _LINK_TYPE_MAP (V1 inspection); P0-3 live validation pending
       AND CUSTOMER_ID IS NOT NULL         -- exclude edges without customer attribution
     LIMIT :max_rows
@@ -1732,8 +1732,8 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
       - gold_plant                  → plant name
       - gold_batch_production_history_v → production context (line / operator / yield)
 
-    The 5-way JOIN matches the existing get_batch_header_summary_spec join
-    pattern and adds production_history on (MATERIAL_ID, BATCH_ID).
+        # The 5-way join matches the existing get_batch_header_summary_spec join
+        # but with slightly different projections._history on (MATERIAL_ID, BATCH_ID).
 
     Plant filter is respected when supplied — leave plant_id='' to take the
     first row by sort order (consistent with the existing batch-header route).
@@ -1800,7 +1800,7 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
 
 
 def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
-    """Map the partial passport JOIN result to the identity + stock + production
+    """Map the partial passport join result to the identity + stock + production
     sections of BatchQualityPassportSchema. The quality, lotHistory,
     massBalance, and signoff fields are NOT populated — frontend must merge
     with mock or a future hook that resolves those.
@@ -2163,8 +2163,8 @@ def get_holds_ledger_spec(request: Trace2HoldsLedgerRequest) -> QuerySpec:
       - active / resolved holds from gold_batch_quality_lot_v entries with no
         usage decision (active) vs. those with a decision (resolved).
 
-    Single-row JOIN strategy — stock columns come from one stock_v row;
-    quality lots are returned in a subselect.
+        # Single-row join strategy — stock columns come from one stock_v row;
+        # identity comes from either base or stock depending on who is populated.lect.
     """
     tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
     tbl_ql = resolve_domain_object("trace2", "gold_batch_quality_lot_v")

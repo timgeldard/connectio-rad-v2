@@ -118,7 +118,7 @@ def get_spc_subgroups_spec(request: SubgroupsRequest) -> QuerySpec:
       AND operation_id = :operation_id
       AND batch_date  >= :date_from
       AND batch_date  <= :date_to
-    GROUP BY batch_id, batch_date
+    GROUP BY plant_id, operation_id, mic_id, batch_id, batch_date
     ORDER BY batch_date DESC
     LIMIT {safe_limit}
     """

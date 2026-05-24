@@ -23,6 +23,7 @@ class UserIdentity:
     user_id: str
     email: Optional[str] = None
     raw_oauth_token: Optional[str] = None
+    catalog_target: Optional[str] = None
 
     def require_user_oauth(self) -> str:
         """Return the OAuth token or raise ``DatabricksAuthRequiredError``.
@@ -54,6 +55,7 @@ def extract_user_identity(
     x_forwarded_access_token: Optional[str] = Header(default=None),
     x_forwarded_user: Optional[str] = Header(default=None),
     x_forwarded_email: Optional[str] = Header(default=None),
+    x_databricks_catalog: Optional[str] = Header(default=None),
 ) -> "UserIdentity":
     """FastAPI ``Depends()`` function — extract ``UserIdentity`` from Databricks Apps headers.
 
@@ -65,4 +67,5 @@ def extract_user_identity(
         user_id=x_forwarded_user or "unknown",
         email=x_forwarded_email,
         raw_oauth_token=x_forwarded_access_token,
+        catalog_target=x_databricks_catalog,
     )
