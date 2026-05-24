@@ -22,6 +22,51 @@ describe('SPC Placeholder Adapters', () => {
         expect(result.error.message).toContain('Databricks adapter unavailable')
       }
     })
+
+    it('returns unavailable for getSPCMonitoringContext', async () => {
+      const result = await adapter.getSPCMonitoringContext(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.error.code).toBe('not-found')
+      }
+    })
+
+    it('returns unavailable for getActiveSPCSignals', async () => {
+      const result = await adapter.getActiveSPCSignals(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.error.code).toBe('not-found')
+      }
+    })
+
+    it('returns unavailable for getMonitoredCharacteristics', async () => {
+      const result = await adapter.getMonitoredCharacteristics(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.error.code).toBe('not-found')
+      }
+    })
+
+    it('returns unavailable for getSPCAlarmHistory', async () => {
+      const result = await adapter.getSPCAlarmHistory(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.error.code).toBe('not-found')
+      }
+    })
+
+    it('returns unavailable for getSPCRelatedBatches', async () => {
+      const result = await adapter.getSPCRelatedBatches(request)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.error.code).toBe('not-found')
+      }
+    })
   })
 
   describe('SPCMonitoringLegacyApiAdapter', () => {
@@ -63,7 +108,7 @@ describe('SPC Placeholder Adapters', () => {
         new Response(JSON.stringify({ detail: 'Unauthorized' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
-        })
+        }),
       )
       const result = await adapter.getMonitoredCharacteristics(request)
       expect(result.ok).toBe(false)
@@ -78,7 +123,7 @@ describe('SPC Placeholder Adapters', () => {
         new Response(JSON.stringify([]), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
-        })
+        }),
       )
       const result = await adapter.getMonitoredCharacteristics(request)
       expect(result.ok).toBe(true)
@@ -102,8 +147,8 @@ describe('SPC Placeholder Adapters', () => {
               operation_id: 'OP-10',
             },
           ]),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
       )
       const result = await adapter.getMonitoredCharacteristics(request)
       expect(result.ok).toBe(true)
@@ -126,16 +171,16 @@ describe('SPC Placeholder Adapters', () => {
             mic_name: 'Length',
             cp: 1.33,
             cpk: 1.25,
-            pp: 1.30,
-            ppk: 1.20,
+            pp: 1.3,
+            ppk: 1.2,
             sample_count: 100,
             process_mean: 10.5,
             process_std_dev: 0.2,
             confidence: 0.95,
-            interpretation: 'capable'
+            interpretation: 'capable',
           }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
       )
       const result = await adapter.getCharacteristicCapability(request)
       expect(result.ok).toBe(true)

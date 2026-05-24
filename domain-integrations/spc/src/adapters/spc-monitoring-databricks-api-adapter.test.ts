@@ -430,4 +430,101 @@ describe('SPCMonitoringDatabricksApiAdapter', () => {
       }
     })
   })
+
+  describe('guardrail pinning', () => {
+    const _successResponse = {
+      materialId: 'MAT1',
+      plantId: 'P1',
+      micId: 'MIC1',
+      micName: 'Test MIC',
+      operationId: 'OP1',
+      points: [
+        {
+          batchId: 'B1',
+          batchDate: '2024-05-22T12:00:00Z',
+          subgroupMean: 10.5,
+          subgroupRange: null,
+          sampleCount: 1,
+          lslSpec: null,
+          uslSpec: null,
+        },
+      ],
+      lockedLimits: null,
+      capabilityAvailable: false,
+      nelsonStoredFlagsAvailable: false,
+      signalsClientSideOnly: true,
+    }
+
+    it('limitProvenance is always unknown — limits are derived client-side, not from a server source', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(_successResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.limitProvenance).toBe('unknown')
+        // Must NOT claim limits came from a governed source.
+        expect(result.data.limitProvenance).not.toBe('calculated')
+        expect(result.data.limitProvenance).not.toBe('approved')
+      }
+    })
+
+    it('lockedLimits server value is never propagated — adapter always emits false (Slice 2 deferred)', async () => {
+      // The backend schema carries lockedLimits but the locked-limits join is
+      // deferred to Slice 2. The adapter MUST emit false regardless of what the
+      // server provides — the value must not be treated as an approval signal.
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(_successResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.lockedLimits).toBe(false)
+      }
+    })
+
+    it('approvalState is always not-approved — no approval workflow exists for subgroups', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(_successResponse),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getControlChartSeries({
+        materialId: 'MAT1',
+        plantId: 'P1',
+        characteristicId: 'MIC1',
+        operationId: 'OP1',
+        dateFrom: '2024-01-01',
+        dateTo: '2024-01-31',
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.approvalState).toBe('not-approved')
+        // Must NOT indicate pending or approved state without a governed workflow.
+        expect(result.data.approvalState).not.toBe('approved')
+        expect(result.data.approvalState).not.toBe('pending-validation')
+      }
+    })
+  })
 })
