@@ -32,11 +32,7 @@ function makeQueryClient() {
 }
 
 function Wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={makeQueryClient()}>
-      {children}
-    </QueryClientProvider>
-  )
+  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>
 }
 
 describe('OrderHistoryView', () => {
@@ -71,7 +67,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     expect(screen.getByTestId('poh-query-form')).toBeInTheDocument()
@@ -83,14 +79,16 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     const submitBtn = screen.getByRole('button', { name: /Run \/ Refresh Order History/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
-      expect(screen.getByText(/Process Order ID is required before running investigation/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Process Order ID is required before running investigation/i),
+      ).toBeInTheDocument()
     })
   })
 
@@ -98,7 +96,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     const orderInput = screen.getAllByPlaceholderText(/e.g. PO-240308-3847/i)[0]
@@ -116,7 +114,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     const presetBtn = screen.getAllByRole('button', { name: /Load Demo-Only Fixture/i })[0]
@@ -133,7 +131,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     // Verify preset button
@@ -171,7 +169,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     expect(screen.getByText(/Running native Databricks Unity Catalog queries/i)).toBeInTheDocument()
@@ -279,7 +277,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     // Check Header Card Elements
@@ -299,9 +297,13 @@ describe('OrderHistoryView', () => {
     expect(screen.getAllByText(/GM-001/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/SL-MILK-SILO/i).length).toBeGreaterThan(0)
     expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/This is not a BOM or reservation coverage claim/i)[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/This is not a BOM or reservation coverage claim/i)[0],
+    ).toBeInTheDocument()
     expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/This is not a production completion or full yield claim/i)[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/This is not a production completion or full yield claim/i)[0],
+    ).toBeInTheDocument()
 
     // Check Derived metrics summary
     expect(screen.getAllByText(/1,860 KG/i).length).toBeGreaterThan(0)
@@ -321,12 +323,13 @@ describe('OrderHistoryView', () => {
     expect(idxGM).toBeLessThan(idxConf)
 
     // Collapsible technical drawer click test
-    const drawerBtn = screen.getAllByRole('button', { name: /Show Technical Query Diagnostics/i })[0]
+    const drawerBtn = screen.getAllByRole('button', {
+      name: /Show Technical Query Diagnostics/i,
+    })[0]
     fireEvent.click(drawerBtn)
     expect(screen.getAllByText(/Active Endpoints/i)[0]).toBeInTheDocument()
     expect(screen.getAllByText(/POST \/api\/por\/order-header/i)[0]).toBeInTheDocument()
   })
-
 
   it('renders section-level route error cards and does not render success content for that section', async () => {
     // Setup a query failure on Operations, but other queries succeed
@@ -356,7 +359,8 @@ describe('OrderHistoryView', () => {
         ok: false,
         error: {
           code: '503',
-          message: 'Databricks SQL warehouse integration is unavailable (BACKEND_ADAPTER_MODE not set).',
+          message:
+            'Databricks SQL warehouse integration is unavailable (BACKEND_ADAPTER_MODE not set).',
         },
       },
       isLoading: false,
@@ -365,7 +369,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     // Header context succeeds and renders
@@ -412,11 +416,13 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: 'PO-240308-3847' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     // Expect the empty badge and safe empty placeholder for Operations
-    expect(screen.getAllByText(/No operation records returned for this order\/source/i)[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/No operation records returned for this order\/source/i)[0],
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/NO RECORDS/i).length).toBeGreaterThan(0)
   })
 
@@ -445,17 +451,19 @@ describe('OrderHistoryView', () => {
     vi.mocked(useOrderOperations).mockReturnValue({
       data: {
         ok: true,
-        data: [{
-          operationId: 'OP-010',
-          operationNumber: '0010',
-          operationText: 'Phase 010',
-          workCentre: '',
-          status: 'confirmed',
-          plannedDurationMinutes: 0,
-          confirmationStatus: 'final-confirmed',
-          confirmed: true,
-          hasException: false,
-        }],
+        data: [
+          {
+            operationId: 'OP-010',
+            operationNumber: '0010',
+            operationText: 'Phase 010',
+            workCentre: '',
+            status: 'confirmed',
+            plannedDurationMinutes: 0,
+            confirmationStatus: 'final-confirmed',
+            confirmed: true,
+            hasException: false,
+          },
+        ],
         source: 'databricks-api',
       },
       isLoading: false,
@@ -482,7 +490,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
@@ -497,7 +505,9 @@ describe('OrderHistoryView', () => {
     expect(payload.counts.goodsMovements).toBe(0)
     expect(payload.counts.componentMaterials).toBe(0)
     expect(payload.counts.producedBatches).toBe(0)
-    expect(payload.warnings).toContain('No-record sections must not be interpreted as complete absence until source coverage is validated.')
+    expect(payload.warnings).toContain(
+      'No-record sections must not be interpreted as complete absence until source coverage is validated.',
+    )
   })
 
   it('derives net component consumption from 261 and 262 movement rows', async () => {
@@ -567,7 +577,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     expect(screen.getByText(/Component Consumption Evidence/i)).toBeInTheDocument()
@@ -646,7 +656,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView request={{ processOrderId: '7006965038', plantId: 'C113' }} />
-      </Wrapper>
+      </Wrapper>,
     )
 
     expect(screen.getByText(/Produced Output Evidence/i)).toBeInTheDocument()
@@ -661,7 +671,7 @@ describe('OrderHistoryView', () => {
     render(
       <Wrapper>
         <OrderHistoryView />
-      </Wrapper>
+      </Wrapper>,
     )
 
     // Verify disabled inputs
@@ -669,7 +679,9 @@ describe('OrderHistoryView', () => {
     expect(screen.getAllByLabelText('Batch ID')[0]).toBeDisabled()
 
     // Verify explanatory copy
-    expect(screen.getAllByText(/Planned filter — not applied to database queries/i).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/Planned filter — not applied to database queries/i).length,
+    ).toBeGreaterThan(0)
     expect(screen.getAllByText(/Wired to Header query only/i)[0]).toBeInTheDocument()
   })
 
@@ -701,7 +713,11 @@ describe('OrderHistoryView', () => {
         isLoading: false,
       } as unknown as ReturnType<typeof useProcessOrderHeader>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} />
+        </Wrapper>,
+      )
 
       // Source badge derives from query.data.source — must show databricks label
       expect(screen.getAllByText(/DATABRICKS/i).length).toBeGreaterThan(0)
@@ -731,7 +747,11 @@ describe('OrderHistoryView', () => {
         isLoading: false,
       } as unknown as ReturnType<typeof useProcessOrderHeader>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SRC-TEST' }} />
+        </Wrapper>,
+      )
 
       // Source badge must derive from query.data.source — shows mock label, not databricks
       expect(screen.getAllByText(/MOCK/i).length).toBeGreaterThan(0)
@@ -771,7 +791,11 @@ describe('OrderHistoryView', () => {
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderConfirmations>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SRC-PAYLOAD' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SRC-PAYLOAD' }} />
+        </Wrapper>,
+      )
       fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
 
       await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalled())
@@ -826,15 +850,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 10,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 5,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // One row only — material appears once in the consumption table
@@ -850,15 +898,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-002', quantity: 8, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 10,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-002',
+              quantity: 8,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Both batch IDs visible in the consumption table — not collapsed into one row
@@ -878,15 +950,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'L', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 10,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 5,
+              uom: 'L',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Each UOM visible as its own row in the consumption table — not summed across UOMs
@@ -903,15 +999,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: undefined, quantity: 6, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 10,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: undefined,
+              quantity: 6,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Known batch row visible in consumption table
@@ -931,15 +1051,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 3, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '262', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 7, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 3,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '262',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 7,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Net = 3 - 7 = -4. Row must remain visible in the consumption table.
@@ -956,15 +1100,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '262', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 5, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 5,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '262',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 5,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Net = 0. Row must still be visible — a full reversal is evidence, not absence.
@@ -980,15 +1148,39 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-001', quantity: 10, uom: 'KG', postedAt: '2026-01-01T00:00:00Z' },
-            { movementId: 'GM-2', movementType: '261', direction: 'input', materialId: 'MAT-RM-A', materialDescription: 'Ingredient A', batchId: 'B-002', quantity: 8, uom: 'KG', postedAt: '2026-01-01T01:00:00Z' },
+            {
+              movementId: 'GM-1',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-001',
+              quantity: 10,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM-A',
+              materialDescription: 'Ingredient A',
+              batchId: 'B-002',
+              quantity: 8,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const ccTable = screen.getByTestId('component-consumption-table')
       // Both batches present in the consumption table despite identical description
@@ -1005,15 +1197,41 @@ describe('OrderHistoryView', () => {
         data: {
           ok: true,
           data: [
-            { movementId: 'GM-1', movementType: '101', direction: 'output', materialId: 'MAT-FG-Y', materialDescription: 'Finished Good Y', batchId: 'FG-001', quantity: 1000, uom: 'KG', postedAt: '2026-01-01T00:00:00Z', referenceDocument: '4900000001' },
-            { movementId: 'GM-2', movementType: '102', direction: 'output', materialId: 'MAT-FG-Y', materialDescription: 'Finished Good Y', batchId: 'FG-001', quantity: 1000, uom: 'KG', postedAt: '2026-01-01T01:00:00Z', referenceDocument: '4900000002' },
+            {
+              movementId: 'GM-1',
+              movementType: '101',
+              direction: 'output',
+              materialId: 'MAT-FG-Y',
+              materialDescription: 'Finished Good Y',
+              batchId: 'FG-001',
+              quantity: 1000,
+              uom: 'KG',
+              postedAt: '2026-01-01T00:00:00Z',
+              referenceDocument: '4900000001',
+            },
+            {
+              movementId: 'GM-2',
+              movementType: '102',
+              direction: 'output',
+              materialId: 'MAT-FG-Y',
+              materialDescription: 'Finished Good Y',
+              batchId: 'FG-001',
+              quantity: 1000,
+              uom: 'KG',
+              postedAt: '2026-01-01T01:00:00Z',
+              referenceDocument: '4900000002',
+            },
           ],
           source: 'databricks-api',
         },
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-GROUPING' }} />
+        </Wrapper>,
+      )
 
       const poTable = screen.getByTestId('produced-output-table')
       // Net = 0. Row must remain visible — a full reversal is evidence, not absence.
@@ -1055,7 +1273,11 @@ describe('OrderHistoryView', () => {
     it('shows Databricks source badge when header AdapterResult.source is databricks-api', () => {
       vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('databricks-api'))
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} />
+        </Wrapper>,
+      )
 
       expect(screen.getAllByText(/Databricks/i).length).toBeGreaterThan(0)
     })
@@ -1063,7 +1285,11 @@ describe('OrderHistoryView', () => {
     it('shows Mock/Sandbox source badge when header AdapterResult.source is mock', () => {
       vi.mocked(useProcessOrderHeader).mockReturnValue(makeHeaderQuery('mock'))
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} />
+        </Wrapper>,
+      )
 
       expect(screen.getAllByText(/Mock\/Sandbox/i).length).toBeGreaterThan(0)
     })
@@ -1084,7 +1310,11 @@ describe('OrderHistoryView', () => {
         isLoading: false,
       } as unknown as ReturnType<typeof useOrderGoodsMovements>)
 
-      render(<Wrapper><OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} /></Wrapper>)
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-SOURCE-TEST' }} />
+        </Wrapper>,
+      )
 
       fireEvent.click(screen.getByRole('button', { name: /Copy UAT Evidence/i }))
 
@@ -1097,6 +1327,69 @@ describe('OrderHistoryView', () => {
       expect(payload.sourceSummary.sections.confirmations).toBe('unknown')
       expect(payload.sourceSummary.sections.goodsMovements).toBe('databricks-api')
       expect(payload.sourceSummary.overall).toBe('mixed')
+    })
+  })
+
+  // ============================================================
+  // Missing movement quantity regression
+  // ============================================================
+  describe('missing movement quantity regression', () => {
+    it('skips missing movement quantities instead of defaulting to zero', () => {
+      vi.mocked(useProcessOrderHeader).mockReturnValue({
+        data: {
+          ok: true,
+          data: {
+            processOrderId: 'PO-NULL-GM',
+            orderType: 'process-order',
+            materialId: 'MAT-FG',
+            materialDescription: 'Finished Good',
+            plantId: 'P001',
+            confirmedQuantity: 0,
+            plannedQuantity: 0,
+            uom: 'KG',
+            plannedStart: null,
+            plannedFinish: null,
+            orderStatus: 'closed',
+          },
+          source: 'mock',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useProcessOrderHeader>)
+
+      vi.mocked(useOrderGoodsMovements).mockReturnValue({
+        data: {
+          ok: true,
+          data: [
+            {
+              movementId: 'GM-NULL',
+              movementType: '261',
+              direction: 'input',
+              materialId: 'MAT-RM',
+              materialDescription: 'Raw Material',
+              batchId: 'BATCH-1',
+              // Critical: missing quantity
+              quantity: null,
+              uom: 'KG',
+              postedAt: '2026-05-18T09:00:00.000Z',
+            },
+          ],
+          source: 'mock',
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useOrderGoodsMovements>)
+
+      render(
+        <Wrapper>
+          <OrderHistoryView request={{ processOrderId: 'PO-NULL-GM' }} />
+        </Wrapper>,
+      )
+
+      // The timeline text must not display "GI: 0"
+      const textContent = document.body.textContent || ''
+      expect(textContent).not.toContain('GI: 0')
+      expect(textContent).not.toContain('GR: 0')
+      // Timeline might format it differently, but it must not use 0 to sum up net consumption.
+      expect(textContent).toMatch(/No net component consumption rows derived/i)
     })
   })
 })
