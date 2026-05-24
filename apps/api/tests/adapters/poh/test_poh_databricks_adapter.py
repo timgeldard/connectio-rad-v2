@@ -493,6 +493,25 @@ class TestMapOrderOperationsRows:
         assert result[1]["operationId"] == "PHASE-002"
         assert result[1]["status"] == "in-progress"
 
+    def test_null_operation_number_returns_empty_string(self) -> None:
+        row = {**self._full_row(), "operation_number": None}
+        result = map_order_operations_rows([row])
+        assert result[0]["operationNumber"] == ""
+
+    def test_null_operation_text_returns_empty_string(self) -> None:
+        row = {**self._full_row(), "operation_text": None}
+        result = map_order_operations_rows([row])
+        assert result[0]["operationText"] == ""
+
+    def test_empty_string_end_user_not_treated_as_confirmed(self) -> None:
+        """SAP may return '' rather than None for END_USER on an in-progress operation.
+        An empty string must not trigger the 'confirmed' branch."""
+        row = {**self._full_row(), "end_user": "", "start_user": "USER01"}
+        result = map_order_operations_rows([row])
+        assert result[0]["status"] == "in-progress"
+        assert result[0]["confirmed"] is False
+        assert result[0]["confirmationStatus"] == "partially-confirmed"
+
 
 # ---------------------------------------------------------------------------
 # get_order_confirmations_spec
@@ -653,6 +672,22 @@ class TestMapOrderConfirmationsRows:
         row = {**self._full_row(), "confirmation_id": None}
         result = map_order_confirmations_rows([row])
         assert result[0]["confirmationId"] == ""
+
+    def test_null_uom_returns_empty_string(self) -> None:
+        """Null UOM must not default to a fabricated unit like 'KG'."""
+        row = {**self._full_row(), "uom": None}
+        result = map_order_confirmations_rows([row])
+        assert result[0]["uom"] == ""
+
+    def test_null_confirmed_yield_returns_zero(self) -> None:
+        row = {**self._full_row(), "confirmed_yield": None}
+        result = map_order_confirmations_rows([row])
+        assert result[0]["confirmedYield"] == 0.0
+
+    def test_null_confirmed_at_returns_none(self) -> None:
+        row = {**self._full_row(), "confirmed_at": None}
+        result = map_order_confirmations_rows([row])
+        assert result[0]["confirmedAt"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -849,3 +884,27 @@ class TestMapOrderGoodsMovementsRows:
         """vw_gold_adp_movement has no material master join — must not be invented."""
         result = map_order_goods_movements_rows([self._full_row()])
         assert "materialDescription" not in result[0]
+
+    def test_null_uom_returns_empty_string(self) -> None:
+        """Null UOM must not default to a fabricated unit like 'KG'."""
+        row = {**self._full_row(), "uom": None}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["uom"] == ""
+
+    def test_negative_quantity_preserved(self) -> None:
+        """Reversal movements carry negative quantities — _safe_float must not zero them."""
+        row = {**self._full_row(), "quantity": -250.0}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["quantity"] == -250.0
+
+    def test_null_movement_type_produces_empty_string_and_unknown_direction(self) -> None:
+        """Null MOVEMENT_TYPE from the view must yield movementType='' and direction='unknown'."""
+        row = {**self._full_row(), "movement_type": None}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["movementType"] == ""
+        assert result[0]["direction"] == "unknown"
+
+    def test_null_posted_at_returns_none(self) -> None:
+        row = {**self._full_row(), "posted_at": None}
+        result = map_order_goods_movements_rows([row])
+        assert result[0]["postedAt"] is None
