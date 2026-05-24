@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { WarehouseReconciliationExceptionsPanel } from './warehouse-reconciliation-exceptions-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import * as queries from '../adapters/warehouse-360-queries.js'
 
 vi.mock('../adapters/warehouse-360-queries.js', () => ({

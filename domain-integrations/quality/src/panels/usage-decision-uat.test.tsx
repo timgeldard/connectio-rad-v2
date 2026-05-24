@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { QualityReadOnlyEvidencePanel } from './quality-readonly-evidence-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import * as queries from '../adapters/quality-readonly-evidence-queries.js'
 
 vi.mock('../adapters/quality-readonly-evidence-queries.js', () => ({
@@ -42,7 +42,7 @@ describe('Quality usage decision evidence (Offline UAT Smoke Check)', () => {
     } as any)
 
     const { container } = render(
-      <QualityReadOnlyEvidencePanel request={{ inspectionLot: '1000123' }} />,
+      <QualityReadOnlyEvidencePanel request={{ inspectionLotId: '1000123' }} />,
     )
 
     // Verify it doesn't leak forbidden claims like "safe" or "approved"

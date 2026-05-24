@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 
-const FORBIDDEN_CLAIMS = [
+export const FORBIDDEN_CLAIMS = [
   'safe',
   'approved',
   'released',

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BatchHeaderPanel } from './batch-header-panel.js'
 import { CustomerExposureNetworkPanel } from './customer-exposure-network-panel.js'
-import { expectNoForbiddenClaims } from './test-utils.js'
+import { expectNoForbiddenClaims } from '@connectio/test-support'
 import type { BatchHeaderSummary, CustomerExposureSummary } from '@connectio/data-contracts'
 import * as queries from '../adapters/trace2-queries.js'
 
