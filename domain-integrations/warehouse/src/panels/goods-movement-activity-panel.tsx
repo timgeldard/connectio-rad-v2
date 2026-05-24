@@ -65,7 +65,7 @@ export function GoodsMovementActivityPanel({ request }: GoodsMovementActivityPan
       errorMessage={!result?.ok ? result?.error.message : undefined}
       source={result?.source}
     >
-      {movements.length === 0 && !isLoading && (
+      {movements.length === 0 && result?.ok && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--shell-fg-3)' }}>No recent movements.</p>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
