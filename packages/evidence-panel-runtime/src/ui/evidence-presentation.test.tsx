@@ -12,7 +12,7 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   it('EvidenceErrorState does not render "no data"', () => {
     const { container } = render(<EvidenceErrorState message="failed to load" />)
     const text = container.textContent ?? ''
-    
+
     expect(text.toLowerCase()).not.toContain('no data')
     expect(text).toContain('failed to load')
   })
@@ -20,7 +20,7 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   it('ConfirmedEmptyState does not render "no issue found"', () => {
     const { container } = render(<ConfirmedEmptyState entityName="deviations" />)
     const text = container.textContent ?? ''
-    
+
     expect(text.toLowerCase()).not.toContain('no issue found')
     expect(text.toLowerCase()).toContain('no deviations recorded')
   })
@@ -28,7 +28,7 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   it('FreshnessBadge handles missing fetchedAt safely', () => {
     const { container } = render(<FreshnessBadge fetchedAt={null} staleAfterSeconds={60} />)
     const text = container.textContent ?? ''
-    
+
     expect(text).toContain('Freshness unknown')
   })
 
@@ -36,7 +36,7 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
     const caveats = ['Caveat one', 'Caveat two']
     const { container } = render(<EvidenceCaveatList caveats={caveats} />)
     const text = container.textContent ?? ''
-    
+
     expect(text).toContain('Caveat one')
     expect(text).toContain('Caveat two')
   })

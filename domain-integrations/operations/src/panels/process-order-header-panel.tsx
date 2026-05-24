@@ -76,8 +76,8 @@ export function ProcessOrderHeaderPanel({ request }: ProcessOrderHeaderPanelProp
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <StatRow label="Planned Qty" value={`${data.plannedQuantity.toLocaleString()} ${data.uom}`} />
-            <StatRow label="Confirmed Qty" value={`${data.confirmedQuantity.toLocaleString()} ${data.uom}`} />
+            <StatRow label="Planned Qty" value={`${(data.plannedQuantity ?? 0).toLocaleString()} ${data.uom}`} />
+            <StatRow label="Confirmed Qty" value={`${(data.confirmedQuantity ?? 0).toLocaleString()} ${data.uom}`} />
             <StatRow label="Planned Start" value={data.plannedStart ? new Date(data.plannedStart).toLocaleString() : '-'} />
             <StatRow label="Planned Finish" value={data.plannedFinish ? new Date(data.plannedFinish).toLocaleString() : '-'} />
             {data.actualStart && <StatRow label="Actual Start" value={new Date(data.actualStart).toLocaleString()} />}

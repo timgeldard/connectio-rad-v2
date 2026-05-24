@@ -1,5 +1,9 @@
 import { useState, useTransition } from 'react'
-import { VerificationStatusBanner, GovernancePendingBadge } from '@connectio/design-system'
+import {
+  VerificationStatusBanner,
+  GovernancePendingBadge,
+  UnavailableValue,
+} from '@connectio/design-system'
 import { EvidenceCaveatList } from '@connectio/evidence-panel-runtime'
 import type { CSSProperties } from 'react'
 import {
@@ -395,8 +399,8 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           'wh360_cockpit_summary_v',
           'wh360_inbound_v',
           'wh360_deliveries_v',
-          'staging_orders_v',
-          'wh360_imwm_exceptions_v',
+          'wh360_process_orders_v',
+          'imwm_exceptions_v',
         ]}
         limitations={[
           'UAT verification pending',
@@ -432,9 +436,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         </div>
         This panel operates entirely in <strong>read-only query mode</strong>. No transactions,
         postings, or inventory write-backs are possible. Dynamic filter variables are executed
-        securely against confirmed source views: <code>wh360_cockpit_summary_v</code>,{' '}
-        <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>, <code>staging_orders_v</code>
-        , and <code>wh360_imwm_exceptions_v</code>.
+        securely against configured source views: <code>wh360_cockpit_summary_v</code>,{' '}
+        <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>,{' '}
+        <code>wh360_process_orders_v</code>, and <code>imwm_exceptions_v</code>.
       </div>
 
       {/* Filters Form Card */}
@@ -1492,7 +1496,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                     textTransform: 'uppercase',
                                   }}
                                 >
-                                  {row.severity || 'low'}
+                                  {row.severity ? row.severity : <UnavailableValue />}
                                 </span>
                               </td>
                               <td style={{ padding: '12px 8px', fontWeight: 600 }}>

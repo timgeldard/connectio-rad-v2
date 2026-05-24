@@ -91,7 +91,7 @@ export function OrderConfirmationsPanel({ request }: OrderConfirmationsPanelProp
                       </span>
                     </div>
                     <div style={{ fontSize: 10, color: 'var(--shell-fg-2)', marginTop: 2 }}>
-                      Yield: {conf.confirmedYield.toLocaleString()} {conf.uom}
+                      Yield: {conf.confirmedYield?.toLocaleString() ?? '—'} {conf.uom}
                       {conf.scrapQuantity != null && conf.scrapQuantity > 0 && (
                         <span style={{ color: '#D32F2F' }}> · scrap: {conf.scrapQuantity} {conf.uom}</span>
                       )}

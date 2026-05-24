@@ -406,7 +406,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
     // UOM sums and Mixed UOM safety check
     const uomSums: Record<string, number> = {}
     goodsMovements.forEach(m => {
-      uomSums[m.uom] = (uomSums[m.uom] || 0) + m.quantity
+      uomSums[m.uom] = (uomSums[m.uom] || 0) + (m.quantity ?? 0)
     })
     const uoms = Object.keys(uomSums)
     const hasMixedUoms = uoms.length > 1
@@ -431,7 +431,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         return
       }
 
-      const normalized = normaliseMovementQuantity(movement.quantity, movement.uom)
+      const normalized = normaliseMovementQuantity((movement.quantity ?? 0), movement.uom)
       if (!normalized) {
         return
       }
@@ -470,7 +470,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         return
       }
 
-      const normalized = normaliseMovementQuantity(movement.quantity, movement.uom)
+      const normalized = normaliseMovementQuantity((movement.quantity ?? 0), movement.uom)
       if (!normalized) {
         return
       }
@@ -569,7 +569,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         dateString: conf.confirmedAt || '',
         type: 'confirmation',
         title: `Yield Confirmed: ${conf.confirmationId}`,
-        description: `Confirmed ${conf.confirmedYield.toLocaleString()} ${conf.uom} by ${conf.confirmedBy || 'System'}.${conf.scrapQuantity ? ` (Scrap: ${conf.scrapQuantity})` : ''}`,
+        description: `Confirmed ${(conf.confirmedYield ?? 0).toLocaleString()} ${conf.uom} by ${conf.confirmedBy || 'System'}.${conf.scrapQuantity ? ` (Scrap: ${conf.scrapQuantity})` : ''}`,
         actor: conf.confirmedBy,
       })
     })
@@ -582,7 +582,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
         dateString: mov.postedAt || '',
         type: 'movement',
         title: `Goods Movement [${mov.movementType}]`,
-        description: `${mov.direction.toUpperCase()}: ${mov.quantity.toLocaleString()} ${mov.uom} of material ${mov.materialId}${mov.batchId ? ` (Batch: ${mov.batchId})` : ''} posted at ${mov.storageLocation || 's-loc'}.`,
+        description: `${mov.direction.toUpperCase()}: ${(mov.quantity ?? 0).toLocaleString()} ${mov.uom} of material ${mov.materialId}${mov.batchId ? ` (Batch: ${mov.batchId})` : ''} posted at ${mov.storageLocation || 's-loc'}.`,
         actor: mov.postedBy,
       })
     })
@@ -1210,7 +1210,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                 <div>
                   <div style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' }}>Order Quantities</div>
                   <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
-                    {headerData.confirmedQuantity.toLocaleString()} / {headerData.plannedQuantity.toLocaleString()} {headerData.uom}
+                    {(headerData.confirmedQuantity ?? 0).toLocaleString()} / {(headerData.plannedQuantity ?? 0).toLocaleString()} {headerData.uom}
                   </div>
                 </div>
                 <div>
@@ -1361,7 +1361,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                       <tr key={conf.confirmationId} style={tableRowStyle(idx)}>
                         <td style={tableCellStyle}>{conf.confirmationId}</td>
                         <td style={tableCellStyle}>{conf.operationId}</td>
-                        <td style={tableCellStyle}>{conf.confirmedYield.toLocaleString()} {conf.uom}</td>
+                        <td style={tableCellStyle}>{(conf.confirmedYield ?? 0).toLocaleString()} {conf.uom}</td>
                         <td style={tableCellStyle}>{safeFormatDate(conf.confirmedAt)}</td>
                         <td style={tableCellStyle}>
                           {conf.setupDurationMinutes != null ? `${conf.setupDurationMinutes}m / ` : '- / '}
@@ -1452,7 +1452,7 @@ export function OrderHistoryView({ request }: OrderHistoryViewProps) {
                             <span style={{ fontStyle: 'italic', color: '#6B7280' }}>none</span>
                           )}
                         </td>
-                        <td style={tableCellStyle}>{mov.quantity.toLocaleString()} {mov.uom}</td>
+                        <td style={tableCellStyle}>{(mov.quantity ?? 0).toLocaleString()} {mov.uom}</td>
                         <td style={tableCellStyle}>{safeFormatDate(mov.postedAt)}</td>
                         <td style={tableCellStyle}>{mov.storageLocation || '-'}</td>
                       </tr>
