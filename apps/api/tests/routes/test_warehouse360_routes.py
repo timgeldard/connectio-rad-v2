@@ -242,24 +242,28 @@ class TestWarehouseStagingRoute:
         assert response.status_code == 401
 
     async def test_returns_200_with_mapped_staging_items(self, wh360_databricks_env) -> None:
+        # Row shape matches actual wh360_process_orders_v columns
+        # (verified in docs/data-layer/warehouse360-staging-source-verification.md).
         fake_rows = [
             {
-                "process_order_id": "000700123456",
-                "reservation_id": "0000123456",
-                "reservation_item_id": "0001",
+                "order_id": "000700123456",
+                "sap_order": "PROD-700123456",
+                "reservation_no": "0000123456",
                 "material_id": "000000000000840123",
-                "material_description": "Starter Culture",
+                "material_name": "Starter Culture",
                 "batch_id": "0000987654",
                 "plant_id": "IE10",
-                "storage_location": "SL03",
-                "warehouse_number": "WH01",
-                "requirement_date": "2026-05-18 08:30:00",
-                "required_quantity": 2.5,
-                "staged_quantity": 2.0,
-                "open_quantity": 0.5,
-                "unit_of_measure": "KG",
-                "staging_status": "PARTIAL",
-                "exception_reason": "",
+                "uom": "KG",
+                "order_qty": 2.5,
+                "planned_start": "2026-05-18 08:30:00",
+                "planned_finish": "2026-05-18 18:30:00",
+                "sched_start": "2026-05-18 08:30:00",
+                "sched_finish": "2026-05-18 18:30:00",
+                "staging_pct": 0.8,
+                "to_items_total": 5,
+                "to_items_done": 4,
+                "mins_to_start": 120,
+                "risk": "low",
             }
         ]
 
@@ -279,8 +283,27 @@ class TestWarehouseStagingRoute:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 1
-        assert data[0]["processOrderId"] == "000700123456"
-        assert data[0]["materialId"] == "000000000000840123"
+        item = data[0]
+        # sap_order is preferred over order_id per source-verification §3.1.
+        assert item["processOrderId"] == "PROD-700123456"
+        assert item["reservationId"] == "0000123456"
+        assert item["materialId"] == "000000000000840123"
+        assert item["materialDescription"] == "Starter Culture"
+        assert item["batchId"] == "0000987654"
+        assert item["plantId"] == "IE10"
+        assert item["unitOfMeasure"] == "KG"
+        assert item["requiredQuantity"] == 2.5
+        # Derived from order_qty * staging_pct: 2.5 * 0.8 = 2.0
+        assert item["stagedQuantity"] == 2.0
+        # Derived: 2.5 * 0.2 = 0.5
+        assert item["openQuantity"] == 0.5
+        # Derived from staging_pct < 1.0 -> 'open' (application-heuristic).
+        assert item["stagingStatus"] == "open"
+        # Source-truthful absence of fields wh360_process_orders_v doesn't carry.
+        assert item["warehouseNumber"] is None
+        assert item["reservationItemId"] is None
+        assert item["storageLocation"] is None
+        assert item["exceptionReason"] is None
         assert response.headers.get("x-query-name") == "warehouse360.get_staging"
 
 
@@ -298,25 +321,23 @@ class TestWarehouseExceptionsRoute:
         assert response.status_code == 401
 
     async def test_returns_200_with_mapped_exceptions(self, wh360_databricks_env) -> None:
+        # Row shape matches actual imwm_exceptions_v columns
+        # (verified in docs/data-layer/warehouse360-imwm-exceptions-source-verification.md).
         fake_rows = [
             {
-                "exception_type": "quantity-mismatch",
-                "severity": "high",
+                "exception_type": "EXPIRED_BATCH_WITH_STOCK",
+                "severity": 2,  # integer per source — no governed int->enum mapping
+                "sla_hours": 24,
                 "material_id": "MAT01",
-                "batch_id": "B01",
+                "material_name": "Cheese Block",
                 "plant_id": "IE10",
-                "storage_location": "SL01",
-                "warehouse_number": "WH01",
-                "quantity": 20.0,
-                "unit_of_measure": "KG",
-                "expiry_date": "2026-06-18",
-                "days_to_expiry": 31,
-                "document_id": "DOC01",
-                "process_order_id": "",
-                "delivery_id": "",
-                "purchase_order_id": "",
-                "reason": "Mismatch",
-                "recommended_review_action": "Count",
+                "storage_loc": "SL01",
+                "storage_loc_name": "Cold Store 1",
+                "qty": 20.0,
+                "batch_id": "B01",
+                "bin_id": "BIN-A1",
+                "detail_text": "Stock recorded for expired batch",
+                "detected_date": "2026-05-22",
             }
         ]
 
@@ -336,8 +357,28 @@ class TestWarehouseExceptionsRoute:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 1
-        assert data[0]["severity"] == "low"  # deterministic days_to_expiry mapping overrides raw string
-        assert data[0]["materialId"] == "MAT01"
+        item = data[0]
+        # source-truthful: no governed int->enum mapping, severity is null.
+        assert item["severity"] is None
+        assert item["exceptionType"] == "EXPIRED_BATCH_WITH_STOCK"
+        assert item["materialId"] == "MAT01"
+        assert item["batchId"] == "B01"
+        assert item["plantId"] == "IE10"
+        assert item["storageLocation"] == "SL01"
+        assert item["quantity"] == 20.0
+        # Reason is the source detail_text.
+        assert item["reason"] == "Stock recorded for expired batch"
+        # Source-truthful absence of fields imwm_exceptions_v doesn't carry.
+        assert item["warehouseNumber"] is None
+        assert item["unitOfMeasure"] is None
+        assert item["expiryDate"] is None
+        assert item["daysToExpiry"] is None
+        assert item["documentId"] is None
+        assert item["processOrderId"] is None
+        assert item["deliveryId"] is None
+        assert item["purchaseOrderId"] is None
+        # recommendedReviewAction stays null until a governed rule exists.
+        assert item["recommendedReviewAction"] is None
         assert response.headers.get("x-query-name") == "warehouse360.get_exceptions"
 
     async def test_returns_502_on_databricks_query_error(self, wh360_databricks_env) -> None:
