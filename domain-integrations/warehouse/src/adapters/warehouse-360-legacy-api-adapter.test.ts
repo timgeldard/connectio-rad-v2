@@ -29,7 +29,7 @@ const fullRequest: Warehouse360AdapterRequest = {
 }
 
 const emptyRequest: Warehouse360AdapterRequest = {
-  warehouseId: '',  // falsy → falls back to mock
+  warehouseId: '', // falsy → falls back to mock
 }
 
 function mockFetch(status: number, body: unknown, ok = status >= 200 && status < 300) {
@@ -470,4 +470,208 @@ describe('Warehouse360LegacyApiAdapter native endpoints', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// Source-truthful null preservation (PR #110)
+// ---------------------------------------------------------------------------
 
+describe('Warehouse360LegacyApiAdapter source-truthful null preservation', () => {
+  it('inbound mapper preserves null for every nullable string/number field', async () => {
+    // Only documentType + materialId are required on the contract.
+    const sparseInbound = {
+      documentType: 'PO',
+      materialId: 'MAT-NULL',
+      purchaseOrderId: null,
+      stockTransportOrderId: null,
+      itemId: null,
+      vendorId: null,
+      supplyingPlantId: null,
+      materialDescription: null,
+      batchId: null,
+      plantId: null,
+      storageLocation: null,
+      warehouseNumber: null,
+      expectedDate: null,
+      receivedDate: null,
+      quantity: null,
+      unitOfMeasure: null,
+      status: null,
+      exceptionReason: null,
+    }
+    vi.stubGlobal('fetch', mockFetch(200, [sparseInbound]))
+    const result = await adapter.getWarehouseInbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const r = result.data[0]
+    expect(r.materialId).toBe('MAT-NULL')
+    expect(r.documentType).toBe('PO')
+    expect(r.purchaseOrderId).toBeNull()
+    expect(r.stockTransportOrderId).toBeNull()
+    expect(r.itemId).toBeNull()
+    expect(r.vendorId).toBeNull()
+    expect(r.supplyingPlantId).toBeNull()
+    expect(r.materialDescription).toBeNull()
+    expect(r.batchId).toBeNull()
+    expect(r.plantId).toBeNull()
+    expect(r.storageLocation).toBeNull()
+    expect(r.warehouseNumber).toBeNull()
+    expect(r.expectedDate).toBeNull()
+    expect(r.receivedDate).toBeNull()
+    expect(r.quantity).toBeNull()
+    expect(r.unitOfMeasure).toBeNull()
+    expect(r.status).toBeNull()
+    expect(r.exceptionReason).toBeNull()
+  })
+
+  it('inbound mapper falls back to documentType="unknown" when source value is unrecognised', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [{ documentType: null, materialId: 'MAT-A' }]))
+    const result = await adapter.getWarehouseInbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data[0].documentType).toBe('unknown')
+  })
+
+  it('inbound mapper does NOT collapse null strings to "" or null numbers to 0', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(200, [
+        {
+          documentType: 'PO',
+          materialId: 'MAT-X',
+          batchId: null,
+          quantity: null,
+          unitOfMeasure: null,
+        },
+      ]),
+    )
+    const result = await adapter.getWarehouseInbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const r = result.data[0]
+    expect(r.batchId).not.toBe('')
+    expect(r.unitOfMeasure).not.toBe('')
+    expect(r.quantity).not.toBe(0)
+    expect(r.batchId).toBeNull()
+    expect(r.unitOfMeasure).toBeNull()
+    expect(r.quantity).toBeNull()
+  })
+
+  it('outbound mapper preserves null for every nullable field', async () => {
+    const sparseOutbound = {
+      materialId: 'MAT-OUT',
+      deliveryId: null,
+      deliveryItemId: null,
+      customerId: null,
+      salesOrderId: null,
+      materialDescription: null,
+      batchId: null,
+      plantId: null,
+      storageLocation: null,
+      warehouseNumber: null,
+      plannedGoodsIssueDate: null,
+      actualGoodsIssueDate: null,
+      quantity: null,
+      unitOfMeasure: null,
+      status: null,
+      exceptionReason: null,
+    }
+    vi.stubGlobal('fetch', mockFetch(200, [sparseOutbound]))
+    const result = await adapter.getWarehouseOutbound(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const r = result.data[0]
+    expect(r.materialId).toBe('MAT-OUT')
+    expect(r.deliveryId).toBeNull()
+    expect(r.customerId).toBeNull()
+    expect(r.batchId).toBeNull()
+    expect(r.unitOfMeasure).toBeNull()
+    expect(r.quantity).toBeNull()
+    expect(r.status).toBeNull()
+  })
+
+  it('staging mapper preserves null for stagingStatus and every nullable field', async () => {
+    const sparseStaging = {
+      materialId: 'MAT-STG',
+      processOrderId: null,
+      reservationId: null,
+      reservationItemId: null,
+      materialDescription: null,
+      batchId: null,
+      plantId: null,
+      storageLocation: null,
+      warehouseNumber: null,
+      requirementDate: null,
+      requiredQuantity: null,
+      stagedQuantity: null,
+      openQuantity: null,
+      unitOfMeasure: null,
+      stagingStatus: null,
+      exceptionReason: null,
+    }
+    vi.stubGlobal('fetch', mockFetch(200, [sparseStaging]))
+    const result = await adapter.getWarehouseStaging(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const r = result.data[0]
+    expect(r.materialId).toBe('MAT-STG')
+    expect(r.stagingStatus).toBeNull()
+    expect(r.requiredQuantity).toBeNull()
+    expect(r.stagedQuantity).toBeNull()
+    expect(r.openQuantity).toBeNull()
+    expect(r.unitOfMeasure).toBeNull()
+  })
+
+  it('exceptions mapper falls back severity to null (NOT "low") when source value is missing', async () => {
+    const sparseException = {
+      materialId: 'MAT-EXC',
+      exceptionType: null,
+      severity: null,
+      batchId: null,
+      plantId: null,
+      storageLocation: null,
+      warehouseNumber: null,
+      quantity: null,
+      unitOfMeasure: null,
+      expiryDate: null,
+      daysToExpiry: null,
+      documentId: null,
+      processOrderId: null,
+      deliveryId: null,
+      purchaseOrderId: null,
+      reason: null,
+      recommendedReviewAction: null,
+    }
+    vi.stubGlobal('fetch', mockFetch(200, [sparseException]))
+    const result = await adapter.getWarehouseExceptionItems(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const r = result.data[0]
+    expect(r.severity).not.toBe('low')
+    expect(r.severity).toBeNull()
+    expect(r.exceptionType).toBeNull()
+    expect(r.reason).toBeNull()
+    expect(r.recommendedReviewAction).toBeNull()
+    expect(r.quantity).toBeNull()
+    expect(r.daysToExpiry).toBeNull()
+  })
+
+  it('exceptions mapper falls back severity to null for unrecognised non-enum values', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(200, [{ materialId: 'MAT-EXC-2', severity: 'whatever-the-source-said' }]),
+    )
+    const result = await adapter.getWarehouseExceptionItems(fullRequest)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data[0].severity).toBeNull()
+  })
+
+  it('exceptions mapper still propagates the four valid severity enum values verbatim', async () => {
+    for (const sev of ['critical', 'high', 'medium', 'low'] as const) {
+      vi.stubGlobal('fetch', mockFetch(200, [{ materialId: 'MAT-EXC', severity: sev }]))
+      const result = await adapter.getWarehouseExceptionItems(fullRequest)
+      expect(result.ok).toBe(true)
+      if (!result.ok) continue
+      expect(result.data[0].severity).toBe(sev)
+    }
+  })
+})

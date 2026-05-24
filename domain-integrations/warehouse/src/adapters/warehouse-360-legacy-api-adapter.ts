@@ -10,6 +10,19 @@ import type { AdapterResult } from '@connectio/source-adapters'
 import { Warehouse360Adapter } from './warehouse-360-adapter.js'
 import type { Warehouse360AdapterRequest } from './warehouse-360-adapter.js'
 
+// Source-truthful field coercion helpers (PR #110): preserve backend
+// `null` rather than collapsing to `''` / `0`. The warehouse item schemas
+// in @connectio/data-contracts mark every optional field
+// `.nullable().optional()`, so null must round-trip end-to-end.
+function nullableString(value: unknown): string | null {
+  return value == null ? null : String(value)
+}
+function nullableNumber(value: unknown): number | null {
+  if (value == null) return null
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
 function isBrowserVerified(endpoint: string): boolean {
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return true // Always run native fetch paths in test environment to test all handlers/mappers!
@@ -81,7 +94,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
               : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'legacy-api',
         }
@@ -139,7 +156,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'databricks-api',
         }
@@ -160,7 +181,12 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         blockedStockCount: Number(raw.blockedStockCount ?? 0),
       }
 
-      return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+      return {
+        ok: true,
+        data: mapped,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
@@ -196,7 +222,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'databricks-api',
         }
@@ -210,28 +240,35 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
       const items: Warehouse360InboundItem[] = raw.map((item: unknown) => {
         const r = item as Record<string, unknown>
         return {
-          documentType: r.documentType === 'PO' || r.documentType === 'STO' ? r.documentType : 'unknown',
-          purchaseOrderId: String(r.purchaseOrderId ?? ''),
-          stockTransportOrderId: String(r.stockTransportOrderId ?? ''),
-          itemId: String(r.itemId ?? ''),
-          vendorId: String(r.vendorId ?? ''),
-          supplyingPlantId: String(r.supplyingPlantId ?? ''),
+          documentType:
+            r.documentType === 'PO' || r.documentType === 'STO' ? r.documentType : 'unknown',
+          purchaseOrderId: nullableString(r.purchaseOrderId),
+          stockTransportOrderId: nullableString(r.stockTransportOrderId),
+          itemId: nullableString(r.itemId),
+          vendorId: nullableString(r.vendorId),
+          supplyingPlantId: nullableString(r.supplyingPlantId),
+          // materialId is the only required string on Warehouse360InboundItem.
           materialId: String(r.materialId ?? ''),
-          materialDescription: String(r.materialDescription ?? ''),
-          batchId: String(r.batchId ?? ''),
-          plantId: String(r.plantId ?? ''),
-          storageLocation: String(r.storageLocation ?? ''),
-          warehouseNumber: String(r.warehouseNumber ?? ''),
-          expectedDate: String(r.expectedDate ?? ''),
-          receivedDate: String(r.receivedDate ?? ''),
-          quantity: Number(r.quantity ?? 0),
-          unitOfMeasure: String(r.unitOfMeasure ?? ''),
-          status: String(r.status ?? ''),
-          exceptionReason: String(r.exceptionReason ?? ''),
+          materialDescription: nullableString(r.materialDescription),
+          batchId: nullableString(r.batchId),
+          plantId: nullableString(r.plantId),
+          storageLocation: nullableString(r.storageLocation),
+          warehouseNumber: nullableString(r.warehouseNumber),
+          expectedDate: nullableString(r.expectedDate),
+          receivedDate: nullableString(r.receivedDate),
+          quantity: nullableNumber(r.quantity),
+          unitOfMeasure: nullableString(r.unitOfMeasure),
+          status: nullableString(r.status),
+          exceptionReason: nullableString(r.exceptionReason),
         }
       })
 
-      return { ok: true, data: items, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+      return {
+        ok: true,
+        data: items,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
@@ -267,7 +304,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'databricks-api',
         }
@@ -281,26 +322,32 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
       const items: Warehouse360OutboundItem[] = raw.map((item: unknown) => {
         const r = item as Record<string, unknown>
         return {
-          deliveryId: String(r.deliveryId ?? ''),
-          deliveryItemId: String(r.deliveryItemId ?? ''),
-          customerId: String(r.customerId ?? ''),
-          salesOrderId: String(r.salesOrderId ?? ''),
+          deliveryId: nullableString(r.deliveryId),
+          deliveryItemId: nullableString(r.deliveryItemId),
+          customerId: nullableString(r.customerId),
+          salesOrderId: nullableString(r.salesOrderId),
+          // materialId is the only required string on Warehouse360OutboundItem.
           materialId: String(r.materialId ?? ''),
-          materialDescription: String(r.materialDescription ?? ''),
-          batchId: String(r.batchId ?? ''),
-          plantId: String(r.plantId ?? ''),
-          storageLocation: String(r.storageLocation ?? ''),
-          warehouseNumber: String(r.warehouseNumber ?? ''),
-          plannedGoodsIssueDate: String(r.plannedGoodsIssueDate ?? ''),
-          actualGoodsIssueDate: String(r.actualGoodsIssueDate ?? ''),
-          quantity: Number(r.quantity ?? 0),
-          unitOfMeasure: String(r.unitOfMeasure ?? ''),
-          status: String(r.status ?? ''),
-          exceptionReason: String(r.exceptionReason ?? ''),
+          materialDescription: nullableString(r.materialDescription),
+          batchId: nullableString(r.batchId),
+          plantId: nullableString(r.plantId),
+          storageLocation: nullableString(r.storageLocation),
+          warehouseNumber: nullableString(r.warehouseNumber),
+          plannedGoodsIssueDate: nullableString(r.plannedGoodsIssueDate),
+          actualGoodsIssueDate: nullableString(r.actualGoodsIssueDate),
+          quantity: nullableNumber(r.quantity),
+          unitOfMeasure: nullableString(r.unitOfMeasure),
+          status: nullableString(r.status),
+          exceptionReason: nullableString(r.exceptionReason),
         }
       })
 
-      return { ok: true, data: items, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+      return {
+        ok: true,
+        data: items,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
@@ -336,7 +383,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'databricks-api',
         }
@@ -350,26 +401,32 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
       const items: Warehouse360StagingItem[] = raw.map((item: unknown) => {
         const r = item as Record<string, unknown>
         return {
-          processOrderId: String(r.processOrderId ?? ''),
-          reservationId: String(r.reservationId ?? ''),
-          reservationItemId: String(r.reservationItemId ?? ''),
+          processOrderId: nullableString(r.processOrderId),
+          reservationId: nullableString(r.reservationId),
+          reservationItemId: nullableString(r.reservationItemId),
+          // materialId is the only required string on Warehouse360StagingItem.
           materialId: String(r.materialId ?? ''),
-          materialDescription: String(r.materialDescription ?? ''),
-          batchId: String(r.batchId ?? ''),
-          plantId: String(r.plantId ?? ''),
-          storageLocation: String(r.storageLocation ?? ''),
-          warehouseNumber: String(r.warehouseNumber ?? ''),
-          requirementDate: String(r.requirementDate ?? ''),
-          requiredQuantity: Number(r.requiredQuantity ?? 0),
-          stagedQuantity: Number(r.stagedQuantity ?? 0),
-          openQuantity: Number(r.openQuantity ?? 0),
-          unitOfMeasure: String(r.unitOfMeasure ?? ''),
-          stagingStatus: String(r.stagingStatus ?? ''),
-          exceptionReason: String(r.exceptionReason ?? ''),
+          materialDescription: nullableString(r.materialDescription),
+          batchId: nullableString(r.batchId),
+          plantId: nullableString(r.plantId),
+          storageLocation: nullableString(r.storageLocation),
+          warehouseNumber: nullableString(r.warehouseNumber),
+          requirementDate: nullableString(r.requirementDate),
+          requiredQuantity: nullableNumber(r.requiredQuantity),
+          stagedQuantity: nullableNumber(r.stagedQuantity),
+          openQuantity: nullableNumber(r.openQuantity),
+          unitOfMeasure: nullableString(r.unitOfMeasure),
+          stagingStatus: nullableString(r.stagingStatus),
+          exceptionReason: nullableString(r.exceptionReason),
         }
       })
 
-      return { ok: true, data: items, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+      return {
+        ok: true,
+        data: items,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {
@@ -405,7 +462,11 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
         const code = response.status === 401 ? ('unauthorized' as const) : ('network' as const)
         return {
           ok: false,
-          error: { code, message: `Proxy returned ${response.status}`, retryable: response.status >= 500 },
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
           displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
           source: 'databricks-api',
         }
@@ -418,28 +479,44 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
 
       const items: Warehouse360ExceptionItem[] = raw.map((item: unknown) => {
         const r = item as Record<string, unknown>
+        // Severity falls back to `null` (not 'low') when the source value is
+        // missing or unrecognised — see PR #109 contract relaxation. The
+        // contract is `enum([...]).nullable().optional()`.
+        const severity =
+          r.severity === 'critical' ||
+          r.severity === 'high' ||
+          r.severity === 'medium' ||
+          r.severity === 'low'
+            ? r.severity
+            : null
         return {
-          exceptionType: String(r.exceptionType ?? ''),
-          severity: r.severity === 'critical' || r.severity === 'high' || r.severity === 'medium' || r.severity === 'low' ? r.severity : 'low',
+          exceptionType: nullableString(r.exceptionType),
+          severity,
+          // materialId is the only required string on Warehouse360ExceptionItem.
           materialId: String(r.materialId ?? ''),
-          batchId: String(r.batchId ?? ''),
-          plantId: String(r.plantId ?? ''),
-          storageLocation: String(r.storageLocation ?? ''),
-          warehouseNumber: String(r.warehouseNumber ?? ''),
-          quantity: Number(r.quantity ?? 0),
-          unitOfMeasure: String(r.unitOfMeasure ?? ''),
-          expiryDate: String(r.expiryDate ?? ''),
-          daysToExpiry: Number(r.daysToExpiry ?? 0),
-          documentId: String(r.documentId ?? ''),
-          processOrderId: String(r.processOrderId ?? ''),
-          deliveryId: String(r.deliveryId ?? ''),
-          purchaseOrderId: String(r.purchaseOrderId ?? ''),
-          reason: String(r.reason ?? ''),
-          recommendedReviewAction: String(r.recommendedReviewAction ?? ''),
+          batchId: nullableString(r.batchId),
+          plantId: nullableString(r.plantId),
+          storageLocation: nullableString(r.storageLocation),
+          warehouseNumber: nullableString(r.warehouseNumber),
+          quantity: nullableNumber(r.quantity),
+          unitOfMeasure: nullableString(r.unitOfMeasure),
+          expiryDate: nullableString(r.expiryDate),
+          daysToExpiry: nullableNumber(r.daysToExpiry),
+          documentId: nullableString(r.documentId),
+          processOrderId: nullableString(r.processOrderId),
+          deliveryId: nullableString(r.deliveryId),
+          purchaseOrderId: nullableString(r.purchaseOrderId),
+          reason: nullableString(r.reason),
+          recommendedReviewAction: nullableString(r.recommendedReviewAction),
         }
       })
 
-      return { ok: true, data: items, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+      return {
+        ok: true,
+        data: items,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {

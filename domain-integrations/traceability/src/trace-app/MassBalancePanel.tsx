@@ -96,10 +96,31 @@ function KpiRow({ ledger }: { ledger: MassBalanceLedger }) {
         background: 'var(--shell-surface-2, #F8F7F0)',
       }}
     >
-      <Kpi label="Produced" value={kpi.produced} sub={`${kpi.postings.production} postings`} tone="good" uom={kpi.uom} />
-      <Kpi label="Consumed" value={kpi.consumed} sub={`${kpi.postings.consumption} postings`} uom={kpi.uom} />
-      <Kpi label="Shipped" value={kpi.shipped} sub={`${kpi.postings.dispatch} postings`} uom={kpi.uom} />
-      <Kpi label="Adjusted" value={kpi.adjusted} sub={`${kpi.postings.adjustment} postings`} uom={kpi.uom} />
+      <Kpi
+        label="Produced"
+        value={kpi.produced}
+        sub={`${kpi.postings.production} postings`}
+        tone="good"
+        uom={kpi.uom}
+      />
+      <Kpi
+        label="Consumed"
+        value={kpi.consumed}
+        sub={`${kpi.postings.consumption} postings`}
+        uom={kpi.uom}
+      />
+      <Kpi
+        label="Shipped"
+        value={kpi.shipped}
+        sub={`${kpi.postings.dispatch} postings`}
+        uom={kpi.uom}
+      />
+      <Kpi
+        label="Adjusted"
+        value={kpi.adjusted}
+        sub={`${kpi.postings.adjustment} postings`}
+        uom={kpi.uom}
+      />
       <Kpi label="On hand" value={kpi.current} sub="Current" tone="brand" uom={kpi.uom} />
       <Kpi
         label="Variance"
@@ -123,19 +144,39 @@ function Kpi({
   value: number
   sub: string
   tone?: 'good' | 'warn' | 'brand'
-  uom: string
+  // MassBalanceKpi.uom is `z.string().nullable()` — do NOT default `null` to
+  // 'KG' (or any other unit). Render an em-dash instead so the user sees that
+  // the source did not supply a unit.
+  uom: string | null
 }) {
   const color =
-    tone === 'good' ? '#1a8454' : tone === 'warn' ? '#8a6b00' : tone === 'brand' ? 'var(--valentia-slate, #005776)' : 'var(--forest, #143700)'
+    tone === 'good'
+      ? '#1a8454'
+      : tone === 'warn'
+        ? '#8a6b00'
+        : tone === 'brand'
+          ? 'var(--valentia-slate, #005776)'
+          : 'var(--forest, #143700)'
   return (
     <div style={{ padding: 14, borderRight: '1px solid var(--shell-line, #E5E3D7)' }}>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)', marginBottom: 4 }}>
+      <div
+        style={{
+          fontSize: 10,
+          letterSpacing: 1.2,
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          color: 'var(--shell-fg-2)',
+          marginBottom: 4,
+        }}
+      >
         {label}
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1 }}>
         {value > 0 ? '+' : ''}
         {value.toLocaleString()}
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-2)', marginLeft: 4 }}>{uom}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-2)', marginLeft: 4 }}>
+          {uom ?? '—'}
+        </span>
       </div>
       <div style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginTop: 4 }}>{sub}</div>
     </div>
@@ -178,15 +219,33 @@ function RunningChart({ events }: { events: readonly MassBalanceEvent[] }) {
           marginBottom: 8,
         }}
       >
-        <span style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--valentia-slate, #005776)' }}>
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+            fontWeight: 700,
+            color: 'var(--valentia-slate, #005776)',
+          }}
+        >
           Running on hand
         </span>
         <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', fontFamily: 'monospace' }}>
           {events.length} postings
         </span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 160, display: 'block' }}>
-        <line x1={padX} x2={width - padX} y1={zeroY} y2={zeroY} stroke="var(--shell-line, #E5E3D7)" strokeDasharray="3 3" />
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ width: '100%', height: 160, display: 'block' }}
+      >
+        <line
+          x1={padX}
+          x2={width - padX}
+          y1={zeroY}
+          y2={zeroY}
+          stroke="var(--shell-line, #E5E3D7)"
+          strokeDasharray="3 3"
+        />
         <path d={path} fill="none" stroke="var(--valentia-slate, #005776)" strokeWidth={2} />
         {events.map((e, i) => (
           <circle
@@ -223,10 +282,25 @@ function EventLedger({
           borderBottom: '1px solid var(--shell-line, #E5E3D7)',
         }}
       >
-        <span style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--valentia-slate, #005776)' }}>
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+            fontWeight: 700,
+            color: 'var(--valentia-slate, #005776)',
+          }}
+        >
           Movement ledger
         </span>
-        <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', fontFamily: 'monospace', marginLeft: 'auto' }}>
+        <span
+          style={{
+            fontSize: 11,
+            color: 'var(--shell-fg-2)',
+            fontFamily: 'monospace',
+            marginLeft: 'auto',
+          }}
+        >
           {ledger.dateStart} → {ledger.dateEnd}
         </span>
       </div>
@@ -244,7 +318,15 @@ function EventLedger({
           <tbody>
             {events.map((e) => (
               <tr key={e.d} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
-                <td style={{ padding: '7px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>+{e.d}d</td>
+                <td
+                  style={{
+                    padding: '7px 12px',
+                    fontFamily: 'monospace',
+                    color: 'var(--shell-fg-2)',
+                  }}
+                >
+                  +{e.d}d
+                </td>
                 <td style={{ padding: '7px 12px' }}>
                   <span
                     style={{
@@ -293,13 +375,7 @@ function EventLedger({
   )
 }
 
-function Th({
-  children,
-  align = 'left',
-}: {
-  children: React.ReactNode
-  align?: 'left' | 'right'
-}) {
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th
       style={{
