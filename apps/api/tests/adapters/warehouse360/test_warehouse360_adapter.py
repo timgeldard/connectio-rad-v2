@@ -106,9 +106,27 @@ class TestWarehouseStagingSpec:
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/staging"
         assert spec.cache_policy == CacheTier.PER_USER_60S
-        assert spec.params["warehouse_id"] == "WH01"
-        assert "staging_orders_v" in spec.sql
-        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`staging_orders_v`" in spec.sql
+        # The view does not expose LGNUM — warehouse_id is accepted but not filtered.
+        assert "warehouse_id" not in spec.params
+        # Source-verification §3 — target view is wh360_process_orders_v.
+        assert "wh360_process_orders_v" in spec.sql
+        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_process_orders_v`" in spec.sql
+        # Stale non-existent view name MUST NOT come back.
+        assert "staging_orders_v" not in spec.sql
+
+    def test_spec_uses_actual_wh360_process_orders_v_columns(self) -> None:
+        spec = get_warehouse_staging_spec(WarehouseStagingRequest("WH01"))
+        for actual_col in ("order_id", "sap_order", "reservation_no", "material_id",
+                           "material_name", "batch_id", "plant_id", "uom", "order_qty",
+                           "sched_start", "sched_finish", "staging_pct",
+                           "to_items_total", "to_items_done", "mins_to_start", "risk"):
+            assert actual_col in spec.sql, f"missing source column {actual_col!r}"
+        # Old broken UPPER_CASE identifiers must NOT regress.
+        for broken_col in ("PROCESS_ORDER_ID", "RESERVATION_ID", "RESERVATION_ITEM_ID",
+                           "WAREHOUSE_NUMBER", "REQUIREMENT_DATE", "REQUIRED_QUANTITY",
+                           "STAGED_QUANTITY", "OPEN_QUANTITY", "STAGING_STATUS",
+                           "EXCEPTION_REASON"):
+            assert broken_col not in spec.sql, f"broken column {broken_col!r} leaked back"
 
 
 class TestWarehouseExceptionsSpec:
@@ -118,9 +136,26 @@ class TestWarehouseExceptionsSpec:
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/exceptions"
         assert spec.cache_policy == CacheTier.PER_USER_60S
-        assert spec.params["warehouse_id"] == "WH01"
-        assert "wh360_imwm_exceptions_v" in spec.sql
-        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_imwm_exceptions_v`" in spec.sql
+        # The view does not expose LGNUM — warehouse_id is accepted but not filtered.
+        assert "warehouse_id" not in spec.params
+        # Source-verification §3 — target view is imwm_exceptions_v (no wh360_ prefix).
+        assert "imwm_exceptions_v" in spec.sql
+        assert "`wh360_uat_catalog`.`wh360_uat_schema`.`imwm_exceptions_v`" in spec.sql
+        # Stale non-existent view name MUST NOT come back.
+        assert "wh360_imwm_exceptions_v" not in spec.sql
+
+    def test_spec_uses_actual_imwm_exceptions_v_columns(self) -> None:
+        spec = get_warehouse_exceptions_spec(WarehouseExceptionRequest("WH01"))
+        for actual_col in ("exception_type", "severity", "sla_hours", "material_id",
+                           "material_name", "plant_id", "storage_loc", "storage_loc_name",
+                           "qty", "batch_id", "bin_id", "detail_text", "detected_date"):
+            assert actual_col in spec.sql, f"missing source column {actual_col!r}"
+        # Old broken UPPER_CASE identifiers must NOT regress.
+        for broken_col in ("EXCEPTION_TYPE", "EXPIRY_DATE", "DAYS_TO_EXPIRY",
+                           "DOCUMENT_ID", "PROCESS_ORDER_ID", "DELIVERY_ID",
+                           "PURCHASE_ORDER_ID", "RECOMMENDED_REVIEW_ACTION",
+                           "WAREHOUSE_NUMBER"):
+            assert broken_col not in spec.sql, f"broken column {broken_col!r} leaked back"
 
 
 class TestQuerySpecDynamicFiltering:
@@ -171,9 +206,11 @@ class TestQuerySpecDynamicFiltering:
         assert spec.params["plant_id"] == "PL10"
         assert spec.params["date_from"] == "2026-05-01"
         assert spec.params["date_to"] == "2026-05-31"
-        assert "PLANT_ID = :plant_id" in spec.sql
-        assert "REQUIREMENT_DATE >= :date_from" in spec.sql
-        assert "REQUIREMENT_DATE <= :date_to" in spec.sql
+        # Lower-case actual column names from wh360_process_orders_v.
+        assert "plant_id = :plant_id" in spec.sql
+        # Date filter targets sched_start (documented in source-verification §3.1).
+        assert "sched_start >= :date_from" in spec.sql
+        assert "sched_start <= :date_to" in spec.sql
         assert "LIMIT 250" in spec.sql
 
     def test_exceptions_with_all_filters(self) -> None:
@@ -188,9 +225,12 @@ class TestQuerySpecDynamicFiltering:
         assert spec.params["plant_id"] == "PL10"
         assert spec.params["date_from"] == "2026-05-01"
         assert spec.params["date_to"] == "2026-05-31"
-        assert "PLANT_ID = :plant_id" in spec.sql
-        assert "EXPIRY_DATE >= :date_from" in spec.sql
-        assert "EXPIRY_DATE <= :date_to" in spec.sql
+        # Lower-case actual column names from imwm_exceptions_v.
+        assert "plant_id = :plant_id" in spec.sql
+        # Date filter targets detected_date (semantic shift from non-existent
+        # EXPIRY_DATE — documented in source-verification §3.1).
+        assert "detected_date >= :date_from" in spec.sql
+        assert "detected_date <= :date_to" in spec.sql
         assert "LIMIT 250" in spec.sql
 
 
@@ -431,75 +471,227 @@ class TestWarehouseRowMappers:
         assert item["plannedGoodsIssueDate"] == "2026-05-18T15:00:00"
 
     def test_map_staging_rows_preserves_sap_ids(self) -> None:
+        # Row shape matches actual wh360_process_orders_v columns.
         rows = [{
-            "process_order_id": "000700123456",
-            "reservation_id": "0000123456",
-            "reservation_item_id": "0001",
+            "order_id": "000700123456",
+            "sap_order": "PROD-700123456",
+            "reservation_no": "0000123456",
             "material_id": "000000000000840123",
-            "material_description": "Starter Culture B10",
+            "material_name": "Starter Culture B10",
             "batch_id": "0000987654",
             "plant_id": "IE10",
-            "storage_location": "SL03",
-            "warehouse_number": "WH01",
-            "requirement_date": "2026-05-18 08:30:00",
-            "required_quantity": 2.5,
-            "staged_quantity": 2.0,
-            "open_quantity": 0.5,
-            "unit_of_measure": "KG",
-            "staging_status": "PARTIAL",
-            "exception_reason": "Shortage",
+            "uom": "KG",
+            "order_qty": 2.5,
+            "planned_start": "2026-05-18 08:30:00",
+            "planned_finish": "2026-05-18 18:30:00",
+            "sched_start": "2026-05-18 08:30:00",
+            "sched_finish": "2026-05-18 18:30:00",
+            "staging_pct": 0.8,
+            "to_items_total": 5,
+            "to_items_done": 4,
+            "mins_to_start": 120,
+            "risk": "low",
         }]
         res = map_warehouse_staging_rows(rows)
         assert len(res) == 1
         item = res[0]
-        assert item["processOrderId"] == "000700123456"
+        # sap_order is preferred over order_id (source-verification §3.1).
+        assert item["processOrderId"] == "PROD-700123456"
         assert item["materialId"] == "000000000000840123"
+        # Derived from order_qty * (1 - staging_pct): 2.5 * 0.2 = 0.5
         assert item["openQuantity"] == 0.5
 
+    # ------------------------------------------------------------------
+    # Source-truthful staging mapper guardrails (Gate 2 implementation).
+    # ------------------------------------------------------------------
+
+    def test_staging_process_order_id_prefers_sap_order(self) -> None:
+        rows = [{"order_id": "INT-1", "sap_order": "PROD-1", "material_id": "M1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["processOrderId"] == "PROD-1"
+
+    def test_staging_process_order_id_falls_back_to_order_id(self) -> None:
+        rows = [{"order_id": "INT-1", "sap_order": None, "material_id": "M1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["processOrderId"] == "INT-1"
+
+    def test_staging_reservation_item_id_is_null_not_invented(self) -> None:
+        """wh360_process_orders_v has no per-line reservation field —
+        unresolved-pending-source per the verification doc."""
+        rows = [{"material_id": "M1", "reservation_no": "R1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["reservationItemId"] is None
+
+    def test_staging_storage_location_is_null_not_invented(self) -> None:
+        rows = [{"material_id": "M1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["storageLocation"] is None
+
+    def test_staging_warehouse_number_is_null_not_invented(self) -> None:
+        rows = [{"material_id": "M1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["warehouseNumber"] is None
+
+    def test_staging_exception_reason_is_null_not_invented(self) -> None:
+        """Exceptions belong to imwm_exceptions_v, not here."""
+        rows = [{"material_id": "M1"}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["exceptionReason"] is None
+
+    def test_staging_unit_of_measure_not_defaulted(self) -> None:
+        """No UOM in source → null. Mapper MUST NOT default to 'KG'."""
+        for raw in (None, "", 0):
+            rows = [{"material_id": "M1", "uom": raw}]
+            res = map_warehouse_staging_rows(rows)
+            assert res[0]["unitOfMeasure"] is None
+
+    def test_staging_status_derived_from_staging_pct(self) -> None:
+        # staging_pct >= 1 → 'staged'; 0 <= staging_pct < 1 → 'open'.
+        cases = [
+            ({"material_id": "M1", "staging_pct": 0.0}, "open"),
+            ({"material_id": "M1", "staging_pct": 0.5}, "open"),
+            ({"material_id": "M1", "staging_pct": 0.999}, "open"),
+            ({"material_id": "M1", "staging_pct": 1.0}, "staged"),
+            ({"material_id": "M1", "staging_pct": 1.5}, "staged"),
+        ]
+        for row, expected in cases:
+            res = map_warehouse_staging_rows([row])
+            assert res[0]["stagingStatus"] == expected, f"row={row} expected={expected}"
+
+    def test_staging_status_null_when_staging_pct_absent(self) -> None:
+        rows = [{"material_id": "M1", "staging_pct": None}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["stagingStatus"] is None
+
+    def test_staging_quantities_derived_or_null(self) -> None:
+        # Both order_qty and staging_pct present → derived values.
+        rows = [{"material_id": "M1", "order_qty": 100.0, "staging_pct": 0.3}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["requiredQuantity"] == 100.0
+        assert res[0]["stagedQuantity"] == 30.0
+        assert res[0]["openQuantity"] == 70.0
+
+    def test_staging_quantities_null_when_order_qty_absent(self) -> None:
+        rows = [{"material_id": "M1", "order_qty": None, "staging_pct": 0.5}]
+        res = map_warehouse_staging_rows(rows)
+        assert res[0]["requiredQuantity"] is None
+        assert res[0]["stagedQuantity"] is None
+        assert res[0]["openQuantity"] is None
+
+    def test_staging_does_not_emit_invented_business_fields(self) -> None:
+        rows = [{"material_id": "M1", "staging_pct": 0.5}]
+        res = map_warehouse_staging_rows(rows)
+        for forbidden in ("safe", "approved", "released", "cleared", "overdue",
+                          "due", "recallRecommended", "risk", "onTime"):
+            assert forbidden not in res[0]
+
     def test_map_exceptions_rows_severity(self) -> None:
+        """Source severity is an integer with no governed int→enum mapping.
+        Mapper emits null rather than inventing a mapping (e.g. 2='high')."""
+        # Row shape matches actual imwm_exceptions_v columns.
         rows = [
             {
-                "exception_type": "quantity-mismatch",
-                "severity": "high",
+                "exception_type": "EXPIRED_BATCH_WITH_STOCK",
+                "severity": 2,
                 "material_id": "MAT01",
                 "batch_id": "B01",
                 "plant_id": "IE10",
-                "storage_location": "SL01",
-                "warehouse_number": "WH01",
-                "quantity": 20.0,
-                "unit_of_measure": "KG",
-                "expiry_date": "2026-06-18",
-                "days_to_expiry": 31,
-                "document_id": "DOC01",
-                "process_order_id": "",
-                "delivery_id": "",
-                "purchase_order_id": "",
-                "reason": "Mismatch",
-                "recommended_review_action": "Count",
+                "storage_loc": "SL01",
+                "qty": 20.0,
+                "detail_text": "Stock recorded",
+                "detected_date": "2026-05-22",
             },
             {
-                "exception_type": "near-expiry",
-                "severity": "low",
+                "exception_type": "QUANTITY_MISMATCH",
+                "severity": 1,
                 "material_id": "MAT02",
                 "batch_id": "B02",
                 "plant_id": "IE10",
-                "storage_location": "SL01",
-                "warehouse_number": "WH01",
-                "quantity": 10.0,
-                "unit_of_measure": "KG",
-                "expiry_date": "2026-05-19",
-                "days_to_expiry": 1,
-                "document_id": "DOC02",
-                "process_order_id": "",
-                "delivery_id": "",
-                "purchase_order_id": "",
-                "reason": "Near expiry",
-                "recommended_review_action": "Release",
+                "storage_loc": "SL01",
+                "qty": 10.0,
+                "detail_text": "Mismatch",
+                "detected_date": "2026-05-21",
             }
         ]
         res = map_warehouse_exceptions_rows(rows)
         assert len(res) == 2
-        # item 1: days_to_expiry = 31 -> low severity (since >30 days)
-        assert res[0]["severity"] == "low"
-        # item 2: days_to_expiry = 1 -> high severity (since <=7 days)
-        assert res[1]["severity"] == "high"
+        # Both severities are integers — no governed int→enum mapping exists.
+        # Mapper MUST emit null rather than guess 2='high' or 1='critical'.
+        assert res[0]["severity"] is None
+        assert res[1]["severity"] is None
+
+    # ------------------------------------------------------------------
+    # Source-truthful exceptions mapper guardrails (Gate 3 implementation).
+    # ------------------------------------------------------------------
+
+    def test_exceptions_severity_governed_string_passes_through(self) -> None:
+        """If the source later provides a governed string severity
+        (e.g. after a future int→enum migration), the mapper accepts it."""
+        for raw, expected in (("critical", "critical"), ("HIGH", "high"),
+                              (" medium ", "medium"), ("low", "low")):
+            rows = [{"material_id": "M1", "severity": raw}]
+            res = map_warehouse_exceptions_rows(rows)
+            assert res[0]["severity"] == expected
+
+    def test_exceptions_unknown_severity_string_yields_null(self) -> None:
+        """A string severity outside the contract enum (e.g. 'urgent')
+        must NOT be accepted as a governance-safe value."""
+        rows = [{"material_id": "M1", "severity": "URGENT"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["severity"] is None
+
+    def test_exceptions_severity_never_defaults_to_low(self) -> None:
+        """The previous _map_exception_severity helper defaulted to 'low'
+        as final fallback. The new mapper MUST emit null for any
+        ungoverned input."""
+        for raw in (None, "", 0, 1, 2, 3, 4, 5, "mystery"):
+            rows = [{"material_id": "M1", "severity": raw}]
+            res = map_warehouse_exceptions_rows(rows)
+            assert res[0]["severity"] != "low", f"severity={raw!r} defaulted to 'low'"
+
+    def test_exceptions_reason_maps_to_detail_text(self) -> None:
+        rows = [{"material_id": "M1", "detail_text": "Stock recorded for expired batch"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["reason"] == "Stock recorded for expired batch"
+
+    def test_exceptions_recommended_review_action_is_null(self) -> None:
+        """application-heuristic — leave null until a governed rule engine exists."""
+        rows = [{"material_id": "M1", "exception_type": "EXPIRED_BATCH_WITH_STOCK"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["recommendedReviewAction"] is None
+
+    def test_exceptions_expiry_fields_null_not_invented(self) -> None:
+        """imwm_exceptions_v has no expiry_date / days_to_expiry —
+        detected_date is when the exception was detected, not when the
+        batch expires."""
+        rows = [{"material_id": "M1", "detected_date": "2026-05-22"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["expiryDate"] is None
+        assert res[0]["daysToExpiry"] is None
+
+    def test_exceptions_document_linkage_fields_null_not_invented(self) -> None:
+        """No PO/SO/process order/delivery linkage in imwm_exceptions_v."""
+        rows = [{"material_id": "M1"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["documentId"] is None
+        assert res[0]["processOrderId"] is None
+        assert res[0]["deliveryId"] is None
+        assert res[0]["purchaseOrderId"] is None
+
+    def test_exceptions_warehouse_number_is_null_not_invented(self) -> None:
+        rows = [{"material_id": "M1"}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["warehouseNumber"] is None
+
+    def test_exceptions_unit_of_measure_is_null(self) -> None:
+        """No UOM column on imwm_exceptions_v — null, not 'KG'."""
+        rows = [{"material_id": "M1", "qty": 20.0}]
+        res = map_warehouse_exceptions_rows(rows)
+        assert res[0]["unitOfMeasure"] is None
+
+    def test_exceptions_does_not_emit_invented_business_fields(self) -> None:
+        rows = [{"material_id": "M1", "exception_type": "EXPIRED_BATCH_WITH_STOCK"}]
+        res = map_warehouse_exceptions_rows(rows)
+        for forbidden in ("safe", "approved", "released", "cleared", "recallRecommended",
+                          "rootCause", "healthy", "unhealthy"):
+            assert forbidden not in res[0]

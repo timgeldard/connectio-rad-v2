@@ -448,43 +448,59 @@ def map_warehouse_outbound_rows(rows: list[dict]) -> list[dict]:
 def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
     """Return QuerySpec for Production Staging Demands.
 
-    Source view: staging_orders_v
+    Source view: wh360_process_orders_v (verified 2026-05-19, see
+    docs/data-layer/warehouse360-staging-source-verification.md).
+
+    The previous adapter targeted ``staging_orders_v`` which does not exist
+    in UAT. ``wh360_process_orders_v`` is the verified replacement and
+    carries process-order-level staging fields:
+      order_id, sap_order, material_id, material_name, plant_id, order_qty,
+      uom, planned_start, planned_finish, sched_start, sched_finish,
+      staging_pct, to_items_total, to_items_done, mins_to_start, risk,
+      reservation_no, batch_id.
+
+    The request still carries warehouse_id for backwards-compatibility, but
+    the SQL does NOT filter on it (the view does not expose LGNUM). Per the
+    source-verification doc §3.1, the date filter is ``sched_start`` —
+    the documented "staging-by" anchor — not the missing REQUIREMENT_DATE.
     """
-    view = resolve_domain_object("wh360", "staging_orders_v")
-    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
-    params = {"warehouse_id": request.warehouse_id}
+    view = resolve_domain_object("wh360", "wh360_process_orders_v")
+    where_clauses: list[str] = []
+    params: dict[str, object] = {}
 
     if request.plant_id:
-        where_clauses.append("PLANT_ID = :plant_id")
+        where_clauses.append("plant_id = :plant_id")
         params["plant_id"] = request.plant_id
     if request.date_from:
-        where_clauses.append("REQUIREMENT_DATE >= :date_from")
+        where_clauses.append("sched_start >= :date_from")
         params["date_from"] = request.date_from
     if request.date_to:
-        where_clauses.append("REQUIREMENT_DATE <= :date_to")
+        where_clauses.append("sched_start <= :date_to")
         params["date_to"] = request.date_to
 
-    where_str = " AND ".join(where_clauses)
+    where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     sql = f"""
     SELECT
-        PROCESS_ORDER_ID          AS process_order_id,
-        RESERVATION_ID            AS reservation_id,
-        RESERVATION_ITEM_ID       AS reservation_item_id,
-        MATERIAL_ID               AS material_id,
-        MATERIAL_DESCRIPTION      AS material_description,
-        BATCH_ID                  AS batch_id,
-        PLANT_ID                  AS plant_id,
-        STORAGE_LOCATION          AS storage_location,
-        WAREHOUSE_NUMBER          AS warehouse_number,
-        REQUIREMENT_DATE          AS requirement_date,
-        REQUIRED_QUANTITY         AS required_quantity,
-        STAGED_QUANTITY           AS staged_quantity,
-        OPEN_QUANTITY             AS open_quantity,
-        UNIT_OF_MEASURE           AS unit_of_measure,
-        STAGING_STATUS            AS staging_status,
-        EXCEPTION_REASON          AS exception_reason
+        order_id,
+        sap_order,
+        reservation_no,
+        material_id,
+        material_name,
+        batch_id,
+        plant_id,
+        uom,
+        order_qty,
+        planned_start,
+        planned_finish,
+        sched_start,
+        sched_finish,
+        staging_pct,
+        to_items_total,
+        to_items_done,
+        mins_to_start,
+        risk
     FROM {view}
-    WHERE {where_str}
+    {where_str}
     LIMIT {request.limit}
     """
     return QuerySpec(
@@ -498,72 +514,161 @@ def get_warehouse_staging_spec(request: WarehouseStagingRequest) -> QuerySpec:
     )
 
 
+def _derive_staging_status(staging_pct: object) -> Optional[str]:
+    """Derive a coarse staging status from ``wh360_process_orders_v.staging_pct``.
+
+    [classification: application-heuristic]
+
+    The source view has no governed staging-status column. We expose:
+      - 'staged'  when staging_pct >= 1.0
+      - 'open'    when 0 <= staging_pct < 1.0
+      - None      when staging_pct is null / unknown
+
+    The governed taxonomy (and whether ``risk`` should be split into a
+    separate field) is unresolved — see source-verification doc §6.
+    """
+    if staging_pct is None:
+        return None
+    try:
+        pct = float(staging_pct)
+    except (TypeError, ValueError):
+        return None
+    if pct >= 1.0:
+        return "staged"
+    if pct >= 0.0:
+        return "open"
+    return None
+
+
+def _staging_quantity_pair(order_qty: object, staging_pct: object) -> tuple[Optional[float], Optional[float]]:
+    """Derive ``(stagedQuantity, openQuantity)`` from ``order_qty * staging_pct``.
+
+    [classification: application-derived]
+
+    The source has no per-row stagedQuantity / openQuantity columns. We
+    derive them from ``order_qty`` and the ``staging_pct`` fraction. When
+    either input is null, both outputs are null — we do NOT default to 0.
+    """
+    if order_qty is None or staging_pct is None:
+        return None, None
+    try:
+        qty = float(order_qty)
+        pct = float(staging_pct)
+    except (TypeError, ValueError):
+        return None, None
+    pct = max(0.0, min(1.0, pct))
+    return round(qty * pct, 6), round(qty * (1.0 - pct), 6)
+
+
 def map_warehouse_staging_rows(rows: list[dict]) -> list[dict]:
-    """Map raw staging rows to Warehouse360StagingItem schema."""
+    """Map raw staging rows from wh360_process_orders_v to Warehouse360StagingItem.
+
+    Source columns documented in
+    docs/data-layer/warehouse360-staging-source-verification.md §3.
+
+    Source-truthful guardrails:
+      - warehouseNumber, reservationItemId, storageLocation, exceptionReason
+        are absent from wh360_process_orders_v; the mapper emits null
+        rather than empty strings or invented values.
+      - processOrderId prefers ``sap_order`` over ``order_id`` (per
+        verification §3.1, ``sap_order`` is the SAP-facing identifier).
+      - requirementDate uses ``sched_start`` — the documented staging-by
+        anchor — not ``planned_start``.
+      - requiredQuantity maps to ``order_qty``; ``stagedQuantity`` and
+        ``openQuantity`` are derived from ``order_qty * staging_pct`` and
+        classified as application-derived.
+      - stagingStatus is derived from ``staging_pct`` and classified as
+        application-heuristic; ``risk`` is preserved as a separate
+        source-field value in the response when contract permits, but the
+        current contract does not surface ``risk`` so we drop it (a future
+        contract may add it).
+      - unitOfMeasure echoes ``uom`` verbatim (no KG default).
+    """
     result = []
     for row in rows:
+        staging_pct = row.get("staging_pct")
+        order_qty = row.get("order_qty")
+        staged_qty, open_qty = _staging_quantity_pair(order_qty, staging_pct)
+        process_order = row.get("sap_order") or row.get("order_id")
+
         result.append({
-            "processOrderId": str(row.get("process_order_id") or ""),
-            "reservationId": str(row.get("reservation_id") or ""),
-            "reservationItemId": str(row.get("reservation_item_id") or ""),
+            "processOrderId": str(process_order) if process_order else None,
+            "reservationId": str(row["reservation_no"]) if row.get("reservation_no") else None,
+            # Reservation-line granularity is absent in wh360_process_orders_v —
+            # see source-verification doc §3 (unresolved-pending-source).
+            "reservationItemId": None,
             "materialId": str(row.get("material_id") or ""),
-            "materialDescription": str(row.get("material_description") or ""),
-            "batchId": str(row.get("batch_id") or ""),
-            "plantId": str(row.get("plant_id") or ""),
-            "storageLocation": str(row.get("storage_location") or ""),
-            "warehouseNumber": str(row.get("warehouse_number") or ""),
-            "requirementDate": _format_datetime(row.get("requirement_date")),
-            "requiredQuantity": _safe_float(row.get("required_quantity")),
-            "stagedQuantity": _safe_float(row.get("staged_quantity")),
-            "openQuantity": _safe_float(row.get("open_quantity")),
-            "unitOfMeasure": str(row.get("unit_of_measure") or ""),
-            "stagingStatus": str(row.get("staging_status") or ""),
-            "exceptionReason": str(row.get("exception_reason") or ""),
+            "materialDescription": str(row["material_name"]) if row.get("material_name") else None,
+            "batchId": str(row["batch_id"]) if row.get("batch_id") else None,
+            "plantId": str(row["plant_id"]) if row.get("plant_id") else None,
+            # Per-row storage location is absent in this view — null is
+            # source-truthful (unresolved-pending-source).
+            "storageLocation": None,
+            # LGNUM/warehouse number is absent in wh360_process_orders_v.
+            "warehouseNumber": None,
+            "requirementDate": _format_datetime(row.get("sched_start")) or None,
+            "requiredQuantity": float(order_qty) if order_qty is not None else None,
+            "stagedQuantity": staged_qty,
+            "openQuantity": open_qty,
+            "unitOfMeasure": str(row["uom"]) if row.get("uom") else None,
+            "stagingStatus": _derive_staging_status(staging_pct),
+            # Exceptions belong to imwm_exceptions_v, not here.
+            "exceptionReason": None,
         })
     return result
 
 
 def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySpec:
-    """Return QuerySpec for IM/WM Reconciliation Exceptions.
+    """Return QuerySpec for IM/WM exceptions.
 
-    Source view: wh360_imwm_exceptions_v
+    Source view: imwm_exceptions_v (verified 2026-05-19, see
+    docs/data-layer/warehouse360-imwm-exceptions-source-verification.md).
+
+    The previous adapter targeted ``wh360_imwm_exceptions_v`` which does
+    not exist in UAT. The actual view drops the ``wh360_`` prefix.
+
+    Verified columns: exception_type, severity (int), sla_hours,
+    material_id, material_name, plant_id, storage_loc, storage_loc_name,
+    qty, batch_id, bin_id, detail_text, detected_date.
+
+    The request still carries warehouse_id for backwards-compatibility, but
+    the SQL does NOT filter on it (the view does not expose LGNUM). The
+    date filter targets ``detected_date`` — this is a SEMANTIC SHIFT from
+    the previous adapter (which filtered on a non-existent ``EXPIRY_DATE``
+    column). See source-verification doc §3.1.
     """
-    view = resolve_domain_object("wh360", "wh360_imwm_exceptions_v")
-    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
-    params = {"warehouse_id": request.warehouse_id}
+    view = resolve_domain_object("wh360", "imwm_exceptions_v")
+    where_clauses: list[str] = []
+    params: dict[str, object] = {}
 
     if request.plant_id:
-        where_clauses.append("PLANT_ID = :plant_id")
+        where_clauses.append("plant_id = :plant_id")
         params["plant_id"] = request.plant_id
     if request.date_from:
-        where_clauses.append("EXPIRY_DATE >= :date_from")
+        where_clauses.append("detected_date >= :date_from")
         params["date_from"] = request.date_from
     if request.date_to:
-        where_clauses.append("EXPIRY_DATE <= :date_to")
+        where_clauses.append("detected_date <= :date_to")
         params["date_to"] = request.date_to
 
-    where_str = " AND ".join(where_clauses)
+    where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     sql = f"""
     SELECT
-        EXCEPTION_TYPE            AS exception_type,
-        SEVERITY                  AS severity,
-        MATERIAL_ID               AS material_id,
-        BATCH_ID                  AS batch_id,
-        PLANT_ID                  AS plant_id,
-        STORAGE_LOCATION          AS storage_location,
-        WAREHOUSE_NUMBER          AS warehouse_number,
-        QUANTITY                  AS quantity,
-        UNIT_OF_MEASURE           AS unit_of_measure,
-        EXPIRY_DATE               AS expiry_date,
-        DAYS_TO_EXPIRY            AS days_to_expiry,
-        DOCUMENT_ID               AS document_id,
-        PROCESS_ORDER_ID          AS process_order_id,
-        DELIVERY_ID               AS delivery_id,
-        PURCHASE_ORDER_ID         AS purchase_order_id,
-        REASON                    AS reason,
-        RECOMMENDED_REVIEW_ACTION  AS recommended_review_action
+        exception_type,
+        severity,
+        sla_hours,
+        material_id,
+        material_name,
+        plant_id,
+        storage_loc,
+        storage_loc_name,
+        qty,
+        batch_id,
+        bin_id,
+        detail_text,
+        detected_date
     FROM {view}
-    WHERE {where_str}
+    {where_str}
     LIMIT {request.limit}
     """
     return QuerySpec(
@@ -577,30 +682,79 @@ def get_warehouse_exceptions_spec(request: WarehouseExceptionRequest) -> QuerySp
     )
 
 
+def _map_exception_severity_v2(severity_raw: object) -> Optional[str]:
+    """Map ``imwm_exceptions_v.severity`` (int) to the contract enum.
+
+    [classification: application-heuristic — governance-pending]
+
+    The source severity is an integer; the contract enum is
+    {'critical','high','medium','low'} but is ``nullable().optional()``.
+    No governed int→enum mapping exists today (see source-verification
+    doc §6, severity int→enum mapping unresolved). To stay source-truthful
+    we return ``None`` for ANY integer value rather than invent a mapping
+    (e.g. 1=critical) without Inventory-team authority.
+
+    The pre-existing ``_map_exception_severity`` helper defaulted to
+    'low' as a final fallback; that default is forbidden by the
+    PR brief and is replaced here with explicit null.
+    """
+    if severity_raw is None:
+        return None
+    # Accept already-governed string values (e.g. set by a future migration).
+    if isinstance(severity_raw, str):
+        s = severity_raw.lower().strip()
+        if s in {"critical", "high", "medium", "low"}:
+            return s
+    # Numeric severity has no governed mapping — return null.
+    return None
+
+
 def map_warehouse_exceptions_rows(rows: list[dict]) -> list[dict]:
-    """Map raw exceptions rows to Warehouse360ExceptionItem schema."""
+    """Map raw imwm_exceptions_v rows to Warehouse360ExceptionItem.
+
+    Source columns documented in
+    docs/data-layer/warehouse360-imwm-exceptions-source-verification.md §3.
+
+    Source-truthful guardrails:
+      - warehouseNumber, expiryDate, daysToExpiry, documentId,
+        processOrderId, deliveryId, purchaseOrderId, unitOfMeasure are
+        absent from imwm_exceptions_v; the mapper emits null rather than
+        empty strings or invented values.
+      - severity maps to null when the source carries an int (no
+        governed int→enum mapping) — see _map_exception_severity_v2.
+      - reason maps to detail_text (free-text reason).
+      - recommendedReviewAction stays null until a governed rule engine
+        exists (the schema classifies it as application-heuristic).
+    """
     result = []
     for row in rows:
-        # Determine severity deterministically
-        severity = _map_exception_severity(row.get("severity"), row.get("days_to_expiry"))
-
         result.append({
-            "exceptionType": str(row.get("exception_type") or ""),
-            "severity": severity,
+            "exceptionType": str(row["exception_type"]) if row.get("exception_type") else None,
+            "severity": _map_exception_severity_v2(row.get("severity")),
             "materialId": str(row.get("material_id") or ""),
-            "batchId": str(row.get("batch_id") or ""),
-            "plantId": str(row.get("plant_id") or ""),
-            "storageLocation": str(row.get("storage_location") or ""),
-            "warehouseNumber": str(row.get("warehouse_number") or ""),
-            "quantity": _safe_float(row.get("quantity")),
-            "unitOfMeasure": str(row.get("unit_of_measure") or ""),
-            "expiryDate": _format_datetime(row.get("expiry_date")),
-            "daysToExpiry": _safe_int(row.get("days_to_expiry")),
-            "documentId": str(row.get("document_id") or ""),
-            "processOrderId": str(row.get("process_order_id") or ""),
-            "deliveryId": str(row.get("delivery_id") or ""),
-            "purchaseOrderId": str(row.get("purchase_order_id") or ""),
-            "reason": str(row.get("reason") or ""),
-            "recommendedReviewAction": str(row.get("recommended_review_action") or ""),
+            "batchId": str(row["batch_id"]) if row.get("batch_id") else None,
+            "plantId": str(row["plant_id"]) if row.get("plant_id") else None,
+            "storageLocation": str(row["storage_loc"]) if row.get("storage_loc") else None,
+            # LGNUM/warehouse number is absent in imwm_exceptions_v.
+            "warehouseNumber": None,
+            "quantity": float(row["qty"]) if row.get("qty") is not None else None,
+            # No UOM column on imwm_exceptions_v — sibling imwm_stock_comparison_v
+            # carries it (out of scope for this slice).
+            "unitOfMeasure": None,
+            # detected_date is when the exception was detected, NOT the batch
+            # expiry date. Returning null for expiryDate / daysToExpiry is
+            # source-truthful — see source-verification doc §3.
+            "expiryDate": None,
+            "daysToExpiry": None,
+            # No document linkage in imwm_exceptions_v.
+            "documentId": None,
+            "processOrderId": None,
+            "deliveryId": None,
+            "purchaseOrderId": None,
+            "reason": str(row["detail_text"]) if row.get("detail_text") else None,
+            # application-heuristic — leave null until a governed rule
+            # engine exists. The pre-existing mapper emitted a string;
+            # null is the safe default per spec §8.
+            "recommendedReviewAction": None,
         })
     return result
