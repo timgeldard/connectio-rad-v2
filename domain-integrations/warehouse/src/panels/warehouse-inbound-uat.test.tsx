@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { InboundOutboundSummaryPanel } from './inbound-outbound-summary-panel.js'
-import { expectNoForbiddenClaims } from '@connectio/evidence-panel-runtime/test-utils'
+import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/warehouse-360-queries.js'
 
 vi.mock('../adapters/warehouse-360-queries.js', () => ({

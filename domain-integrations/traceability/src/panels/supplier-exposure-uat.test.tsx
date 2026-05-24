@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MaterialSupplierExposurePanel } from './material-supplier-exposure-panel.js'
 import { MassBalancePanel } from '../trace-app/MassBalancePanel.js'
-import { expectNoForbiddenClaims } from '@connectio/evidence-panel-runtime/test-utils'
+import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/trace2-queries.js'
 import * as traceAppQueries from '../trace-app/trace-app-queries.js'
 
