@@ -43,10 +43,10 @@ function resolveEvidenceStatus(result: AdapterResult<unknown> | undefined): Evid
 }
 
 export function ChartOverviewView({ request }: ChartOverviewViewProps) {
-  const { data: charsResult } = useMonitoredCharacteristics(request)
+  const { data: charsResult, isLoading: charsLoading } = useMonitoredCharacteristics(request)
   const { data: summaryResult } = useSPCSummary(request)
   const { data: signalsResult } = useActiveSPCSignals(request)
-  
+
   const characteristics = charsResult?.ok ? charsResult.data : []
 
   return (
@@ -121,7 +121,21 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
         <SPCSummaryPanel request={request} />
         <ActiveSPCSignalsPanel request={request} />
       </div>
-      {characteristics.length > 0 ? (
+      {charsLoading ? (
+        <div
+          role="status"
+          style={{
+            padding: 40,
+            textAlign: 'center',
+            color: 'var(--shell-fg-3)',
+            fontSize: 13,
+            border: '1px dashed var(--shell-line)',
+            borderRadius: 6,
+          }}
+        >
+          Loading monitored characteristics...
+        </div>
+      ) : characteristics.length > 0 ? (
         <div style={CHART_GRID}>
           {characteristics.map(char => (
             <ControlChartPanel
@@ -132,6 +146,7 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
         </div>
       ) : (
         <div
+          role="status"
           style={{
             padding: 40,
             textAlign: 'center',
@@ -141,7 +156,9 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
             borderRadius: 6,
           }}
         >
-          No monitored characteristics found for this scope.
+          {charsResult?.ok
+            ? 'No monitored characteristics found for this scope.'
+            : 'Characteristics unavailable — source returned an error.'}
         </div>
       )}
     </div>
