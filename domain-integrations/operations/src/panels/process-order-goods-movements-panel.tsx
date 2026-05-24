@@ -8,15 +8,23 @@ import type { ProcessOrderReviewAdapterRequest } from '../adapters/process-order
 const registration: EvidencePanelRegistration = {
   panelId: 'process-order-goods-movements',
   displayName: 'Goods Movements',
-  description: 'Goods issues (inputs) and goods receipts (outputs) posted against this process order.',
+  description:
+    'Goods issues (inputs) and goods receipts (outputs) posted against this process order.',
   ownerDomain: 'operations',
   sourceOwnership: { domainId: 'operations', systemName: 'poh', legacyAppId: 'poh' },
   lifecycle: 'pilot',
   allowedConsumerWorkspaces: ['process-order-review'],
   requiredContext: [{ contextKey: 'processOrderId', scopeLevel: 'process-order', required: true }],
-  freshnessPolicy: { staleAfterSeconds: 120, errorAfterSeconds: 600, refreshOnFocus: true, pollIntervalSeconds: null },
+  freshnessPolicy: {
+    staleAfterSeconds: 120,
+    errorAfterSeconds: 600,
+    refreshOnFocus: true,
+    pollIntervalSeconds: null,
+  },
   confidencePolicy: { level: null, hidden: false },
-  requiredPermissions: [{ permissionId: 'operations.order.read', displayName: 'Operations Order Read' }],
+  requiredPermissions: [
+    { permissionId: 'operations.order.read', displayName: 'Operations Order Read' },
+  ],
 }
 
 export interface ProcessOrderGoodsMovementsPanelProps {
@@ -51,9 +59,9 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
   }, [isLoading, result, markReady, markError])
 
   const movements: ProcessOrderGoodsMovement[] = result?.ok ? result.data : []
-  const inputCount = movements.filter(m => m.direction === 'input').length
-  const outputCount = movements.filter(m => m.direction === 'output').length
-  const unknownCount = movements.filter(m => m.direction === 'unknown').length
+  const inputCount = movements.filter((m) => m.direction === 'input').length
+  const outputCount = movements.filter((m) => m.direction === 'output').length
+  const unknownCount = movements.filter((m) => m.direction === 'unknown').length
 
   return (
     <EvidencePanel
@@ -65,7 +73,9 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
       {result?.ok && (
         <div style={{ padding: '12px 16px' }}>
           {movements.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--shell-fg-3)', margin: 0 }}>No goods movements posted against this order.</p>
+            <p style={{ fontSize: 12, color: 'var(--shell-fg-3)', margin: 0 }}>
+              No goods movements posted against this order.
+            </p>
           ) : (
             <>
               <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
@@ -82,16 +92,27 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
                 )}
               </div>
               <div style={{ display: 'grid', gap: 6 }}>
-                {movements.map(mov => {
+                {movements.map((mov) => {
                   const color = DIRECTION_COLOR[mov.direction] ?? 'var(--shell-fg-3)'
                   return (
-                    <div key={mov.movementId} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, color: '#fff',
-                        background: color, borderRadius: 3,
-                        padding: '2px 5px', flexShrink: 0, marginTop: 1,
-                        minWidth: 20, textAlign: 'center',
-                      }}>
+                    <div
+                      key={mov.movementId}
+                      style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: '#fff',
+                          background: color,
+                          borderRadius: 3,
+                          padding: '2px 5px',
+                          flexShrink: 0,
+                          marginTop: 1,
+                          minWidth: 20,
+                          textAlign: 'center',
+                        }}
+                      >
                         {DIRECTION_LABEL[mov.direction]}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -99,8 +120,14 @@ export function ProcessOrderGoodsMovementsPanel({ request }: ProcessOrderGoodsMo
                           {mov.materialDescription}
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--shell-fg-2)', marginTop: 1 }}>
-                          {(mov.quantity ?? 0).toLocaleString()} {mov.uom}
-                          {mov.batchId && <span style={{ fontFamily: 'monospace', marginLeft: 4 }}>{mov.batchId}</span>}
+                          {mov.quantity != null
+                            ? `${mov.quantity.toLocaleString()} ${mov.uom ?? ''}`.trim()
+                            : '—'}
+                          {mov.batchId && (
+                            <span style={{ fontFamily: 'monospace', marginLeft: 4 }}>
+                              {mov.batchId}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginTop: 1 }}>
                           {mov.postedAt ? new Date(mov.postedAt).toLocaleString() : '-'}

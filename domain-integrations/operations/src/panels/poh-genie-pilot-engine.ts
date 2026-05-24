@@ -68,14 +68,38 @@ interface UnsupportedQuestion {
 type QuestionClassification = ApprovedQuestion | BlockedQuestion | UnsupportedQuestion
 
 const BLOCKED_KEYWORDS: Array<{ readonly pattern: RegExp; readonly reason: string }> = [
-  { pattern: /\bwhy\b.*\blate\b|\blate\b|\bdelay\b|\broot cause\b/i, reason: 'lateness and root-cause analysis are blocked in the current POH pilot' },
-  { pattern: /\boee\b|\bschedule adherence\b|\bcapability\b|\bbenchmark/i, reason: 'OEE and broader analytics are not part of the approved POH pilot scope' },
-  { pattern: /\bplanning\b|\bday view\b|\blineside\b|\bline side\b/i, reason: 'planning, day-view, and lineside workflows are outside the approved POH pilot scope' },
-  { pattern: /\bdowntime\b|\bnote\b|\bnotes\b|\bcomment\b|\bcomments\b/i, reason: 'downtime and operator notes are not currently approved POH Genie topics' },
-  { pattern: /\bgenealog/i, reason: 'genealogy and related-batch inference are blocked from the current POH pilot' },
-  { pattern: /\brelease\b|\bquality release\b|\brelease readiness\b/i, reason: 'release reasoning and decision support are blocked from the current POH pilot' },
-  { pattern: /\bstaff\b|\bescalat/i, reason: 'staffing and escalation recommendations are blocked from the current POH pilot' },
-  { pattern: /\bvessel\b/i, reason: 'vessel-planning questions are outside the approved POH pilot scope' },
+  {
+    pattern: /\bwhy\b.*\blate\b|\blate\b|\bdelay\b|\broot cause\b/i,
+    reason: 'lateness and root-cause analysis are blocked in the current POH pilot',
+  },
+  {
+    pattern: /\boee\b|\bschedule adherence\b|\bcapability\b|\bbenchmark/i,
+    reason: 'OEE and broader analytics are not part of the approved POH pilot scope',
+  },
+  {
+    pattern: /\bplanning\b|\bday view\b|\blineside\b|\bline side\b/i,
+    reason: 'planning, day-view, and lineside workflows are outside the approved POH pilot scope',
+  },
+  {
+    pattern: /\bdowntime\b|\bnote\b|\bnotes\b|\bcomment\b|\bcomments\b/i,
+    reason: 'downtime and operator notes are not currently approved POH Genie topics',
+  },
+  {
+    pattern: /\bgenealog/i,
+    reason: 'genealogy and related-batch inference are blocked from the current POH pilot',
+  },
+  {
+    pattern: /\brelease\b|\bquality release\b|\brelease readiness\b/i,
+    reason: 'release reasoning and decision support are blocked from the current POH pilot',
+  },
+  {
+    pattern: /\bstaff\b|\bescalat/i,
+    reason: 'staffing and escalation recommendations are blocked from the current POH pilot',
+  },
+  {
+    pattern: /\bvessel\b/i,
+    reason: 'vessel-planning questions are outside the approved POH pilot scope',
+  },
 ]
 
 function classifyQuestion(question: string): QuestionClassification {
@@ -98,12 +122,20 @@ function classifyQuestion(question: string): QuestionClassification {
 
   const mentionsOperations = /\boperation\b|\boperations\b|\bphase\b|\bphases\b/.test(normalized)
   const mentionsConfirmations = /\bconfirmation\b|\bconfirmations\b|\byield\b/.test(normalized)
-  const mentionsGoodsMovements = /\bgoods movement\b|\bgoods movements\b|\bmovement\b|\bmovements\b|\bissue\b|\bissues\b|\breceipt\b|\breceipts\b/.test(normalized)
+  const mentionsGoodsMovements =
+    /\bgoods movement\b|\bgoods movements\b|\bmovement\b|\bmovements\b|\bissue\b|\bissues\b|\breceipt\b|\breceipts\b/.test(
+      normalized,
+    )
   const mentionsHeader = /\bstatus\b|\bmaterial\b|\bquantity\b|\bheader\b/.test(normalized)
 
-  const approvedCount = [mentionsOperations, mentionsConfirmations, mentionsGoodsMovements].filter(Boolean).length
+  const approvedCount = [mentionsOperations, mentionsConfirmations, mentionsGoodsMovements].filter(
+    Boolean,
+  ).length
 
-  if (approvedCount > 1 || /\bsummarize\b|\bsummary\b|\bcurrently loaded\b|\bshow all\b/.test(normalized)) {
+  if (
+    approvedCount > 1 ||
+    /\bsummarize\b|\bsummary\b|\bcurrently loaded\b|\bshow all\b/.test(normalized)
+  ) {
     return { kind: 'approved', intent: 'combined' }
   }
   if (mentionsOperations) return { kind: 'approved', intent: 'operations' }
@@ -119,29 +151,36 @@ function formatOrderStatus(status: string): string {
 }
 
 function summariseOperations(operations: readonly ProcessOrderOperation[]): string {
-  const confirmed = operations.filter(operation => operation.confirmed).length
-  const exceptions = operations.filter(operation => operation.hasException).length
-  const inProgress = operations.filter(operation => operation.status === 'in-progress').length
+  const confirmed = operations.filter((operation) => operation.confirmed).length
+  const exceptions = operations.filter((operation) => operation.hasException).length
+  const inProgress = operations.filter((operation) => operation.status === 'in-progress').length
   return `${operations.length} operations returned; ${confirmed} confirmed, ${inProgress} in progress, ${exceptions} with exception flags.`
 }
 
 function summariseConfirmations(confirmations: readonly ProcessOrderConfirmation[]): string {
-  const finalCount = confirmations.filter(confirmation => confirmation.isFinalConfirmation).length
+  const finalCount = confirmations.filter((confirmation) => confirmation.isFinalConfirmation).length
   const partialCount = confirmations.length - finalCount
-  const totalYield = confirmations.reduce((sum, confirmation) => sum + confirmation.confirmedYield ?? 0, 0)
-  const uoms = Array.from(new Set(confirmations.map(confirmation => confirmation.uom).filter(Boolean)))
-  const yieldSummary = uoms.length === 1
-    ? `${totalYield.toLocaleString()} ${uoms[0]} total confirmed yield`
-    : `${totalYield.toLocaleString()} total confirmed yield across mixed units`
+  const totalYield = confirmations.reduce(
+    (sum, confirmation) =>
+      confirmation.confirmedYield != null ? sum + confirmation.confirmedYield : sum,
+    0,
+  )
+  const uoms = Array.from(
+    new Set(confirmations.map((confirmation) => confirmation.uom).filter(Boolean)),
+  )
+  const yieldSummary =
+    uoms.length === 1
+      ? `${totalYield.toLocaleString()} ${uoms[0]} total confirmed yield`
+      : `${totalYield.toLocaleString()} total confirmed yield across mixed units`
 
   return `${confirmations.length} confirmations returned; ${finalCount} final, ${partialCount} partial/open, ${yieldSummary}.`
 }
 
 function summariseGoodsMovements(movements: readonly ProcessOrderGoodsMovement[]): string {
-  const inputs = movements.filter(movement => movement.direction === 'input').length
-  const outputs = movements.filter(movement => movement.direction === 'output').length
-  const unknown = movements.filter(movement => movement.direction === 'unknown').length
-  const distinctMaterials = new Set(movements.map(movement => movement.materialId)).size
+  const inputs = movements.filter((movement) => movement.direction === 'input').length
+  const outputs = movements.filter((movement) => movement.direction === 'output').length
+  const unknown = movements.filter((movement) => movement.direction === 'unknown').length
+  const distinctMaterials = new Set(movements.map((movement) => movement.materialId)).size
 
   return `${movements.length} goods movements returned; ${inputs} input issues, ${outputs} output receipts, ${unknown} unclassified, ${distinctMaterials} distinct materials.`
 }
@@ -151,9 +190,18 @@ function sharedScopeNote(): string {
 }
 
 function buildApprovedReply(intent: PohGenieIntent, snapshot: PohGenieSnapshot): AssistantReply {
-  const operationsCitation = buildAssistantCitation('OrderOperationsPanel', snapshot.operations.source)
-  const confirmationsCitation = buildAssistantCitation('OrderConfirmationsPanel', snapshot.confirmations.source)
-  const movementsCitation = buildAssistantCitation('ProcessOrderGoodsMovementsPanel', snapshot.goodsMovements.source)
+  const operationsCitation = buildAssistantCitation(
+    'OrderOperationsPanel',
+    snapshot.operations.source,
+  )
+  const confirmationsCitation = buildAssistantCitation(
+    'OrderConfirmationsPanel',
+    snapshot.confirmations.source,
+  )
+  const movementsCitation = buildAssistantCitation(
+    'ProcessOrderGoodsMovementsPanel',
+    snapshot.goodsMovements.source,
+  )
   const headerCitation = buildAssistantCitation('ProcessOrderHeaderPanel', snapshot.header?.source)
   const warning = buildMockWarning([
     snapshot.header?.source,
@@ -216,7 +264,8 @@ function buildApprovedReply(intent: PohGenieIntent, snapshot: PohGenieSnapshot):
             `${snapshot.header.data.materialDescription} (${snapshot.header.data.materialId}) is currently ${formatOrderStatus(snapshot.header.data.orderStatus)} with ${(snapshot.header.data.confirmedQuantity ?? 0).toLocaleString()} ${snapshot.header.data.uom} confirmed against ${(snapshot.header.data.plannedQuantity ?? 0).toLocaleString()} ${snapshot.header.data.uom} planned.`,
           ],
           citations: [headerCitation],
-          scopeNote: 'Scope note: the header slice is conditional in the current POH pilot and should not be used to infer blocked topics outside the approved pack.',
+          scopeNote:
+            'Scope note: the header slice is conditional in the current POH pilot and should not be used to infer blocked topics outside the approved pack.',
           warning,
         }),
       }
@@ -230,7 +279,9 @@ function buildApprovedReply(intent: PohGenieIntent, snapshot: PohGenieSnapshot):
       ]
 
       if (snapshot.header) {
-        details.push(`- Conditional header slice from ${headerCitation}: ${snapshot.header.data.materialDescription} is currently ${formatOrderStatus(snapshot.header.data.orderStatus)}.`)
+        details.push(
+          `- Conditional header slice from ${headerCitation}: ${snapshot.header.data.materialDescription} is currently ${formatOrderStatus(snapshot.header.data.orderStatus)}.`,
+        )
       } else {
         details.push('- Conditional header slice is not currently included in this answer.')
       }
