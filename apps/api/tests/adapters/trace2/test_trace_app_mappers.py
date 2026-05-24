@@ -17,6 +17,7 @@ import pytest
 
 from adapters.trace2.trace2_databricks_adapter import (
     build_batch_quality_passport,
+    map_customer_delivery_rows,
     map_investigation_timeline_rows,
     map_supplier_batch_view,
     map_supplier_exposure_rows,
@@ -751,6 +752,152 @@ class TestMapMassBalanceLedgerRows:
         assert result is not None
         assert len(result["events"]) == 1
         assert result["events"][0]["delta"] == 0
+
+
+# ===========================================================================
+# map_customer_delivery_rows — source-truthful mapper hardening (PR 7)
+# ===========================================================================
+
+
+def _cd_row(**overrides) -> dict:
+    """One row from gold_batch_delivery_v (verified V1-parity delivery view)."""
+    base = {
+        "delivery": "DEL-001",
+        "customer_id": "CUST-001",
+        "customer_name": "Kerry Ingredients",
+        "country_id": "IE",
+        "city": "Dublin",
+        "abs_quantity": 500.0,
+        "uom": "KG",
+        "posting_date": "2024-03-10",
+    }
+    base.update(overrides)
+    return base
+
+
+class TestMapCustomerDeliveryRows:
+    """Direct mapper hardening for map_customer_delivery_rows.
+
+    Pin source-truthful semantics:
+      - empty rows return None (caller must 404, not 'no issue found')
+      - delivery and customer IDs are counted accurately
+      - shipped quantity is aggregated correctly
+      - countries are distinct and sorted
+      - UOM comes from source row, is never invented
+      - recallRecommended is always None (no governed recall source)
+      - no delivered/safe/approved/received field is emitted
+    """
+
+    def test_empty_rows_returns_none(self) -> None:
+        """Zero rows → None. Caller must return 404 with explicit
+        'do not interpret as zero exposure' message. The mapper MUST NOT
+        return an empty-dict result that the route could surface as clean."""
+        assert map_customer_delivery_rows([]) is None
+
+    def test_distinct_delivery_ids_counted(self) -> None:
+        rows = [_cd_row(delivery="DEL-A"), _cd_row(delivery="DEL-B"), _cd_row(delivery="DEL-A")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["affectedDeliveries"] == 2
+
+    def test_distinct_customer_ids_counted(self) -> None:
+        rows = [_cd_row(customer_id="C1"), _cd_row(customer_id="C2"), _cd_row(customer_id="C1")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["affectedCustomers"] == 2
+
+    def test_shipped_quantity_aggregated(self) -> None:
+        rows = [_cd_row(abs_quantity=300.0), _cd_row(abs_quantity=200.0)]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["shippedQuantity"] == 500.0
+
+    def test_null_quantity_excluded_from_sum(self) -> None:
+        rows = [_cd_row(abs_quantity=400.0), _cd_row(abs_quantity=None)]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["shippedQuantity"] == 400.0
+
+    def test_countries_collected_and_sorted(self) -> None:
+        rows = [_cd_row(country_id="IE"), _cd_row(country_id="DE"), _cd_row(country_id="IE")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["countries"] == ["DE", "IE"]
+
+    def test_null_country_id_excluded(self) -> None:
+        rows = [_cd_row(country_id=None), _cd_row(country_id="GB")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["countries"] == ["GB"]
+
+    def test_null_delivery_id_excluded_from_count(self) -> None:
+        """A NULL delivery ID in source is not a countable delivery —
+        it should not inflate affectedDeliveries."""
+        rows = [_cd_row(delivery=None), _cd_row(delivery="DEL-001")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["affectedDeliveries"] == 1
+
+    def test_null_customer_id_excluded_from_count(self) -> None:
+        rows = [_cd_row(customer_id=None), _cd_row(customer_id="CUST-001")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert result["affectedCustomers"] == 1
+
+    def test_uom_taken_from_first_non_null_row(self) -> None:
+        rows = [_cd_row(uom=None), _cd_row(uom="KG"), _cd_row(uom="T")]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        # First non-null uom is 'KG' — mapper takes it for consistency.
+        assert result.get("uom") == "KG"
+
+    def test_all_null_uom_does_not_invent_default(self) -> None:
+        """If no row has a UOM, the uom key must be absent — never
+        defaulted to 'KG' or 'EA'."""
+        rows = [_cd_row(uom=None), _cd_row(uom=None)]
+        result = map_customer_delivery_rows(rows)
+        assert result is not None
+        assert "uom" not in result
+
+    def test_recall_recommended_is_always_none(self) -> None:
+        """recallRecommended MUST be None — no governed recall-rule source
+        exists. Both True and False would constitute a safety claim or
+        safety assurance without a governed engine."""
+        result = map_customer_delivery_rows([_cd_row()])
+        assert result is not None
+        assert result["recallRecommended"] is None
+        assert result["recallRecommended"] is not False
+
+    def test_no_delivered_received_safe_approved_field(self) -> None:
+        """The presence of a delivery row is NOT a 'delivered' confirmation.
+        No invented lifecycle, safety, or approval field may appear."""
+        result = map_customer_delivery_rows([_cd_row()])
+        assert result is not None
+        for forbidden in ("delivered", "received", "safe", "approved", "released", "cleared"):
+            assert forbidden not in result
+
+    def test_delivery_evidence_source_is_inventory_movements(self) -> None:
+        """deliveryEvidenceSource distinguishes this V1-parity direct-delivery
+        path from the lineage-based customer-exposure path."""
+        result = map_customer_delivery_rows([_cd_row()])
+        assert result is not None
+        assert result["deliveryEvidenceSource"] == "inventory-movements"
+
+    def test_blocked_deliveries_is_zero_no_source(self) -> None:
+        """blockedDeliveries = 0 because no confirmed blocked-status column
+        exists in gold_batch_delivery_v. This is documented governance-pending,
+        not an inferred 'no blocks' assurance."""
+        result = map_customer_delivery_rows([_cd_row()])
+        assert result is not None
+        assert result["blockedDeliveries"] == 0
+
+    def test_highest_severity_is_medium_preliminary(self) -> None:
+        """highestSeverity = 'medium' as a preliminary placeholder while
+        severity business rules are not yet defined for V2. Pin so a
+        regression to 'low' (false reassurance) is caught."""
+        result = map_customer_delivery_rows([_cd_row()])
+        assert result is not None
+        assert result["highestSeverity"] == "medium"
 
 
 # ---------------------------------------------------------------------------
