@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { MaterialSupplierExposurePanel } from './material-supplier-exposure-panel.js'
 import { MassBalancePanel } from '../trace-app/MassBalancePanel.js'
 import { expectNoForbiddenClaims } from './test-utils.js'
@@ -35,6 +35,7 @@ describe('Trace supplier exposure + mass balance (Offline UAT Smoke Check)', () 
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
@@ -65,6 +66,7 @@ describe('Trace supplier exposure + mass balance (Offline UAT Smoke Check)', () 
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(

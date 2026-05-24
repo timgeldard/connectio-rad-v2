@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { InboundOutboundSummaryPanel } from './inbound-outbound-summary-panel.js'
 import { expectNoForbiddenClaims } from './test-utils.js'
@@ -18,6 +18,7 @@ describe('Warehouse inbound (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(

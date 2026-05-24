@@ -31,6 +31,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
     vi.mocked(queries.useBatchHeaderSummary).mockReturnValue({
       data: { ok: true, data: mockData, fetchedAt: new Date().toISOString(), source: 'mock' },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
@@ -58,6 +59,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
     vi.mocked(queries.useCustomerExposureSummary).mockReturnValue({
       data: { ok: true, data: mockData, fetchedAt: new Date().toISOString(), source: 'mock' },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
@@ -79,6 +81,7 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     render(<BatchHeaderPanel request={{ investigationId: 'INV-1', batchId: 'BATCH-001' }} />)

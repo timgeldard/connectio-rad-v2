@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { WarehouseReconciliationExceptionsPanel } from './warehouse-reconciliation-exceptions-panel.js'
 import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/warehouse-360-queries.js'
@@ -29,6 +29,7 @@ describe('Warehouse exceptions (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { ProcessOrderHeaderPanel } from './process-order-header-panel.js'
 import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/process-order-review-queries.js'
@@ -28,6 +28,7 @@ describe('POH process-order header (Offline UAT Smoke Check)', () => {
         source: 'mock',
       },
       isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { container } = render(
