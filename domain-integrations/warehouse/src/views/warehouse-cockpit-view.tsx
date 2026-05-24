@@ -648,23 +648,18 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               )}
             </div>
 
-            {/* Metric 4 */}
-            <div style={CARD_STYLE}>
+            {/* Metric 4 — BLOCKED: nearExpiryCount and reconciliationExceptionCount require governance (Gates 4 & 5) */}
+            <div style={{ ...CARD_STYLE, borderLeft: `4px solid ${COLORS.warning}`, background: '#fffbeb' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate600, marginBottom: 8 }}>EXCEPTIONS & INVENTORY STATUS</div>
-              {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
-              ) : overviewQuery.data?.ok ? (
-                <div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
-                    {overviewQuery.data.data.reconciliationExceptionCount}
-                  </div>
-                  <div style={{ fontSize: 12, color: COLORS.slate600, fontWeight: 600, marginTop: 4 }}>
-                    🚨 {overviewQuery.data.data.nearExpiryCount} Expiry | {overviewQuery.data.data.blockedStockCount} Blocked
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: COLORS.slate600 }}>Overview unavailable</div>
-              )}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 6 }}>
+                ⚠️ Overview Blocked — Governance Pending
+              </div>
+              <div style={{ fontSize: 11, color: '#78350f', lineHeight: 1.5 }}>
+                <strong>nearExpiryCount</strong> and <strong>reconciliationExceptionCount</strong> require governed thresholds, inclusion rules, and source owner acceptance before display. Gates 4 and 5 are open.
+              </div>
+              <div style={{ fontSize: 11, color: COLORS.slate600, marginTop: 8 }}>
+                Drill-through evidence (inbound, staging, exceptions) is accessible below.
+              </div>
             </div>
           </div>
 
