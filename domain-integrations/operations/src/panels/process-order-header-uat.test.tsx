@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ProcessOrderHeaderPanel } from './process-order-header-panel.js'
-import { expectNoForbiddenClaims } from '@connectio/evidence-panel-runtime/test-utils'
+import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/process-order-review-queries.js'
 
 vi.mock('../adapters/process-order-review-queries.js', () => ({

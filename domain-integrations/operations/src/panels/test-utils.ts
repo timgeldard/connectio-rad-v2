@@ -14,13 +14,6 @@ const FORBIDDEN_CLAIMS = [
   'fully contained',
 ]
 
-/**
- * Checks that none of the forbidden claims are present in the text content
- * of the provided container, ignoring casing.
- *
- * @param container The HTML element to check
- * @param allowedExceptions Optional list of claims to allow for this specific test
- */
 export function expectNoForbiddenClaims(container: HTMLElement, allowedExceptions: string[] = []) {
   const content = container.textContent?.toLowerCase() || ''
   const forbidden = FORBIDDEN_CLAIMS.filter((claim) => !allowedExceptions.includes(claim))

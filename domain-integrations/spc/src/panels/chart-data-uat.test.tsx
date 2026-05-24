@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ControlChartPanel } from './control-chart-panel.js'
-import { expectNoForbiddenClaims } from '@connectio/evidence-panel-runtime/test-utils'
+import { expectNoForbiddenClaims } from './test-utils.js'
 import * as queries from '../adapters/spc-monitoring-queries.js'
 
 vi.mock('../adapters/spc-monitoring-queries.js', () => ({
@@ -17,6 +17,7 @@ describe('SPC chart data (Offline UAT Smoke Check)', () => {
           seriesId: 'SPC-001',
           characteristicId: 'CHAR-1',
           characteristicName: 'Weight',
+          chartType: 'individuals',
           uom: 'g',
           dataPoints: [
             {
