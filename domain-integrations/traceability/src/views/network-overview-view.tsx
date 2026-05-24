@@ -306,7 +306,7 @@ function InlineNodeDetail({
             : node.materialDescription}
         </p>
         <p style={{ margin: '2px 0 0', fontSize: 11, fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>
-          {node.type ?? 'unknown'} · depth {node.depth ?? 0} · {node.riskLevel ?? 'none'}
+          {node.type ?? 'unknown'} · depth {node.depth ?? '—'} · risk: {node.riskLevel ?? 'unknown'}
         </p>
       </div>
       <button
