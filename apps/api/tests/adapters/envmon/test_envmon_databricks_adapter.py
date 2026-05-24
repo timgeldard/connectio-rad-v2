@@ -19,6 +19,7 @@ from adapters.envmon.envmon_databricks_adapter import (
     map_site_summary_rows,
     map_swab_result_rows,
     _default_site_summary,
+    _map_status,
 )
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.errors import DatabricksConfigError
@@ -741,3 +742,114 @@ class TestMapSwabResultRows:
         assert row["micCode"] == "MIC001"
         assert row["inspector"] == "USER001"
         assert row["inspectionMethod"] == "METHOD-001"
+
+    def test_required_identifiers_preserved(self) -> None:
+        """sampleId, inspectionPointId, operationId, plantId must all be mapped from source."""
+        result = map_swab_result_rows([self._fail_row()])
+        row = result[0]
+        assert row["sampleId"] == "S001"
+        assert row["inspectionPointId"] == "00005678"
+        assert row["operationId"] == "0010"
+        assert row["plantId"] == "C061"
+        assert row["inspectionType"] == "14"
+        assert row["createdDate"] == "2026-01-15"
+
+    def test_null_unit_of_measure_returns_none(self) -> None:
+        """UOM must not be defaulted to KG or EA — null source value must remain null."""
+        row = {**self._fail_row(), "unit_of_measure": None}
+        result = map_swab_result_rows([row])
+        assert result[0]["unitOfMeasure"] is None
+
+    def test_null_inspection_end_date_returns_none(self) -> None:
+        """Ongoing inspection lots have no end date — must not be fabricated."""
+        row = {**self._fail_row(), "inspection_end_date": None}
+        result = map_swab_result_rows([row])
+        assert result[0]["inspectionEndDate"] is None
+
+    def test_null_process_order_id_and_batch_id_return_none(self) -> None:
+        """Standalone environmental lots are not linked to a process order or batch."""
+        row = {**self._fail_row(), "process_order_id": None, "batch_id": None}
+        result = map_swab_result_rows([row])
+        assert result[0]["processOrderId"] is None
+        assert result[0]["batchId"] is None
+
+    def test_null_mic_fields_when_left_join_returns_no_match(self) -> None:
+        """LEFT JOIN: inspection points with no result row produce all-null MIC/result fields.
+        Status must be 'pending' — not 'pass' or 'ok' — and no UOM default is invented."""
+        row = {
+            **self._fail_row(),
+            "mic_id": None,
+            "mic_name": None,
+            "mic_code": None,
+            "result": None,
+            "quantitative_result": None,
+            "qualitative_result": None,
+            "target_value": None,
+            "upper_tolerance": None,
+            "lower_tolerance": None,
+            "unit_of_measure": None,
+            "valuation": None,
+            "inspector": None,
+            "inspection_method": None,
+        }
+        result = map_swab_result_rows([row])
+        item = result[0]
+        assert item["status"] == "pending"
+        assert item["micId"] is None
+        assert item["micName"] is None
+        assert item["unitOfMeasure"] is None
+        assert item["quantitativeResult"] is None
+
+    def test_no_root_cause_or_safety_claim_in_output(self) -> None:
+        """Mapper must not invent root cause, sanitation, or area safety conclusions."""
+        result = map_swab_result_rows([self._fail_row()])
+        item = result[0]
+        forbidden = {"rootCause", "sanitationRequired", "sanitationComplete", "areaSafe", "areaUnsafe", "cleaningRequired"}
+        assert not forbidden.intersection(item.keys())
+
+
+# ---------------------------------------------------------------------------
+# _map_status (direct unit tests)
+# ---------------------------------------------------------------------------
+
+class TestMapStatus:
+    """Direct tests for _map_status valuation → category mapping (confirmed-v1+ddl)."""
+
+    def test_none_returns_pending(self) -> None:
+        assert _map_status(None) == "pending"
+
+    def test_empty_string_returns_pending(self) -> None:
+        assert _map_status("") == "pending"
+
+    def test_whitespace_returns_pending(self) -> None:
+        assert _map_status("   ") == "pending"
+
+    def test_r_returns_fail(self) -> None:
+        assert _map_status("R") == "fail"
+
+    def test_rej_returns_fail(self) -> None:
+        assert _map_status("REJ") == "fail"
+
+    def test_reject_returns_fail(self) -> None:
+        assert _map_status("REJECT") == "fail"
+
+    def test_lowercase_r_returns_fail(self) -> None:
+        """_map_status applies .upper() so lowercase variants still map correctly."""
+        assert _map_status("r") == "fail"
+
+    def test_w_returns_warning(self) -> None:
+        assert _map_status("W") == "warning"
+
+    def test_warn_returns_warning(self) -> None:
+        assert _map_status("WARN") == "warning"
+
+    def test_warning_returns_warning(self) -> None:
+        assert _map_status("WARNING") == "warning"
+
+    def test_accepted_a_returns_pass(self) -> None:
+        assert _map_status("A") == "pass"
+
+    def test_unrecognised_valuation_returns_pass(self) -> None:
+        """Any non-empty, non-fail, non-warn valuation is treated as pass — V1-confirmed."""
+        assert _map_status("X") == "pass"
+        assert _map_status("Z") == "pass"
