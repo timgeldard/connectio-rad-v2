@@ -28,9 +28,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "detail"
-      ],
+      "required": ["detail"],
       "additionalProperties": false
     },
     "BatchHeaderSummary": {
@@ -58,13 +56,7 @@
         },
         "batchStatus": {
           "type": "string",
-          "enum": [
-            "active",
-            "archived",
-            "blocked",
-            "deleted",
-            "unknown"
-          ],
+          "enum": ["active", "archived", "blocked", "deleted", "unknown"],
           "description": "[classification: source-field]"
         },
         "quantity": {
@@ -123,25 +115,12 @@
         },
         "qualityStatus": {
           "type": "string",
-          "enum": [
-            "accepted",
-            "rejected",
-            "pending",
-            "conditional",
-            "not-applicable",
-            "unknown"
-          ],
+          "enum": ["accepted", "rejected", "pending", "conditional", "not-applicable", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "releaseStatus": {
           "type": "string",
-          "enum": [
-            "released",
-            "blocked",
-            "restricted",
-            "not-released",
-            "unknown"
-          ],
+          "enum": ["released", "blocked", "restricted", "not-released", "unknown"],
           "description": "[classification: governance-pending]"
         }
       },
@@ -230,19 +209,12 @@
             },
             "confidenceSource": {
               "type": "string",
-              "enum": [
-                "application-heuristic",
-                "governed"
-              ],
+              "enum": ["application-heuristic", "governed"],
               "description": "[classification: application-heuristic]"
             },
             "heuristicQualityStatus": {
               "type": "string",
-              "enum": [
-                "accepted",
-                "conditional",
-                "rejected"
-              ],
+              "enum": ["accepted", "conditional", "rejected"],
               "description": "[classification: application-heuristic]"
             },
             "notes": {
@@ -287,31 +259,15 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "ok",
-                      "warn",
-                      "fail"
-                    ],
+                    "enum": ["ok", "warn", "fail"],
                     "description": "[classification: application-heuristic]"
                   },
                   "binary": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "description": "[classification: source-field]"
                   }
                 },
-                "required": [
-                  "mic",
-                  "param",
-                  "low",
-                  "high",
-                  "target",
-                  "actual",
-                  "uom",
-                  "status"
-                ],
+                "required": ["mic", "param", "low", "high", "target", "actual", "uom", "status"],
                 "additionalProperties": false
               }
             }
@@ -440,11 +396,7 @@
               },
               "result": {
                 "type": "string",
-                "enum": [
-                  "accept",
-                  "conditional",
-                  "reject"
-                ],
+                "enum": ["accept", "conditional", "reject"],
                 "description": "[classification: application-heuristic]"
               },
               "mics": {
@@ -460,15 +412,7 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "id",
-              "date",
-              "inspection",
-              "result",
-              "mics",
-              "failed",
-              "decisionBy"
-            ],
+            "required": ["id", "date", "inspection", "result", "mics", "failed", "decisionBy"],
             "additionalProperties": false
           }
         },
@@ -484,17 +428,11 @@
               "description": "[classification: application-derived]"
             },
             "detailUrl": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "description": "[classification: application-derived]"
             }
           },
-          "required": [
-            "variance",
-            "note"
-          ],
+          "required": ["variance", "note"],
           "additionalProperties": false
         },
         "usageDecisionEvidence": {
@@ -512,11 +450,7 @@
               },
               "decisionType": {
                 "type": "string",
-                "enum": [
-                  "usage-decision-recorded",
-                  "inspection-completed",
-                  "none"
-                ],
+                "enum": ["usage-decision-recorded", "inspection-completed", "none"],
                 "description": "[classification: source-field]"
               },
               "recordedAt": {
@@ -524,12 +458,7 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "role",
-              "decisionBy",
-              "decisionType",
-              "recordedAt"
-            ],
+            "required": ["role", "decisionBy", "decisionType", "recordedAt"],
             "additionalProperties": false
           }
         }
@@ -583,11 +512,7 @@
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "routine",
-            "expedited",
-            "critical"
-          ]
+          "enum": ["routine", "expedited", "critical"]
         },
         "assignedTo": {
           "type": "string"
@@ -609,12 +534,7 @@
         },
         "releaseType": {
           "type": "string",
-          "enum": [
-            "standard",
-            "conditional",
-            "emergency",
-            "retrospective"
-          ]
+          "enum": ["standard", "conditional", "emergency", "retrospective"]
         }
       },
       "required": [
@@ -665,11 +585,7 @@
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "routine",
-            "expedited",
-            "critical"
-          ]
+          "enum": ["routine", "expedited", "critical"]
         },
         "dueBy": {
           "type": "string",
@@ -736,12 +652,7 @@
         },
         "overallReadiness": {
           "type": "string",
-          "enum": [
-            "ready",
-            "conditional",
-            "blocked",
-            "incomplete"
-          ]
+          "enum": ["ready", "conditional", "blocked", "incomplete"]
         },
         "qualityPassed": {
           "type": "boolean"
@@ -775,13 +686,7 @@
         },
         "recommendedAction": {
           "type": "string",
-          "enum": [
-            "release",
-            "conditional-release",
-            "reject",
-            "escalate",
-            "retest"
-          ]
+          "enum": ["release", "conditional-release", "reject", "escalate", "retest"]
         },
         "lastEvaluatedAt": {
           "type": "string",
@@ -838,26 +743,14 @@
         },
         "releaseStatus": {
           "type": "string",
-          "enum": [
-            "released",
-            "blocked",
-            "restricted",
-            "unrestricted",
-            "unknown"
-          ]
+          "enum": ["released", "blocked", "restricted", "unrestricted", "unknown"]
         },
         "expiryDate": {
           "type": "string",
           "format": "date-time"
         }
       },
-      "required": [
-        "batchId",
-        "materialId",
-        "materialDescription",
-        "plantId",
-        "releaseStatus"
-      ],
+      "required": ["batchId", "materialId", "materialDescription", "plantId", "releaseStatus"],
       "additionalProperties": false
     },
     "CharacteristicCapability": {
@@ -909,12 +802,7 @@
         },
         "interpretation": {
           "type": "string",
-          "enum": [
-            "capable",
-            "marginal",
-            "not-capable",
-            "insufficient-data"
-          ],
+          "enum": ["capable", "marginal", "not-capable", "insufficient-data"],
           "description": "[classification: application-heuristic]"
         },
         "limitProvenance": {
@@ -929,12 +817,7 @@
         },
         "approvalState": {
           "type": "string",
-          "enum": [
-            "approved",
-            "not-approved",
-            "pending-validation",
-            "unavailable"
-          ],
+          "enum": ["approved", "not-approved", "pending-validation", "unavailable"],
           "description": "[classification: governance-pending]"
         }
       },
@@ -967,12 +850,7 @@
         },
         "readinessStatus": {
           "type": "string",
-          "enum": [
-            "complete",
-            "incomplete",
-            "pending-sign-off",
-            "not-applicable"
-          ]
+          "enum": ["complete", "incomplete", "pending-sign-off", "not-applicable"]
         },
         "missingFields": {
           "type": "array",
@@ -1004,18 +882,10 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "complete",
-                  "incomplete",
-                  "not-required"
-                ]
+                "enum": ["complete", "incomplete", "not-required"]
               }
             },
-            "required": [
-              "customerId",
-              "customerName",
-              "status"
-            ],
+            "required": ["customerId", "customerName", "status"],
             "additionalProperties": false
           }
         },
@@ -1043,24 +913,12 @@
         },
         "releaseStatus": {
           "type": "string",
-          "enum": [
-            "released",
-            "not-released",
-            "conditional",
-            "blocked",
-            "unknown"
-          ],
+          "enum": ["released", "not-released", "conditional", "blocked", "unknown"],
           "description": "[classification: governance-pending]"
         },
         "usageDecision": {
           "type": "string",
-          "enum": [
-            "accept",
-            "reject",
-            "pending",
-            "conditional",
-            "not-set"
-          ],
+          "enum": ["accept", "reject", "pending", "conditional", "not-set"],
           "description": "[classification: source-field]"
         },
         "openQualityLots": {
@@ -1117,9 +975,7 @@
           "default": false
         }
       },
-      "required": [
-        "level"
-      ],
+      "required": ["level"],
       "additionalProperties": false
     },
     "ConnectedQualityLabFailure": {
@@ -1160,16 +1016,10 @@
         },
         "sev": {
           "type": "string",
-          "enum": [
-            "fail",
-            "warn"
-          ]
+          "enum": ["fail", "warn"]
         },
         "ts": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "lotType": {
           "type": "string"
@@ -1236,16 +1086,10 @@
               },
               "sev": {
                 "type": "string",
-                "enum": [
-                  "fail",
-                  "warn"
-                ]
+                "enum": ["fail", "warn"]
               },
               "ts": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "lotType": {
                 "type": "string"
@@ -1283,10 +1127,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "fails",
-        "dataAvailable"
-      ],
+      "required": ["fails", "dataAvailable"],
       "additionalProperties": false
     },
     "ConnectedQualityLabPlant": {
@@ -1299,10 +1140,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "plantId",
-        "plantName"
-      ],
+      "required": ["plantId", "plantName"],
       "additionalProperties": false
     },
     "ConnectedQualityLabPlantsResponse": {
@@ -1320,17 +1158,12 @@
                 "type": "string"
               }
             },
-            "required": [
-              "plantId",
-              "plantName"
-            ],
+            "required": ["plantId", "plantName"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "plants"
-      ],
+      "required": ["plants"],
       "additionalProperties": false
     },
     "ControlChartPoint": {
@@ -1366,22 +1199,11 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "not-evaluated",
-            "in-control",
-            "warning",
-            "out-of-control"
-          ],
+          "enum": ["not-evaluated", "in-control", "warning", "out-of-control"],
           "description": "[classification: application-heuristic]"
         }
       },
-      "required": [
-        "pointId",
-        "timestamp",
-        "value",
-        "signalIds",
-        "status"
-      ],
+      "required": ["pointId", "timestamp", "value", "signalIds", "status"],
       "additionalProperties": false
     },
     "ControlChartSeries": {
@@ -1449,22 +1271,11 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "not-evaluated",
-                  "in-control",
-                  "warning",
-                  "out-of-control"
-                ],
+                "enum": ["not-evaluated", "in-control", "warning", "out-of-control"],
                 "description": "[classification: application-heuristic]"
               }
             },
-            "required": [
-              "pointId",
-              "timestamp",
-              "value",
-              "signalIds",
-              "status"
-            ],
+            "required": ["pointId", "timestamp", "value", "signalIds", "status"],
             "additionalProperties": false
           }
         },
@@ -1489,10 +1300,7 @@
           "description": "[classification: source-field]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "confidence": {
@@ -1513,12 +1321,7 @@
         },
         "approvalState": {
           "type": "string",
-          "enum": [
-            "approved",
-            "not-approved",
-            "pending-validation",
-            "unavailable"
-          ],
+          "enum": ["approved", "not-approved", "pending-validation", "unavailable"],
           "description": "[classification: governance-pending]"
         },
         "lockedLimits": {
@@ -1573,13 +1376,7 @@
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["none", "low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "blockedDeliveries": {
@@ -1588,7 +1385,7 @@
           "description": "[classification: source-field]"
         },
         "recallRecommended": {
-          "type": "boolean",
+          "type": ["boolean", "null"],
           "description": "[classification: governance-pending]"
         },
         "maxExposureDepth": {
@@ -1604,20 +1401,14 @@
           "description": "[classification: source-field]"
         },
         "uom": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "deliveryEvidenceSource": {
           "anyOf": [
             {
               "type": "string",
-              "enum": [
-                "lineage",
-                "inventory-movements"
-              ]
+              "enum": ["lineage", "inventory-movements"]
             },
             {
               "type": "null"
@@ -1668,32 +1459,15 @@
               },
               "type": {
                 "type": "string",
-                "enum": [
-                  "process",
-                  "quality",
-                  "environmental",
-                  "supplier",
-                  "equipment",
-                  "other"
-                ]
+                "enum": ["process", "quality", "environmental", "supplier", "equipment", "other"]
               },
               "severity": {
                 "type": "string",
-                "enum": [
-                  "minor",
-                  "major",
-                  "critical"
-                ]
+                "enum": ["minor", "major", "critical"]
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "open",
-                  "under-investigation",
-                  "pending-approval",
-                  "closed",
-                  "waived"
-                ]
+                "enum": ["open", "under-investigation", "pending-approval", "closed", "waived"]
               },
               "description": {
                 "type": "string"
@@ -1765,10 +1539,7 @@
           }
         }
       },
-      "required": [
-        "targetWorkspaceId",
-        "label"
-      ],
+      "required": ["targetWorkspaceId", "label"],
       "additionalProperties": false
     },
     "EntityRef": {
@@ -1784,10 +1555,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "id",
-        "type"
-      ],
+      "required": ["id", "type"],
       "additionalProperties": false
     },
     "EnvMonAlert": {
@@ -1811,13 +1579,7 @@
         },
         "testType": {
           "type": "string",
-          "enum": [
-            "swab",
-            "air-sample",
-            "surface-contact",
-            "rinse-water",
-            "other"
-          ],
+          "enum": ["swab", "air-sample", "surface-contact", "rinse-water", "other"],
           "description": "[classification: source-field]"
         },
         "organism": {
@@ -1826,12 +1588,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "detectedAt": {
@@ -1846,13 +1603,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "investigating",
-            "corrective-action",
-            "resolved",
-            "escalated"
-          ],
+          "enum": ["open", "investigating", "corrective-action", "resolved", "escalated"],
           "description": "[classification: source-field]"
         },
         "correctiveActionId": {
@@ -1925,12 +1676,7 @@
         },
         "overallRiskStatus": {
           "type": "string",
-          "enum": [
-            "compliant",
-            "elevated",
-            "non-compliant",
-            "unknown"
-          ],
+          "enum": ["compliant", "elevated", "non-compliant", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "lastSampleDate": {
@@ -2003,23 +1749,12 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "pending-verification",
-            "closed",
-            "overdue"
-          ],
+          "enum": ["open", "in-progress", "pending-verification", "closed", "overdue"],
           "description": "[classification: source-field]"
         },
         "assignee": {
@@ -2079,12 +1814,7 @@
         },
         "hygieneZone": {
           "type": "string",
-          "enum": [
-            "zone-1",
-            "zone-2",
-            "zone-3",
-            "zone-4"
-          ],
+          "enum": ["zone-1", "zone-2", "zone-3", "zone-4"],
           "description": "[classification: source-field]"
         },
         "riskScore": {
@@ -2110,13 +1840,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "compliant",
-            "alert",
-            "overdue",
-            "corrective-action",
-            "suspended"
-          ],
+          "enum": ["compliant", "alert", "overdue", "corrective-action", "suspended"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -2193,12 +1917,7 @@
         },
         "trendDirection": {
           "type": "string",
-          "enum": [
-            "improving",
-            "stable",
-            "deteriorating",
-            "unknown"
-          ],
+          "enum": ["improving", "stable", "deteriorating", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "confidence": {
@@ -2229,54 +1948,33 @@
       "type": "object",
       "properties": {
         "inspectionLotId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "inspectionPointId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "sampleId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "operationId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "functionalLocation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "sampleSummary": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "sampleHour": {
           "anyOf": [
             {
-              "type": [
-                "string",
-                "number"
-              ]
+              "type": ["string", "number"]
             },
             {
               "type": "null"
@@ -2285,61 +1983,37 @@
           "description": "[classification: source-field]"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "inspectionType": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "createdDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "inspectionEndDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "micId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "micName": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "micCode": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "result": {
           "anyOf": [
             {
-              "type": [
-                "string",
-                "number"
-              ]
+              "type": ["string", "number"]
             },
             {
               "type": "null"
@@ -2350,10 +2024,7 @@
         "quantitativeResult": {
           "anyOf": [
             {
-              "type": [
-                "number",
-                "string"
-              ]
+              "type": ["number", "string"]
             },
             {
               "type": "null"
@@ -2362,19 +2033,13 @@
           "description": "[classification: source-field]"
         },
         "qualitativeResult": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "targetValue": {
           "anyOf": [
             {
-              "type": [
-                "number",
-                "string"
-              ]
+              "type": ["number", "string"]
             },
             {
               "type": "null"
@@ -2385,10 +2050,7 @@
         "upperTolerance": {
           "anyOf": [
             {
-              "type": [
-                "number",
-                "string"
-              ]
+              "type": ["number", "string"]
             },
             {
               "type": "null"
@@ -2399,10 +2061,7 @@
         "lowerTolerance": {
           "anyOf": [
             {
-              "type": [
-                "number",
-                "string"
-              ]
+              "type": ["number", "string"]
             },
             {
               "type": "null"
@@ -2411,62 +2070,36 @@
           "description": "[classification: source-field]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "valuation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "fail",
-            "warning",
-            "pending",
-            "pass"
-          ],
+          "enum": ["fail", "warning", "pending", "pass"],
           "description": "[classification: application-heuristic]"
         },
         "inspector": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "inspectionMethod": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "materialId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "batchId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "processOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         }
       },
@@ -2552,22 +2185,12 @@
         },
         "riskStatus": {
           "type": "string",
-          "enum": [
-            "compliant",
-            "elevated",
-            "non-compliant",
-            "unknown"
-          ],
+          "enum": ["compliant", "elevated", "non-compliant", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "confidence": {
@@ -2618,13 +2241,7 @@
         },
         "testType": {
           "type": "string",
-          "enum": [
-            "swab",
-            "air-sample",
-            "surface-contact",
-            "rinse-water",
-            "other"
-          ],
+          "enum": ["swab", "air-sample", "surface-contact", "rinse-water", "other"],
           "description": "[classification: source-field]"
         },
         "organism": {
@@ -2633,12 +2250,7 @@
         },
         "result": {
           "type": "string",
-          "enum": [
-            "negative",
-            "positive",
-            "borderline",
-            "pending"
-          ],
+          "enum": ["negative", "positive", "borderline", "pending"],
           "description": "[classification: source-field]"
         },
         "cfu": {
@@ -2706,13 +2318,7 @@
         },
         "frequency": {
           "type": "string",
-          "enum": [
-            "daily",
-            "weekly",
-            "bi-weekly",
-            "monthly",
-            "quarterly"
-          ],
+          "enum": ["daily", "weekly", "bi-weekly", "monthly", "quarterly"],
           "description": "[classification: source-field]"
         },
         "nextDueDate": {
@@ -2727,12 +2333,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "on-schedule",
-            "overdue",
-            "in-progress",
-            "suspended"
-          ],
+          "enum": ["on-schedule", "overdue", "in-progress", "suspended"],
           "description": "[classification: source-field]"
         },
         "pointCount": {
@@ -2836,35 +2437,17 @@
         },
         "areaType": {
           "type": "string",
-          "enum": [
-            "production",
-            "storage",
-            "packaging",
-            "utility",
-            "corridor",
-            "other"
-          ],
+          "enum": ["production", "storage", "packaging", "utility", "corridor", "other"],
           "description": "[classification: source-field]"
         },
         "hygieneZone": {
           "type": "string",
-          "enum": [
-            "zone-1",
-            "zone-2",
-            "zone-3",
-            "zone-4"
-          ],
+          "enum": ["zone-1", "zone-2", "zone-3", "zone-4"],
           "description": "[classification: source-field]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "compliant",
-            "alert",
-            "overdue",
-            "corrective-action",
-            "suspended"
-          ],
+          "enum": ["compliant", "alert", "overdue", "corrective-action", "suspended"],
           "description": "[classification: application-heuristic]"
         },
         "lastSampleDate": {
@@ -2939,13 +2522,7 @@
         },
         "currentStatus": {
           "type": "string",
-          "enum": [
-            "running",
-            "planned-down",
-            "unplanned-down",
-            "standby",
-            "maintenance"
-          ],
+          "enum": ["running", "planned-down", "unplanned-down", "standby", "maintenance"],
           "description": "[classification: application-heuristic]"
         },
         "openWorkOrderCount": {
@@ -3002,9 +2579,9 @@
           "type": "object",
           "properties": {
             "lastRefreshedAt": {
-      "type": ["string", "null"],
-      "format": "date-time"
-    },
+              "type": ["string", "null"],
+              "format": "date-time"
+            },
             "isStale": {
               "type": "boolean"
             },
@@ -3012,11 +2589,7 @@
               "type": "number"
             }
           },
-          "required": [
-            "lastRefreshedAt",
-            "isStale",
-            "staleAfterSeconds"
-          ],
+          "required": ["lastRefreshedAt", "isStale", "staleAfterSeconds"],
           "additionalProperties": false
         },
         "confidence": {
@@ -3042,19 +2615,14 @@
               "default": false
             }
           },
-          "required": [
-            "level"
-          ],
+          "required": ["level"],
           "additionalProperties": false
         },
         "errorMessage": {
           "type": "string"
         }
       },
-      "required": [
-        "panelId",
-        "displayState"
-      ],
+      "required": ["panelId", "displayState"],
       "additionalProperties": false
     },
     "ExecutionTimelineItem": {
@@ -3103,32 +2671,20 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         }
       },
-      "required": [
-        "eventId",
-        "timestamp",
-        "eventType",
-        "title",
-        "description",
-        "sourceSystem"
-      ],
+      "required": ["eventId", "timestamp", "eventType", "title", "description", "sourceSystem"],
       "additionalProperties": false
     },
     "FreshnessMetadata": {
       "type": "object",
       "properties": {
         "lastRefreshedAt": {
-      "type": ["string", "null"],
-      "format": "date-time"
-    },
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
         "isStale": {
           "type": "boolean"
         },
@@ -3136,11 +2692,7 @@
           "type": "number"
         }
       },
-      "required": [
-        "lastRefreshedAt",
-        "isStale",
-        "staleAfterSeconds"
-      ],
+      "required": ["lastRefreshedAt", "isStale", "staleAfterSeconds"],
       "additionalProperties": false
     },
     "GoodsMovementEvent": {
@@ -3225,69 +2777,40 @@
           "type": "string"
         },
         "reasonCode": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "qty": {
           "type": "number"
         },
         "uom": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "opened": {
           "type": "string"
         },
         "resolved": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "owner": {
           "type": "string"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "pending",
-            "released",
-            "rejected"
-          ]
+          "enum": ["pending", "released", "rejected"]
         },
         "detail": {
           "type": "string"
         },
         "resolution": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
-      "required": [
-        "id",
-        "reason",
-        "qty",
-        "uom",
-        "opened",
-        "owner",
-        "status",
-        "detail"
-      ],
+      "required": ["id", "reason", "qty", "uom", "opened", "owner", "status", "detail"],
       "additionalProperties": false
     },
     "HoldStatus": {
       "type": "string",
-      "enum": [
-        "pending",
-        "released",
-        "rejected"
-      ]
+      "enum": ["pending", "released", "rejected"]
     },
     "HoldsLedger": {
       "type": "object",
@@ -3304,60 +2827,35 @@
                 "type": "string"
               },
               "reasonCode": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "qty": {
                 "type": "number"
               },
               "uom": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "opened": {
                 "type": "string"
               },
               "resolved": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "owner": {
                 "type": "string"
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "released",
-                  "rejected"
-                ]
+                "enum": ["pending", "released", "rejected"]
               },
               "detail": {
                 "type": "string"
               },
               "resolution": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               }
             },
-            "required": [
-              "id",
-              "reason",
-              "qty",
-              "uom",
-              "opened",
-              "owner",
-              "status",
-              "detail"
-            ],
+            "required": ["id", "reason", "qty", "uom", "opened", "owner", "status", "detail"],
             "additionalProperties": false
           }
         },
@@ -3382,33 +2880,18 @@
                 "type": "number"
               },
               "uom": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "color": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               }
             },
-            "required": [
-              "code",
-              "label",
-              "qty",
-              "uom"
-            ],
+            "required": ["code", "label", "qty", "uom"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "activeHolds",
-        "resolvedHolds",
-        "qtyByReason"
-      ],
+      "required": ["activeHolds", "resolvedHolds", "qtyByReason"],
       "additionalProperties": false
     },
     "HoldsQtyByReason": {
@@ -3424,24 +2907,13 @@
           "type": "number"
         },
         "uom": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "color": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
-      "required": [
-        "code",
-        "label",
-        "qty",
-        "uom"
-      ],
+      "required": ["code", "label", "qty", "uom"],
       "additionalProperties": false
     },
     "InvestigationTimeline": {
@@ -3479,24 +2951,13 @@
               },
               "tone": {
                 "type": "string",
-                "enum": [
-                  "good",
-                  "warn",
-                  "bad",
-                  "brand",
-                  "neutral"
-                ]
+                "enum": ["good", "warn", "bad", "brand", "neutral"]
               },
               "sourceSystem": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "enum": [
-                      "SAP",
-                      "LIMS",
-                      "TRACE",
-                      "MANUAL"
-                    ]
+                    "enum": ["SAP", "LIMS", "TRACE", "MANUAL"]
                   },
                   {
                     "type": "null"
@@ -3504,21 +2965,12 @@
                 ]
               }
             },
-            "required": [
-              "ts",
-              "type",
-              "label",
-              "actor",
-              "detail",
-              "tone"
-            ],
+            "required": ["ts", "type", "label", "actor", "detail", "tone"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "events"
-      ],
+      "required": ["events"],
       "additionalProperties": false
     },
     "LateOrder": {
@@ -3574,12 +3026,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "owner": {
@@ -3623,14 +3070,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "running",
-            "idle",
-            "changeover",
-            "downtime",
-            "planned-stop",
-            "unknown"
-          ],
+          "enum": ["running", "idle", "changeover", "downtime", "planned-stop", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "oee": {
@@ -3652,12 +3092,7 @@
         },
         "changeoverStatus": {
           "type": "string",
-          "enum": [
-            "not-applicable",
-            "pending",
-            "in-progress",
-            "complete"
-          ],
+          "enum": ["not-applicable", "pending", "in-progress", "complete"],
           "description": "[classification: source-derived]"
         },
         "nextOrderId": {
@@ -3666,13 +3101,7 @@
         },
         "riskLevel": {
           "type": "string",
-          "enum": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["none", "low", "medium", "high", "critical"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -3725,14 +3154,7 @@
         },
         "locationType": {
           "type": "string",
-          "enum": [
-            "bin",
-            "shelf",
-            "rack",
-            "floor",
-            "bulk-area",
-            "staging-lane"
-          ],
+          "enum": ["bin", "shelf", "rack", "floor", "bulk-area", "staging-lane"],
           "description": "[classification: source-field]"
         },
         "isBlocked": {
@@ -3774,11 +3196,7 @@
         },
         "result": {
           "type": "string",
-          "enum": [
-            "accept",
-            "conditional",
-            "reject"
-          ],
+          "enum": ["accept", "conditional", "reject"],
           "description": "[classification: application-heuristic]"
         },
         "mics": {
@@ -3794,15 +3212,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "id",
-        "date",
-        "inspection",
-        "result",
-        "mics",
-        "failed",
-        "decisionBy"
-      ],
+      "required": ["id", "date", "inspection", "result", "mics", "failed", "decisionBy"],
       "additionalProperties": false
     },
     "MICFailure": {
@@ -3834,15 +3244,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "organism",
-        "testMethod",
-        "result",
-        "limit",
-        "unit",
-        "exceededBy",
-        "testedAt"
-      ],
+      "required": ["organism", "testMethod", "result", "limit", "unit", "exceededBy", "testedAt"],
       "additionalProperties": false
     },
     "MaintenanceBacklogItem": {
@@ -3880,22 +3282,12 @@
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "critical",
-            "high",
-            "medium",
-            "low"
-          ],
+          "enum": ["critical", "high", "medium", "low"],
           "description": "[classification: source-field]"
         },
         "productionImpact": {
           "type": "string",
-          "enum": [
-            "line-down",
-            "reduced-capacity",
-            "no-impact",
-            "risk-only"
-          ],
+          "enum": ["line-down", "reduced-capacity", "no-impact", "risk-only"],
           "description": "[classification: source-field]"
         },
         "targetCompletionDate": {
@@ -3954,12 +3346,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "expectedResolutionAt": {
@@ -3976,13 +3363,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "active",
-            "scheduled",
-            "in-progress",
-            "resolved",
-            "overdue"
-          ],
+          "enum": ["active", "scheduled", "in-progress", "resolved", "overdue"],
           "description": "[classification: source-field]"
         }
       },
@@ -4125,10 +3506,7 @@
           "description": "[classification: source-field]"
         },
         "date": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "delta": {
@@ -4141,13 +3519,7 @@
         },
         "code": {
           "type": "string",
-          "enum": [
-            "101",
-            "261",
-            "601",
-            "701",
-            "Z01"
-          ],
+          "enum": ["101", "261", "601", "701", "Z01"],
           "description": "[classification: source-field]"
         },
         "label": {
@@ -4155,13 +3527,7 @@
           "description": "[classification: application-derived]"
         }
       },
-      "required": [
-        "d",
-        "delta",
-        "cum",
-        "code",
-        "label"
-      ],
+      "required": ["d", "delta", "cum", "code", "label"],
       "additionalProperties": false
     },
     "MassBalanceKpi": {
@@ -4192,7 +3558,7 @@
           "description": "[classification: source-derived]"
         },
         "uom": {
-          "type": "string",
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "postings": {
@@ -4215,12 +3581,7 @@
               "description": "[classification: source-derived]"
             }
           },
-          "required": [
-            "production",
-            "consumption",
-            "dispatch",
-            "adjustment"
-          ],
+          "required": ["production", "consumption", "dispatch", "adjustment"],
           "additionalProperties": false
         }
       },
@@ -4267,7 +3628,7 @@
               "description": "[classification: source-derived]"
             },
             "uom": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "[classification: source-field]"
             },
             "postings": {
@@ -4290,12 +3651,7 @@
                   "description": "[classification: source-derived]"
                 }
               },
-              "required": [
-                "production",
-                "consumption",
-                "dispatch",
-                "adjustment"
-              ],
+              "required": ["production", "consumption", "dispatch", "adjustment"],
               "additionalProperties": false
             }
           },
@@ -4321,10 +3677,7 @@
                 "description": "[classification: source-field]"
               },
               "date": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "[classification: source-field]"
               },
               "delta": {
@@ -4337,13 +3690,7 @@
               },
               "code": {
                 "type": "string",
-                "enum": [
-                  "101",
-                  "261",
-                  "601",
-                  "701",
-                  "Z01"
-                ],
+                "enum": ["101", "261", "601", "701", "Z01"],
                 "description": "[classification: source-field]"
               },
               "label": {
@@ -4351,13 +3698,7 @@
                 "description": "[classification: application-derived]"
               }
             },
-            "required": [
-              "d",
-              "delta",
-              "cum",
-              "code",
-              "label"
-            ],
+            "required": ["d", "delta", "cum", "code", "label"],
             "additionalProperties": false
           }
         },
@@ -4371,20 +3712,11 @@
         },
         "reconciliationSource": {
           "type": "string",
-          "enum": [
-            "application-heuristic",
-            "governed"
-          ],
+          "enum": ["application-heuristic", "governed"],
           "description": "[classification: application-heuristic]"
         }
       },
-      "required": [
-        "kpi",
-        "events",
-        "dateStart",
-        "dateEnd",
-        "reconciliationSource"
-      ],
+      "required": ["kpi", "events", "dateStart", "dateEnd", "reconciliationSource"],
       "additionalProperties": false
     },
     "MassBalanceMovement": {
@@ -4396,12 +3728,7 @@
         },
         "category": {
           "type": "string",
-          "enum": [
-            "production",
-            "shipment",
-            "consumption",
-            "adjustment"
-          ],
+          "enum": ["production", "shipment", "consumption", "adjustment"],
           "description": "[classification: application-derived]"
         },
         "quantity": {
@@ -4430,14 +3757,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "date",
-        "category",
-        "quantity",
-        "delta",
-        "runningBalance",
-        "uom"
-      ],
+      "required": ["date", "category", "quantity", "delta", "runningBalance", "uom"],
       "additionalProperties": false
     },
     "MassBalancePostings": {
@@ -4460,12 +3780,7 @@
           "description": "[classification: source-derived]"
         }
       },
-      "required": [
-        "production",
-        "consumption",
-        "dispatch",
-        "adjustment"
-      ],
+      "required": ["production", "consumption", "dispatch", "adjustment"],
       "additionalProperties": false
     },
     "MassBalanceSummary": {
@@ -4513,12 +3828,7 @@
               },
               "category": {
                 "type": "string",
-                "enum": [
-                  "production",
-                  "shipment",
-                  "consumption",
-                  "adjustment"
-                ],
+                "enum": ["production", "shipment", "consumption", "adjustment"],
                 "description": "[classification: application-derived]"
               },
               "quantity": {
@@ -4547,14 +3857,7 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "date",
-              "category",
-              "quantity",
-              "delta",
-              "runningBalance",
-              "uom"
-            ],
+            "required": ["date", "category", "quantity", "delta", "runningBalance", "uom"],
             "additionalProperties": false
           }
         }
@@ -4615,33 +3918,17 @@
         },
         "stagingStatus": {
           "type": "string",
-          "enum": [
-            "not-staged",
-            "partial",
-            "staged",
-            "not-required"
-          ],
+          "enum": ["not-staged", "partial", "staged", "not-required"],
           "description": "[classification: source-field]"
         },
         "procurementStatus": {
           "type": "string",
-          "enum": [
-            "in-stock",
-            "ordered",
-            "delayed",
-            "out-of-stock",
-            "unknown"
-          ],
+          "enum": ["in-stock", "ordered", "delayed", "out-of-stock", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         }
       },
@@ -4706,12 +3993,7 @@
         },
         "highestSignalSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "operationId": {
@@ -4720,11 +4002,7 @@
         },
         "chartTypeSource": {
           "type": "string",
-          "enum": [
-            "heuristic",
-            "override",
-            "manual"
-          ],
+          "enum": ["heuristic", "override", "manual"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -4776,21 +4054,12 @@
         },
         "urgency": {
           "type": "string",
-          "enum": [
-            "expired",
-            "critical",
-            "warning",
-            "caution"
-          ],
+          "enum": ["expired", "critical", "warning", "caution"],
           "description": "[classification: application-heuristic]"
         },
         "holdStatus": {
           "type": "string",
-          "enum": [
-            "unrestricted",
-            "quality-hold",
-            "blocked"
-          ],
+          "enum": ["unrestricted", "quality-hold", "blocked"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -4911,12 +4180,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "sourcePanel": {
@@ -4925,15 +4189,7 @@
         },
         "linkedEntityType": {
           "type": "string",
-          "enum": [
-            "process-order",
-            "line",
-            "material",
-            "batch",
-            "asset",
-            "handover",
-            "other"
-          ],
+          "enum": ["process-order", "line", "material", "batch", "asset", "handover", "other"],
           "description": "[classification: source-field]"
         },
         "linkedEntityId": {
@@ -4942,12 +4198,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "completed",
-            "dismissed"
-          ],
+          "enum": ["open", "in-progress", "completed", "dismissed"],
           "description": "[classification: application-heuristic]"
         },
         "recommendedAction": {
@@ -5002,22 +4253,12 @@
         },
         "riskStatus": {
           "type": "string",
-          "enum": [
-            "on-track",
-            "at-risk",
-            "critical",
-            "unknown"
-          ],
+          "enum": ["on-track", "at-risk", "critical", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "openBlockers": {
@@ -5129,12 +4370,7 @@
         },
         "riskLevel": {
           "type": "string",
-          "enum": [
-            "on-track",
-            "at-risk",
-            "delayed",
-            "blocked"
-          ],
+          "enum": ["on-track", "at-risk", "delayed", "blocked"],
           "description": "[classification: application-heuristic]"
         },
         "confidence": {
@@ -5225,13 +4461,7 @@
         },
         "stagingStatus": {
           "type": "string",
-          "enum": [
-            "not-started",
-            "partial",
-            "fully-staged",
-            "blocked",
-            "not-required"
-          ],
+          "enum": ["not-started", "partial", "fully-staged", "blocked", "not-required"],
           "description": "[classification: source-field]"
         },
         "componentsRequired": {
@@ -5261,12 +4491,7 @@
         },
         "readinessStatus": {
           "type": "string",
-          "enum": [
-            "ready",
-            "partial",
-            "blocked",
-            "not-started"
-          ],
+          "enum": ["ready", "partial", "blocked", "not-started"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -5352,17 +4577,11 @@
           "description": "[classification: application-derived]"
         },
         "detailUrl": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: application-derived]"
         }
       },
-      "required": [
-        "variance",
-        "note"
-      ],
+      "required": ["variance", "note"],
       "additionalProperties": false
     },
     "PassportProduction": {
@@ -5434,19 +4653,12 @@
         },
         "confidenceSource": {
           "type": "string",
-          "enum": [
-            "application-heuristic",
-            "governed"
-          ],
+          "enum": ["application-heuristic", "governed"],
           "description": "[classification: application-heuristic]"
         },
         "heuristicQualityStatus": {
           "type": "string",
-          "enum": [
-            "accepted",
-            "conditional",
-            "rejected"
-          ],
+          "enum": ["accepted", "conditional", "rejected"],
           "description": "[classification: application-heuristic]"
         },
         "notes": {
@@ -5491,31 +4703,15 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "ok",
-                  "warn",
-                  "fail"
-                ],
+                "enum": ["ok", "warn", "fail"],
                 "description": "[classification: application-heuristic]"
               },
               "binary": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+                "type": ["string", "null"],
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "mic",
-              "param",
-              "low",
-              "high",
-              "target",
-              "actual",
-              "uom",
-              "status"
-            ],
+            "required": ["mic", "param", "low", "high", "target", "actual", "uom", "status"],
             "additionalProperties": false
           }
         }
@@ -5557,14 +4753,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "unrestricted",
-        "qualityInspection",
-        "blocked",
-        "restricted",
-        "transit",
-        "uom"
-      ],
+      "required": ["unrestricted", "qualityInspection", "blocked", "restricted", "transit", "uom"],
       "additionalProperties": false
     },
     "PassportUsageDecisionEvidence": {
@@ -5580,11 +4769,7 @@
         },
         "decisionType": {
           "type": "string",
-          "enum": [
-            "usage-decision-recorded",
-            "inspection-completed",
-            "none"
-          ],
+          "enum": ["usage-decision-recorded", "inspection-completed", "none"],
           "description": "[classification: source-field]"
         },
         "recordedAt": {
@@ -5592,12 +4777,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "role",
-        "decisionBy",
-        "decisionType",
-        "recordedAt"
-      ],
+      "required": ["role", "decisionBy", "decisionType", "recordedAt"],
       "additionalProperties": false
     },
     "PlanRiskSummary": {
@@ -5639,12 +4819,7 @@
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "topRiskReason": {
@@ -5698,14 +4873,7 @@
         },
         "frequency": {
           "type": "string",
-          "enum": [
-            "daily",
-            "weekly",
-            "fortnightly",
-            "monthly",
-            "quarterly",
-            "annually"
-          ],
+          "enum": ["daily", "weekly", "fortnightly", "monthly", "quarterly", "annually"],
           "description": "[classification: source-field]"
         },
         "dueDate": {
@@ -5715,13 +4883,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "upcoming",
-            "due-today",
-            "overdue",
-            "completed",
-            "deferred"
-          ],
+          "enum": ["upcoming", "due-today", "overdue", "completed", "deferred"],
           "description": "[classification: source-field]"
         },
         "daysOverdue": {
@@ -5830,12 +4992,7 @@
           "description": "[classification: source-derived]"
         }
       },
-      "required": [
-        "confirmationId",
-        "operationId",
-        "confirmedYield",
-        "uom"
-      ],
+      "required": ["confirmationId", "operationId", "confirmedYield", "uom"],
       "additionalProperties": false
     },
     "ProcessOrderGoodsMovement": {
@@ -5851,11 +5008,7 @@
         },
         "direction": {
           "type": "string",
-          "enum": [
-            "input",
-            "output",
-            "unknown"
-          ],
+          "enum": ["input", "output", "unknown"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -5903,14 +5056,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "movementId",
-        "movementType",
-        "direction",
-        "materialId",
-        "quantity",
-        "uom"
-      ],
+      "required": ["movementId", "movementType", "direction", "materialId", "quantity", "uom"],
       "additionalProperties": false
     },
     "ProcessOrderHeader": {
@@ -5922,12 +5068,7 @@
         },
         "orderType": {
           "type": "string",
-          "enum": [
-            "process-order",
-            "production-order",
-            "maintenance-order",
-            "planned-order"
-          ],
+          "enum": ["process-order", "production-order", "maintenance-order", "planned-order"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -6118,12 +5259,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "pending",
-            "in-progress",
-            "confirmed",
-            "skipped"
-          ],
+          "enum": ["pending", "in-progress", "confirmed", "skipped"],
           "description": "[classification: source-field]"
         },
         "plannedDurationMinutes": {
@@ -6138,11 +5274,7 @@
         },
         "confirmationStatus": {
           "type": "string",
-          "enum": [
-            "unconfirmed",
-            "partially-confirmed",
-            "final-confirmed"
-          ],
+          "enum": ["unconfirmed", "partially-confirmed", "final-confirmed"],
           "description": "[classification: source-field]"
         },
         "confirmed": {
@@ -6178,14 +5310,7 @@
         },
         "orderStatus": {
           "type": "string",
-          "enum": [
-            "created",
-            "released",
-            "in-process",
-            "completed",
-            "closed",
-            "deleted"
-          ]
+          "enum": ["created", "released", "in-process", "completed", "closed", "deleted"]
         },
         "plannedQuantity": {
           "type": "number"
@@ -6219,12 +5344,7 @@
         },
         "conformanceStatus": {
           "type": "string",
-          "enum": [
-            "conformant",
-            "non-conformant",
-            "pending-review",
-            "waived"
-          ]
+          "enum": ["conformant", "non-conformant", "pending-review", "waived"]
         },
         "openNCRCount": {
           "type": "integer",
@@ -6309,13 +5429,7 @@
         },
         "stagingStatus": {
           "type": "string",
-          "enum": [
-            "not-started",
-            "partial",
-            "fully-staged",
-            "blocked",
-            "not-required"
-          ],
+          "enum": ["not-started", "partial", "fully-staged", "blocked", "not-required"],
           "description": "[classification: application-heuristic]"
         },
         "lastUpdatedAt": {
@@ -6378,14 +5492,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "created",
-            "released",
-            "partially-confirmed",
-            "confirmed",
-            "closed",
-            "deleted"
-          ]
+          "enum": ["created", "released", "partially-confirmed", "confirmed", "closed", "deleted"]
         },
         "oeePercent": {
           "type": "number",
@@ -6393,13 +5500,7 @@
           "maximum": 100
         }
       },
-      "required": [
-        "processOrderId",
-        "materialId",
-        "materialDescription",
-        "plantId",
-        "status"
-      ],
+      "required": ["processOrderId", "materialId", "materialDescription", "plantId", "status"],
       "additionalProperties": false
     },
     "ProductionHistoryRow": {
@@ -6436,20 +5537,11 @@
         },
         "qualityStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "unknown"
-          ],
+          "enum": ["pass", "fail", "unknown"],
           "description": "[classification: application-heuristic]"
         }
       },
-      "required": [
-        "batchId",
-        "materialId",
-        "quantity",
-        "qualityStatus"
-      ],
+      "required": ["batchId", "materialId", "quantity", "qualityStatus"],
       "additionalProperties": false
     },
     "ProductionHistorySummary": {
@@ -6515,32 +5607,16 @@
               },
               "qualityStatus": {
                 "type": "string",
-                "enum": [
-                  "pass",
-                  "fail",
-                  "unknown"
-                ],
+                "enum": ["pass", "fail", "unknown"],
                 "description": "[classification: application-heuristic]"
               }
             },
-            "required": [
-              "batchId",
-              "materialId",
-              "quantity",
-              "qualityStatus"
-            ],
+            "required": ["batchId", "materialId", "quantity", "qualityStatus"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "materialId",
-        "totalBatches",
-        "passCount",
-        "failCount",
-        "unknownCount",
-        "rows"
-      ],
+      "required": ["materialId", "totalBatches", "passCount", "failCount", "unknownCount", "rows"],
       "additionalProperties": false
     },
     "ProductionStagingContext": {
@@ -6601,12 +5677,7 @@
         },
         "riskStatus": {
           "type": "string",
-          "enum": [
-            "ready",
-            "at-risk",
-            "blocked",
-            "unknown"
-          ],
+          "enum": ["ready", "at-risk", "blocked", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "lastUpdatedAt": {
@@ -6677,12 +5748,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "description": {
@@ -6747,39 +5813,20 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "ok",
-            "warn",
-            "fail"
-          ],
+          "enum": ["ok", "warn", "fail"],
           "description": "[classification: application-heuristic]"
         },
         "binary": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "mic",
-        "param",
-        "low",
-        "high",
-        "target",
-        "actual",
-        "uom",
-        "status"
-      ],
+      "required": ["mic", "param", "low", "high", "target", "actual", "uom", "status"],
       "additionalProperties": false
     },
     "QualityCoaDocumentStatus": {
       "type": "string",
-      "enum": [
-        "unavailable",
-        "unknown"
-      ]
+      "enum": ["unavailable", "unknown"]
     },
     "QualityCoaResultEvidence": {
       "type": "object",
@@ -6930,28 +5977,16 @@
         },
         "source": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api",
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
           "description": "[classification: source-field]"
         },
         "documentStatus": {
           "type": "string",
-          "enum": [
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["unavailable", "unknown"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "source",
-        "documentStatus"
-      ],
+      "required": ["source", "documentStatus"],
       "additionalProperties": false
     },
     "QualityEvidenceRequest": {
@@ -7034,13 +6069,7 @@
           "properties": {
             "source": {
               "type": "string",
-              "enum": [
-                "mock",
-                "legacy-api",
-                "databricks-api",
-                "unavailable",
-                "unknown"
-              ],
+              "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
               "description": "[classification: source-field]"
             },
             "status": {
@@ -7104,13 +6133,7 @@
             },
             "sourceFreshnessStatus": {
               "type": "string",
-              "enum": [
-                "fresh",
-                "stale",
-                "unknown",
-                "unavailable",
-                "not-verified"
-              ],
+              "enum": ["fresh", "stale", "unknown", "unavailable", "not-verified"],
               "description": "[classification: application-derived]"
             },
             "evidenceState": {
@@ -7325,13 +6348,7 @@
               },
               "source": {
                 "type": "string",
-                "enum": [
-                  "mock",
-                  "legacy-api",
-                  "databricks-api",
-                  "unavailable",
-                  "unknown"
-                ],
+                "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
                 "description": "[classification: source-field]"
               },
               "usageDecisionCode": {
@@ -7415,10 +6432,7 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "inspectionLotId",
-              "source"
-            ],
+            "required": ["inspectionLotId", "source"],
             "additionalProperties": false
           }
         },
@@ -7663,14 +6677,7 @@
               },
               "resultStatus": {
                 "type": "string",
-                "enum": [
-                  "pass",
-                  "fail",
-                  "warning",
-                  "pending",
-                  "unknown",
-                  "not-evaluated"
-                ],
+                "enum": ["pass", "fail", "warning", "pending", "unknown", "not-evaluated"],
                 "description": "[classification: application-heuristic]"
               },
               "sampleId": {
@@ -7749,20 +6756,11 @@
               },
               "source": {
                 "type": "string",
-                "enum": [
-                  "mock",
-                  "legacy-api",
-                  "databricks-api",
-                  "unavailable",
-                  "unknown"
-                ],
+                "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "resultStatus",
-              "source"
-            ],
+            "required": ["resultStatus", "source"],
             "additionalProperties": false
           }
         },
@@ -7887,13 +6885,7 @@
                     },
                     "source": {
                       "type": "string",
-                      "enum": [
-                        "mock",
-                        "legacy-api",
-                        "databricks-api",
-                        "unavailable",
-                        "unknown"
-                      ],
+                      "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
                       "description": "[classification: source-field]"
                     },
                     "mappingStatus": {
@@ -7908,10 +6900,7 @@
                       "description": "[classification: application-derived]"
                     }
                   },
-                  "required": [
-                    "source",
-                    "mappingStatus"
-                  ],
+                  "required": ["source", "mappingStatus"],
                   "additionalProperties": false
                 }
               ]
@@ -8072,50 +7061,26 @@
               },
               "source": {
                 "type": "string",
-                "enum": [
-                  "mock",
-                  "legacy-api",
-                  "databricks-api",
-                  "unavailable",
-                  "unknown"
-                ],
+                "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
                 "description": "[classification: source-field]"
               },
               "documentStatus": {
                 "type": "string",
-                "enum": [
-                  "unavailable",
-                  "unknown"
-                ],
+                "enum": ["unavailable", "unknown"],
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "source",
-              "documentStatus"
-            ],
+            "required": ["source", "documentStatus"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "request",
-        "summary",
-        "inspectionLots",
-        "micResults",
-        "coaResults"
-      ],
+      "required": ["request", "summary", "inspectionLots", "micResults", "coaResults"],
       "additionalProperties": false
     },
     "QualityEvidenceSource": {
       "type": "string",
-      "enum": [
-        "mock",
-        "legacy-api",
-        "databricks-api",
-        "unavailable",
-        "unknown"
-      ]
+      "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"]
     },
     "QualityEvidenceStatus": {
       "type": "string",
@@ -8134,13 +7099,7 @@
       "properties": {
         "source": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api",
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
           "description": "[classification: source-field]"
         },
         "status": {
@@ -8204,13 +7163,7 @@
         },
         "sourceFreshnessStatus": {
           "type": "string",
-          "enum": [
-            "fresh",
-            "stale",
-            "unknown",
-            "unavailable",
-            "not-verified"
-          ],
+          "enum": ["fresh", "stale", "unknown", "unavailable", "not-verified"],
           "description": "[classification: application-derived]"
         },
         "evidenceState": {
@@ -8423,13 +7376,7 @@
         },
         "source": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api",
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
           "description": "[classification: source-field]"
         },
         "usageDecisionCode": {
@@ -8477,13 +7424,7 @@
                 },
                 {
                   "type": "string",
-                  "enum": [
-                    "source-only",
-                    "verified",
-                    "unverified",
-                    "unavailable",
-                    "not-mapped"
-                  ]
+                  "enum": ["source-only", "verified", "unverified", "unavailable", "not-mapped"]
                 }
               ]
             },
@@ -8513,10 +7454,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "inspectionLotId",
-        "source"
-      ],
+      "required": ["inspectionLotId", "source"],
       "additionalProperties": false
     },
     "QualityMicResultEvidence": {
@@ -8758,14 +7696,7 @@
         },
         "resultStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "warning",
-            "pending",
-            "unknown",
-            "not-evaluated"
-          ],
+          "enum": ["pass", "fail", "warning", "pending", "unknown", "not-evaluated"],
           "description": "[classification: application-heuristic]"
         },
         "sampleId": {
@@ -8844,20 +7775,11 @@
         },
         "source": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api",
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "resultStatus",
-        "source"
-      ],
+      "required": ["resultStatus", "source"],
       "additionalProperties": false
     },
     "QualityResultsSummary": {
@@ -8871,52 +7793,23 @@
         },
         "micStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "pending",
-            "conditional",
-            "not-required"
-          ]
+          "enum": ["pass", "fail", "pending", "conditional", "not-required"]
         },
         "chemicalStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "pending",
-            "conditional",
-            "not-required"
-          ]
+          "enum": ["pass", "fail", "pending", "conditional", "not-required"]
         },
         "sensoryStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "pending",
-            "conditional",
-            "not-required"
-          ]
+          "enum": ["pass", "fail", "pending", "conditional", "not-required"]
         },
         "physicalStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "pending",
-            "conditional",
-            "not-required"
-          ]
+          "enum": ["pass", "fail", "pending", "conditional", "not-required"]
         },
         "overallStatus": {
           "type": "string",
-          "enum": [
-            "pass",
-            "fail",
-            "pending",
-            "conditional"
-          ]
+          "enum": ["pass", "fail", "pending", "conditional"]
         },
         "micFailures": {
           "type": "array",
@@ -8987,13 +7880,7 @@
     },
     "QualitySourceFreshnessStatus": {
       "type": "string",
-      "enum": [
-        "fresh",
-        "stale",
-        "unknown",
-        "unavailable",
-        "not-verified"
-      ]
+      "enum": ["fresh", "stale", "unknown", "unavailable", "not-verified"]
     },
     "QualityUsageDecisionEvidence": {
       "type": "object",
@@ -9109,42 +7996,21 @@
         },
         "source": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api",
-            "unavailable",
-            "unknown"
-          ],
+          "enum": ["mock", "legacy-api", "databricks-api", "unavailable", "unknown"],
           "description": "[classification: source-field]"
         },
         "mappingStatus": {
           "type": "string",
-          "enum": [
-            "source-only",
-            "verified",
-            "unverified",
-            "unavailable",
-            "not-mapped"
-          ],
+          "enum": ["source-only", "verified", "unverified", "unavailable", "not-mapped"],
           "description": "[classification: application-derived]"
         }
       },
-      "required": [
-        "source",
-        "mappingStatus"
-      ],
+      "required": ["source", "mappingStatus"],
       "additionalProperties": false
     },
     "QualityUsageDecisionMappingStatus": {
       "type": "string",
-      "enum": [
-        "source-only",
-        "verified",
-        "unverified",
-        "unavailable",
-        "not-mapped"
-      ]
+      "enum": ["source-only", "verified", "unverified", "unavailable", "not-mapped"]
     },
     "QualityUsageDecisionStatus": {
       "type": "string",
@@ -9173,12 +8039,7 @@
           "type": "number"
         }
       },
-      "required": [
-        "code",
-        "name",
-        "qty",
-        "pct"
-      ],
+      "required": ["code", "name", "qty", "pct"],
       "additionalProperties": false
     },
     "RecallDelivery": {
@@ -9201,24 +8062,13 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "delivery-evidence",
-            "delivered",
-            "in-transit",
-            "recalled",
-            "blocked",
-            "unknown"
-          ]
+          "enum": ["delivery-evidence", "delivered", "in-transit", "recalled", "blocked", "unknown"]
         },
         "statusSource": {
           "anyOf": [
             {
               "type": "string",
-              "enum": [
-                "delivery-record-present",
-                "governed",
-                "unavailable"
-              ]
+              "enum": ["delivery-record-present", "governed", "unavailable"]
             },
             {
               "type": "null"
@@ -9229,27 +8079,12 @@
           "type": "string"
         }
       },
-      "required": [
-        "id",
-        "customer",
-        "country",
-        "date",
-        "qty",
-        "status",
-        "doc"
-      ],
+      "required": ["id", "customer", "country", "date", "qty", "status", "doc"],
       "additionalProperties": false
     },
     "RecallDeliveryStatus": {
       "type": "string",
-      "enum": [
-        "delivery-evidence",
-        "delivered",
-        "in-transit",
-        "recalled",
-        "blocked",
-        "unknown"
-      ]
+      "enum": ["delivery-evidence", "delivered", "in-transit", "recalled", "blocked", "unknown"]
     },
     "RecallReadiness": {
       "type": "object",
@@ -9273,13 +8108,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "customers",
-            "countries",
-            "deliveries",
-            "shipped",
-            "uom"
-          ],
+          "required": ["customers", "countries", "deliveries", "shipped", "uom"],
           "additionalProperties": false
         },
         "countries": {
@@ -9300,12 +8129,7 @@
                 "type": "number"
               }
             },
-            "required": [
-              "code",
-              "name",
-              "qty",
-              "pct"
-            ],
+            "required": ["code", "name", "qty", "pct"],
             "additionalProperties": false
           }
         },
@@ -9344,11 +8168,7 @@
                 "anyOf": [
                   {
                     "type": "string",
-                    "enum": [
-                      "delivery-record-present",
-                      "governed",
-                      "unavailable"
-                    ]
+                    "enum": ["delivery-record-present", "governed", "unavailable"]
                   },
                   {
                     "type": "null"
@@ -9359,33 +8179,16 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "customer",
-              "country",
-              "date",
-              "qty",
-              "status",
-              "doc"
-            ],
+            "required": ["id", "customer", "country", "date", "qty", "status", "doc"],
             "additionalProperties": false
           }
         },
         "recommendationStatus": {
           "type": "string",
-          "enum": [
-            "not-evaluated",
-            "recommended",
-            "not-recommended"
-          ]
+          "enum": ["not-evaluated", "recommended", "not-recommended"]
         }
       },
-      "required": [
-        "totals",
-        "countries",
-        "deliveries",
-        "recommendationStatus"
-      ],
+      "required": ["totals", "countries", "deliveries", "recommendationStatus"],
       "additionalProperties": false
     },
     "RecallTotals": {
@@ -9407,13 +8210,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "customers",
-        "countries",
-        "deliveries",
-        "shipped",
-        "uom"
-      ],
+      "required": ["customers", "countries", "deliveries", "shipped", "uom"],
       "additionalProperties": false
     },
     "RelatedBatchContext": {
@@ -9429,44 +8226,22 @@
         },
         "relationshipType": {
           "type": "string",
-          "enum": [
-            "output",
-            "input-component",
-            "co-product",
-            "by-product",
-            "rework"
-          ],
+          "enum": ["output", "input-component", "co-product", "by-product", "rework"],
           "description": "[classification: source-field]"
         },
         "traceRisk": {
           "type": "string",
-          "enum": [
-            "none",
-            "potential",
-            "confirmed"
-          ],
+          "enum": ["none", "potential", "confirmed"],
           "description": "[classification: application-heuristic]"
         },
         "qualityStatus": {
           "type": "string",
-          "enum": [
-            "released",
-            "on-hold",
-            "rejected",
-            "under-review",
-            "awaiting-review"
-          ],
+          "enum": ["released", "on-hold", "rejected", "under-review", "awaiting-review"],
           "description": "[classification: application-heuristic]"
         },
         "stockStatus": {
           "type": "string",
-          "enum": [
-            "unrestricted",
-            "blocked",
-            "in-transit",
-            "quality-inspection",
-            "restricted"
-          ],
+          "enum": ["unrestricted", "blocked", "in-transit", "quality-inspection", "restricted"],
           "description": "[classification: application-heuristic]"
         },
         "drillThroughTarget": {
@@ -9497,23 +8272,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "escalated",
-            "resolved",
-            "closed"
-          ],
+          "enum": ["open", "in-progress", "escalated", "resolved", "closed"],
           "description": "[classification: source-field]"
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "relatedBy": {
@@ -9538,14 +8302,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "investigationId",
-        "title",
-        "status",
-        "severity",
-        "relatedBy",
-        "openedAt"
-      ],
+      "required": ["investigationId", "title", "status", "severity", "relatedBy", "openedAt"],
       "additionalProperties": false
     },
     "ReleaseDecisionHistoryItem": {
@@ -9606,11 +8363,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "attachmentId",
-              "name",
-              "mimeType"
-            ],
+            "required": ["attachmentId", "name", "mimeType"],
             "additionalProperties": false
           }
         }
@@ -9675,12 +8428,7 @@
         },
         "releaseStatus": {
           "type": "string",
-          "enum": [
-            "active",
-            "pending-release",
-            "released",
-            "escalated"
-          ],
+          "enum": ["active", "pending-release", "released", "escalated"],
           "description": "[classification: governance-pending]"
         },
         "qualityOwner": {
@@ -9689,12 +8437,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         }
       },
@@ -9748,11 +8491,7 @@
         },
         "trendDirection": {
           "type": "string",
-          "enum": [
-            "improving",
-            "stable",
-            "degrading"
-          ],
+          "enum": ["improving", "stable", "degrading"],
           "description": "[classification: application-heuristic]"
         },
         "periodDays": {
@@ -9813,12 +8552,7 @@
         },
         "urgency": {
           "type": "string",
-          "enum": [
-            "critical",
-            "high",
-            "medium",
-            "low"
-          ],
+          "enum": ["critical", "high", "medium", "low"],
           "description": "[classification: application-heuristic]"
         },
         "openPurchaseOrderId": {
@@ -9870,23 +8604,12 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "active",
-            "acknowledged",
-            "investigating",
-            "resolved",
-            "false-positive"
-          ],
+          "enum": ["active", "acknowledged", "investigating", "resolved", "false-positive"],
           "description": "[classification: application-heuristic]"
         },
         "acknowledgedBy": {
@@ -9903,14 +8626,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "alarmId",
-        "timestamp",
-        "characteristicId",
-        "rule",
-        "severity",
-        "status"
-      ],
+      "required": ["alarmId", "timestamp", "characteristicId", "rule", "severity", "status"],
       "additionalProperties": false
     },
     "SPCMonitoringContext": {
@@ -9970,12 +8686,7 @@
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "lastUpdatedAt": {
@@ -10020,13 +8731,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "released",
-            "on-hold",
-            "rejected",
-            "under-review",
-            "awaiting-review"
-          ],
+          "enum": ["released", "on-hold", "rejected", "under-review", "awaiting-review"],
           "description": "[classification: application-heuristic]"
         },
         "relatedSignalCount": {
@@ -10036,11 +8741,7 @@
         },
         "releaseImpact": {
           "type": "string",
-          "enum": [
-            "blocking",
-            "risk",
-            "none"
-          ],
+          "enum": ["blocking", "risk", "none"],
           "description": "[classification: application-heuristic]"
         },
         "drillThroughTarget": {
@@ -10075,16 +8776,7 @@
         },
         "signalType": {
           "type": "string",
-          "enum": [
-            "rule-1",
-            "rule-2",
-            "rule-3",
-            "rule-4",
-            "rule-5",
-            "rule-6",
-            "rule-7",
-            "rule-8"
-          ]
+          "enum": ["rule-1", "rule-2", "rule-3", "rule-4", "rule-5", "rule-6", "rule-7", "rule-8"]
         },
         "detectedAt": {
           "type": "string",
@@ -10092,11 +8784,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "info",
-            "warning",
-            "critical"
-          ]
+          "enum": ["info", "warning", "critical"]
         },
         "description": {
           "type": "string"
@@ -10179,12 +8867,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "detectedAt": {
@@ -10206,13 +8889,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "active",
-            "acknowledged",
-            "investigating",
-            "resolved",
-            "false-positive"
-          ],
+          "enum": ["active", "acknowledged", "investigating", "resolved", "false-positive"],
           "description": "[classification: application-heuristic]"
         }
       },
@@ -10265,17 +8942,7 @@
               },
               "chartType": {
                 "type": "string",
-                "enum": [
-                  "xbar-r",
-                  "xbar-s",
-                  "individuals",
-                  "p",
-                  "np",
-                  "c",
-                  "u",
-                  "cusum",
-                  "ewma"
-                ]
+                "enum": ["xbar-r", "xbar-s", "individuals", "p", "np", "c", "u", "cusum", "ewma"]
               },
               "parameter": {
                 "type": "string"
@@ -10285,11 +8952,7 @@
               },
               "severity": {
                 "type": "string",
-                "enum": [
-                  "minor",
-                  "major",
-                  "critical"
-                ]
+                "enum": ["minor", "major", "critical"]
               },
               "firedAt": {
                 "type": "string",
@@ -10301,12 +8964,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "active",
-                  "acknowledged",
-                  "resolved",
-                  "overridden"
-                ]
+                "enum": ["active", "acknowledged", "resolved", "overridden"]
               }
             },
             "required": [
@@ -10353,10 +9011,7 @@
           "description": "[classification: source-derived]"
         },
         "subgroupRange": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-derived]"
         },
         "sampleCount": {
@@ -10365,17 +9020,11 @@
           "description": "[classification: source-derived]"
         },
         "lslSpec": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "uslSpec": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         }
       },
@@ -10406,10 +9055,7 @@
           "description": "[classification: source-field]"
         },
         "micName": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "operationId": {
@@ -10434,10 +9080,7 @@
                 "description": "[classification: source-derived]"
               },
               "subgroupRange": {
-                "type": [
-                  "number",
-                  "null"
-                ],
+                "type": ["number", "null"],
                 "description": "[classification: source-derived]"
               },
               "sampleCount": {
@@ -10446,17 +9089,11 @@
                 "description": "[classification: source-derived]"
               },
               "lslSpec": {
-                "type": [
-                  "number",
-                  "null"
-                ],
+                "type": ["number", "null"],
                 "description": "[classification: source-field]"
               },
               "uslSpec": {
-                "type": [
-                  "number",
-                  "null"
-                ],
+                "type": ["number", "null"],
                 "description": "[classification: source-field]"
               }
             },
@@ -10536,12 +9173,7 @@
         },
         "highestSeverity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "recommendedAction": {
@@ -10689,14 +9321,7 @@
         },
         "category": {
           "type": "string",
-          "enum": [
-            "quality",
-            "safety",
-            "maintenance",
-            "operations",
-            "material",
-            "other"
-          ],
+          "enum": ["quality", "safety", "maintenance", "operations", "material", "other"],
           "description": "[classification: source-field]"
         },
         "title": {
@@ -10723,22 +9348,12 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "acknowledged",
-            "in-progress",
-            "resolved"
-          ],
+          "enum": ["open", "acknowledged", "in-progress", "resolved"],
           "description": "[classification: source-field]"
         }
       },
@@ -10764,10 +9379,7 @@
           "type": "string"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "batchId": {
           "type": "string"
@@ -10782,13 +9394,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "plant",
-        "batchId",
-        "mfg",
-        "qty",
-        "vendorBatch"
-      ],
+      "required": ["plant", "batchId", "mfg", "qty", "vendorBatch"],
       "additionalProperties": false
     },
     "StagingAlert": {
@@ -10816,12 +9422,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "processOrderId": {
@@ -10856,12 +9457,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "acknowledged",
-            "in-progress",
-            "resolved"
-          ],
+          "enum": ["open", "acknowledged", "in-progress", "resolved"],
           "description": "[classification: source-field]"
         },
         "owner": {
@@ -10930,23 +9526,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "assigned",
-            "in-transit",
-            "completed",
-            "cancelled"
-          ],
+          "enum": ["open", "assigned", "in-transit", "completed", "cancelled"],
           "description": "[classification: source-field]"
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "createdAt": {
@@ -11035,23 +9620,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "not-staged",
-            "partial",
-            "staged",
-            "blocked",
-            "not-required"
-          ],
+          "enum": ["not-staged", "partial", "staged", "blocked", "not-required"],
           "description": "[classification: source-field]"
         },
         "urgency": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "pickTaskIds": {
@@ -11134,23 +9708,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "picked",
-            "staged",
-            "cancelled"
-          ],
+          "enum": ["open", "in-progress", "picked", "staged", "cancelled"],
           "description": "[classification: source-field]"
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "createdAt": {
@@ -11224,13 +9787,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "planned",
-            "in-progress",
-            "completed",
-            "partial",
-            "cancelled"
-          ],
+          "enum": ["planned", "in-progress", "completed", "partial", "cancelled"],
           "description": "[classification: source-field]"
         },
         "scheduledStart": {
@@ -11330,12 +9887,7 @@
         },
         "riskStatus": {
           "type": "string",
-          "enum": [
-            "ready",
-            "at-risk",
-            "blocked",
-            "unknown"
-          ],
+          "enum": ["ready", "at-risk", "blocked", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "confidence": {
@@ -11410,24 +9962,12 @@
         },
         "urgency": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         },
         "procurementStatus": {
           "type": "string",
-          "enum": [
-            "in-stock",
-            "in-transit",
-            "ordered",
-            "delayed",
-            "out-of-stock",
-            "unknown"
-          ],
+          "enum": ["in-stock", "in-transit", "ordered", "delayed", "out-of-stock", "unknown"],
           "description": "[classification: application-heuristic]"
         },
         "expectedArrival": {
@@ -11495,12 +10035,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "available",
-            "high-utilisation",
-            "full",
-            "blocked"
-          ],
+          "enum": ["available", "high-utilisation", "full", "blocked"],
           "description": "[classification: application-heuristic]"
         },
         "overflowRisk": {
@@ -11543,14 +10078,7 @@
               },
               "zoneType": {
                 "type": "string",
-                "enum": [
-                  "ambient",
-                  "chilled",
-                  "frozen",
-                  "hazardous",
-                  "bulk",
-                  "staging"
-                ],
+                "enum": ["ambient", "chilled", "frozen", "hazardous", "bulk", "staging"],
                 "description": "[classification: source-field]"
               },
               "stockLines": {
@@ -11620,14 +10148,7 @@
         },
         "zoneType": {
           "type": "string",
-          "enum": [
-            "ambient",
-            "chilled",
-            "frozen",
-            "hazardous",
-            "bulk",
-            "staging"
-          ],
+          "enum": ["ambient", "chilled", "frozen", "hazardous", "bulk", "staging"],
           "description": "[classification: source-field]"
         },
         "stockLines": {
@@ -11685,30 +10206,14 @@
                 "type": "string"
               },
               "coa": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "risk": {
                 "type": "string",
-                "enum": [
-                  "low",
-                  "medium",
-                  "high",
-                  "unknown"
-                ]
+                "enum": ["low", "medium", "high", "unknown"]
               }
             },
-            "required": [
-              "vendor",
-              "vendorBatch",
-              "material",
-              "receipt",
-              "consumed",
-              "uom",
-              "risk"
-            ],
+            "required": ["vendor", "vendorBatch", "material", "receipt", "consumed", "uom", "risk"],
             "additionalProperties": false
           }
         },
@@ -11721,10 +10226,7 @@
                 "type": "string"
               },
               "plantId": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "batchId": {
                 "type": "string"
@@ -11739,21 +10241,12 @@
                 "type": "string"
               }
             },
-            "required": [
-              "plant",
-              "batchId",
-              "mfg",
-              "qty",
-              "vendorBatch"
-            ],
+            "required": ["plant", "batchId", "mfg", "qty", "vendorBatch"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "consumedLots",
-        "siblingBatches"
-      ],
+      "required": ["consumedLots", "siblingBatches"],
       "additionalProperties": false
     },
     "SupplierDetail": {
@@ -11794,11 +10287,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "supplierId",
-        "receivedQuantity",
-        "batchCount"
-      ],
+      "required": ["supplierId", "receivedQuantity", "batchCount"],
       "additionalProperties": false
     },
     "SupplierExposureSummary": {
@@ -11868,31 +10357,17 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "supplierId",
-              "receivedQuantity",
-              "batchCount"
-            ],
+            "required": ["supplierId", "receivedQuantity", "batchCount"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "supplierCount",
-        "supplierLots",
-        "upstreamMaterials",
-        "openSupplierActions"
-      ],
+      "required": ["supplierCount", "supplierLots", "upstreamMaterials", "openSupplierActions"],
       "additionalProperties": false
     },
     "SupplierLotRisk": {
       "type": "string",
-      "enum": [
-        "low",
-        "medium",
-        "high",
-        "unknown"
-      ]
+      "enum": ["low", "medium", "high", "unknown"]
     },
     "SupplierLot": {
       "type": "object",
@@ -11916,30 +10391,14 @@
           "type": "string"
         },
         "coa": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "risk": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "unknown"
-          ]
+          "enum": ["low", "medium", "high", "unknown"]
         }
       },
-      "required": [
-        "vendor",
-        "vendorBatch",
-        "material",
-        "receipt",
-        "consumed",
-        "uom",
-        "risk"
-      ],
+      "required": ["vendor", "vendorBatch", "material", "receipt", "consumed", "uom", "risk"],
       "additionalProperties": false
     },
     "TimelineEvent": {
@@ -11972,24 +10431,13 @@
         },
         "tone": {
           "type": "string",
-          "enum": [
-            "good",
-            "warn",
-            "bad",
-            "brand",
-            "neutral"
-          ]
+          "enum": ["good", "warn", "bad", "brand", "neutral"]
         },
         "sourceSystem": {
           "anyOf": [
             {
               "type": "string",
-              "enum": [
-                "SAP",
-                "LIMS",
-                "TRACE",
-                "MANUAL"
-              ]
+              "enum": ["SAP", "LIMS", "TRACE", "MANUAL"]
             },
             {
               "type": "null"
@@ -11997,47 +10445,20 @@
           ]
         }
       },
-      "required": [
-        "ts",
-        "type",
-        "label",
-        "actor",
-        "detail",
-        "tone"
-      ],
+      "required": ["ts", "type", "label", "actor", "detail", "tone"],
       "additionalProperties": false
     },
     "TimelineEventSourceSystem": {
       "type": "string",
-      "enum": [
-        "SAP",
-        "LIMS",
-        "TRACE",
-        "MANUAL"
-      ]
+      "enum": ["SAP", "LIMS", "TRACE", "MANUAL"]
     },
     "TimelineEventTone": {
       "type": "string",
-      "enum": [
-        "good",
-        "warn",
-        "bad",
-        "brand",
-        "neutral"
-      ]
+      "enum": ["good", "warn", "bad", "brand", "neutral"]
     },
     "TimelineEventType": {
       "type": "string",
-      "enum": [
-        "production",
-        "consumption",
-        "qc",
-        "release",
-        "approval",
-        "hold",
-        "dispatch",
-        "note"
-      ]
+      "enum": ["production", "consumption", "qc", "release", "approval", "hold", "dispatch", "note"]
     },
     "TraceEdge": {
       "type": "object",
@@ -12121,11 +10542,7 @@
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "id",
-        "source",
-        "target"
-      ],
+      "required": ["id", "source", "target"],
       "additionalProperties": false
     },
     "TraceEvent": {
@@ -12176,21 +10593,11 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "info",
-            "warning",
-            "critical"
-          ],
+          "enum": ["info", "warning", "critical"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "eventId",
-        "timestamp",
-        "type",
-        "title",
-        "sourceSystem"
-      ],
+      "required": ["eventId", "timestamp", "type", "title", "sourceSystem"],
       "additionalProperties": false
     },
     "TraceExposureForRelease": {
@@ -12204,23 +10611,11 @@
         },
         "upstreamRiskLevel": {
           "type": "string",
-          "enum": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ]
+          "enum": ["none", "low", "medium", "high", "critical"]
         },
         "downstreamRiskLevel": {
           "type": "string",
-          "enum": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ]
+          "enum": ["none", "low", "medium", "high", "critical"]
         },
         "affectedCustomerCount": {
           "type": "integer",
@@ -12243,23 +10638,13 @@
               },
               "severity": {
                 "type": "string",
-                "enum": [
-                  "low",
-                  "medium",
-                  "high",
-                  "critical"
-                ]
+                "enum": ["low", "medium", "high", "critical"]
               },
               "summary": {
                 "type": "string"
               }
             },
-            "required": [
-              "investigationId",
-              "status",
-              "severity",
-              "summary"
-            ],
+            "required": ["investigationId", "status", "severity", "summary"],
             "additionalProperties": false
           }
         },
@@ -12268,12 +10653,7 @@
         },
         "traceReadiness": {
           "type": "string",
-          "enum": [
-            "clean",
-            "flagged",
-            "blocked",
-            "unknown"
-          ]
+          "enum": ["clean", "flagged", "blocked", "unknown"]
         },
         "lastEvaluatedAt": {
           "type": "string",
@@ -12308,11 +10688,7 @@
         },
         "direction": {
           "type": "string",
-          "enum": [
-            "forward",
-            "reverse",
-            "both"
-          ]
+          "enum": ["forward", "reverse", "both"]
         },
         "affectedBatches": {
           "type": "number"
@@ -12325,12 +10701,7 @@
         },
         "riskLevel": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ]
+          "enum": ["low", "medium", "high", "critical"]
         },
         "generatedAt": {
           "type": "string",
@@ -12398,23 +10769,12 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "resolved",
-                  "unresolved",
-                  "blocked",
-                  "partial"
-                ],
+                "enum": ["resolved", "unresolved", "blocked", "partial"],
                 "description": "[classification: source-field]"
               },
               "riskLevel": {
                 "type": "string",
-                "enum": [
-                  "none",
-                  "low",
-                  "medium",
-                  "high",
-                  "critical"
-                ],
+                "enum": ["none", "low", "medium", "high", "critical"],
                 "description": "[classification: application-heuristic]"
               },
               "depth": {
@@ -12433,11 +10793,7 @@
                 "description": "[classification: source-derived]"
               }
             },
-            "required": [
-              "id",
-              "materialId",
-              "materialDescription"
-            ],
+            "required": ["id", "materialId", "materialDescription"],
             "additionalProperties": false
           }
         },
@@ -12525,21 +10881,13 @@
                 "description": "[classification: source-field]"
               }
             },
-            "required": [
-              "id",
-              "source",
-              "target"
-            ],
+            "required": ["id", "source", "target"],
             "additionalProperties": false
           }
         },
         "direction": {
           "type": "string",
-          "enum": [
-            "upstream",
-            "downstream",
-            "both"
-          ],
+          "enum": ["upstream", "downstream", "both"],
           "description": "[classification: source-field]"
         },
         "depth": {
@@ -12599,23 +10947,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "escalated",
-            "resolved",
-            "closed"
-          ],
+          "enum": ["open", "in-progress", "escalated", "resolved", "closed"],
           "description": "[classification: source-field]"
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -12751,23 +11088,12 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "resolved",
-            "unresolved",
-            "blocked",
-            "partial"
-          ],
+          "enum": ["resolved", "unresolved", "blocked", "partial"],
           "description": "[classification: source-field]"
         },
         "riskLevel": {
           "type": "string",
-          "enum": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["none", "low", "medium", "high", "critical"],
           "description": "[classification: application-heuristic]"
         },
         "depth": {
@@ -12786,11 +11112,7 @@
           "description": "[classification: source-derived]"
         }
       },
-      "required": [
-        "id",
-        "materialId",
-        "materialDescription"
-      ],
+      "required": ["id", "materialId", "materialDescription"],
       "additionalProperties": false
     },
     "TraceRiskSignal": {
@@ -12810,13 +11132,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "info",
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["info", "low", "medium", "high", "critical"],
           "description": "[classification: source-field]"
         },
         "source": {
@@ -12834,14 +11150,7 @@
           "description": "[classification: application-heuristic]"
         }
       },
-      "required": [
-        "signalId",
-        "title",
-        "description",
-        "severity",
-        "source",
-        "confidence"
-      ],
+      "required": ["signalId", "title", "description", "severity", "source", "confidence"],
       "additionalProperties": false
     },
     "UATEvidencePayload": {
@@ -12859,23 +11168,14 @@
         },
         "adapterMode": {
           "type": "string",
-          "enum": [
-            "mock",
-            "legacy-api",
-            "databricks-api"
-          ]
+          "enum": ["mock", "legacy-api", "databricks-api"]
         },
         "inputs": {
           "type": "object",
           "additionalProperties": {
             "anyOf": [
               {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean",
-                  "null"
-                ]
+                "type": ["string", "number", "boolean", "null"]
               },
               {
                 "type": "array",
@@ -12897,14 +11197,7 @@
           "properties": {
             "overall": {
               "type": "string",
-              "enum": [
-                "mock",
-                "legacy-api",
-                "databricks-api",
-                "mixed",
-                "unavailable",
-                "unknown"
-              ]
+              "enum": ["mock", "legacy-api", "databricks-api", "mixed", "unavailable", "unknown"]
             },
             "sections": {
               "type": "object",
@@ -12913,9 +11206,7 @@
               }
             }
           },
-          "required": [
-            "overall"
-          ],
+          "required": ["overall"],
           "additionalProperties": false
         },
         "evidenceCompleteness": {
@@ -12941,9 +11232,7 @@
               }
             }
           },
-          "required": [
-            "status"
-          ],
+          "required": ["status"],
           "additionalProperties": false
         },
         "counts": {
@@ -12985,22 +11274,14 @@
       "type": "object",
       "properties": {
         "exceptionType": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "severity": {
           "anyOf": [
             {
               "type": "string",
-              "enum": [
-                "critical",
-                "high",
-                "medium",
-                "low"
-              ]
+              "enum": ["critical", "high", "medium", "low"]
             },
             {
               "type": "null"
@@ -13013,107 +11294,63 @@
           "description": "[classification: source-field]"
         },
         "batchId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "storageLocation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "warehouseNumber": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "quantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "expiryDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "daysToExpiry": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: application-derived]"
         },
         "documentId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "processOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "deliveryId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "purchaseOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "reason": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "recommendedReviewAction": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: application-heuristic]"
         }
       },
-      "required": [
-        "materialId"
-      ],
+      "required": ["materialId"],
       "additionalProperties": false
     },
     "Warehouse360InboundItem": {
@@ -13121,46 +11358,27 @@
       "properties": {
         "documentType": {
           "type": "string",
-          "enum": [
-            "PO",
-            "STO",
-            "unknown"
-          ],
+          "enum": ["PO", "STO", "unknown"],
           "description": "[classification: source-field]"
         },
         "purchaseOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "stockTransportOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "itemId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "vendorId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "supplyingPlantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -13168,118 +11386,70 @@
           "description": "[classification: source-field]"
         },
         "materialDescription": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "batchId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "storageLocation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "warehouseNumber": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "expectedDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "receivedDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "quantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "status": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "exceptionReason": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "documentType",
-        "materialId"
-      ],
+      "required": ["documentType", "materialId"],
       "additionalProperties": false
     },
     "Warehouse360OutboundItem": {
       "type": "object",
       "properties": {
         "deliveryId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "deliveryItemId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "customerId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "salesOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -13287,86 +11457,51 @@
           "description": "[classification: source-field]"
         },
         "materialDescription": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "batchId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "storageLocation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "warehouseNumber": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "plannedGoodsIssueDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "actualGoodsIssueDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "quantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "status": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "exceptionReason": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "materialId"
-      ],
+      "required": ["materialId"],
       "additionalProperties": false
     },
     "Warehouse360OverviewContext": {
@@ -13511,24 +11646,15 @@
       "type": "object",
       "properties": {
         "processOrderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "reservationId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "reservationItemId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "materialId": {
@@ -13536,93 +11662,55 @@
           "description": "[classification: source-field]"
         },
         "materialDescription": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "batchId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "plantId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "storageLocation": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "warehouseNumber": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "requirementDate": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "requiredQuantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "stagedQuantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-field]"
         },
         "openQuantity": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "[classification: source-derived]"
         },
         "unitOfMeasure": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "stagingStatus": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         },
         "exceptionReason": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "[classification: source-field]"
         }
       },
-      "required": [
-        "materialId"
-      ],
+      "required": ["materialId"],
       "additionalProperties": false
     },
     "Warehouse360Summary": {
@@ -13736,14 +11824,7 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "materialId",
-        "plantId",
-        "holdType",
-        "quantity",
-        "uom",
-        "placedAt"
-      ],
+      "required": ["materialId", "plantId", "holdType", "quantity", "uom", "placedAt"],
       "additionalProperties": false
     },
     "WarehouseHoldStatus": {
@@ -13763,13 +11844,7 @@
         },
         "stockType": {
           "type": "string",
-          "enum": [
-            "unrestricted",
-            "quality-inspection",
-            "blocked",
-            "returns",
-            "transit"
-          ]
+          "enum": ["unrestricted", "quality-inspection", "blocked", "returns", "transit"]
         },
         "totalQuantity": {
           "type": "number"
@@ -13796,13 +11871,7 @@
               },
               "holdType": {
                 "type": "string",
-                "enum": [
-                  "quality",
-                  "regulatory",
-                  "customer",
-                  "internal",
-                  "trace"
-                ]
+                "enum": ["quality", "regulatory", "customer", "internal", "trace"]
               },
               "reason": {
                 "type": "string"
@@ -13820,22 +11889,10 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "active",
-                  "pending-release",
-                  "released",
-                  "escalated"
-                ]
+                "enum": ["active", "pending-release", "released", "escalated"]
               }
             },
-            "required": [
-              "holdId",
-              "holdType",
-              "reason",
-              "placedBy",
-              "placedAt",
-              "status"
-            ],
+            "required": ["holdId", "holdType", "reason", "placedBy", "placedAt", "status"],
             "additionalProperties": false
           }
         },
@@ -13926,22 +11983,12 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "critical",
-            "high",
-            "medium",
-            "low"
-          ],
+          "enum": ["critical", "high", "medium", "low"],
           "description": "[classification: source-field]"
         },
         "resolution": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "resolved",
-            "escalated"
-          ],
+          "enum": ["open", "in-progress", "resolved", "escalated"],
           "description": "[classification: source-field]"
         }
       },
@@ -14004,14 +12051,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "pending",
-            "in-progress",
-            "staged",
-            "partial",
-            "blocked",
-            "not-required"
-          ],
+          "enum": ["pending", "in-progress", "staged", "partial", "blocked", "not-required"],
           "description": "[classification: source-field]"
         },
         "lastMovementAt": {
@@ -14063,34 +12103,17 @@
         },
         "workOrderType": {
           "type": "string",
-          "enum": [
-            "corrective",
-            "preventive",
-            "predictive",
-            "emergency",
-            "inspection"
-          ],
+          "enum": ["corrective", "preventive", "predictive", "emergency", "inspection"],
           "description": "[classification: source-field]"
         },
         "status": {
           "type": "string",
-          "enum": [
-            "open",
-            "in-progress",
-            "on-hold",
-            "completed",
-            "cancelled"
-          ],
+          "enum": ["open", "in-progress", "on-hold", "completed", "cancelled"],
           "description": "[classification: source-field]"
         },
         "priority": {
           "type": "string",
-          "enum": [
-            "critical",
-            "high",
-            "medium",
-            "low"
-          ],
+          "enum": ["critical", "high", "medium", "low"],
           "description": "[classification: source-field]"
         },
         "plannedStart": {
@@ -14119,12 +12142,7 @@
         },
         "productionImpact": {
           "type": "string",
-          "enum": [
-            "line-down",
-            "reduced-capacity",
-            "no-impact",
-            "risk-only"
-          ],
+          "enum": ["line-down", "reduced-capacity", "no-impact", "risk-only"],
           "description": "[classification: source-field]"
         }
       },
@@ -14196,11 +12214,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "workspaceId",
-        "scope",
-        "userId"
-      ],
+      "required": ["workspaceId", "scope", "userId"],
       "additionalProperties": false
     },
     "YieldVarianceSummary": {
@@ -14250,12 +12264,7 @@
         },
         "severity": {
           "type": "string",
-          "enum": [
-            "low",
-            "medium",
-            "high",
-            "critical"
-          ],
+          "enum": ["low", "medium", "high", "critical"],
           "description": "[classification: source-derived]"
         }
       },

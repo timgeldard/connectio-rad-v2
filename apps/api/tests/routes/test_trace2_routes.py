@@ -541,7 +541,10 @@ class TestCustomerExposureSuccess:
         assert data["shippedQuantity"] == pytest.approx(500.0)
         assert data["countries"] == []
         assert data["blockedDeliveries"] == 0
-        assert data["recallRecommended"] is False
+        # recallRecommended is governance-pending — null means no governed
+        # recall-rule source exists. Was previously emitted as `False` which
+        # was contract-forced; the contract is now nullable.
+        assert data["recallRecommended"] is None
         assert data["highestSeverity"] == "medium"
         assert data["maxExposureDepth"] == 1
 
@@ -851,7 +854,8 @@ class TestCustomerDeliveriesSuccess:
         assert data["shippedQuantity"] == pytest.approx(500.0)
         assert "IE" in data["countries"]
         assert data["blockedDeliveries"] == 0
-        assert data["recallRecommended"] is False
+        # null means no governed recall-rule source available.
+        assert data["recallRecommended"] is None
         assert data["highestSeverity"] == "medium"
         assert data["deliveryEvidenceSource"] == "inventory-movements"
 
@@ -1297,26 +1301,29 @@ class TestCustomerExposureResponseModel:
         assert data["highestSeverity"] in {"none", "low", "medium", "high", "critical"}
 
     async def test_recall_recommended_is_governance_pending(self, monkeypatch) -> None:
-        """The contract today requires `recallRecommended: bool` (classified
-        as `governance-pending` in the schema). The mapper emits `False` with
-        a "rules not yet defined" caveat in its docstring.
+        """recallRecommended is now contract-nullable. Until a governed
+        recall-rule engine lands, the mapper MUST emit `null` (no governed
+        recommendation available) rather than `False` (which would read
+        as "recall not required" — a positive safety claim the system
+        cannot make without governance).
 
-        Source-truthfulness rule from PR 6 brief says no `recallRecommended:
-        false` without governed source — but the contract type forces a bool
-        today. This test pins the CURRENT behaviour (False) so a regression
-        toward True is caught, AND documents the gap. Fix forward in a
-        contract-relaxation PR (mirror of PR 8's UOM pattern) — out of scope
-        here.
+        Semantics:
+          - true  → governed source says recall recommended
+          - false → governed source says recall NOT recommended
+          - null  → no governed recall-rule source available
+
+        Both `true` and `false` require a governed source. The current
+        mapper has no governed source, so the answer is null.
         """
         _databricks_env(monkeypatch)
         with _patch_executor([_FAKE_DELIVERY_ROW]):
             async with _make_client() as client:
                 response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         data = response.json()
-        # Must NOT be True (would imply a governed recall recommendation).
+        # Must NOT be True or False — both require a governed source.
+        assert data["recallRecommended"] is None
         assert data["recallRecommended"] is not True
-        # Current behaviour: False (pre-existing governance gap, tracked).
-        assert data["recallRecommended"] is False
+        assert data["recallRecommended"] is not False
 
     async def test_no_invented_release_or_safety_fields(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)

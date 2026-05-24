@@ -834,7 +834,10 @@ def map_customer_exposure_rows(rows: list[dict]) -> Optional[dict]:
         "countries": [],        # deferred — gold_batch_lineage has no country column
         "highestSeverity": "medium",  # preliminary — severity rules not yet defined
         "blockedDeliveries": 0,       # deferred — requires gold_batch_delivery_v
-        "recallRecommended": False,
+        # null = no governed recall-rule source available. Contract was relaxed
+        # to z.boolean().nullable() so we can stop emitting `false` (which would
+        # read as "recall not required"). See PR brief Part A.
+        "recallRecommended": None,
         "deliveryEvidenceSource": "lineage",
     }
     if min_depth is not None:
@@ -949,7 +952,8 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
         "countries": sorted(countries),
         "highestSeverity": "medium",    # preliminary — severity rules not yet defined
         "blockedDeliveries": 0,         # deferred — no confirmed blocked-status column
-        "recallRecommended": False,
+        # null = no governed recall-rule source available. See PR brief Part A.
+        "recallRecommended": None,
         "deliveryEvidenceSource": "inventory-movements",
     }
     if uom is not None:
@@ -1948,15 +1952,21 @@ def map_mass_balance_ledger_rows(rows: list[dict]) -> Optional[dict]:
         return None
 
     events: list[dict] = []
-    uom = ""
+    # uom is source-truthful: stays `None` when no row provides one.
+    # Contract was relaxed to z.string().nullable() so we no longer emit
+    # the empty-string sentinel (which read as "unit is empty" rather
+    # than "unit is unavailable"). See PR brief Part B.
+    uom: Optional[str] = None
     cum_running = 0.0
     for i, row in enumerate(rows):
         bucket = _bucket_movement_type(row.get("movement_type"))
         qty = float(row.get("quantity") or 0)
         balance = row.get("balance_qty")
         cum_running = float(balance) if balance is not None else cum_running + qty
-        if not uom and row.get("uom") is not None:
-            uom = str(row["uom"])
+        if uom is None and row.get("uom") is not None:
+            raw_uom = str(row["uom"]).strip()
+            if raw_uom:
+                uom = raw_uom
         events.append({
             "d": i,
             "date": str(row.get("posting_date") or ""),

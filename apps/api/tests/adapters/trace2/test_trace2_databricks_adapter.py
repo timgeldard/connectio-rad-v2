@@ -1170,11 +1170,16 @@ class TestMapCustomerExposureRows:
         assert result is not None
         assert result["blockedDeliveries"] == 0
 
-    def test_recall_recommended_always_false(self) -> None:
-        """Recall rules not yet defined — must be False in this slice."""
+    def test_recall_recommended_is_null_governance_pending(self) -> None:
+        """Recall rules not yet defined — mapper emits None (no governed
+        recommendation). The contract was relaxed to nullable so the mapper
+        can stop emitting `False` (which would read as "recall not required").
+        """
         result = map_customer_exposure_rows([_delivery_row()])
         assert result is not None
-        assert result["recallRecommended"] is False
+        assert result["recallRecommended"] is None
+        assert result["recallRecommended"] is not False
+        assert result["recallRecommended"] is not True
 
     def test_highest_severity_is_medium_preliminary(self) -> None:
         """Preliminary — business severity rules not yet defined."""
@@ -1381,10 +1386,14 @@ class TestMapCustomerDeliveryRows:
         assert result is not None
         assert result["blockedDeliveries"] == 0
 
-    def test_recall_recommended_is_false(self) -> None:
+    def test_recall_recommended_is_null_governance_pending(self) -> None:
+        """No governed recall-rule source — mapper emits None. Contract
+        was relaxed to nullable so the mapper stops emitting `False`
+        (which would read as "recall not required" — a positive safety
+        claim the system cannot make without governance)."""
         result = map_customer_delivery_rows([_delivery_view_row()])
         assert result is not None
-        assert result["recallRecommended"] is False
+        assert result["recallRecommended"] is None
 
     def test_highest_severity_is_medium_preliminary(self) -> None:
         result = map_customer_delivery_rows([_delivery_view_row()])

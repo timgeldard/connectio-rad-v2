@@ -604,16 +604,26 @@ class TestMapMassBalanceLedgerRows:
         assert result is not None
         assert result["kpi"]["uom"] == "L"
 
-    def test_uom_is_empty_string_when_source_null(self) -> None:
-        """The MassBalanceKpi contract requires `uom: string` (not
-        nullable). Until a contract relaxation lands, the mapper emits
-        empty string when uom is null — NEVER 'KG'."""
+    def test_uom_is_null_when_source_null(self) -> None:
+        """The MassBalanceKpi contract was relaxed to `z.string().nullable()`,
+        so the mapper now emits `null` for an unavailable UOM rather than
+        the misleading empty-string sentinel. Never 'KG'."""
         from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
         rows = [_mb_row(uom=None)]
         result = map_mass_balance_ledger_rows(rows)
         assert result is not None
-        assert result["kpi"]["uom"] == ""
+        assert result["kpi"]["uom"] is None
         assert result["kpi"]["uom"] != "KG"
+        assert result["kpi"]["uom"] != ""
+
+    def test_uom_is_null_when_source_empty_string(self) -> None:
+        """A source row with `uom: ''` is operationally the same as null —
+        emit null, not empty string."""
+        from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows
+        rows = [_mb_row(uom="")]
+        result = map_mass_balance_ledger_rows(rows)
+        assert result is not None
+        assert result["kpi"]["uom"] is None
 
     def test_uom_not_defaulted_to_kg_for_unfamiliar_uom(self) -> None:
         from adapters.trace2.trace2_databricks_adapter import map_mass_balance_ledger_rows

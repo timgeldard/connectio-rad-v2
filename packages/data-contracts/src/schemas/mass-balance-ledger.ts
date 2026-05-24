@@ -29,7 +29,11 @@ export const MassBalanceKpiSchema = z.object({
   adjusted: z.number().describe('[classification: source-derived]'),
   current: z.number().describe('[classification: source-derived]'),
   variance: z.number().describe('[classification: source-derived]'),
-  uom: z.string().describe('[classification: source-field]'),
+  // uom is source-truthful: emit verbatim when present, `null` when the
+  // source is silent. The previous empty-string sentinel was misleading —
+  // it suggested "unit is empty" rather than "unit is unavailable".
+  // Do NOT default to 'KG' or any other unit.
+  uom: z.string().nullable().describe('[classification: source-field]'),
   postings: MassBalancePostingsSchema,
 })
 
@@ -62,6 +66,8 @@ export const MassBalanceLedgerSchema = z.object({
    * `application-heuristic` until a governed reconciliation engine is
    * wired. `governed` is reserved for future use.
    */
-  reconciliationSource: z.enum(['application-heuristic', 'governed']).describe('[classification: application-heuristic]'),
+  reconciliationSource: z
+    .enum(['application-heuristic', 'governed'])
+    .describe('[classification: application-heuristic]'),
 })
 export type MassBalanceLedger = z.infer<typeof MassBalanceLedgerSchema>
