@@ -76,3 +76,18 @@ export type { SourceConfidenceStripProps } from './components/manufacturing/sour
 
 export { PartialDataNotice } from './components/manufacturing/partial-data-notice'
 export type { PartialDataNoticeProps } from './components/manufacturing/partial-data-notice'
+
+export { UnavailableValue } from './components/manufacturing/unavailable-value'
+export type { UnavailableValueProps } from './components/manufacturing/unavailable-value'
+
+export { UnknownValue } from './components/manufacturing/unknown-value'
+export type { UnknownValueProps } from './components/manufacturing/unknown-value'
+
+export { NotEvaluatedValue } from './components/manufacturing/not-evaluated-value'
+export type { NotEvaluatedValueProps } from './components/manufacturing/not-evaluated-value'
+
+export { CaveatBadge } from './components/manufacturing/caveat-badge'
+export type { CaveatBadgeProps } from './components/manufacturing/caveat-badge'
+
+export { ApplicationHeuristicBadge } from './components/manufacturing/application-heuristic-badge'
+export type { ApplicationHeuristicBadgeProps } from './components/manufacturing/application-heuristic-badge'
