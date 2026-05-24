@@ -68,7 +68,7 @@ export function OpenHoldsPanel({ request, onHoldNavigate }: OpenHoldsPanelProps)
       errorMessage={!result?.ok ? result?.error.message : undefined}
       source={result?.source}
     >
-      {holds.length === 0 && !isLoading && (
+      {holds.length === 0 && result?.ok && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--shell-fg-3)' }}>No open holds.</p>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
