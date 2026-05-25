@@ -11,7 +11,11 @@ import {
 import { TraceabilityInitialState } from '../components/TraceabilityInitialState.js'
 import { TraceQueryForm } from '../forms/trace-query-form.js'
 import { UAT_CANDIDATE } from '../constants.js'
-import { useBatchHeaderSummary } from '../adapters/trace2-queries.js'
+import {
+  useBatchHeaderSummary,
+  useCustomerExposureSummary,
+  useTraceGraph,
+} from '../adapters/trace2-queries.js'
 import type { TraceNode } from '@connectio/data-contracts'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 
@@ -57,12 +61,18 @@ export function NetworkOverviewView({ request: initialRequest }: NetworkOverview
   // (material, batch, plant) combination, the investigation context is invalid.
   // Suppress every downstream panel — lineage edges may exist for the same batch
   // in a different plant and would mislead the user about the entered context.
-  const batchHeaderResult = useBatchHeaderSummary(request, { enabled: !isInitialState })
+  const batchHeaderQuery = useBatchHeaderSummary(request, { enabled: !isInitialState })
   const validationFailed =
     !isInitialState &&
-    batchHeaderResult.data !== undefined &&
-    !batchHeaderResult.data.ok &&
-    batchHeaderResult.data.error.code === 'not-found'
+    batchHeaderQuery.data !== undefined &&
+    !batchHeaderQuery.data.ok &&
+    batchHeaderQuery.data.error.code === 'not-found'
+  const customerExposureQuery = useCustomerExposureSummary(request, {
+    enabled: !isInitialState && !validationFailed,
+  })
+  const traceGraphQuery = useTraceGraph(request, {
+    enabled: !isInitialState && !validationFailed,
+  })
 
   if (isInitialState) {
     return (
@@ -153,14 +163,19 @@ export function NetworkOverviewView({ request: initialRequest }: NetworkOverview
             }}
           >
             <BatchHeaderNetworkPanel
-              request={request}
+              result={batchHeaderQuery.data}
+              isLoading={batchHeaderQuery.isLoading}
               onStockBucketClick={setSelectedBucket}
             />
-            <CustomerExposureNetworkPanel request={request} />
+            <CustomerExposureNetworkPanel
+              result={customerExposureQuery.data}
+              isLoading={customerExposureQuery.isLoading}
+            />
           </div>
 
           <TraceGraphNetworkPanel
-            request={request}
+            result={traceGraphQuery.data}
+            isLoading={traceGraphQuery.isLoading}
             riskFilter={riskFilter}
             onNodeClick={setSelectedNode}
           />

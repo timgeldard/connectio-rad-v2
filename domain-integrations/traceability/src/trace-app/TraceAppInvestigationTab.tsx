@@ -7,6 +7,11 @@ import {
   type RiskFilter,
 } from '../panels/trace-graph-network-panel.js'
 import type { TraceNode } from '@connectio/data-contracts'
+import {
+  useBatchHeaderSummary,
+  useCustomerExposureSummary,
+  useTraceGraph,
+} from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 
 export interface TraceAppInvestigationTabProps {
@@ -26,6 +31,9 @@ export function TraceAppInvestigationTab({ request }: TraceAppInvestigationTabPr
   const [riskFilter, setRiskFilter] = useState<RiskFilter>('all')
   const [selectedBucket, setSelectedBucket] = useState<StockBucket | null>(null)
   const [selectedNode, setSelectedNode] = useState<TraceNode | null>(null)
+  const batchHeaderQuery = useBatchHeaderSummary(request)
+  const customerExposureQuery = useCustomerExposureSummary(request)
+  const traceGraphQuery = useTraceGraph(request)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 20 }}>
@@ -75,12 +83,20 @@ export function TraceAppInvestigationTab({ request }: TraceAppInvestigationTabPr
           gap: 16,
         }}
       >
-        <BatchHeaderNetworkPanel request={request} onStockBucketClick={setSelectedBucket} />
-        <CustomerExposureNetworkPanel request={request} />
+        <BatchHeaderNetworkPanel
+          result={batchHeaderQuery.data}
+          isLoading={batchHeaderQuery.isLoading}
+          onStockBucketClick={setSelectedBucket}
+        />
+        <CustomerExposureNetworkPanel
+          result={customerExposureQuery.data}
+          isLoading={customerExposureQuery.isLoading}
+        />
       </div>
 
       <TraceGraphNetworkPanel
-        request={request}
+        result={traceGraphQuery.data}
+        isLoading={traceGraphQuery.isLoading}
         riskFilter={riskFilter}
         onNodeClick={setSelectedNode}
       />

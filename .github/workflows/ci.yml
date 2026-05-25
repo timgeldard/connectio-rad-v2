@@ -32,9 +32,18 @@ jobs:
 
       - run: npm ci
 
+      - name: Derive Nx affected range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+          else
+            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+          fi
+          echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
+
       # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      - run: npx nx record -- npx nx format:check  --base="remotes/origin/main"
-      - run: npx nx run-many -t lint test build typecheck e2e-ci
+      - run: npx nx record -- npx nx format:check --base="$NX_BASE"
+      - run: npx nx affected -t lint test build typecheck e2e-ci --base="$NX_BASE" --head="$NX_HEAD"
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: npx nx fix-ci
         if: always()
