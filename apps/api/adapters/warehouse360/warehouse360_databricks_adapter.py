@@ -371,43 +371,78 @@ def map_warehouse_inbound_rows(rows: list[dict]) -> list[dict]:
 def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
     """Return QuerySpec for Outbound Deliveries.
 
-    Source view: wh360_deliveries_v
+    Source view: wh360_deliveries_v (verified live 2026-05-25 via
+    ``DESCRIBE TABLE connected_plant_uat.wh360.wh360_deliveries_v`` —
+    see docs/data-layer/warehouse360-outbound-source-verification.md).
+
+    Verified columns: delivery_id, delivery_type, plant_id, customer_id,
+    customer_name, carrier, lgnum, planned_gi_date, actual_gi_date,
+    loading_date, delivery_date, gross_weight, weight_uom, packages,
+    wm_status, mins_to_cutoff, pick_pct, line_count, risk, shipped.
+
+    The previous adapter projected SAP-style UPPER_CASE line-item columns
+    (``DELIVERY_ITEM_ID``, ``SALES_ORDER_ID``, ``MATERIAL_ID``,
+    ``MATERIAL_DESCRIPTION``, ``BATCH_ID``, ``STORAGE_LOCATION``,
+    ``WAREHOUSE_NUMBER``, ``PLANNED_GOODS_ISSUE_DATE``,
+    ``ACTUAL_GOODS_ISSUE_DATE``, ``QUANTITY``, ``UNIT_OF_MEASURE``,
+    ``STATUS``, ``EXCEPTION_REASON``) which do not exist in the live
+    delivery-header view. The route returned HTTP 502 in databricks-api
+    mode. This spec now uses the live lower-case column names.
+
+    Filters are optional and symmetric (SQL placeholder ⇔ params key):
+      - ``lgnum = :warehouse_id`` when ``warehouse_id`` is supplied
+      - ``plant_id = :plant_id`` when ``plant_id`` is supplied
+      - ``planned_gi_date >= :date_from`` when supplied (lexical ISO compare —
+        the source column is ``string`` not ``date``)
+      - ``planned_gi_date <= :date_to`` when supplied
+
+    Line-item / material / batch fields are unavailable from this
+    delivery-header view; the mapper emits ``None`` for those contract
+    fields (``materialId`` stays as empty string to satisfy the
+    generated-contract requirement — see source-verification doc §5).
     """
     view = resolve_domain_object("wh360", "wh360_deliveries_v")
-    where_clauses = ["WAREHOUSE_NUMBER = :warehouse_id"]
-    params = {"warehouse_id": request.warehouse_id}
+    where_clauses: list[str] = []
+    params: dict[str, object] = {}
 
+    if request.warehouse_id:
+        where_clauses.append("lgnum = :warehouse_id")
+        params["warehouse_id"] = request.warehouse_id
     if request.plant_id:
-        where_clauses.append("PLANT_ID = :plant_id")
+        where_clauses.append("plant_id = :plant_id")
         params["plant_id"] = request.plant_id
     if request.date_from:
-        where_clauses.append("PLANNED_GOODS_ISSUE_DATE >= :date_from")
+        where_clauses.append("planned_gi_date >= :date_from")
         params["date_from"] = request.date_from
     if request.date_to:
-        where_clauses.append("PLANNED_GOODS_ISSUE_DATE <= :date_to")
+        where_clauses.append("planned_gi_date <= :date_to")
         params["date_to"] = request.date_to
 
-    where_str = " AND ".join(where_clauses)
+    where_str = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
     sql = f"""
     SELECT
-        DELIVERY_ID               AS delivery_id,
-        DELIVERY_ITEM_ID          AS delivery_item_id,
-        CUSTOMER_ID               AS customer_id,
-        SALES_ORDER_ID            AS sales_order_id,
-        MATERIAL_ID               AS material_id,
-        MATERIAL_DESCRIPTION      AS material_description,
-        BATCH_ID                  AS batch_id,
-        PLANT_ID                  AS plant_id,
-        STORAGE_LOCATION          AS storage_location,
-        WAREHOUSE_NUMBER          AS warehouse_number,
-        PLANNED_GOODS_ISSUE_DATE  AS planned_goods_issue_date,
-        ACTUAL_GOODS_ISSUE_DATE    AS actual_goods_issue_date,
-        QUANTITY                  AS quantity,
-        UNIT_OF_MEASURE           AS unit_of_measure,
-        STATUS                    AS status,
-        EXCEPTION_REASON          AS exception_reason
+        delivery_id,
+        delivery_type,
+        plant_id,
+        customer_id,
+        customer_name,
+        carrier,
+        lgnum,
+        planned_gi_date,
+        actual_gi_date,
+        loading_date,
+        delivery_date,
+        gross_weight,
+        weight_uom,
+        packages,
+        wm_status,
+        mins_to_cutoff,
+        pick_pct,
+        line_count,
+        risk,
+        shipped
     FROM {view}
-    WHERE {where_str}
+    {where_str}
     LIMIT {request.limit}
     """
     return QuerySpec(
@@ -422,26 +457,59 @@ def get_warehouse_outbound_spec(request: WarehouseOutboundRequest) -> QuerySpec:
 
 
 def map_warehouse_outbound_rows(rows: list[dict]) -> list[dict]:
-    """Map raw outbound rows to Warehouse360OutboundItem schema."""
+    """Map raw wh360_deliveries_v rows to Warehouse360OutboundItem.
+
+    Source columns verified live 2026-05-25 — see
+    docs/data-layer/warehouse360-outbound-source-verification.md §3.
+
+    Source-truthful guardrails:
+      - deliveryItemId, salesOrderId, materialDescription, batchId,
+        storageLocation, exceptionReason are absent from the
+        delivery-header view; the mapper emits ``None`` rather than
+        empty strings or invented values.
+      - materialId remains empty string (``""``) because the generated
+        ``Warehouse360OutboundItem`` contract requires ``materialId: str``.
+        The header-grain view has no material identifier at all; relaxing
+        the contract is tracked as a future follow-up so the response
+        body shape stays stable for the existing frontend. See
+        source-verification doc §5.
+      - quantity maps to ``gross_weight`` (a header-level weight, not a
+        line quantity) with ``unitOfMeasure`` mirroring ``weight_uom`` so
+        the unit is explicit. Documented as ``application-derived`` in
+        the source-verification doc §4.
+      - status maps to ``wm_status`` verbatim — the WM-status string is
+        source-truthful and not coerced into a governed enum.
+      - warehouseNumber maps to ``lgnum``.
+    """
     result = []
     for row in rows:
+        gross_weight = row.get("gross_weight")
+        quantity = float(gross_weight) if gross_weight is not None else None
+
         result.append({
-            "deliveryId": str(row.get("delivery_id") or ""),
-            "deliveryItemId": str(row.get("delivery_item_id") or ""),
-            "customerId": str(row.get("customer_id") or ""),
-            "salesOrderId": str(row.get("sales_order_id") or ""),
-            "materialId": str(row.get("material_id") or ""),
-            "materialDescription": str(row.get("material_description") or ""),
-            "batchId": str(row.get("batch_id") or ""),
-            "plantId": str(row.get("plant_id") or ""),
-            "storageLocation": str(row.get("storage_location") or ""),
-            "warehouseNumber": str(row.get("warehouse_number") or ""),
-            "plannedGoodsIssueDate": _format_datetime(row.get("planned_goods_issue_date")),
-            "actualGoodsIssueDate": _format_datetime(row.get("actual_goods_issue_date")),
-            "quantity": _safe_float(row.get("quantity")),
-            "unitOfMeasure": str(row.get("unit_of_measure") or ""),
-            "status": str(row.get("status") or ""),
-            "exceptionReason": str(row.get("exception_reason") or ""),
+            "deliveryId": str(row["delivery_id"]) if row.get("delivery_id") else None,
+            # Line-grain — absent in wh360_deliveries_v (delivery-header view).
+            "deliveryItemId": None,
+            "customerId": str(row["customer_id"]) if row.get("customer_id") else None,
+            # Sales order is not exposed on the delivery-header view.
+            "salesOrderId": None,
+            # The header-grain view has no material identifier. Contract
+            # requires materialId: str — empty string keeps the response
+            # body shape stable; relaxing the contract is a follow-up.
+            "materialId": "",
+            "materialDescription": None,
+            "batchId": None,
+            "plantId": str(row["plant_id"]) if row.get("plant_id") else None,
+            "storageLocation": None,
+            "warehouseNumber": str(row["lgnum"]) if row.get("lgnum") else None,
+            "plannedGoodsIssueDate": _format_datetime(row.get("planned_gi_date")) or None,
+            "actualGoodsIssueDate": _format_datetime(row.get("actual_gi_date")) or None,
+            "quantity": quantity,
+            "unitOfMeasure": str(row["weight_uom"]) if row.get("weight_uom") else None,
+            "status": str(row["wm_status"]) if row.get("wm_status") else None,
+            # No exception_reason column in wh360_deliveries_v — exceptions
+            # live in imwm_exceptions_v.
+            "exceptionReason": None,
         })
     return result
 
