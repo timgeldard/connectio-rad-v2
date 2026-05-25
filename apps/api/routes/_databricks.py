@@ -55,13 +55,14 @@ def set_databricks_response_headers(response: Response, spec: QuerySpec) -> None
 
 
 def build_user_identity(
-    token: str | None, user: str | None, email: str | None
+    token: str | None, user: str | None, email: str | None, catalog_target: str | None = None
 ) -> UserIdentity:
     """Construct a UserIdentity from forwarded OAuth headers."""
     return UserIdentity(
         user_id=user or "unknown",
         email=email,
         raw_oauth_token=token,
+        catalog_target=catalog_target,
     )
 
 
@@ -79,11 +80,18 @@ async def run_query(
 
     Returns (rows, spec) so the caller can set response headers from the spec.
     """
+    from shared.query_service.query_executor import DatabricksRepository
     try:
-        spec: QuerySpec = spec_factory()
         client = StatementApiDatabricksClient(host=databricks_host)
         executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
+        repository = DatabricksRepository(executor=executor, identity=identity)
+        
+        # We pass a simple lambda for the mapper since we just want the raw rows.
+        # This keeps backwards compatibility with existing route handlers that map the rows themselves.
+        rows, spec = await repository.fetch(
+            spec_factory=spec_factory,
+            mapper=lambda r: r
+        )
         return rows, spec
     except DatabricksConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

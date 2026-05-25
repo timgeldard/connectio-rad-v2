@@ -1,4 +1,4 @@
-﻿import type { ScopeContext } from '@connectio/data-contracts'
+import type { ScopeContext } from '@connectio/data-contracts'
 
 /** Identity resolved from the Databricks Apps proxy headers. */
 export interface UserIdentity {
@@ -8,6 +8,7 @@ export interface UserIdentity {
   /** Identity provider group memberships (from JWT claims). */
   readonly groups: readonly string[]
   readonly isAuthenticated: boolean
+  readonly catalogTarget?: 'uat' | 'prod'
 }
 
 /** A single scope dimension the user is authorised to access. */

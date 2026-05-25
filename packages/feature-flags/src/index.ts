@@ -83,6 +83,9 @@ export const featureFlags = {
   runtime: {
     get enableCrossDomainContext() { return getFlag('runtime.enableCrossDomainContext', 'VITE_FEATURE_ENABLE_CROSS_DOMAIN_CONTEXT', false) },
   },
+  databricks: {
+    get useProductionCatalog() { return getFlag('databricks.useProductionCatalog', 'VITE_FEATURE_DATABRICKS_USE_PROD_CATALOG', false) },
+  },
 }
 
 /** Map workspaceId to the corresponding workspace feature flag status. */

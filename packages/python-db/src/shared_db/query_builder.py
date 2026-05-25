@@ -11,6 +11,17 @@ from typing import Any, Optional
 from shared_db.core import sql_param
 
 _IDENTIFIER_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_AGGREGATE_EXPR_RE = re.compile(
+    r"^(?P<func>AVG|COUNT|MAX|MIN|SUM)\(\s*(?P<arg>[^()]+?)\s*\)"
+    r"(?:\s+AS\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?$",
+    re.IGNORECASE,
+)
+_MIC_IDENTIFIER_RE = re.compile(r"\b(mic|mic_id|mic_name|unified_mic_key)\b", re.IGNORECASE)
+_PLANT_IDENTIFIER_RE = re.compile(r"\bplant_id\b", re.IGNORECASE)
+_PLAN_IDENTIFIER_RE = re.compile(
+    r"\b(operation_id|inspection_lot_id|inspection_plan)\b",
+    re.IGNORECASE,
+)
 
 
 def _is_safe_identifier(identifier: str, *, allow_qualified: bool = True) -> bool:
@@ -41,6 +52,23 @@ def _is_safe_identifier(identifier: str, *, allow_qualified: bool = True) -> boo
     return True
 
 
+def _is_allowed_aggregate_expression(expression: str) -> bool:
+    """Return whether *expression* is a supported aggregate select item."""
+    match = _AGGREGATE_EXPR_RE.fullmatch(expression)
+    if not match:
+        return False
+
+    arg = match.group("arg").strip()
+    if arg.upper().startswith("DISTINCT "):
+        arg = arg[9:].strip()
+
+    if arg != "*" and not _is_safe_identifier(arg):
+        return False
+
+    alias = match.group("alias")
+    return alias is None or _is_safe_identifier(alias, allow_qualified=False)
+
+
 @dataclass
 class QueryBuilder:
     """Standardized query builder for Databricks SQL cockpits.
@@ -57,6 +85,7 @@ class QueryBuilder:
     order_by: Optional[str] = None
     limit: Optional[int] = None
     offset: Optional[int] = None
+    group_by_columns: list[str] = field(default_factory=list)
     clustering_columns: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -110,6 +139,24 @@ class QueryBuilder:
         self.order_by = order_by
         return self
 
+    def with_group_by(self, *columns: str) -> "QueryBuilder":
+        """Set GROUP BY clause.
+
+        Args:
+            *columns: Column identifiers to group by.
+
+        Returns:
+            Self, for method chaining.
+
+        Raises:
+            ValueError: When any column contains unsafe characters.
+        """
+        for col in columns:
+            if not _is_safe_identifier(col):
+                raise ValueError(f"Invalid GROUP BY identifier: {col!r}")
+        self.group_by_columns.extend(columns)
+        return self
+
     def with_clustering_hint(self, *columns: str) -> "QueryBuilder":
         """Add optimizer-hint column names.
 
@@ -136,12 +183,30 @@ class QueryBuilder:
             Tuple of ``(sql_statement, params_list)``.
 
         Raises:
-            ValueError: When any column in ``self.columns`` is unsafe.
+            ValueError: When any column in ``self.columns`` is unsafe, or when
+                        aggregations violate data grouping rules.
         """
         for col in self.columns:
             if col != "*" and not _is_safe_identifier(col):
-                raise ValueError(f"Invalid column identifier: {col!r}")
+                if not _is_allowed_aggregate_expression(col):
+                    raise ValueError(f"Invalid column identifier: {col!r}")
         cols = ", ".join(self.columns)
+
+        # Enforce MIC grouping rule if aggregations or GROUP BY are used
+        is_aggregated = bool(self.group_by_columns) or any(
+            _is_allowed_aggregate_expression(c) for c in self.columns
+        )
+        if is_aggregated:
+            query_text = cols + " " + " ".join(self.filters) + " " + " ".join(self.group_by_columns)
+            if _MIC_IDENTIFIER_RE.search(query_text):
+                has_plant = _PLANT_IDENTIFIER_RE.search(query_text) is not None
+                has_plan = _PLAN_IDENTIFIER_RE.search(query_text) is not None
+                if not (has_plant and has_plan):
+                    raise ValueError(
+                        "Severe cross-plant contamination risk: Aggregations on MICs MUST be scoped to a local "
+                        "Plant and Inspection Plan. Please include plant_id AND operation_id/inspection_lot_id "
+                        "in your grouping or filters."
+                    )
 
         hints = ""
         if self.clustering_columns:
@@ -151,6 +216,9 @@ class QueryBuilder:
 
         if self.filters:
             sql += "\nWHERE " + " AND ".join(self.filters)
+
+        if self.group_by_columns:
+            sql += f"\nGROUP BY {', '.join(self.group_by_columns)}"
 
         if self.order_by:
             sql += f"\nORDER BY {self.order_by}"
