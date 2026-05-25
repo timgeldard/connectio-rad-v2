@@ -49,6 +49,8 @@ from dataclasses import dataclass
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
+from shared.query_service.query_executor import DatabricksRepository
+
 
 # ---------------------------------------------------------------------------
 # Inspection type constants — confirmed-v1+ddl from em_config.py
@@ -412,3 +414,23 @@ def _map_swab_row(row: dict) -> dict:
         "inspector": row.get("inspector"),
         "inspectionMethod": row.get("inspection_method"),
     }
+
+
+class EnvMonRepository:
+    """Repository for Environmental Monitoring data."""
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_site_summary(self, request: SiteSummaryRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_site_summary_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_swab_results(self, request: SwabResultsRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_swab_results_spec(request),
+            mapper=lambda rows: rows,
+        )
+

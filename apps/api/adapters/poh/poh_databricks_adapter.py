@@ -40,6 +40,8 @@ from typing import Optional
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
+from shared.query_service.query_executor import DatabricksRepository
+
 
 # ---------------------------------------------------------------------------
 # Status mapping — confirmed against live vw_gold_process_order (2026-05-17)
@@ -517,3 +519,35 @@ def map_order_goods_movements_rows(rows: list[dict]) -> list[dict]:
 
         result.append(item)
     return result
+
+
+class PohRepository:
+    """Repository for Process Order History data."""
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_process_order_header(self, request: ProcessOrderHeaderRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_process_order_header_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_order_operations(self, request: OrderOperationsRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_order_operations_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_order_confirmations(self, request: OrderConfirmationsRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_order_confirmations_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_order_goods_movements(self, request: OrderGoodsMovementsRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_order_goods_movements_spec(request),
+            mapper=lambda rows: rows,
+        )
+

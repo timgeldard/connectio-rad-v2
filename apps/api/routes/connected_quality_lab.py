@@ -16,20 +16,15 @@ import os
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
 
-from adapters.cq.cq_databricks_adapter import get_lab_plants_spec, map_lab_plants_rows
-from routes._databricks import require_databricks_config, set_databricks_response_headers
-from shared.query_service.databricks_client import StatementApiDatabricksClient
-from shared.query_service.errors import (
-    DatabricksAuthRequiredError,
-    DatabricksConfigError,
-    DatabricksPermissionError,
-    DatabricksQueryError,
-    DatabricksQueryTimeoutError,
-    DatabricksRateLimitError,
-    DatabricksWarehouseConfigError,
+from adapters.cq.cq_databricks_adapter import CqLabRepository
+from routes._databricks import (
+    build_databricks_repository,
+    build_user_identity,
+    require_databricks_config,
+    run_repository_fetch,
+    set_databricks_response_headers,
 )
-from shared.query_service.identity import UserIdentity
-from shared.query_service.query_executor import QueryExecutor
+
 
 router = APIRouter()
 
@@ -105,33 +100,10 @@ async def _lab_plants_databricks(
     email: str | None,
 ) -> dict:
     databricks_host, warehouse_id = require_databricks_config()
-
-    identity = UserIdentity(
-        user_id=user or "unknown",
-        email=email,
-        raw_oauth_token=token,
-    )
-
-    try:
-        spec = get_lab_plants_spec()
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        rows = await executor.execute(spec, identity)
-    except DatabricksConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksAuthRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except DatabricksPermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except DatabricksWarehouseConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except DatabricksRateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except DatabricksQueryTimeoutError as exc:
-        raise HTTPException(status_code=504, detail=str(exc)) from exc
-    except DatabricksQueryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    result = map_lab_plants_rows(rows)
+    identity = build_user_identity(token, user, email)
+    repository = build_databricks_repository(identity, databricks_host, warehouse_id)
+    cq_repo = CqLabRepository(repository)
+    result, spec = await run_repository_fetch(cq_repo.fetch_lab_plants)
     set_databricks_response_headers(response, spec)
     return result
+

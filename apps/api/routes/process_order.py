@@ -21,10 +21,7 @@ from adapters.poh.poh_databricks_adapter import (
     OrderGoodsMovementsRequest,
     OrderOperationsRequest,
     ProcessOrderHeaderRequest,
-    get_order_confirmations_spec,
-    get_order_goods_movements_spec,
-    get_order_operations_spec,
-    get_process_order_header_spec,
+    PohRepository,
     map_order_confirmations_rows,
     map_order_goods_movements_rows,
     map_order_operations_rows,
@@ -37,11 +34,13 @@ from contracts.generated import (
     ProcessOrderOperation,
 )
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
-    run_query,
+    run_repository_fetch,
     set_databricks_response_headers,
 )
+
 
 router = APIRouter()
 
@@ -112,15 +111,13 @@ async def _order_header_databricks(
 ) -> dict:
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(token, user, email)
-    rows, spec = await run_query(
-        lambda: get_process_order_header_spec(
-            ProcessOrderHeaderRequest(
-                process_order_id=body.process_order_id,
-                plant_id=body.plant_id,
-            )
-        ),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    poh_repo = PohRepository(repository)
+    req = ProcessOrderHeaderRequest(
+        process_order_id=body.process_order_id,
+        plant_id=body.plant_id,
     )
+    rows, spec = await run_repository_fetch(lambda: poh_repo.fetch_process_order_header(req))
 
     result = map_process_order_header_rows(rows)
     if result is None:
@@ -128,6 +125,7 @@ async def _order_header_databricks(
 
     set_databricks_response_headers(response, spec)
     return result
+
 
 
 @router.get("/por/order-operations", response_model=list[ProcessOrderOperation])
@@ -153,10 +151,10 @@ async def order_operations(
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_order_operations_spec(OrderOperationsRequest(process_order_id=process_order_id)),
-        identity, host, warehouse_id,
-    )
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    poh_repo = PohRepository(repository)
+    req = OrderOperationsRequest(process_order_id=process_order_id)
+    rows, spec = await run_repository_fetch(lambda: poh_repo.fetch_order_operations(req))
     set_databricks_response_headers(response, spec)
     return map_order_operations_rows(rows)
 
@@ -186,10 +184,10 @@ async def order_confirmations(
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_order_confirmations_spec(OrderConfirmationsRequest(process_order_id=process_order_id)),
-        identity, host, warehouse_id,
-    )
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    poh_repo = PohRepository(repository)
+    req = OrderConfirmationsRequest(process_order_id=process_order_id)
+    rows, spec = await run_repository_fetch(lambda: poh_repo.fetch_order_confirmations(req))
     set_databricks_response_headers(response, spec)
     return map_order_confirmations_rows(rows)
 
@@ -220,9 +218,9 @@ async def order_goods_movements(
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_order_goods_movements_spec(OrderGoodsMovementsRequest(process_order_id=process_order_id)),
-        identity, host, warehouse_id,
-    )
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    poh_repo = PohRepository(repository)
+    req = OrderGoodsMovementsRequest(process_order_id=process_order_id)
+    rows, spec = await run_repository_fetch(lambda: poh_repo.fetch_order_goods_movements(req))
     set_databricks_response_headers(response, spec)
     return map_order_goods_movements_rows(rows)
