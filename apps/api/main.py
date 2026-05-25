@@ -1,4 +1,5 @@
 """ConnectIO V2 FastAPI application entry point."""
+from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,8 +16,16 @@ from routes.trace2 import router as trace2_router
 from routes.warehouse360 import router as warehouse360_router
 from routes.workspaces import router as workspaces_router
 from routes.quality import router as quality_router
+from shared.query_service.databricks_client import StatementApiDatabricksClient
 
-app = FastAPI(title="ConnectIO API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    await StatementApiDatabricksClient.aclose_shared_clients()
+
+
+app = FastAPI(title="ConnectIO API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

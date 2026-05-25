@@ -28,5 +28,6 @@ describe('Warehouse exceptions (Offline UAT Smoke Check)', () => {
 
     expectNoForbiddenClaims(container)
     expect(container.textContent?.toLowerCase()).not.toContain('low')
+    expect(container.textContent?.toLowerCase()).not.toContain('low')
   })
 })

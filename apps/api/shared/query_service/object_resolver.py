@@ -23,6 +23,12 @@ import os
 
 from shared.query_service.errors import DatabricksConfigError
 
+import contextvars
+
+# Context variable to hold a per-request catalog override (e.g. 'uat' or 'prod')
+# Injected by the route handler based on the X-Databricks-Catalog header.
+catalog_context: contextvars.ContextVar[str | None] = contextvars.ContextVar("catalog_context", default=None)
+
 _CATALOG_ENV: dict[str, str] = {
     "poh": "POH_CATALOG",
     "cq": "CQ_CATALOG",
@@ -87,7 +93,12 @@ def resolve_domain_object(
         raise ValueError(f"Unknown domain: {domain!r}. Known domains: {sorted(_CATALOG_ENV)}")
 
     catalog_env = _CATALOG_ENV[domain]
-    catalog = catalog_override or os.getenv(catalog_env, "")
+    
+    context_catalog = catalog_context.get()
+    if context_catalog:
+        catalog = context_catalog
+    else:
+        catalog = catalog_override or os.getenv(catalog_env, "")
 
     # CQ_CATALOG falls back to TRACE_CATALOG (V1 behaviour — CQ and Trace share workspace)
     if not catalog and domain in ("cq", "envmon", "spc"):

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -106,6 +106,8 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
     included in structured log output for observability.
     """
 
+    _shared_clients: ClassVar[dict[tuple[str, int], httpx.AsyncClient]] = {}
+
     def __init__(self, host: str) -> None:
         # Strip scheme (https:// or http://) if present, then whitespace and trailing slashes.
         # Prevents double-scheme URLs like https://https://... when DATABRICKS_HOST includes
@@ -114,8 +116,20 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
         for scheme in ("https://", "http://"):
             if h.lower().startswith(scheme):
                 h = h[len(scheme):]
-                break
         self._host = h.rstrip("/")
+
+    def _get_client(self, timeout_seconds: int) -> httpx.AsyncClient:
+        # Cache clients at class scope so request-scoped wrappers still share pools.
+        key = (self._host, timeout_seconds)
+        if key not in self._shared_clients:
+            self._shared_clients[key] = httpx.AsyncClient(timeout=timeout_seconds + 10)
+        return self._shared_clients[key]
+
+    @classmethod
+    async def aclose_shared_clients(cls) -> None:
+        for client in cls._shared_clients.values():
+            await client.aclose()
+        cls._shared_clients.clear()
 
     async def execute(
         self,
@@ -158,8 +172,7 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
         url = f"https://{self._host}/api/2.0/sql/statements"
 
         try:
-            async with httpx.AsyncClient(timeout=timeout_seconds + 10) as client:
-                response = await client.post(url, headers=headers, json=body)
+            response = await self._get_client(timeout_seconds).post(url, headers=headers, json=body)
         except httpx.TimeoutException as exc:
             raise DatabricksQueryTimeoutError(query_name) from exc
         except httpx.HTTPError as exc:

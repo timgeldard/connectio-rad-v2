@@ -22,6 +22,7 @@ async def get_read_only_evidence(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> QualityEvidenceResponse:
     """
     Read-only Quality evidence route.
@@ -83,7 +84,7 @@ async def get_read_only_evidence(
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(
-        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email, x_databricks_catalog
     )
 
     rows, _ = await run_query(
