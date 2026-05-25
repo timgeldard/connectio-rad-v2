@@ -11,6 +11,7 @@ from typing import Optional
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
+from shared.query_service.query_executor import DatabricksRepository
 
 
 @dataclass
@@ -758,3 +759,41 @@ def map_warehouse_exceptions_rows(rows: list[dict]) -> list[dict]:
             "recommendedReviewAction": None,
         })
     return result
+
+
+class Warehouse360Repository:
+    """Repository for Warehouse 360 data."""
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_warehouse_overview(self, request: WarehouseOverviewRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_warehouse_overview_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_warehouse_inbound(self, request: WarehouseInboundRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_warehouse_inbound_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_warehouse_outbound(self, request: WarehouseOutboundRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_warehouse_outbound_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_warehouse_staging(self, request: WarehouseStagingRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_warehouse_staging_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_warehouse_exceptions(self, request: WarehouseExceptionRequest) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_warehouse_exceptions_spec(request),
+            mapper=lambda rows: rows,
+        )
+

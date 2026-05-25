@@ -22,11 +22,7 @@ from adapters.warehouse360.warehouse360_databricks_adapter import (
     WarehouseOutboundRequest,
     WarehouseStagingRequest,
     WarehouseExceptionRequest,
-    get_warehouse_overview_spec,
-    get_warehouse_inbound_spec,
-    get_warehouse_outbound_spec,
-    get_warehouse_staging_spec,
-    get_warehouse_exceptions_spec,
+    Warehouse360Repository,
     map_warehouse_overview_rows,
     map_warehouse_inbound_rows,
     map_warehouse_outbound_rows,
@@ -40,9 +36,10 @@ from contracts.generated import (
     Warehouse360ExceptionItem,
 )
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
-    run_query,
+    run_repository_fetch,
     set_databricks_response_headers,
 )
 
@@ -138,9 +135,10 @@ async def warehouse_overview(
 
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_warehouse_overview_spec(req),
-        identity, host, db_warehouse_id,
+    repository = build_databricks_repository(identity, host, db_warehouse_id)
+    wh_repo = Warehouse360Repository(repository)
+    rows, spec = await run_repository_fetch(
+        lambda: wh_repo.fetch_warehouse_overview(req)
     )
     set_databricks_response_headers(response, spec)
     return map_warehouse_overview_rows(rows, req)
@@ -191,9 +189,10 @@ async def warehouse_inbound(
 
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_warehouse_inbound_spec(req),
-        identity, host, db_warehouse_id,
+    repository = build_databricks_repository(identity, host, db_warehouse_id)
+    wh_repo = Warehouse360Repository(repository)
+    rows, spec = await run_repository_fetch(
+        lambda: wh_repo.fetch_warehouse_inbound(req)
     )
     set_databricks_response_headers(response, spec)
     return map_warehouse_inbound_rows(rows)
@@ -244,9 +243,10 @@ async def warehouse_outbound(
 
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_warehouse_outbound_spec(req),
-        identity, host, db_warehouse_id,
+    repository = build_databricks_repository(identity, host, db_warehouse_id)
+    wh_repo = Warehouse360Repository(repository)
+    rows, spec = await run_repository_fetch(
+        lambda: wh_repo.fetch_warehouse_outbound(req)
     )
     set_databricks_response_headers(response, spec)
     return map_warehouse_outbound_rows(rows)
@@ -297,9 +297,10 @@ async def warehouse_staging(
 
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_warehouse_staging_spec(req),
-        identity, host, db_warehouse_id,
+    repository = build_databricks_repository(identity, host, db_warehouse_id)
+    wh_repo = Warehouse360Repository(repository)
+    rows, spec = await run_repository_fetch(
+        lambda: wh_repo.fetch_warehouse_staging(req)
     )
     set_databricks_response_headers(response, spec)
     return map_warehouse_staging_rows(rows)
@@ -350,9 +351,10 @@ async def warehouse_exceptions(
 
     host, db_warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_warehouse_exceptions_spec(req),
-        identity, host, db_warehouse_id,
+    repository = build_databricks_repository(identity, host, db_warehouse_id)
+    wh_repo = Warehouse360Repository(repository)
+    rows, spec = await run_repository_fetch(
+        lambda: wh_repo.fetch_warehouse_exceptions(req)
     )
     set_databricks_response_headers(response, spec)
     return map_warehouse_exceptions_rows(rows)

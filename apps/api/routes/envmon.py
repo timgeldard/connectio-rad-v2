@@ -20,18 +20,19 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from adapters.envmon.envmon_databricks_adapter import (
     SiteSummaryRequest,
     SwabResultsRequest,
-    get_site_summary_spec,
-    get_swab_results_spec,
+    EnvMonRepository,
     map_site_summary_rows,
     map_swab_result_rows,
 )
 from contracts.generated import EnvMonNativeSwabResult, EnvMonSiteSummary
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
-    run_query,
+    run_repository_fetch,
     set_databricks_response_headers,
 )
+
 
 router = APIRouter()
 
@@ -70,16 +71,14 @@ async def envmon_site_summary(
 
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_site_summary_spec(
-            SiteSummaryRequest(
-                plant_id=plant_id,
-                period_start=period_start,
-                period_end=period_end,
-            )
-        ),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    envmon_repo = EnvMonRepository(repository)
+    req = SiteSummaryRequest(
+        plant_id=plant_id,
+        period_start=period_start,
+        period_end=period_end,
     )
+    rows, spec = await run_repository_fetch(lambda: envmon_repo.fetch_site_summary(req))
     set_databricks_response_headers(response, spec)
     return map_site_summary_rows(rows, plant_id)
 
@@ -121,16 +120,14 @@ async def envmon_swab_results(
     clamped_limit = max(1, min(limit, 500))
     host, warehouse_id = require_databricks_config()
     identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-    rows, spec = await run_query(
-        lambda: get_swab_results_spec(
-            SwabResultsRequest(
-                plant_id=plant_id,
-                period_start=period_start,
-                period_end=period_end,
-                limit=clamped_limit,
-            )
-        ),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    envmon_repo = EnvMonRepository(repository)
+    req = SwabResultsRequest(
+        plant_id=plant_id,
+        period_start=period_start,
+        period_end=period_end,
+        limit=clamped_limit,
     )
+    rows, spec = await run_repository_fetch(lambda: envmon_repo.fetch_swab_results(req))
     set_databricks_response_headers(response, spec)
     return map_swab_result_rows(rows)

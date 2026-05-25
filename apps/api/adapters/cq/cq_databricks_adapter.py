@@ -24,6 +24,8 @@ from __future__ import annotations
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
+from shared.query_service.query_executor import DatabricksRepository
+
 
 
 def map_lab_plants_rows(rows: list[dict]) -> dict:
@@ -76,3 +78,17 @@ def get_lab_plants_spec() -> QuerySpec:
         cache_policy=CacheTier.GLOBAL_300S,
         tags=["cq", "lab", "plants"],
     )
+
+
+class CqLabRepository:
+    """Repository for Connected Quality Lab data."""
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_lab_plants(self) -> tuple[dict, QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=get_lab_plants_spec,
+            mapper=map_lab_plants_rows,
+        )
+
