@@ -33,6 +33,33 @@ mapping through `QualityUsageDecisionRepository`.
 - No caching was introduced.
 - No live Databricks calls were added.
 
+## Connection Lifecycle Decision
+
+The repository path uses app-lifecycle-owned Databricks HTTP client pooling.
+
+`DatabricksHttpClientPool` owns reusable `httpx.AsyncClient` instances keyed by
+normalized Databricks host and statement timeout. The key is intentionally
+bounded; OAuth tokens are passed per request and are never stored in the pooled
+client. `StatementApiDatabricksClient` receives the pool through injection or
+uses the module-level app pool.
+
+FastAPI shutdown closes the app-level pool through the application lifespan
+hook. Pool close is idempotent, clears all managed clients, and later requests
+can safely create fresh clients rather than reusing a closed instance.
+
+Tests cover:
+
+- reusing the same client for the same host and timeout
+- creating separate clients for different timeouts
+- closing all managed clients
+- idempotent close behavior
+- recreating a client when a cached client is closed
+- timeout and HTTP error paths keeping ownership with the pool until close
+- FastAPI lifespan shutdown calling pool close
+
+Out of scope: connection-pool sizing, retry policy redesign, catalog
+allowlisting, caching, and live Databricks verification.
+
 ## Standard Error Behaviors
 
 Future repository-backed routes should preserve this mapping:
@@ -60,8 +87,6 @@ Future repository-backed routes should preserve this mapping:
 
 ## Remaining Blockers Before Broad Migration
 
-- Connection pooling still needs explicit lifecycle ownership; `AsyncClient`
-  instances must be closed or owned by an app lifecycle hook.
 - Catalog overrides need production allowlisting before production-like flows.
 - Retry semantics should be reviewed so total attempts and retries are named
   distinctly.

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from typing import Any
 
 import httpx
 
@@ -87,6 +87,43 @@ class NotImplementedDatabricksClient(DatabricksQueryClient):
         )
 
 
+def _normalize_host(host: str) -> str:
+    """Normalize a Databricks host for client-pool keys and request URLs."""
+    h = host.strip()
+    for scheme in ("https://", "http://"):
+        if h.lower().startswith(scheme):
+            h = h[len(scheme):]
+    return h.rstrip("/")
+
+
+class DatabricksHttpClientPool:
+    """App-lifecycle-owned pool of reusable Databricks HTTP clients.
+
+    The key is deliberately bounded to normalized Databricks host and Statement
+    API timeout. OAuth tokens are passed per request, never stored in clients.
+    """
+
+    def __init__(self) -> None:
+        self._clients: dict[tuple[str, int], httpx.AsyncClient] = {}
+
+    def get_client(self, *, host: str, timeout_seconds: int) -> httpx.AsyncClient:
+        key = (_normalize_host(host), timeout_seconds)
+        client = self._clients.get(key)
+        if client is None or getattr(client, "is_closed", False) is True:
+            client = httpx.AsyncClient(timeout=timeout_seconds + 10)
+            self._clients[key] = client
+        return client
+
+    async def aclose(self) -> None:
+        clients = list(self._clients.values())
+        self._clients.clear()
+        for client in clients:
+            await client.aclose()
+
+
+databricks_http_client_pool = DatabricksHttpClientPool()
+
+
 class StatementApiDatabricksClient(DatabricksQueryClient):
     """Executes SQL via the Databricks SQL Statement API (ADR-025).
 
@@ -106,30 +143,20 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
     included in structured log output for observability.
     """
 
-    _shared_clients: ClassVar[dict[tuple[str, int], httpx.AsyncClient]] = {}
-
-    def __init__(self, host: str) -> None:
-        # Strip scheme (https:// or http://) if present, then whitespace and trailing slashes.
-        # Prevents double-scheme URLs like https://https://... when DATABRICKS_HOST includes
-        # the prefix. The URL is reconstructed with explicit https:// in execute().
-        h = host.strip()
-        for scheme in ("https://", "http://"):
-            if h.lower().startswith(scheme):
-                h = h[len(scheme):]
-        self._host = h.rstrip("/")
+    def __init__(self, host: str, pool: DatabricksHttpClientPool | None = None) -> None:
+        # Strip scheme (https:// or http://) if present, then whitespace and
+        # trailing slashes. Prevents double-scheme URLs like
+        # https://https://... when DATABRICKS_HOST includes the prefix. The URL
+        # is reconstructed with explicit https:// in execute().
+        self._host = _normalize_host(host)
+        self._pool = pool or databricks_http_client_pool
 
     def _get_client(self, timeout_seconds: int) -> httpx.AsyncClient:
-        # Cache clients at class scope so request-scoped wrappers still share pools.
-        key = (self._host, timeout_seconds)
-        if key not in self._shared_clients:
-            self._shared_clients[key] = httpx.AsyncClient(timeout=timeout_seconds + 10)
-        return self._shared_clients[key]
+        return self._pool.get_client(host=self._host, timeout_seconds=timeout_seconds)
 
     @classmethod
     async def aclose_shared_clients(cls) -> None:
-        for client in cls._shared_clients.values():
-            await client.aclose()
-        cls._shared_clients.clear()
+        await databricks_http_client_pool.aclose()
 
     async def execute(
         self,

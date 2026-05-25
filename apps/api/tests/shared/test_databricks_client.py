@@ -3,9 +3,13 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import httpx
+from fastapi.testclient import TestClient
 
 from shared.query_service.databricks_client import (
+    DatabricksHttpClientPool,
     StatementApiDatabricksClient,
+    databricks_http_client_pool,
     _infer_param_type,
     _parse_result,
 )
@@ -121,6 +125,7 @@ def _make_statement_response(
 def _make_http_client_mock(response: MagicMock) -> AsyncMock:
     """Return a mock httpx.AsyncClient with a configured post method."""
     http_client = AsyncMock()
+    http_client.is_closed = False
     http_client.post = AsyncMock(return_value=response)
     return http_client
 
@@ -355,6 +360,115 @@ class TestStatementApiDatabricksClient:
         await StatementApiDatabricksClient.aclose_shared_clients()
 
         shared_client.aclose.assert_awaited_once()
+
+    async def test_pool_returns_same_client_for_same_host_and_timeout(self) -> None:
+        first_client = AsyncMock()
+        first_client.is_closed = False
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", return_value=first_client) as factory:
+            first = pool.get_client(host="https://test.databricks.com/", timeout_seconds=30)
+            second = pool.get_client(host="test.databricks.com", timeout_seconds=30)
+
+        assert first is second
+        assert factory.call_count == 1
+
+    async def test_pool_keys_clients_by_timeout(self) -> None:
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", side_effect=[AsyncMock(), AsyncMock()]) as factory:
+            first = pool.get_client(host="test.databricks.com", timeout_seconds=30)
+            second = pool.get_client(host="test.databricks.com", timeout_seconds=45)
+
+        assert first is not second
+        assert factory.call_count == 2
+
+    async def test_pool_closes_all_managed_clients(self) -> None:
+        first_client = AsyncMock()
+        first_client.is_closed = False
+        second_client = AsyncMock()
+        second_client.is_closed = False
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", side_effect=[first_client, second_client]):
+            pool.get_client(host="test.databricks.com", timeout_seconds=30)
+            pool.get_client(host="test.databricks.com", timeout_seconds=45)
+
+        await pool.aclose()
+
+        first_client.aclose.assert_awaited_once()
+        second_client.aclose.assert_awaited_once()
+
+    async def test_pool_close_is_idempotent(self) -> None:
+        client = AsyncMock()
+        client.is_closed = False
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", return_value=client):
+            pool.get_client(host="test.databricks.com", timeout_seconds=30)
+
+        await pool.aclose()
+        await pool.aclose()
+
+        client.aclose.assert_awaited_once()
+
+    async def test_pool_recreates_after_closed_client(self) -> None:
+        closed_client = AsyncMock()
+        closed_client.is_closed = True
+        open_client = AsyncMock()
+        open_client.is_closed = False
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", side_effect=[closed_client, open_client]):
+            first = pool.get_client(host="test.databricks.com", timeout_seconds=30)
+            first.is_closed = True
+            second = pool.get_client(host="test.databricks.com", timeout_seconds=30)
+
+        assert first is closed_client
+        assert second is open_client
+
+    async def test_timeout_path_keeps_client_pool_owned_until_close(self) -> None:
+        http_client = AsyncMock()
+        http_client.is_closed = False
+        http_client.post = AsyncMock(side_effect=httpx.TimeoutException("timed out"))
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", return_value=http_client):
+            client = StatementApiDatabricksClient(host="test.databricks.com", pool=pool)
+            with pytest.raises(DatabricksQueryTimeoutError):
+                await client.execute(**self._BASE_KWARGS)
+
+        http_client.aclose.assert_not_awaited()
+
+        await pool.aclose()
+
+        http_client.aclose.assert_awaited_once()
+
+    async def test_http_error_path_keeps_client_pool_owned_until_close(self) -> None:
+        response = _make_statement_response("FAILED", status_code=500)
+        response.text = "Internal server error"
+        http_client = _make_http_client_mock(response)
+        pool = DatabricksHttpClientPool()
+
+        with patch("httpx.AsyncClient", return_value=http_client):
+            client = StatementApiDatabricksClient(host="test.databricks.com", pool=pool)
+            with pytest.raises(DatabricksQueryError):
+                await client.execute(**self._BASE_KWARGS)
+
+        http_client.aclose.assert_not_awaited()
+
+        await pool.aclose()
+
+        http_client.aclose.assert_awaited_once()
+
+    def test_fastapi_lifespan_closes_databricks_pool(self) -> None:
+        from main import app
+
+        with patch.object(databricks_http_client_pool, "aclose", new_callable=AsyncMock) as close:
+            with TestClient(app):
+                pass
+
+        close.assert_awaited_once()
 
     # ── Host normalisation ──────────────────────────────────────────────────
 
