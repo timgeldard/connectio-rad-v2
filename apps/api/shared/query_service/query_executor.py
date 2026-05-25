@@ -189,11 +189,11 @@ class DatabricksRepository:
         elif spec.cache_policy == CacheTier.NONE or ttl <= 0:
             spec.cache_status = "BYPASS"
         else:
+            cache_key = self._build_cache_key(spec)
             try:
-                cache_key = self._build_cache_key(spec)
                 entry = await cache_store.get(cache_key)
-            except Exception as exc:
-                _log.error("Cache store get error (graceful degradation applied): %s", exc)
+            except Exception:
+                _log.exception("Cache store get error (graceful degradation applied)")
                 spec.cache_status = "BYPASS"
 
             if entry is not None:
@@ -225,13 +225,13 @@ class DatabricksRepository:
 
                     # Cache the raw rows on a successful MISS
                     if cache_enabled and spec.cache_status == "MISS":
+                        cache_key = self._build_cache_key(current_spec)
                         try:
-                            cache_key = self._build_cache_key(current_spec)
                             await cache_store.set(cache_key, rows, ttl)
                             current_spec.cache_age_seconds = 0
                             current_spec.cache_ttl_seconds = ttl
-                        except Exception as exc:
-                            _log.error("Cache store set error (graceful degradation applied): %s", exc)
+                        except Exception:
+                            _log.exception("Cache store set error (graceful degradation applied)")
                             current_spec.cache_status = "BYPASS"
                             current_spec.cache_age_seconds = None
                             current_spec.cache_ttl_seconds = None
