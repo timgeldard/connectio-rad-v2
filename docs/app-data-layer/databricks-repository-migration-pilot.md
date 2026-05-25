@@ -57,8 +57,35 @@ Tests cover:
 - timeout and HTTP error paths keeping ownership with the pool until close
 - FastAPI lifespan shutdown calling pool close
 
-Out of scope: connection-pool sizing, retry policy redesign, catalog
-allowlisting, caching, and live Databricks verification.
+Out of scope: connection-pool sizing, retry policy redesign, caching, and
+live Databricks verification.
+
+## Catalog override allowlist
+
+Per-request catalog targeting uses the `x-databricks-catalog` header, mapped to
+`UserIdentity.catalog_target` and applied through `catalog_context` during
+`DatabricksRepository.fetch`.
+
+Behaviour:
+
+- **No override** — blank or absent header; environment catalog resolution via
+  `CQ_CATALOG` / `TRACE_CATALOG` (and domain fallbacks) is unchanged.
+- **Allowlisted override** — header value must appear in
+  `DATABRICKS_ALLOWED_CATALOGS` (comma-separated Unity Catalog names).
+- **Invalid override** — unknown catalog, unsafe characters, or override when
+  the allowlist env var is unset/empty → HTTP 400
+  `Unsupported Databricks catalog target` before SQL generation or
+  `QueryExecutor.execute`. User input is not echoed in error details.
+
+Validation lives in `shared/query_service/catalog_policy.py` and runs in
+`build_user_identity`, `extract_user_identity`, and `DatabricksRepository.fetch`
+so invalid values do not reach `object_resolver` or leak into `catalog_context`.
+
+OAuth tokens and catalog targets are not stored in pooled HTTP clients.
+Catalog context reset/isolation after success/error remains covered by tests.
+
+Deployment-specific approved catalog values remain an environment configuration
+concern (`DATABRICKS_ALLOWED_CATALOGS`). This does not imply production readiness.
 
 ## Standard Error Behaviors
 
@@ -87,7 +114,6 @@ Future repository-backed routes should preserve this mapping:
 
 ## Remaining Blockers Before Broad Migration
 
-- Catalog overrides need production allowlisting before production-like flows.
 - Retry semantics should be reviewed so total attempts and retries are named
   distinctly.
 - Caching requires an ADR before implementation and must be tied to freshness

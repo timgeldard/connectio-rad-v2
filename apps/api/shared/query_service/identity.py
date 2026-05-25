@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import Header
 
+from .catalog_policy import assert_allowed_catalog_target
 from .errors import DatabricksAuthRequiredError
 
 
@@ -67,5 +68,5 @@ def extract_user_identity(
         user_id=x_forwarded_user or "unknown",
         email=x_forwarded_email,
         raw_oauth_token=x_forwarded_access_token,
-        catalog_target=x_databricks_catalog,
+        catalog_target=assert_allowed_catalog_target(x_databricks_catalog),
     )

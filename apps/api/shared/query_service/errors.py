@@ -75,6 +75,16 @@ class DatabricksRateLimitError(Exception):
         self.query_name = query_name
 
 
+class DatabricksCatalogTargetError(Exception):
+    """Raised when ``x-databricks-catalog`` is invalid or not allowlisted.
+
+    The client message is fixed — user-supplied catalog values are never echoed.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Unsupported Databricks catalog target")
+
+
 class DatabricksWarehouseConfigError(Exception):
     """Raised when the SQL Warehouse is not found or not accessible (HTTP 404).
 
