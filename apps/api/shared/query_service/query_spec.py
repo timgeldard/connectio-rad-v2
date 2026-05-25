@@ -37,7 +37,7 @@ class QuerySpec:
     endpoint: str
     sql: str
     params: dict = field(default_factory=dict)
-    cache_policy: CacheTier = CacheTier.GLOBAL_300S
+    cache_policy: CacheTier = CacheTier.NONE
     source_badge: str = "databricks-api"
     catalog_override: Optional[str] = None
     schema_override: Optional[str] = None
