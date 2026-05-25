@@ -1725,16 +1725,48 @@ def map_supplier_batch_view(
 def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportRequest) -> QuerySpec:
     """Return a QuerySpec for the verified-source portion of the Quality Passport.
 
-    Sources (all verified live in connected_plant_uat.gold):
-      - gold_batch_stock_v          → stock buckets
-      - gold_batch_summary_v        → manufacture / expiry dates, process order
-      - gold_material               → material description, base UoM
-      - gold_plant                  → plant name
-      - gold_batch_production_history_v → production context (line / operator / yield)
+    Sources (all verified live in connected_plant_uat.gold via the 2026-05-25
+    Databricks repository compatibility audit — see
+    docs/data-layer/trace2-batch-quality-passport-source-verification.md):
+      - gold_batch_stock_v               → stock buckets (per plant)
+      - gold_batch_summary_v             → manufacture / expiry dates only
+      - gold_material                    → material description, base UoM
+      - gold_plant                       → plant name
+      - gold_batch_production_history_v  → process order, posting date,
+                                            batch quantity, UoM
 
-    The 5-way join matches the existing get_batch_header_summary_spec join
-    but with slightly different projections. Adds production_history on
-    (MATERIAL_ID, BATCH_ID).
+    Removed projections (columns absent from live DDL — caused
+    UNRESOLVED_COLUMN before this fix):
+      - b.PROCESS_ORDER_ID (gold_batch_summary_v has only MATERIAL_ID,
+        BATCH_ID, MANUFACTURE_DATE, SHELF_LIFE_EXPIRATION_DATE,
+        MATERIAL_NAME, MATERIAL_TYPE, MATERIAL_DESC_SHORT, days_to_expiry,
+        shelf_life_status)
+      - ph.START_DATE, ph.CONFIRMED_DATE, ph.PLANNED_QTY, ph.ACTUAL_QTY,
+        ph.PRODUCTION_LINE, ph.OPERATOR (gold_batch_production_history_v
+        has only PROCESS_ORDER_ID, BATCH_ID, PLANT_ID, MATERIAL_ID,
+        POSTING_DATE, BATCH_QTY, UOM, quality_status)
+
+    Mapping decisions:
+      - process_order_id now comes from gold_batch_production_history_v
+        (PROCESS_ORDER_ID), not gold_batch_summary_v.
+      - production_started_at maps from POSTING_DATE. This is the
+        production-history posting date and is NOT claimed to be the
+        confirmed production start timestamp — the live view exposes no
+        START / CONFIRMED timestamps.
+      - production_actual_qty maps from BATCH_QTY. This is the actual
+        batch quantity recorded on the production-history posting, NOT a
+        planned quantity — the live view exposes no planned-vs-actual split.
+      - production_uom is selected as ph.UOM but is currently not surfaced
+        through the Production contract (which has no production-uom
+        field); the row key is kept so a future contract addition can
+        consume it without re-touching the SQL.
+
+    Intentionally unavailable (no live source column — the mapper emits
+    contract defaults to keep the response body shape stable):
+      - production_confirmed_at
+      - production_planned_qty
+      - production_line
+      - production_operator
 
     Plant filter is respected when supplied — leave plant_id='' to take the
     first row by sort order (consistent with the existing batch-header route).
@@ -1761,13 +1793,10 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
         p.PLANT_NAME                 AS plant_name,
         b.MANUFACTURE_DATE           AS manufacture_date,
         b.SHELF_LIFE_EXPIRATION_DATE AS expiry_date,
-        b.PROCESS_ORDER_ID           AS process_order_id,
-        ph.START_DATE                AS production_started_at,
-        ph.CONFIRMED_DATE            AS production_confirmed_at,
-        ph.PLANNED_QTY               AS production_planned_qty,
-        ph.ACTUAL_QTY                AS production_actual_qty,
-        ph.PRODUCTION_LINE           AS production_line,
-        ph.OPERATOR                  AS production_operator
+        ph.PROCESS_ORDER_ID          AS process_order_id,
+        ph.POSTING_DATE              AS production_started_at,
+        ph.BATCH_QTY                 AS production_actual_qty,
+        ph.UOM                       AS production_uom
     FROM {tbl_stock} s
     JOIN {tbl_summary} b
         ON s.MATERIAL_ID = b.MATERIAL_ID AND s.BATCH_ID = b.BATCH_ID
@@ -1808,6 +1837,32 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
 
     Returns None on zero rows so the route can 404 (same convention as the
     existing batch-header route).
+
+    Production-section source mapping (2026-05-25 Databricks compatibility
+    audit, Finding #2 — see
+    docs/data-layer/trace2-batch-quality-passport-source-verification.md):
+
+      Sourced from live ``gold_batch_production_history_v``:
+        - ``orderId``   ← ``process_order_id`` (PROCESS_ORDER_ID)
+        - ``startedAt`` ← ``production_started_at`` (POSTING_DATE — the
+          production-posting date, **not** a confirmed production start
+          timestamp; the live view has no START / CONFIRMED columns)
+        - ``actualQty`` ← ``production_actual_qty`` (BATCH_QTY — the
+          actual batch quantity, **not** a planned quantity)
+
+      Intentionally unavailable from the live view (the live DDL has no
+      START_DATE / CONFIRMED_DATE / PLANNED_QTY / ACTUAL_QTY /
+      PRODUCTION_LINE / OPERATOR columns). The mapper emits the contract
+      defaults below to satisfy the required-string / required-float
+      ``Production`` model; relaxing those fields to nullable is a
+      follow-up tracked in the source-verification doc:
+        - ``line``         → "" (Production.line is required str)
+        - ``operator``     → "" (Production.operator is required str)
+        - ``confirmedAt``  → "" (Production.confirmed_at is required str)
+        - ``plannedQty``   → 0.0 (Production.planned_qty is required float)
+        - ``yield``        → 0.0 (no planned/actual split is available;
+          source-verification doc §4 flags this as application-derived
+          and currently null-equivalent)
     """
     if not rows:
         return None
@@ -1837,11 +1892,21 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
         },
         "production": {
             "orderId": str(row.get("process_order_id") or ""),
+            # No PRODUCTION_LINE column in gold_batch_production_history_v.
             "line": str(row.get("production_line") or ""),
+            # No OPERATOR column in gold_batch_production_history_v.
             "operator": str(row.get("production_operator") or ""),
+            # POSTING_DATE — the production-posting date, not a confirmed
+            # start timestamp.
             "startedAt": str(row.get("production_started_at") or ""),
+            # No CONFIRMED_DATE column — contract default keeps the
+            # response body shape stable.
             "confirmedAt": str(row.get("production_confirmed_at") or ""),
+            # No PLANNED_QTY column — contract default keeps the response
+            # body shape stable.
             "plannedQty": float(row.get("production_planned_qty") or 0),
+            # BATCH_QTY — the actual batch quantity recorded on the
+            # production-history posting.
             "actualQty": float(row.get("production_actual_qty") or 0),
             "yield": (
                 float(row.get("production_actual_qty") or 0)
@@ -1852,9 +1917,16 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
             "originatingCustomer": "",  # not in gold_batch_production_history_v
             "notes": "",  # not in gold_batch_production_history_v
         },
-        # Sections below remain to be populated when their sources land.
-        # The frontend layer is responsible for merging with mock / null-tolerating.
-        "_unverifiedSections": ["quality", "lotHistory", "massBalance", "signoff"],
+        # "production" was added 2026-05-25 because the post-audit SQL only
+        # surfaces orderId / startedAt / actualQty from the live view; the
+        # other Production fields stay contract-defaulted (see docstring).
+        "_unverifiedSections": [
+            "quality",
+            "lotHistory",
+            "massBalance",
+            "signoff",
+            "production",
+        ],
     }
 
 

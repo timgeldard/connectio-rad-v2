@@ -331,18 +331,94 @@ class TestBatchQualityPassportMapping:
         lots_rows = [{"inspection_lot_id": "L1", "usage_decision": "Accepted"}]
         summary_rows = []
         balance_rows = []
-        
+
         result = build_batch_quality_passport(identity_rows, coa_rows, lots_rows, summary_rows, balance_rows)
         assert result is not None
         # Heuristic quality assertion
         assert "heuristicQualityConfidence" in result["quality"]
         assert "heuristicQualityStatus" in result["quality"]
         assert "overallStatus" not in result["quality"]
-        
+
         # Usage decisions should only include actual lots, no "Release decision" / "Group QA" placeholders
         for ud in result["usageDecisionEvidence"]:
             assert ud.get("role") != "Group QA"
             assert ud.get("decisionType") != "Release decision"
+
+
+class TestBatchQualityPassportRouteHappyPath:
+    """End-to-end runtime check for the post-audit (2026-05-25) passport fix.
+
+    The route fans out five sequential Databricks queries; before the fix
+    the first query (partial spec) failed with UNRESOLVED_COLUMN because it
+    referenced columns absent from the live gold_batch_summary_v and
+    gold_batch_production_history_v views. This test mocks each sequential
+    call's row payload using row shapes that match the post-audit SQL.
+    """
+
+    async def test_route_passes_partial_query_with_live_row_shape(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+
+        identity_rows = [
+            {
+                "material_id": "20582002",
+                "batch_id": "0008898869",
+                "plant_id": "C351",
+                "material_name": "Emmental cheese block",
+                "plant_name": "Charleville",
+                "manufacture_date": "2026-05-01",
+                "expiry_date": "2026-11-01",
+                "uom": "KG",
+                "unrestricted": 100.0,
+                "blocked": 0.0,
+                "quality_inspection": 0.0,
+                "restricted": 0.0,
+                "transit": 0.0,
+                # Post-audit production-history projection only.
+                "process_order_id": "1000123456",
+                "production_started_at": "2026-05-10",
+                "production_actual_qty": 1200.5,
+                "production_uom": "KG",
+            }
+        ]
+        # CoA / lots / summary / balance rows can be empty — the route
+        # builds a valid passport with empty evidence sections.
+        side_effect_calls = [identity_rows, [], [], [], []]
+
+        async def _mock_execute(*args, **kwargs):
+            return side_effect_calls.pop(0)
+
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            _mock_execute,
+        ):
+            async with _client() as c:
+                response = await c.post(
+                    "/api/trace2/batch-quality-passport",
+                    json={"material_id": "20582002", "batch_id": "0008898869", "plant_id": ""},
+                    headers=_HEADERS,
+                )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        # Response body shape unchanged — every top-level section present.
+        for section in ("identity", "quality", "stock", "production",
+                         "lotHistory", "massBalance", "usageDecisionEvidence"):
+            assert section in body, f"missing section {section!r}"
+        # Live-sourced production fields surfaced.
+        assert body["identity"]["processOrderId"] == "1000123456"
+        assert body["production"]["orderId"] == "1000123456"
+        assert body["production"]["startedAt"] == "2026-05-10"
+        assert body["production"]["actualQty"] == 1200.5
+        # Contract-default fallbacks for fields with no live source.
+        assert body["production"]["line"] == ""
+        assert body["production"]["operator"] == ""
+        assert body["production"]["confirmedAt"] == ""
+        assert body["production"]["plannedQty"] == 0.0
+        # Standard Databricks observability headers still set.
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+        assert "trace2.get_batch_quality_passport_partial" in response.headers.get(
+            "x-query-name", ""
+        )
 
 
 # ---------------------------------------------------------------------------
