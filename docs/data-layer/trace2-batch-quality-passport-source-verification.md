@@ -135,29 +135,43 @@ computed `yield` is always `0.0` in the post-audit response. The
 contract field is required `float`; the contract default keeps the
 response body shape stable.
 
-## 7. Fields intentionally returned with contract defaults
+## 7. Fields intentionally returned as `null`
 
-The generated `Production` model (in `apps/api/contracts/generated.py`)
-declares the following fields as required, not Optional. The accompanying
-mapper retains the existing contract-default fallbacks so the route can
-respond at all; relaxing the contract to nullable is a documented
-follow-up (§9):
+This PR **relaxed** the seven `PassportProductionSchema` fields below to
+`z.<type>().nullable().optional()` in
+[`packages/data-contracts/src/schemas/batch-quality-passport.ts`](../../packages/data-contracts/src/schemas/batch-quality-passport.ts)
+and regenerated the Pydantic contract
+(`apps/api/contracts/generated.py`). The mapper now emits `None`
+source-truthfully — empty strings and zero defaults that formerly
+satisfied the required-field contract are gone:
 
-| Contract field                   | Fallback emitted | Reason                                                                       |
-| -------------------------------- | ---------------- | ---------------------------------------------------------------------------- |
-| `production.line`                | `""`             | No `PRODUCTION_LINE` column on the live view.                                |
-| `production.operator`            | `""`             | No `OPERATOR` column on the live view.                                       |
-| `production.confirmedAt`         | `""`             | No `CONFIRMED_DATE` column on the live view.                                 |
-| `production.plannedQty`          | `0.0`            | No `PLANNED_QTY` column on the live view.                                    |
-| `production.yield`               | `0.0`            | Cannot be derived without `plannedQty` (see §6.3).                           |
-| `production.originatingCustomer` | `""`             | Not in `gold_batch_production_history_v`. Unchanged from the pre-fix mapper. |
-| `production.notes`               | `""`             | Not in `gold_batch_production_history_v`. Unchanged from the pre-fix mapper. |
+| Contract field (post-relaxation)                       | Now emitted | Reason                                                                          |
+| ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------- |
+| `production.line` _(nullable+optional)_                | `None`      | No `PRODUCTION_LINE` column on `gold_batch_production_history_v`.               |
+| `production.operator` _(nullable+optional)_            | `None`      | No `OPERATOR` column on `gold_batch_production_history_v`.                      |
+| `production.confirmedAt` _(nullable+optional)_         | `None`      | No `CONFIRMED_DATE` column on `gold_batch_production_history_v`.                |
+| `production.plannedQty` _(nullable+optional)_          | `None`      | No `PLANNED_QTY` column on `gold_batch_production_history_v`.                   |
+| `production.yield` _(nullable+optional)_               | `None`      | Cannot be derived without `plannedQty` (see §6.3); no governed yield available. |
+| `production.originatingCustomer` _(nullable+optional)_ | `None`      | Not exposed on `gold_batch_production_history_v`.                               |
+| `production.notes` _(nullable+optional)_               | `None`      | Not exposed on `gold_batch_production_history_v`.                               |
 
-The mapper's intermediate `_unverifiedSections` marker is extended to
-include `"production"` so any downstream consumer that respects the
-marker knows the production block is partial. (The marker is not present
-on the wire — the final `BatchQualityPassport` Pydantic model has
-`extra='forbid'`.)
+`production.orderId`, `production.startedAt`, and `production.actualQty`
+remain **required** on the contract because they have live sources
+(`ph.PROCESS_ORDER_ID`, `ph.POSTING_DATE`, `ph.BATCH_QTY` respectively).
+The PR did not change any of those three field shapes.
+
+The previous `build_batch_quality_passport` overrides that replaced
+empty `originatingCustomer` / `notes` with reassuring strings (`"—"` and
+`"Source: gold_batch_production_history_v"`) have been removed so the
+mapper's `None` survives to the wire.
+
+The mapper's intermediate `_unverifiedSections` marker now includes
+`"production"` (because three of the section's fields come from live
+UAT and the rest are null) and the stale `"signoff"` entry — which was
+renamed to `"usageDecisionEvidence"` long before this PR — is replaced
+with the current wire-contract field name. The marker is not present on
+the wire (the final `BatchQualityPassport` Pydantic model has
+`extra='forbid'`); it is intermediate metadata used inside the adapter.
 
 ## 8. Runtime impact of the fix
 
@@ -180,33 +194,40 @@ After (this PR):
   source-aligned and were not modified by this PR.
 - The route remains read-only — no writes to Databricks, no writes to
   SAP, no schema mutations.
-- Response body shape is unchanged. The `Production` section now sources
-  three fields (`orderId`, `startedAt`, `actualQty`) from the live view;
-  the other six fields stay at contract defaults as documented in §7.
-- `response_model=BatchQualityPassport` stays enabled.
+- The `Production` section now sources three fields (`orderId`,
+  `startedAt`, `actualQty`) from the live view; the other seven fields
+  (`line`, `operator`, `confirmedAt`, `plannedQty`, `yield`,
+  `originatingCustomer`, `notes`) are emitted as `null` per the
+  contract relaxation in §7. All other top-level passport sections
+  retain their pre-PR shape; no field is added to or removed from the
+  wire envelope.
+- `response_model=BatchQualityPassport` stays enabled. The generated
+  Pydantic contract (`apps/api/contracts/generated.py`) was
+  regenerated in lock-step with the Zod relaxation and committed in
+  this PR.
 
 ## 9. Items still unresolved pending source / governance
 
-| Item                                                                                                                                                                                                                                                 | Why unresolved                                                                                                                                                                                                      | Whose decision        |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| Is `POSTING_DATE` the correct source for `production.startedAt`, or should the contract field rename to `postedAt` to make the semantic explicit?                                                                                                    | The pre-existing contract field name is ambiguous. The live view has no `START_DATE` column.                                                                                                                        | Trace team + frontend |
-| Should `Production.line`, `Production.operator`, `Production.confirmedAt`, `Production.plannedQty`, `Production.yield`, `Production.originatingCustomer`, `Production.notes` be relaxed from required to nullable+optional in the Zod source schema? | The live gold layer does not surface them at all. Returning the contract defaults (`""` / `0.0`) is a fake-data violation per project rule but is the minimum-blast-radius preservation of the response body shape. | Trace team            |
-| Where (if anywhere) in the gold layer do production line / operator / planned-quantity / actual-vs-planned splits live? Is there a sibling MES / OEE view that could supply them?                                                                    | The current production-history view is batch-level only. A line-event view would unlock the six currently-defaulted fields.                                                                                         | Data platform         |
-| Should `production.uom` be added to the contract so the new `ph.UOM` projection can surface?                                                                                                                                                         | The mapper already reads the row key; it is just not on the contract.                                                                                                                                               | Trace team            |
+| Item                                                                                                                                                                                                                                                | Why unresolved                                                                                                                                        | Whose decision             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Is `POSTING_DATE` the correct source for `production.startedAt`, or should the contract field rename to `postedAt` to make the semantic explicit?                                                                                                   | The pre-existing contract field name is ambiguous. The live view has no `START_DATE` column.                                                          | Trace team + frontend      |
+| Where (if anywhere) in the gold layer can governed values for `Production.line`, `Production.operator`, `Production.confirmedAt`, `Production.plannedQty`, `Production.yield`, `Production.originatingCustomer`, and `Production.notes` be sourced? | The Zod contract was relaxed to nullable+optional in this PR (see §7) so the API can be source-truthful, but the underlying business questions stand. | Data platform + Trace team |
+| Where (if anywhere) in the gold layer do production line / operator / planned-quantity / actual-vs-planned splits live? Is there a sibling MES / OEE view that could supply them?                                                                   | The current production-history view is batch-level only. A line-event view would unlock the six currently-defaulted fields.                           | Data platform              |
+| Should `production.uom` be added to the contract so the new `ph.UOM` projection can surface?                                                                                                                                                        | The mapper already reads the row key; it is just not on the contract.                                                                                 | Trace team                 |
 
 ## 10. Forbidden until source / governance changes land
 
 - **No** invented production line names, operator names, planned
-  quantities, confirmed-at timestamps, or originating customers — the
-  contract defaults (`""` / `0.0`) are minimum-blast-radius response
-  body preservation, not real values, and the source-verification doc
-  records this explicitly.
+  quantities, confirmed-at timestamps, originating customers, or notes —
+  the relaxed-contract fields are `null` when no live source exists.
+  Reintroducing `""`, `"—"`, or any other fixed sentinel would
+  re-create the fake-default pattern this PR removes.
+- **No** computed `yield` value: the dividend `plannedQty` is `null`
+  and no governed yield source exists, so `production.yield` is
+  emitted as `null`.
 - **No** default-to-zero on `actualQty` when `BATCH_QTY` is null — the
-  mapper's existing `float(... or 0)` already does this; the source
-  caveats are documented per row in the mapper docstring.
-- **No** invented `yield` value other than the
-  `actualQty / plannedQty` division (which falls to `0.0` because
-  `plannedQty` has no live source).
+  mapper's existing `float(... or 0)` is retained for `actualQty`
+  only, with the source caveat documented in §6.2.
 - **No** production-readiness claim. **No** browser-UAT claim.
 
 ## 11. Cross-references

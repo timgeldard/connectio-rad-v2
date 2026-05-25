@@ -371,11 +371,17 @@
               "description": "[classification: source-field]"
             },
             "line": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "[classification: source-field]"
             },
             "operator": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "[classification: source-field]"
             },
             "startedAt": {
@@ -383,11 +389,17 @@
               "description": "[classification: source-field]"
             },
             "confirmedAt": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "[classification: source-field]"
             },
             "plannedQty": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "description": "[classification: source-field]"
             },
             "actualQty": {
@@ -395,29 +407,31 @@
               "description": "[classification: source-field]"
             },
             "yield": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "description": "[classification: source-derived]"
             },
             "originatingCustomer": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "[classification: source-field]"
             },
             "notes": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "[classification: source-field]"
             }
           },
           "required": [
             "orderId",
-            "line",
-            "operator",
             "startedAt",
-            "confirmedAt",
-            "plannedQty",
-            "actualQty",
-            "yield",
-            "originatingCustomer",
-            "notes"
+            "actualQty"
           ],
           "additionalProperties": false
         },
@@ -5382,11 +5396,17 @@
           "description": "[classification: source-field]"
         },
         "line": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "operator": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "startedAt": {
@@ -5394,11 +5414,17 @@
           "description": "[classification: source-field]"
         },
         "confirmedAt": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "plannedQty": {
-          "type": "number",
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "actualQty": {
@@ -5406,29 +5432,31 @@
           "description": "[classification: source-field]"
         },
         "yield": {
-          "type": "number",
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "[classification: source-derived]"
         },
         "originatingCustomer": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "notes": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         }
       },
       "required": [
         "orderId",
-        "line",
-        "operator",
         "startedAt",
-        "confirmedAt",
-        "plannedQty",
-        "actualQty",
-        "yield",
-        "originatingCustomer",
-        "notes"
+        "actualQty"
       ],
       "additionalProperties": false
     },

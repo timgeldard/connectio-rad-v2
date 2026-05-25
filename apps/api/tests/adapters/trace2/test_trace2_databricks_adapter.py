@@ -1874,13 +1874,12 @@ class TestMapBatchQualityPassportPartial:
         assert result["production"]["startedAt"] == "2026-05-10"
         assert result["production"]["actualQty"] == 1200.5
 
-    def test_unavailable_production_fields_use_contract_defaults(self) -> None:
+    def test_unavailable_production_fields_emit_null(self) -> None:
         """gold_batch_production_history_v has no PRODUCTION_LINE, OPERATOR,
-        CONFIRMED_DATE, or PLANNED_QTY columns. The mapper must emit the
-        contract defaults (empty string for required str fields, 0.0 for
-        required float fields) so the response body shape stays stable —
-        relaxing those contract fields to nullable is a documented
-        follow-up."""
+        CONFIRMED_DATE, PLANNED_QTY, ORIGINATING_CUSTOMER, or NOTES
+        columns. The Zod source schema was relaxed to nullable+optional in
+        this PR so the mapper can emit ``None`` source-truthfully rather
+        than reassuring contract defaults (``""`` / ``0.0``)."""
         row = {
             "material_id": "M1",
             "batch_id": "B1",
@@ -1902,15 +1901,20 @@ class TestMapBatchQualityPassportPartial:
         result = map_batch_quality_passport_partial([row])
         assert result is not None
         production = result["production"]
-        assert production["line"] == ""
-        assert production["operator"] == ""
-        assert production["confirmedAt"] == ""
-        assert production["plannedQty"] == 0.0
+        assert production["line"] is None
+        assert production["operator"] is None
+        assert production["confirmedAt"] is None
+        assert production["plannedQty"] is None
+        assert production["yield"] is None
+        assert production["originatingCustomer"] is None
+        assert production["notes"] is None
 
-    def test_unverified_sections_now_includes_production(self) -> None:
-        """The mapper's intermediate _unverifiedSections marker must
-        include 'production' so any downstream consumer that respects the
-        marker knows the production block is partial."""
+    def test_unverified_sections_uses_current_contract_field_names(self) -> None:
+        """The intermediate _unverifiedSections marker must reference the
+        current wire-contract field names. ``signoff`` was renamed to
+        ``usageDecisionEvidence`` long before this PR; the marker now
+        reflects that. ``production`` is included because the post-audit
+        SQL surfaces only three of the section's fields from live UAT."""
         row = {
             "material_id": "M1",
             "batch_id": "B1",
@@ -1928,7 +1932,13 @@ class TestMapBatchQualityPassportPartial:
         }
         result = map_batch_quality_passport_partial([row])
         assert result is not None
-        assert "production" in result["_unverifiedSections"]
+        markers = result["_unverifiedSections"]
+        assert "production" in markers
+        assert "usageDecisionEvidence" in markers
+        assert "signoff" not in markers, (
+            "`signoff` was renamed to `usageDecisionEvidence` — the marker "
+            "must reflect the current wire-contract field name."
+        )
 
     def test_empty_rows_returns_none(self) -> None:
         """No batch in primary sources → caller must surface 404."""

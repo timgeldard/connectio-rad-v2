@@ -22,7 +22,9 @@ export const LotHistoryEntrySchema = z.object({
   id: z.string().describe('[classification: source-field]'),
   date: z.string().describe('[classification: source-field]'),
   inspection: z.string().describe('[classification: source-field]'),
-  result: z.enum(['accept', 'conditional', 'reject']).describe('[classification: application-heuristic]'),
+  result: z
+    .enum(['accept', 'conditional', 'reject'])
+    .describe('[classification: application-heuristic]'),
   mics: z.number().int().describe('[classification: source-derived]'),
   failed: z.number().int().describe('[classification: source-derived]'),
   decisionBy: z.string().describe('[classification: source-field]'),
@@ -56,9 +58,17 @@ export type PassportIdentity = z.infer<typeof PassportIdentitySchema>
  *   *summary indicator*, not a release decision.
  */
 export const PassportQualitySchema = z.object({
-  heuristicQualityConfidence: z.number().min(0).max(100).describe('[classification: application-heuristic]'),
-  confidenceSource: z.enum(['application-heuristic', 'governed']).describe('[classification: application-heuristic]'),
-  heuristicQualityStatus: z.enum(['accepted', 'conditional', 'rejected']).describe('[classification: application-heuristic]'),
+  heuristicQualityConfidence: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe('[classification: application-heuristic]'),
+  confidenceSource: z
+    .enum(['application-heuristic', 'governed'])
+    .describe('[classification: application-heuristic]'),
+  heuristicQualityStatus: z
+    .enum(['accepted', 'conditional', 'rejected'])
+    .describe('[classification: application-heuristic]'),
   notes: z.array(z.string()).describe('[classification: application-derived]'),
   coa: z.array(QualityCharacteristicSchema),
 })
@@ -74,17 +84,40 @@ export const PassportStockSchema = z.object({
 })
 export type PassportStock = z.infer<typeof PassportStockSchema>
 
+/**
+ * Production block — sourced from gold_batch_production_history_v.
+ *
+ * The 2026-05-25 Databricks compatibility audit (Finding #2) confirmed that
+ * the live UAT view exposes only PROCESS_ORDER_ID, BATCH_ID, PLANT_ID,
+ * MATERIAL_ID, POSTING_DATE, BATCH_QTY, UOM, and quality_status. The
+ * concepts of production line, operator, planned-vs-actual quantity, yield,
+ * confirmed-end timestamp, originating customer, and free-text production
+ * notes are NOT modelled in the gold layer today.
+ *
+ * The seven fields without a live source are relaxed to nullable + optional
+ * so the API can be source-truthful (emit `null`) rather than emit a
+ * reassuring contract default such as `""` or `0.0`. The three live-sourced
+ * fields stay required:
+ *   - orderId      ← ph.PROCESS_ORDER_ID
+ *   - startedAt    ← ph.POSTING_DATE (production-posting evidence, NOT a
+ *                    confirmed production-start timestamp)
+ *   - actualQty    ← ph.BATCH_QTY (actual batch quantity recorded on the
+ *                    posting, NOT a planned quantity)
+ *
+ * See docs/data-layer/trace2-batch-quality-passport-source-verification.md
+ * for the full mapping and the data-platform follow-ups.
+ */
 export const PassportProductionSchema = z.object({
   orderId: z.string().describe('[classification: source-field]'),
-  line: z.string().describe('[classification: source-field]'),
-  operator: z.string().describe('[classification: source-field]'),
+  line: z.string().nullable().optional().describe('[classification: source-field]'),
+  operator: z.string().nullable().optional().describe('[classification: source-field]'),
   startedAt: z.string().describe('[classification: source-field]'),
-  confirmedAt: z.string().describe('[classification: source-field]'),
-  plannedQty: z.number().describe('[classification: source-field]'),
+  confirmedAt: z.string().nullable().optional().describe('[classification: source-field]'),
+  plannedQty: z.number().nullable().optional().describe('[classification: source-field]'),
   actualQty: z.number().describe('[classification: source-field]'),
-  yield: z.number().describe('[classification: source-derived]'),
-  originatingCustomer: z.string().describe('[classification: source-field]'),
-  notes: z.string().describe('[classification: source-field]'),
+  yield: z.number().nullable().optional().describe('[classification: source-derived]'),
+  originatingCustomer: z.string().nullable().optional().describe('[classification: source-field]'),
+  notes: z.string().nullable().optional().describe('[classification: source-field]'),
 })
 export type PassportProduction = z.infer<typeof PassportProductionSchema>
 
@@ -112,7 +145,9 @@ export type PassportMassBalance = z.infer<typeof PassportMassBalanceSchema>
 export const PassportUsageDecisionEvidenceSchema = z.object({
   role: z.string().describe('[classification: source-field]'),
   decisionBy: z.string().describe('[classification: source-field]'),
-  decisionType: z.enum(['usage-decision-recorded', 'inspection-completed', 'none']).describe('[classification: source-field]'),
+  decisionType: z
+    .enum(['usage-decision-recorded', 'inspection-completed', 'none'])
+    .describe('[classification: source-field]'),
   recordedAt: z.string().describe('[classification: source-field]'),
 })
 export type PassportUsageDecisionEvidence = z.infer<typeof PassportUsageDecisionEvidenceSchema>

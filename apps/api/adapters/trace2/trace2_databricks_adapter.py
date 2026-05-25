@@ -1852,17 +1852,17 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
 
       Intentionally unavailable from the live view (the live DDL has no
       START_DATE / CONFIRMED_DATE / PLANNED_QTY / ACTUAL_QTY /
-      PRODUCTION_LINE / OPERATOR columns). The mapper emits the contract
-      defaults below to satisfy the required-string / required-float
-      ``Production`` model; relaxing those fields to nullable is a
-      follow-up tracked in the source-verification doc:
-        - ``line``         → "" (Production.line is required str)
-        - ``operator``     → "" (Production.operator is required str)
-        - ``confirmedAt``  → "" (Production.confirmed_at is required str)
-        - ``plannedQty``   → 0.0 (Production.planned_qty is required float)
-        - ``yield``        → 0.0 (no planned/actual split is available;
-          source-verification doc §4 flags this as application-derived
-          and currently null-equivalent)
+      PRODUCTION_LINE / OPERATOR columns). The Zod source schema was
+      relaxed to nullable+optional in the same PR so the API can emit
+      ``None`` source-truthfully rather than reassuring contract
+      defaults (``""`` / ``0.0``):
+        - ``line``                → None
+        - ``operator``            → None
+        - ``confirmedAt``         → None
+        - ``plannedQty``          → None
+        - ``yield``               → None (no planned/actual split available)
+        - ``originatingCustomer`` → None
+        - ``notes``               → None
     """
     if not rows:
         return None
@@ -1892,39 +1892,40 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
         },
         "production": {
             "orderId": str(row.get("process_order_id") or ""),
-            # No PRODUCTION_LINE column in gold_batch_production_history_v.
-            "line": str(row.get("production_line") or ""),
+            # No PRODUCTION_LINE column in gold_batch_production_history_v —
+            # null is source-truthful (contract relaxed in this PR).
+            "line": None,
             # No OPERATOR column in gold_batch_production_history_v.
-            "operator": str(row.get("production_operator") or ""),
+            "operator": None,
             # POSTING_DATE — the production-posting date, not a confirmed
             # start timestamp.
             "startedAt": str(row.get("production_started_at") or ""),
-            # No CONFIRMED_DATE column — contract default keeps the
-            # response body shape stable.
-            "confirmedAt": str(row.get("production_confirmed_at") or ""),
-            # No PLANNED_QTY column — contract default keeps the response
-            # body shape stable.
-            "plannedQty": float(row.get("production_planned_qty") or 0),
+            # No CONFIRMED_DATE column on the live view.
+            "confirmedAt": None,
+            # No PLANNED_QTY column on the live view.
+            "plannedQty": None,
             # BATCH_QTY — the actual batch quantity recorded on the
             # production-history posting.
             "actualQty": float(row.get("production_actual_qty") or 0),
-            "yield": (
-                float(row.get("production_actual_qty") or 0)
-                / float(row.get("production_planned_qty") or 1)
-                if float(row.get("production_planned_qty") or 0) > 0
-                else 0.0
-            ),
-            "originatingCustomer": "",  # not in gold_batch_production_history_v
-            "notes": "",  # not in gold_batch_production_history_v
+            # Yield = actualQty / plannedQty is not derivable without a
+            # planned quantity, which the live view does not expose.
+            "yield": None,
+            # Originating customer is not in gold_batch_production_history_v.
+            "originatingCustomer": None,
+            # No free-text notes column on the live view.
+            "notes": None,
         },
         # "production" was added 2026-05-25 because the post-audit SQL only
-        # surfaces orderId / startedAt / actualQty from the live view; the
-        # other Production fields stay contract-defaulted (see docstring).
+        # surfaces orderId / startedAt / actualQty from the live view.
+        # The four-section legacy marker referenced "signoff"; that field
+        # was renamed to "usageDecisionEvidence" in the wire contract long
+        # ago — the marker is updated here so it reflects the current
+        # contract name.
         "_unverifiedSections": [
             "quality",
             "lotHistory",
             "massBalance",
-            "signoff",
+            "usageDecisionEvidence",
             "production",
         ],
     }
@@ -2669,11 +2670,16 @@ def build_batch_quality_passport(
 
     production = dict(partial["production"])
     if not production.get("orderId"):
+        # The mapper sources orderId from ph.PROCESS_ORDER_ID, but if that
+        # column was null the partial-spec join may still have surfaced
+        # the identity's processOrderId via gold_batch_summary_v.MATERIAL_ID
+        # joins; fall back so the response stays internally consistent.
         production["orderId"] = identity.get("processOrderId", "")
-    if not production.get("originatingCustomer"):
-        production["originatingCustomer"] = "—"
-    if not production.get("notes"):
-        production["notes"] = "Source: gold_batch_production_history_v"
+    # NOTE: originatingCustomer and notes are intentionally NOT defaulted
+    # here — both fields were relaxed to nullable+optional in the Zod
+    # schema (2026-05-25 PR) precisely because the live view has no
+    # source for them. Substituting "—" or a static "Source: ..." string
+    # would re-introduce the fake-default pattern that this PR fixes.
 
     return {
         "identity": identity,

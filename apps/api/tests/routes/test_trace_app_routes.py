@@ -409,11 +409,16 @@ class TestBatchQualityPassportRouteHappyPath:
         assert body["production"]["orderId"] == "1000123456"
         assert body["production"]["startedAt"] == "2026-05-10"
         assert body["production"]["actualQty"] == 1200.5
-        # Contract-default fallbacks for fields with no live source.
-        assert body["production"]["line"] == ""
-        assert body["production"]["operator"] == ""
-        assert body["production"]["confirmedAt"] == ""
-        assert body["production"]["plannedQty"] == 0.0
+        # Source-truthful null for fields with no live source — the Zod
+        # schema was relaxed to nullable+optional in this PR so missing
+        # production evidence is no longer faked with empty strings or 0.0.
+        assert body["production"]["line"] is None
+        assert body["production"]["operator"] is None
+        assert body["production"]["confirmedAt"] is None
+        assert body["production"]["plannedQty"] is None
+        assert body["production"]["yield"] is None
+        assert body["production"]["originatingCustomer"] is None
+        assert body["production"]["notes"] is None
         # Standard Databricks observability headers still set.
         assert response.headers.get("x-adapter-mode") == "databricks-api"
         assert "trace2.get_batch_quality_passport_partial" in response.headers.get(
