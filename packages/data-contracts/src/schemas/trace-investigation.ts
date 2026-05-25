@@ -53,7 +53,7 @@ export const BatchHeaderSummarySchema = z.object({
   uom: z.string().optional().describe('[classification: source-field]'),
   manufactureDate: z.string().datetime().optional().describe('[classification: source-field]'),
   expiryDate: z.string().datetime().optional().describe('[classification: source-field]'),
-  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
   // Individual stock bucket quantities — sourced from gold_batch_stock_v (all columns verified live 2026-05-19).
   // All optional: absent means the source row did not return a value, not that the stock is zero.
   unrestricted: z.number().optional().describe('[classification: source-field]'),
@@ -147,7 +147,7 @@ export const TraceEdgeSchema = z.object({
   documentReference: z.string().optional().describe('[classification: source-field]'),
   // Full evidence fields from gold_batch_lineage
   postingDate: z.string().optional().describe('[classification: source-field]'),
-  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
   materialDocumentNumber: z.string().optional().describe('[classification: source-field]'),
   purchaseOrderId: z.string().optional().describe('[classification: source-field]'),
   supplierId: z.string().optional().describe('[classification: source-field]'),
@@ -303,7 +303,7 @@ export type SupplierExposureSummary = z.infer<typeof SupplierExposureSummarySche
 // One row in the production history for a given material.
 // Sourced from gold_batch_production_history_v.
 export const ProductionHistoryRowSchema = z.object({
-  processOrderId: z.string().optional().describe('[classification: source-field]'),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
   batchId: z.string().describe('[classification: source-field]'),
   plantId: z.string().optional().describe('[classification: source-field]'),
   materialId: z.string().describe('[classification: source-field]'),
