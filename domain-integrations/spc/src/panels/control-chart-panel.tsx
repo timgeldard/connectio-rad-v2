@@ -1,9 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { ControlChartSeries, ControlChartPoint } from '@connectio/data-contracts'
 import { useControlChartSeries } from '../adapters/spc-monitoring-queries.js'
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
+import { useSPCExclusions } from '../utils/spc-exclusion-store.js'
+import { computeAll } from '../utils/calculations.js'
+import type { QuantChartType, IndexedChartPoint } from '../utils/spc-types.js'
+import { InteractiveControlChart } from '../components/interactive-control-chart.js'
+import { SPCExclusionsModal, type ExclusionDialogState } from '../components/spc-exclusions-modal.js'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'control-chart',
@@ -32,6 +37,8 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
     lastRefreshedAt,
   })
 
+  const [exclusionDialog, setExclusionDialog] = useState<ExclusionDialogState | null>(null)
+
   useEffect(() => {
     if (isLoading) return
     if (result?.ok) markReady()
@@ -46,6 +53,70 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
       p != null && typeof p.value === 'number' && !isNaN(p.value)
   ) ?? []
 
+  const charId = request.characteristicId ?? ''
+  const { exclusions, toggleExclusion, clearExclusions } = useSPCExclusions(charId)
+
+  // Map to IndexedChartPoint
+  const indexedPoints: IndexedChartPoint[] = validPoints.map((p, idx) => {
+    const isExcluded = exclusions.has(p.pointId)
+    return {
+      batch_id: p.batchId || null,
+      batch_date: p.timestamp || null,
+      batch_seq: idx + 1,
+      sample_seq: 1,
+      value: p.value,
+      lsl: series?.lowerSpecLimit || null,
+      usl: series?.upperSpecLimit || null,
+      originalIndex: idx,
+      excluded: isExcluded,
+    }
+  })
+
+  // Recalculate reactively
+  const activePoints = indexedPoints.filter(p => !p.excluded)
+  const chartTypeMapped: QuantChartType = (series?.chartType === 'xbar-r' ? 'xbar_r' : series?.chartType === 'xbar-s' ? 'xbar_s' : series?.chartType === 'ewma' ? 'ewma' : series?.chartType === 'cusum' ? 'cusum' : 'imr') as QuantChartType
+
+  const computed = computeAll(activePoints, chartTypeMapped, 'weco')
+
+  // Get limits
+  let cl = series?.centerLine
+  let ucl = series?.upperControlLimit
+  let lcl = series?.lowerControlLimit
+
+  if (exclusions.size > 0) {
+    if (chartTypeMapped === 'imr' && computed.imr) {
+      cl = computed.imr.xBar
+      ucl = computed.imr.ucl_x
+      lcl = computed.imr.lcl_x
+    } else if (chartTypeMapped === 'xbar_r' && computed.xbarR) {
+      cl = computed.xbarR.grandMean
+      ucl = computed.xbarR.ucl_x
+      lcl = computed.xbarR.lcl_x
+    } else if (chartTypeMapped === 'xbar_s' && computed.xbarS) {
+      cl = computed.xbarS.grandMean
+      ucl = computed.xbarS.ucl_x
+      lcl = computed.xbarS.lcl_x
+    }
+  }
+
+  // Active signals
+  const activeSignals = computed.signals || []
+
+  const handlePointClick = (p: IndexedChartPoint) => {
+    setExclusionDialog({
+      action: p.excluded ? 'manual_restore' : 'manual_exclude',
+      point: p,
+    })
+  }
+
+  const handleExclusionSubmit = () => {
+    if (exclusionDialog?.point) {
+      const pointId = validPoints[exclusionDialog.point.originalIndex].pointId
+      toggleExclusion(pointId, exclusionDialog.action === 'manual_exclude')
+    }
+    setExclusionDialog(null)
+  }
+
   return (
     <EvidencePanel
       registration={registration}
@@ -55,8 +126,26 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
     >
       {series && (
         <div style={{ padding: '12px 16px' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginBottom: 6 }}>
-            {series.characteristicName} — {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {validPoints.length} points
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
+              {series.characteristicName} — {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {validPoints.length} points
+            </div>
+            {exclusions.size > 0 && (
+              <button
+                onClick={clearExclusions}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--sunset, #F24A00)',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Clear exclusions ({exclusions.size})
+              </button>
+            )}
           </div>
 
           {validPoints.length === 0 ? (
@@ -69,12 +158,12 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
           ) : (
             <>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 12 }}>
-                {(series.upperControlLimit != null || series.centerLine != null || series.lowerControlLimit != null) && (
+                {(ucl != null || cl != null || lcl != null) && (
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--shell-fg-3)', marginRight: 4 }}>Control Limits:</span>
-                    {series.upperControlLimit != null && <ChartStat label="UCL" value={series.upperControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />}
-                    {series.centerLine != null && <ChartStat label="CL" value={series.centerLine.toFixed(2)} color="var(--shell-fg-2)" />}
-                    {series.lowerControlLimit != null && <ChartStat label="LCL" value={series.lowerControlLimit.toFixed(2)} color="var(--sunset, #F24A00)" />}
+                    {ucl != null && <ChartStat label="UCL" value={ucl.toFixed(2)} color="var(--sunset, #F24A00)" />}
+                    {cl != null && <ChartStat label="CL" value={cl.toFixed(2)} color="var(--shell-fg-2)" />}
+                    {lcl != null && <ChartStat label="LCL" value={lcl.toFixed(2)} color="var(--sunset, #F24A00)" />}
                   </div>
                 )}
                 {(series.upperSpecLimit != null || series.lowerSpecLimit != null) && (
@@ -86,7 +175,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 )}
               </div>
 
-              {series.upperControlLimit == null && series.lowerControlLimit == null && series.centerLine == null ? (
+              {cl == null && lcl == null && ucl == null ? (
                 <div
                   style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                   role="status"
@@ -110,7 +199,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 </div>
               ) : null}
 
-              {validPoints.length > 0 && validPoints.length < 3 && (series.upperControlLimit != null || series.lowerControlLimit != null || series.centerLine != null) && (
+              {validPoints.length > 0 && validPoints.length < 3 && (ucl != null || lcl != null || cl != null) && (
                 <div
                   style={{ padding: '4px 8px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn, #C7821C)', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)' }}
                   role="status"
@@ -119,17 +208,38 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
                 </div>
               )}
 
-              <ChartPlaceholder series={{ ...series, points: validPoints }} />
+              <InteractiveControlChart
+                title={series.characteristicName}
+                points={indexedPoints}
+                cl={cl}
+                ucl={ucl}
+                lcl={lcl}
+                usl={series.upperSpecLimit}
+                lsl={series.lowerSpecLimit}
+                unit={series.unitOfMeasure || ''}
+                signals={activeSignals}
+                onPointClick={handlePointClick}
+              />
 
-              <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
+              <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <LegendItem color={STATUS_COLOR['in-control']} label="No signals returned" />
                 <LegendItem color={STATUS_COLOR['warning']} label="Warning" />
                 <LegendItem color={STATUS_COLOR['out-of-control']} label="Active SPC signal" />
                 <LegendItem color={STATUS_COLOR['not-evaluated']} label="Not evaluated" />
+                <LegendItem color={STATUS_COLOR['excluded']} label="Excluded Point" />
               </div>
             </>
           )}
         </div>
+      )}
+
+      {exclusionDialog && (
+        <SPCExclusionsModal
+          dialog={exclusionDialog}
+          saving={false}
+          onCancel={() => setExclusionDialog(null)}
+          onSubmit={handleExclusionSubmit}
+        />
       )}
     </EvidencePanel>
   )
@@ -140,6 +250,7 @@ const STATUS_COLOR: Record<string, string> = {
   'warning': 'var(--shell-warn, #C7821C)',
   'in-control': 'var(--shell-good, #1F8B4C)',
   'not-evaluated': 'var(--shell-fg-3, #888)',
+  'excluded': 'var(--shell-fg-3, #a0a0a5)',
 }
 
 function ChartStat({ label, value, color }: { label: string; value: string; color: string }) {
@@ -156,145 +267,6 @@ function LegendItem({ color, label }: { color: string; label: string }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
       <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>{label}</span>
-    </div>
-  )
-}
-
-function formatPointDate(ts: string | null | undefined): string {
-  if (!ts) return '—'
-  const d = new Date(ts)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}
-
-function ChartPlaceholder({ series }: { series: ControlChartSeries }) {
-  const all = series.points.map(p => p.value)
-  
-  // Defensively build list of existing limit values to avoid Math.min/max returning NaN
-  const limitValues = [
-    series.lowerControlLimit,
-    series.upperControlLimit,
-    series.centerLine,
-    series.lowerSpecLimit,
-    series.upperSpecLimit,
-  ].filter((v): v is number => v != null)
-
-  const rawMin = Math.min(...all, ...limitValues)
-  const rawMax = Math.max(...all, ...limitValues)
-  const yPad = ((rawMax - rawMin) || 1) * 0.12
-  const yMin = rawMin - yPad
-  const yMax = rawMax + yPad
-  const yRange = yMax - yMin
-
-  const W = 480
-  const H = 180
-  const PAD_L = 44
-  const PAD_R = 48
-  const PAD_T = 12
-  const PAD_B = 24
-  const plotW = W - PAD_L - PAD_R
-  const plotH = H - PAD_T - PAD_B
-  const n = series.points.length
-
-  function toX(i: number) {
-    return PAD_L + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2)
-  }
-
-  function toY(v: number) {
-    return PAD_T + (1 - (v - yMin) / yRange) * plotH
-  }
-
-  const yTicks: number[] = Array.from({ length: 5 }, (_, i) => yMin + (yRange * i) / 4)
-
-  const labelStep = Math.max(1, Math.round((n - 1) / 5))
-  const xLabelSet = new Set<number>()
-  for (let i = 0; i < n; i += labelStep) xLabelSet.add(i)
-  if (n > 0) xLabelSet.add(n - 1)
-
-  const uclText = series.upperControlLimit != null ? `UCL ${series.upperControlLimit.toFixed(1)}` : 'UCL —'
-  const clText = series.centerLine != null ? `CL ${series.centerLine.toFixed(1)}` : 'CL —'
-  const lclText = series.lowerControlLimit != null ? `LCL ${series.lowerControlLimit.toFixed(1)}` : 'LCL —'
-
-  return (
-    <div
-      style={{ background: 'var(--shell-surface-2)', borderRadius: 4, overflowX: 'auto' }}
-      role="img"
-      aria-label={`Control chart for ${series.characteristicName} — ${n} data points, UCL ${series.upperControlLimit?.toFixed(2) ?? '—'}, CL ${series.centerLine?.toFixed(2) ?? '—'}, LCL ${series.lowerControlLimit?.toFixed(2) ?? '—'}`}
-    >
-      <svg width={W} height={H} style={{ display: 'block' }}>
-        {/* Y-axis grid lines and value labels */}
-        {yTicks.map((tick, i) => (
-          <g key={i}>
-            <line x1={PAD_L} y1={toY(tick)} x2={PAD_L + plotW} y2={toY(tick)} stroke="var(--shell-line)" strokeWidth={0.5} />
-            <text x={PAD_L - 4} y={toY(tick) + 3} textAnchor="end" fontSize={9} fill="var(--shell-fg-3)">{tick.toFixed(1)}</text>
-          </g>
-        ))}
-
-        {/* UCL */}
-        {series.upperControlLimit != null && (
-          <g>
-            <line x1={PAD_L} y1={toY(series.upperControlLimit)} x2={PAD_L + plotW} y2={toY(series.upperControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
-            <text x={PAD_L + plotW + 3} y={toY(series.upperControlLimit) + 3} fontSize={8} fill="var(--sunset, #F24A00)">{uclText}</text>
-          </g>
-        )}
-
-        {/* CL */}
-        {series.centerLine != null && (
-          <g>
-            <line x1={PAD_L} y1={toY(series.centerLine)} x2={PAD_L + plotW} y2={toY(series.centerLine)} stroke="var(--shell-fg-3)" strokeWidth={1} />
-            <text x={PAD_L + plotW + 3} y={toY(series.centerLine) + 3} fontSize={8} fill="var(--shell-fg-3)">{clText}</text>
-          </g>
-        )}
-
-        {/* LCL */}
-        {series.lowerControlLimit != null && (
-          <g>
-            <line x1={PAD_L} y1={toY(series.lowerControlLimit)} x2={PAD_L + plotW} y2={toY(series.lowerControlLimit)} stroke="var(--sunset, #F24A00)" strokeWidth={1} strokeDasharray="4 3" />
-            <text x={PAD_L + plotW + 3} y={toY(series.lowerControlLimit) + 3} fontSize={8} fill="var(--sunset, #F24A00)">{lclText}</text>
-          </g>
-        )}
-
-        {/* Spec limits */}
-        {series.upperSpecLimit != null && (
-          <g>
-            <line x1={PAD_L} y1={toY(series.upperSpecLimit)} x2={PAD_L + plotW} y2={toY(series.upperSpecLimit)} stroke="#D32F2F" strokeWidth={1} strokeDasharray="2 4" />
-            <text x={PAD_L + plotW + 3} y={toY(series.upperSpecLimit) + 3} fontSize={8} fill="#D32F2F">USL {series.upperSpecLimit.toFixed(1)}</text>
-          </g>
-        )}
-        {series.lowerSpecLimit != null && (
-          <g>
-            <line x1={PAD_L} y1={toY(series.lowerSpecLimit)} x2={PAD_L + plotW} y2={toY(series.lowerSpecLimit)} stroke="#D32F2F" strokeWidth={1} strokeDasharray="2 4" />
-            <text x={PAD_L + plotW + 3} y={toY(series.lowerSpecLimit) + 3} fontSize={8} fill="#D32F2F">LSL {series.lowerSpecLimit.toFixed(1)}</text>
-          </g>
-        )}
-
-        {/* Data series line */}
-        {n > 1 && (
-          <polyline
-            fill="none"
-            stroke="var(--shell-fg-2)"
-            strokeWidth={1.5}
-            points={series.points.map((p: ControlChartPoint, i: number) => `${toX(i)},${toY(p.value)}`).join(' ')}
-          />
-        )}
-
-        {/* Data points */}
-        {series.points.map((p: ControlChartPoint, i: number) => (
-          <circle key={p.pointId} cx={toX(i)} cy={toY(p.value)} r={5} fill={STATUS_COLOR[p.status] ?? '#888'}>
-            <title>{`${formatPointDate(p.timestamp)} — ${series.characteristicName}: ${p.value} ${series.unitOfMeasure} (${p.status.replace(/-/g, ' ')})`}</title>
-          </circle>
-        ))}
-
-        {/* X-axis date labels */}
-        {series.points.map((p: ControlChartPoint, i: number) => {
-          if (!xLabelSet.has(i)) return null
-          return (
-            <text key={p.pointId} x={toX(i)} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--shell-fg-3)">
-              {formatPointDate(p.timestamp)}
-            </text>
-          )
-        })}
-      </svg>
     </div>
   )
 }

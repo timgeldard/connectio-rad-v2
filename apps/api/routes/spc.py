@@ -51,7 +51,10 @@ from routes._databricks import (
     require_databricks_config,
     run_repository_fetch,
     set_databricks_response_headers,
+    run_query,
 )
+from shared.query_service.object_resolver import resolve_domain_object
+from shared.query_service.query_spec import QuerySpec
 
 router = APIRouter()
 
@@ -139,7 +142,11 @@ async def _forward_post(path: str, body: dict, token: str | None) -> dict | list
 
 @router.get("/spc/materials")
 async def spc_materials(
+    response: Response = None,
     x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> list:
     """List all materials with SPC data.
 
@@ -148,6 +155,46 @@ async def spc_materials(
     NOT YET BROWSER-VERIFIED: route is wired but has not been tested against
     a live V1 SPC UAT deployment.
     """
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode == "databricks-api":
+        host, warehouse_id = require_databricks_config()
+        identity = build_user_identity(
+            x_forwarded_access_token,
+            x_forwarded_user,
+            x_forwarded_email,
+            x_databricks_catalog,
+        )
+        
+        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
+        m_tbl = resolve_domain_object("spc", "gold_material")
+        
+        sql = f"""
+            SELECT DISTINCT
+                r.MATERIAL_ID   AS material_id,
+                COALESCE(m.MATERIAL_NAME, r.MATERIAL_ID) AS material_name
+            FROM {r_tbl} r
+            LEFT JOIN {m_tbl} m
+                ON m.MATERIAL_ID = r.MATERIAL_ID
+               AND m.LANGUAGE_ID = 'E'
+            WHERE r.QUANTITATIVE_RESULT IS NOT NULL
+              AND (r.QUALITATIVE_RESULT IS NULL OR r.QUALITATIVE_RESULT = '')
+            ORDER BY material_name
+        """
+        
+        spec = QuerySpec(
+            name="spc.get_materials",
+            module="spc",
+            endpoint="/api/spc/materials",
+            sql=sql,
+            params={},
+            source_badge="view:gold_batch_quality_result_v",
+            tags=["spc", "materials"],
+        )
+        
+        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        set_databricks_response_headers(response, spec)
+        return rows
+
     _ensure_legacy_mode()
     return await _forward_get("/api/spc/materials", {}, x_forwarded_access_token)
 
@@ -155,7 +202,11 @@ async def spc_materials(
 @router.get("/spc/plants")
 async def spc_plants(
     material_id: str = Query(..., description="SAP material number to filter plant list"),
+    response: Response = None,
     x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> list:
     """List plants that have SPC data for the given material.
 
@@ -164,6 +215,50 @@ async def spc_plants(
     NOT YET BROWSER-VERIFIED: route is wired but has not been tested against
     a live V1 SPC UAT deployment.
     """
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode == "databricks-api":
+        host, warehouse_id = require_databricks_config()
+        identity = build_user_identity(
+            x_forwarded_access_token,
+            x_forwarded_user,
+            x_forwarded_email,
+            x_databricks_catalog,
+        )
+        
+        mb_tbl = resolve_domain_object("spc", "gold_batch_mass_balance_v")
+        p_tbl = resolve_domain_object("spc", "gold_plant")
+        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
+        
+        sql = f"""
+            SELECT DISTINCT
+                mb.PLANT_ID AS plant_id,
+                COALESCE(p.PLANT_NAME, mb.PLANT_ID) AS plant_name
+            FROM {mb_tbl} mb
+            LEFT JOIN {p_tbl} p
+                ON p.PLANT_ID = mb.PLANT_ID
+            INNER JOIN {r_tbl} r
+                ON r.MATERIAL_ID = mb.MATERIAL_ID
+               AND r.BATCH_ID    = mb.BATCH_ID
+               AND r.QUANTITATIVE_RESULT IS NOT NULL
+            WHERE mb.MATERIAL_ID = :material_id
+              AND mb.MOVEMENT_CATEGORY = 'Production'
+            ORDER BY plant_name
+        """
+        
+        spec = QuerySpec(
+            name="spc.get_plants",
+            module="spc",
+            endpoint="/api/spc/plants",
+            sql=sql,
+            params={"material_id": material_id},
+            source_badge="view:gold_batch_mass_balance_v",
+            tags=["spc", "plants"],
+        )
+        
+        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        set_databricks_response_headers(response, spec)
+        return rows
+
     _ensure_legacy_mode()
     return await _forward_get("/api/spc/plants", {"material_id": material_id}, x_forwarded_access_token)
 
@@ -172,7 +267,11 @@ async def spc_plants(
 async def spc_characteristics(
     material_id: str = Query(..., description="SAP material number"),
     plant_id: str | None = Query(default=None, description="Plant ID (optional filter)"),
+    response: Response = None,
     x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> list:
     """List monitored inspection characteristics (MICs) for a material.
 
@@ -182,6 +281,71 @@ async def spc_characteristics(
     NOT YET BROWSER-VERIFIED: route is wired but has not been tested against
     a live V1 SPC UAT deployment.
     """
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode == "databricks-api":
+        host, warehouse_id = require_databricks_config()
+        identity = build_user_identity(
+            x_forwarded_access_token,
+            x_forwarded_user,
+            x_forwarded_email,
+            x_databricks_catalog,
+        )
+        
+        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
+        
+        sql = f"""
+            SELECT
+                MIC_ID                                                       AS mic_id,
+                MIC_NAME                                                     AS mic_name,
+                INSPECTION_METHOD                                            AS inspection_method,
+                MAX(CASE WHEN QUALITATIVE_RESULT IS NOT NULL
+                              AND QUALITATIVE_RESULT != ''
+                         THEN 1 ELSE 0 END)                                 AS is_attribute,
+                COUNT(DISTINCT BATCH_ID)                                     AS batch_count,
+                COUNT(*)                                                     AS total_samples
+            FROM {r_tbl}
+            WHERE MATERIAL_ID = :material_id
+              AND (QUANTITATIVE_RESULT IS NOT NULL
+                   OR (QUALITATIVE_RESULT IS NOT NULL AND QUALITATIVE_RESULT != ''))
+            GROUP BY MIC_ID, MIC_NAME, INSPECTION_METHOD
+            HAVING COUNT(DISTINCT BATCH_ID) >= 3
+            ORDER BY mic_name
+        """
+        
+        spec = QuerySpec(
+            name="spc.get_characteristics",
+            module="spc",
+            endpoint="/api/spc/characteristics",
+            sql=sql,
+            params={"material_id": material_id},
+            source_badge="view:gold_batch_quality_result_v",
+            tags=["spc", "characteristics"],
+        )
+        
+        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        set_databricks_response_headers(response, spec)
+        
+        mapped_rows = []
+        for row in rows:
+            is_attr = int(float(row.get("is_attribute") or 0)) == 1
+            total_samples = float(row.get("total_samples") or 0)
+            batch_count = int(float(row.get("batch_count") or 0))
+            avg_spb = total_samples / batch_count if batch_count > 0 else 0
+            chart_type = "p_chart" if is_attr else ("xbar_r" if avg_spb > 1.5 else "imr")
+            
+            mapped_rows.append({
+                "mic_id": row.get("mic_id"),
+                "mic_name": row.get("mic_name"),
+                "plant_id": plant_id,
+                "material_id": material_id,
+                "operation_id": "00000001",
+                "chart_type": chart_type,
+                "batch_count": batch_count,
+                "sample_count": int(total_samples),
+                "has_active_signal": False
+            })
+        return mapped_rows
+
     _ensure_legacy_mode()
     return await _forward_get(
         "/api/spc/characteristics",

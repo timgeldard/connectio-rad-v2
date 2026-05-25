@@ -17,7 +17,7 @@ import { useWorkspaceShellState } from './useWorkspaceShellState.js'
  * allowing the grid to collapse the scopebar row via CSS.
  */
 export function ShellLayout() {
-  const { hasScope } = useWorkspaceShellState()
+  const { hasScope, workspaceId } = useWorkspaceShellState()
 
   return (
     <>
@@ -44,7 +44,7 @@ export function ShellLayout() {
         Skip to main content
       </a>
       <div
-        className={`connectio-shell${hasScope ? '' : ' no-scope'}`}
+        className={`connectio-shell${hasScope ? '' : ' no-scope'}${workspaceId === 'trace-consumer' ? ' fullscreen' : ''}`}
         data-testid="workspace-shell"
       >
         <DomainSidebar />
