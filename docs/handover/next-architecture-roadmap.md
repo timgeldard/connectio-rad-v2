@@ -28,12 +28,13 @@ yet fully represented as first-class Nx project boundaries.
 
 ## High-Priority Next Workstreams
 
-- TODO: Migrate domain adapters to `DatabricksRepository` incrementally by
-  domain, with timeout, rate limit, permission, auth, and config error tests for
-  each migrated group.
-- TODO: Fix `DatabricksRepository` connection pooling lifecycle in a dedicated
-  backend reliability PR. `AsyncClient` instances must be closed or owned by an
-  app lifecycle hook, and connection ownership must be explicit.
+- Quality usage-decision pilot (`POST /api/quality/read-only-evidence`) — complete.
+- SPC chart-data (`POST /api/spc/chart-data`) — migrated to `SpcChartDataRepository`.
+- `DatabricksHttpClientPool` app lifecycle — complete.
+- `DATABRICKS_ALLOWED_CATALOGS` catalog override allowlist — complete.
+- TODO: Migrate additional small read-only adapters to `DatabricksRepository`
+  incrementally, with timeout, rate limit, permission, auth, and config error
+  tests for each migrated group.
 - TODO: Define an ADR before implementing evidence-route caching. Caching must
   be tied to freshness policy, cache hit/miss/age must be visible in headers,
   stale cached evidence must not appear live, and decision-sensitive evidence
@@ -45,6 +46,10 @@ DatabricksRepository catalog overrides are allowlisted via
 `DATABRICKS_ALLOWED_CATALOGS`; deployment-specific approved catalog values remain
 environment configuration. Retry semantics must distinguish total attempts from
 retries.
+
+Broad Warehouse 360 and Trace Investigation `DatabricksRepository` migration
+remains deferred until the pattern is proven on at least one more backend route
+beyond Quality and SPC chart-data.
 
 Focused UAT must use real browser/network capture when Databricks access is
 available. Offline smoke checks do not count as live UAT evidence. Warehouse 360

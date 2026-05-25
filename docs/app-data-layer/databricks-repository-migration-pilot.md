@@ -112,11 +112,46 @@ Future repository-backed routes should preserve this mapping:
 6. Keep SQL, contracts, and frontend behavior unchanged unless the adapter
    migration itself reveals a blocking bug.
 
+## Second adapter migration
+
+Migrated adapter:
+
+- `POST /api/spc/chart-data`
+- `apps/api/adapters/spc/spc_databricks_chart_adapter.py` via `SpcChartDataRepository`
+
+Why low-risk:
+
+- Single read-only route with two small QuerySpecs (subgroups + optional locked limits)
+- Stable `SpcChartDataResponse` shape already covered by mapper and route tests
+- No write-back, no Warehouse/Trace complexity, no new proxy routes
+
+What stayed unchanged:
+
+- SQL strings and bind parameters (except `source_badge` metadata on QuerySpec for headers)
+- Contracts, frontend, generated assets, catalog allowlist, connection pooling
+- `run_query(...)` remains for non-migrated SPC routes (e.g. `GET /spc/subgroups`)
+- Response assembly still uses `map_spc_chart_response` in the route
+
+Tests added:
+
+- `SpcChartDataRepository` unit tests (execution, optional `chartType` skip, catalog isolation/reset)
+- Route tests for standard headers, error mapping, catalog override, and single-execute path when `chartType` is absent
+
+Edge cases:
+
+- Locked limits query runs only when `chartType` is set; otherwise the repository returns `([], None)` without calling Databricks.
+- Subgroups and limits fetches run in parallel when `chartType` is present.
+
+Readiness:
+
+- Pattern is proven on two domains (Quality + SPC chart-data). A third small read-only adapter can follow the same steps.
+- Warehouse 360 and Trace Investigation remain deferred until retry semantics are clarified and another backend route is migrated.
+
 ## Remaining Blockers Before Broad Migration
 
 - Retry semantics should be reviewed so total attempts and retries are named
   distinctly.
 - Caching requires an ADR before implementation and must be tied to freshness
   policy.
-- Warehouse 360 and Trace Investigation should wait until this pattern and the
-  connection lifecycle are stable.
+- Warehouse 360 and Trace Investigation should wait until at least one more
+  repository-backed route is proven beyond Quality and SPC chart-data.
