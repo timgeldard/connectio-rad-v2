@@ -47,6 +47,10 @@ This command:
 
 If drift is detected, the diff shows exactly which lines changed. Commit the regenerated files to resolve.
 
+The sync wrapper preserves the existing datamodel-codegen timestamp header in
+`apps/api/contracts/generated.py`; timestamp-only regeneration noise should not
+appear as contract drift.
+
 ### When to run
 
 - Before merging any PR that modifies `packages/data-contracts/src/schemas/`
