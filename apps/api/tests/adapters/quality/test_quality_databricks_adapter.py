@@ -1,11 +1,16 @@
 import pytest
 
 from adapters.quality.quality_databricks_adapter import (
+    QualityUsageDecisionEvidence,
+    QualityUsageDecisionRepository,
     UD_LABELS,
     get_quality_usage_decision_spec,
     map_quality_usage_decision_rows,
     QualityUsageDecisionQuerySpec,
 )
+from shared.query_service.identity import UserIdentity
+from shared.query_service.object_resolver import resolve_domain_object
+from shared.query_service.query_executor import DatabricksRepository
 
 @pytest.fixture(autouse=True)
 def setup_env(monkeypatch):
@@ -21,6 +26,111 @@ def test_get_quality_usage_decision_spec():
     assert "udr.MATERIAL_ID = :material_id" in spec.sql
     assert "udr.BATCH_ID = :batch_id" in spec.sql
     assert "udr.PLANT_ID = :plant_id" in spec.sql
+
+
+class _FakeExecutor:
+    def __init__(self, rows: list[dict] | None = None, error: Exception | None = None) -> None:
+        self.rows = rows or []
+        self.error = error
+        self.sql_seen: str | None = None
+
+    async def execute(self, spec, identity):
+        self.sql_seen = spec.sql
+        if self.error:
+            raise self.error
+        return self.rows
+
+
+async def test_quality_repository_executes_and_maps_usage_decision(monkeypatch):
+    monkeypatch.setenv("CQ_CATALOG", "repo_catalog")
+    monkeypatch.setenv("CQ_SCHEMA", "repo_schema")
+    executor = _FakeExecutor(
+        rows=[
+            {
+                "INSPECTION_LOT_ID": "LOT-100",
+                "USAGE_DECISION_CODE": "A",
+                "MATERIAL_ID": "MAT1",
+                "BATCH_ID": "BATCH1",
+            }
+        ]
+    )
+    repository = QualityUsageDecisionRepository(
+        DatabricksRepository(
+            executor=executor,
+            identity=UserIdentity(user_id="u001", raw_oauth_token="tok"),
+        )
+    )
+
+    evidence, spec = await repository.fetch_usage_decision_evidence(
+        material_id="MAT1",
+        batch_id="BATCH1",
+        plant_id=None,
+        queried_at="2026-05-25T00:00:00Z",
+    )
+
+    assert isinstance(evidence, QualityUsageDecisionEvidence)
+    assert isinstance(spec, QualityUsageDecisionQuerySpec)
+    assert evidence.inspection_lots[0].inspection_lot_id == "LOT-100"
+    assert evidence.summary.inspection_lot_count == 1
+    assert "`repo_catalog`.`repo_schema`.`gold_inspection_usage_decision`" in executor.sql_seen
+
+
+async def test_quality_repository_applies_catalog_override_without_leaking(monkeypatch):
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+    monkeypatch.setenv("CQ_SCHEMA", "gold")
+    executor = _FakeExecutor(rows=[])
+    repository = QualityUsageDecisionRepository(
+        DatabricksRepository(
+            executor=executor,
+            identity=UserIdentity(
+                user_id="u001",
+                raw_oauth_token="tok",
+                catalog_target="override_catalog",
+            ),
+        )
+    )
+
+    await repository.fetch_usage_decision_evidence(
+        material_id="MAT1",
+        batch_id="BATCH1",
+        plant_id=None,
+        queried_at="2026-05-25T00:00:00Z",
+    )
+
+    assert "`override_catalog`.`gold`.`gold_inspection_usage_decision`" in executor.sql_seen
+    assert "`env_catalog`.`gold`.`gold_inspection_usage_decision`" in resolve_domain_object(
+        "cq",
+        "gold_inspection_usage_decision",
+    )
+
+
+async def test_quality_repository_resets_catalog_override_after_error(monkeypatch):
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+    monkeypatch.setenv("CQ_SCHEMA", "gold")
+    executor = _FakeExecutor(error=RuntimeError("query failed"))
+    repository = QualityUsageDecisionRepository(
+        DatabricksRepository(
+            executor=executor,
+            identity=UserIdentity(
+                user_id="u001",
+                raw_oauth_token="tok",
+                catalog_target="override_catalog",
+            ),
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="query failed"):
+        await repository.fetch_usage_decision_evidence(
+            material_id="MAT1",
+            batch_id="BATCH1",
+            plant_id=None,
+            queried_at="2026-05-25T00:00:00Z",
+        )
+
+    assert "`env_catalog`.`gold`.`gold_inspection_usage_decision`" in resolve_domain_object(
+        "cq",
+        "gold_inspection_usage_decision",
+    )
 
 def test_map_quality_usage_decision_rows_empty():
     lots, summary = map_quality_usage_decision_rows([], "2026-05-22T00:00:00Z")
