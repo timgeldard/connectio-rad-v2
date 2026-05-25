@@ -16,8 +16,10 @@ from fastapi import HTTPException, Response
 _logger = logging.getLogger("connectio.databricks_routes")
 
 from shared.query_service.databricks_client import StatementApiDatabricksClient
+from shared.query_service.catalog_policy import assert_allowed_catalog_target
 from shared.query_service.errors import (
     DatabricksAuthRequiredError,
+    DatabricksCatalogTargetError,
     DatabricksConfigError,
     DatabricksPermissionError,
     DatabricksQueryError,
@@ -61,11 +63,15 @@ def build_user_identity(
     token: str | None, user: str | None, email: str | None, catalog_target: str | None = None
 ) -> UserIdentity:
     """Construct a UserIdentity from forwarded OAuth headers."""
+    try:
+        validated_catalog = assert_allowed_catalog_target(catalog_target)
+    except DatabricksCatalogTargetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return UserIdentity(
         user_id=user or "unknown",
         email=email,
         raw_oauth_token=token,
-        catalog_target=catalog_target,
+        catalog_target=validated_catalog,
     )
 
 
@@ -86,6 +92,8 @@ async def run_repository_fetch(
     """Run a repository fetch and translate standard Databricks errors."""
     try:
         return await fetcher()
+    except DatabricksCatalogTargetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except DatabricksConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except DatabricksAuthRequiredError as exc:

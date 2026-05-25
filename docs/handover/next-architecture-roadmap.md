@@ -41,9 +41,10 @@ yet fully represented as first-class Nx project boundaries.
 - TODO: Run focused Warehouse 360 and Trace Investigation UAT after CI and
   repository reliability are stable.
 
-DatabricksRepository migration should validate and allowlist catalog overrides
-before use in production-like flows. Retry semantics must distinguish total
-attempts from retries.
+DatabricksRepository catalog overrides are allowlisted via
+`DATABRICKS_ALLOWED_CATALOGS`; deployment-specific approved catalog values remain
+environment configuration. Retry semantics must distinguish total attempts from
+retries.
 
 Focused UAT must use real browser/network capture when Databricks access is
 available. Offline smoke checks do not count as live UAT evidence. Warehouse 360

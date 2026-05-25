@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 
+from .catalog_policy import assert_allowed_catalog_target
 from .databricks_client import DatabricksQueryClient, NotImplementedDatabricksClient
 from .errors import (
     DatabricksAuthRequiredError,
@@ -129,6 +130,8 @@ class DatabricksRepository:
         # Execute spec_factory inside the loop so catalog env vars are evaluated
         # per attempt (e.g. if we switch context midway, though unlikely).
         last_error: Exception | None = None
+
+        assert_allowed_catalog_target(self.identity.catalog_target)
 
         from shared.query_service.object_resolver import catalog_context
         token = catalog_context.set(self.identity.catalog_target)

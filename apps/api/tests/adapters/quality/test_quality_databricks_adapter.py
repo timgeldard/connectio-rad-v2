@@ -16,6 +16,10 @@ from shared.query_service.query_executor import DatabricksRepository
 def setup_env(monkeypatch):
     monkeypatch.setenv("CQ_CATALOG", "test_catalog")
     monkeypatch.setenv("CQ_SCHEMA", "test_schema")
+    monkeypatch.setenv(
+        "DATABRICKS_ALLOWED_CATALOGS",
+        "test_catalog,env_catalog,override_catalog,repo_catalog",
+    )
 
 def test_get_quality_usage_decision_spec():
     spec = get_quality_usage_decision_spec(material_id="123", batch_id="456", plant_id="P1")

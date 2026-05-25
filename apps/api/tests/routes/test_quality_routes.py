@@ -31,6 +31,7 @@ def _databricks_env(monkeypatch) -> None:
     monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
     monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
     monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog,env_catalog")
 
 
 def _quality_spec() -> QuerySpec:
@@ -170,6 +171,109 @@ def test_get_read_only_evidence_missing_oauth_returns_401(monkeypatch):
 
     assert response.status_code == 401
     assert "OAuth token required" in response.json()["detail"]
+
+
+def test_get_read_only_evidence_rejects_unknown_catalog_override(monkeypatch):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+
+    with patch(
+        "shared.query_service.query_executor.QueryExecutor.execute",
+        new_callable=AsyncMock,
+    ) as execute:
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+            headers={
+                "x-forwarded-access-token": "tok",
+                "x-databricks-catalog": "bad_catalog",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Databricks catalog target"
+    execute.assert_not_awaited()
+
+
+def test_get_read_only_evidence_rejects_unsafe_catalog_override(monkeypatch):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog;drop")
+
+    with patch(
+        "shared.query_service.query_executor.QueryExecutor.execute",
+        new_callable=AsyncMock,
+    ) as execute:
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+            headers={
+                "x-forwarded-access-token": "tok",
+                "x-databricks-catalog": "allowed_catalog;drop",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Databricks catalog target"
+    assert "drop" not in response.json()["detail"]
+    execute.assert_not_awaited()
+
+
+def test_get_read_only_evidence_blank_catalog_header_treated_as_no_override(
+    mock_quality_repository,
+    monkeypatch,
+):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+    mock_quality_repository.return_value = _repository_result(
+        [{"INSPECTION_LOT_ID": "123", "USAGE_DECISION_CODE": "A"}]
+    )
+
+    response = client.post(
+        "/api/quality/read-only-evidence",
+        json={"materialId": "MAT1", "batchId": "BATCH1"},
+        headers={
+            "x-forwarded-access-token": "tok",
+            "x-databricks-catalog": "   ",
+        },
+    )
+
+    assert response.status_code == 200
+
+
+def test_get_read_only_evidence_allowlisted_catalog_override_applied(monkeypatch):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "env_catalog")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    captured_sql: list[str] = []
+
+    async def capture_execute(spec, identity):
+        captured_sql.append(spec.sql)
+        return [
+            {
+                "INSPECTION_LOT_ID": "LOT-1",
+                "USAGE_DECISION_CODE": "A",
+                "MATERIAL_ID": "MAT1",
+                "BATCH_ID": "BATCH1",
+            }
+        ]
+
+    with patch(
+        "shared.query_service.query_executor.QueryExecutor.execute",
+        side_effect=capture_execute,
+    ):
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+            headers={
+                "x-forwarded-access-token": "tok",
+                "x-databricks-catalog": "allowed_catalog",
+            },
+        )
+
+    assert response.status_code == 200
+    assert "`allowed_catalog`." in captured_sql[0]
 
 
 @pytest.mark.parametrize(
