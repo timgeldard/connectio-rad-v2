@@ -4,3 +4,9 @@
 /.nx/cache
 /.nx/workspace-data
 .nx/self-healing
+
+# Generated JSON schema bundle — output of `nx run data-contracts:sync-pydantic`.
+# Prettier would reformat it differently from the codegen output and
+# `data-contracts:check-pydantic` would then fail with drift on every CI run.
+# The Pydantic generator consumes this verbatim; treat as a generated artifact.
+/packages/data-contracts/dist-schema

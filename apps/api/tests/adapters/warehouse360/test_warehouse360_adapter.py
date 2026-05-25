@@ -94,9 +94,48 @@ class TestWarehouseOutboundSpec:
         assert spec.module == "wh360"
         assert spec.endpoint == "/api/warehouse360/outbound"
         assert spec.cache_policy == CacheTier.PER_USER_60S
+        # warehouse_id is bound symmetrically — present in params iff supplied.
         assert spec.params["warehouse_id"] == "WH01"
+        assert "lgnum = :warehouse_id" in spec.sql
         assert "wh360_deliveries_v" in spec.sql
         assert "`wh360_uat_catalog`.`wh360_uat_schema`.`wh360_deliveries_v`" in spec.sql
+
+    def test_spec_uses_actual_wh360_deliveries_v_columns(self) -> None:
+        """Pin the source-verified column names so a regression cannot
+        silently revert to the broken upper-case identifiers."""
+        spec = get_warehouse_outbound_spec(WarehouseOutboundRequest("WH01"))
+        for actual_col in ("delivery_id", "delivery_type", "plant_id",
+                           "customer_id", "customer_name", "carrier",
+                           "lgnum", "planned_gi_date", "actual_gi_date",
+                           "loading_date", "delivery_date", "gross_weight",
+                           "weight_uom", "packages", "wm_status",
+                           "mins_to_cutoff", "pick_pct", "line_count",
+                           "risk", "shipped"):
+            assert actual_col in spec.sql, f"missing source column {actual_col!r}"
+        # Old broken UPPER_CASE identifiers must NOT come back.
+        for broken_col in ("DELIVERY_ITEM_ID", "SALES_ORDER_ID",
+                           "MATERIAL_ID", "MATERIAL_DESCRIPTION", "BATCH_ID",
+                           "STORAGE_LOCATION", "WAREHOUSE_NUMBER",
+                           "PLANNED_GOODS_ISSUE_DATE",
+                           "ACTUAL_GOODS_ISSUE_DATE",
+                           "UNIT_OF_MEASURE", "EXCEPTION_REASON"):
+            assert broken_col not in spec.sql, f"broken column {broken_col!r} leaked back into SQL"
+
+    def test_spec_optional_filters_bound_symmetrically(self) -> None:
+        """Every :placeholder must have a matching params key (and vice versa)
+        across the supplied/absent combinations."""
+        # No optional filters supplied — only warehouse_id is bound.
+        spec = get_warehouse_outbound_spec(WarehouseOutboundRequest("WH01"))
+        assert set(spec.params) == {"warehouse_id"}
+        for absent in (":plant_id", ":date_from", ":date_to"):
+            assert absent not in spec.sql, f"unbound placeholder {absent} present"
+        # All optional filters supplied — every placeholder is bound.
+        spec = get_warehouse_outbound_spec(WarehouseOutboundRequest(
+            "WH01", plant_id="PL10", date_from="2026-05-01", date_to="2026-05-31",
+        ))
+        for key in ("warehouse_id", "plant_id", "date_from", "date_to"):
+            assert key in spec.params, f"missing param {key!r}"
+            assert f":{key}" in spec.sql, f"missing placeholder :{key}"
 
 
 class TestWarehouseStagingSpec:
@@ -186,12 +225,16 @@ class TestQuerySpecDynamicFiltering:
             limit=250,
         )
         spec = get_warehouse_outbound_spec(req)
+        assert spec.params["warehouse_id"] == "WH01"
         assert spec.params["plant_id"] == "PL10"
         assert spec.params["date_from"] == "2026-05-01"
         assert spec.params["date_to"] == "2026-05-31"
-        assert "PLANT_ID = :plant_id" in spec.sql
-        assert "PLANNED_GOODS_ISSUE_DATE >= :date_from" in spec.sql
-        assert "PLANNED_GOODS_ISSUE_DATE <= :date_to" in spec.sql
+        # Lower-case actual column names from wh360_deliveries_v.
+        assert "lgnum = :warehouse_id" in spec.sql
+        assert "plant_id = :plant_id" in spec.sql
+        # Date filter targets planned_gi_date (the live ``string`` column).
+        assert "planned_gi_date >= :date_from" in spec.sql
+        assert "planned_gi_date <= :date_to" in spec.sql
         assert "LIMIT 250" in spec.sql
 
     def test_staging_with_all_filters(self) -> None:
@@ -479,30 +522,143 @@ class TestWarehouseRowMappers:
             assert forbidden not in res[0]
 
     def test_map_outbound_rows_preserves_sap_ids(self) -> None:
+        # Row shape matches actual wh360_deliveries_v columns.
         rows = [{
             "delivery_id": "0080047212",
-            "delivery_item_id": "000010",
-            "customer_id": "0003829100",
-            "sales_order_id": "0010034921",
-            "material_id": "000000000000481234",
-            "material_description": "Emmental Block",
-            "batch_id": "0000045612",
+            "delivery_type": "LF",
             "plant_id": "IE10",
-            "storage_location": "SL02",
-            "warehouse_number": "WH01",
-            "planned_goods_issue_date": "2026-05-18 15:00:00",
-            "actual_goods_issue_date": None,
-            "quantity": 960.0,
-            "unit_of_measure": "KG",
-            "status": "OPEN",
-            "exception_reason": "",
+            "customer_id": "0003829100",
+            "customer_name": "Acme Foods Ltd",
+            "carrier": "DHL",
+            "lgnum": "WH01",
+            "planned_gi_date": "2026-05-18 15:00:00",
+            "actual_gi_date": None,
+            "loading_date": "2026-05-18 14:00:00",
+            "delivery_date": "2026-05-19",
+            "gross_weight": 960.0,
+            "weight_uom": "KG",
+            "packages": "12",
+            "wm_status": "OPEN",
+            "mins_to_cutoff": 90.0,
+            "pick_pct": 0.85,
+            "line_count": 3,
+            "risk": "amber",
+            "shipped": False,
         }]
         res = map_warehouse_outbound_rows(rows)
         assert len(res) == 1
         item = res[0]
         assert item["deliveryId"] == "0080047212"
-        assert item["materialId"] == "000000000000481234"
+        assert item["customerId"] == "0003829100"
+        assert item["plantId"] == "IE10"
+        assert item["warehouseNumber"] == "WH01"
+        # planned_gi_date is `string`-typed in the source; _format_datetime
+        # normalises the space separator into ISO 8601.
         assert item["plannedGoodsIssueDate"] == "2026-05-18T15:00:00"
+        # quantity ← gross_weight; unitOfMeasure ← weight_uom (documented
+        # in source-verification doc §4).
+        assert item["quantity"] == 960.0
+        assert item["unitOfMeasure"] == "KG"
+        # status echoes wm_status verbatim.
+        assert item["status"] == "OPEN"
+
+    # ------------------------------------------------------------------
+    # Source-truthful outbound mapper guardrails (parity with inbound /
+    # staging gates — Databricks compatibility audit follow-up
+    # 2026-05-25).
+    # ------------------------------------------------------------------
+
+    def test_outbound_line_grain_fields_are_null_not_invented(self) -> None:
+        """wh360_deliveries_v is delivery-header grain. Line-item /
+        material / batch identifiers are absent — the mapper must emit
+        None, not empty strings or invented values."""
+        rows = [{"delivery_id": "D1", "plant_id": "PL10"}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["deliveryItemId"] is None
+        assert res[0]["salesOrderId"] is None
+        assert res[0]["materialDescription"] is None
+        assert res[0]["batchId"] is None
+        assert res[0]["storageLocation"] is None
+        assert res[0]["exceptionReason"] is None
+
+    def test_outbound_material_id_is_contract_required_empty_string(self) -> None:
+        """The generated Warehouse360OutboundItem.materialId is a required
+        string. The header-grain source has no material identifier, so
+        the mapper emits "" to keep the response body shape stable.
+        Relaxing the contract is tracked as a follow-up in the
+        source-verification doc §5."""
+        rows = [{"delivery_id": "D1"}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["materialId"] == ""
+
+    def test_outbound_warehouse_number_maps_to_lgnum(self) -> None:
+        rows = [{"delivery_id": "D1", "lgnum": "WH42"}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["warehouseNumber"] == "WH42"
+
+    def test_outbound_warehouse_number_null_when_lgnum_missing(self) -> None:
+        """lgnum may be null in some rows — the mapper must NOT fall back
+        to the request's warehouse_id or any invented value."""
+        for raw in (None, ""):
+            rows = [{"delivery_id": "D1", "lgnum": raw}]
+            res = map_warehouse_outbound_rows(rows)
+            assert res[0]["warehouseNumber"] is None
+
+    def test_outbound_planned_gi_date_null_when_source_missing(self) -> None:
+        rows = [{"delivery_id": "D1", "planned_gi_date": None}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["plannedGoodsIssueDate"] is None
+
+    def test_outbound_actual_gi_date_null_when_source_missing(self) -> None:
+        rows = [{"delivery_id": "D1", "actual_gi_date": None}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["actualGoodsIssueDate"] is None
+
+    def test_outbound_quantity_maps_to_gross_weight(self) -> None:
+        """quantity ← gross_weight (application-derived — see
+        source-verification doc §4). unitOfMeasure ← weight_uom so the
+        unit is explicit on the wire."""
+        rows = [{"delivery_id": "D1", "gross_weight": 1250.5, "weight_uom": "KG"}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["quantity"] == 1250.5
+        assert res[0]["unitOfMeasure"] == "KG"
+
+    def test_outbound_quantity_null_when_gross_weight_missing(self) -> None:
+        rows = [{"delivery_id": "D1", "gross_weight": None}]
+        res = map_warehouse_outbound_rows(rows)
+        assert res[0]["quantity"] is None
+
+    def test_outbound_unit_of_measure_null_when_weight_uom_missing(self) -> None:
+        """No UOM in source → null. Mapper MUST NOT default to 'KG'."""
+        for raw in (None, ""):
+            rows = [{"delivery_id": "D1", "weight_uom": raw}]
+            res = map_warehouse_outbound_rows(rows)
+            assert res[0]["unitOfMeasure"] is None
+
+    def test_outbound_status_echoes_wm_status_verbatim(self) -> None:
+        """wm_status is the source-truthful status — not coerced into a
+        governed enum here."""
+        for raw in ("OPEN", "PICKED", "PACKED", "SHIPPED"):
+            rows = [{"delivery_id": "D1", "wm_status": raw}]
+            res = map_warehouse_outbound_rows(rows)
+            assert res[0]["status"] == raw
+
+    def test_outbound_status_null_when_wm_status_missing(self) -> None:
+        for raw in (None, ""):
+            rows = [{"delivery_id": "D1", "wm_status": raw}]
+            res = map_warehouse_outbound_rows(rows)
+            assert res[0]["status"] is None
+
+    def test_outbound_does_not_emit_invented_business_fields(self) -> None:
+        """No 'safe' / 'approved' / 'released' / 'cleared' / 'recallRecommended'
+        / 'shipped' / 'risk' fields invented on the wire — the contract
+        does not surface them, so they must not appear."""
+        rows = [{"delivery_id": "D1", "risk": "amber", "shipped": False}]
+        res = map_warehouse_outbound_rows(rows)
+        for forbidden in ("safe", "approved", "released", "cleared",
+                          "overdue", "due", "recallRecommended", "risk",
+                          "shipped", "onTime"):
+            assert forbidden not in res[0]
 
     def test_map_staging_rows_preserves_sap_ids(self) -> None:
         # Row shape matches actual wh360_process_orders_v columns.

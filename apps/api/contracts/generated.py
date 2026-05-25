@@ -282,11 +282,11 @@ class Production(BaseModel):
     """
     [classification: source-field]
     """
-    line: str
+    line: Optional[str] = None
     """
     [classification: source-field]
     """
-    operator: str
+    operator: Optional[str] = None
     """
     [classification: source-field]
     """
@@ -294,11 +294,11 @@ class Production(BaseModel):
     """
     [classification: source-field]
     """
-    confirmed_at: str = Field(..., alias='confirmedAt')
+    confirmed_at: Optional[str] = Field(None, alias='confirmedAt')
     """
     [classification: source-field]
     """
-    planned_qty: float = Field(..., alias='plannedQty')
+    planned_qty: Optional[float] = Field(None, alias='plannedQty')
     """
     [classification: source-field]
     """
@@ -306,15 +306,15 @@ class Production(BaseModel):
     """
     [classification: source-field]
     """
-    yield_: float = Field(..., alias='yield')
+    yield_: Optional[float] = Field(None, alias='yield')
     """
     [classification: source-derived]
     """
-    originating_customer: str = Field(..., alias='originatingCustomer')
+    originating_customer: Optional[str] = Field(None, alias='originatingCustomer')
     """
     [classification: source-field]
     """
-    notes: str
+    notes: Optional[str] = None
     """
     [classification: source-field]
     """
@@ -3364,11 +3364,11 @@ class PassportProduction(BaseModel):
     """
     [classification: source-field]
     """
-    line: str
+    line: Optional[str] = None
     """
     [classification: source-field]
     """
-    operator: str
+    operator: Optional[str] = None
     """
     [classification: source-field]
     """
@@ -3376,11 +3376,11 @@ class PassportProduction(BaseModel):
     """
     [classification: source-field]
     """
-    confirmed_at: str = Field(..., alias='confirmedAt')
+    confirmed_at: Optional[str] = Field(None, alias='confirmedAt')
     """
     [classification: source-field]
     """
-    planned_qty: float = Field(..., alias='plannedQty')
+    planned_qty: Optional[float] = Field(None, alias='plannedQty')
     """
     [classification: source-field]
     """
@@ -3388,15 +3388,15 @@ class PassportProduction(BaseModel):
     """
     [classification: source-field]
     """
-    yield_: float = Field(..., alias='yield')
+    yield_: Optional[float] = Field(None, alias='yield')
     """
     [classification: source-derived]
     """
-    originating_customer: str = Field(..., alias='originatingCustomer')
+    originating_customer: Optional[str] = Field(None, alias='originatingCustomer')
     """
     [classification: source-field]
     """
-    notes: str
+    notes: Optional[str] = None
     """
     [classification: source-field]
     """
