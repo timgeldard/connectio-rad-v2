@@ -2,126 +2,73 @@
 
 ## Status
 
-Proposed
+Proposed (Updated with review revisions)
 
 ## Context
 
-ConnectIO V2 is a read-only evidence and investigation application. It surfaces Databricks-backed manufacturing evidence with source badges, freshness indicators, caveats, and truthfulness guardrails.
-
-Caching query results at the FastAPI routing or repository level can significantly reduce Databricks query execution costs and page load latency. However, serving cached evidence introduces the risk of users acting on stale data under the false assumption that it represents real-time conditions. Stale information in a quality-assurance or product-recall context can lead to incorrect operational decisions.
-
-To balance performance with compliance and safety, any caching layer must be tied directly to explicit freshness policies, transparent response headers, UI caveats, and strict evidence state semantics.
+ConnectIO V2 surfaces Databricks-backed manufacturing evidence with source badges, freshness indicators, and safety guardrails. Serving cached evidence improves response times and reduces Databricks query costs but risks misleading users with stale decision-sensitive data. This ADR defines our server-side cache and freshness policies.
 
 ---
 
 ## Decision
 
-Define a lightweight, opt-in server-side caching layer for repository-backed evidence routes. This caching layer will not be implemented until this ADR is accepted.
+We will implement a lightweight, opt-in caching layer on top of `DatabricksRepository.fetch` with the following design rules:
 
-### 1. Cache Policy Categories (Aligned with CacheTier)
+### 1. Cache Tiers (Mapped to CacheTier)
 
-The cache policy must map directly to the backend `CacheTier` definitions. The current configuration is aligned as follows, with recommended future expansions:
+- **`NONE` / `NO_CACHE`**: For safety-critical or volatile evidence. Bypasses the cache.
+- **`PER_USER_60S`**: For user-scoped operational data.
+- **`GLOBAL_300S`**: For slow-moving global reference/dimension data.
+- **Future Tiers**: `PER_USER_30S`, `PER_USER_300S`, and `SHARED_REFERENCE_1H`.
 
-- **`NONE` / `NO_CACHE`**: For decision-sensitive, safety-critical, or highly volatile evidence. Queries in this tier bypass the cache entirely and must always fetch from the live source.
-- **`PER_USER_60S`** (Existing): For common evidence panels where minute-level freshness is acceptable. Cached data is isolated to a single user identity.
-- **`GLOBAL_300S`** (Existing): For slow-moving reference or dimension data. Shared across all users.
-- **Proposed Future Expansions**:
-  - `PER_USER_30S`: For highly interactive but user-scoped views.
-  - `PER_USER_300S`: For slower-changing reference summaries.
-  - `SHARED_REFERENCE_1H`: For non-user-sensitive global reference data (never to be used for batch, recall, or quality decision evidence).
+### 2. Cache Key Strategy & Context Scoping
 
-### 2. Cache Key Composition & Security Isolation
+To isolate user permissions, environment contexts, and cross-domain parameters, cache keys must be built by hashing a combination of:
 
-To prevent information leaks, unauthorized access, and cross-catalog cache pollution, all cache keys must be constructed from:
+- `query_name` and `route_name`
+- **Cross-Domain Context**: Normalized active bounds (e.g., `batchId`, `materialId`, `plantId`, `processOrderId`).
+- User identity (for `PER_USER` tiers) and the active `catalog_target` (to prevent override leakage).
+- Normalized request bind parameters.
 
-- `query_name`
-- `route_name` / FastAPI endpoint
-- Normalized request parameters (sorted query/body parameters)
-- User identity context or per-user token boundary (excluding raw OAuth tokens)
-- The resolved `catalog_target` (to prevent catalog override leakage)
-- `adapter_mode`
-- The relevant `CacheTier`
+_Example cache key serialization format:_
 
-**Security Constraints:**
+```python
+key = sha256(f"{query_name}:{route_endpoint}:{catalog_target}:{sorted_context}:{user_id}")
+```
 
-- Raw OAuth tokens or sensitive credentials must never be included in cache keys or saved in cache values.
-- Cached results must never be shared across different user boundaries unless the query is explicitly classified under a global/shared reference tier.
+### 3. Route Decorators (Python API Polish)
 
-### 3. Response Headers Specification
+Routes or repositories configure cache tiers using decorators to express policy concisely:
 
-Any route serving cached evidence must return the following cache instrumentation headers to provide full observability to callers and UAT processes:
+```python
+@evidence_route(freshness=FreshnessPolicy(ttl=300, critical=True))
+async def get_chart_data(request: Request):
+    # Route logic automatically propagates cache behavior
+```
+
+### 4. Event-Driven Invalidation Strategy
+
+For critical workspaces (like Trace and Warehouse 360), passive TTL expiration is supplemented with event-driven invalidation:
+
+- **Databricks Events / CDC**: When change data capture pipelines or workflow updates commit new data, they broadcast an invalidation message (e.g. over a lightweight pub/sub or webhook) to purge specific catalog/batch-scoped keys.
+- **Action-Triggered Invalidation**: When user actions write back status changes (e.g. manual usage decisions), the cache key for that lot/batch is immediately purged.
+
+### 5. Response Headers & Observability
 
 - `X-Cache-Status`: `HIT` | `MISS` | `BYPASS` | `STALE` | `DISABLED`
-- `X-Cache-Age-Seconds`: Integer value representing seconds since the item was cached, or blank if not cached.
-- `X-Cache-TTL-Seconds`: Integer value indicating the configured TTL for the cache entry, or blank if not cached.
-- `X-Data-Freshness-Policy`: Identifier of the freshness policy applied (e.g., `per-user-60s`, `no-cache`, `route-default`).
-- `X-Data-Source`: Existing source badge (e.g., `databricks-api`).
-- `X-Query-Name`: Existing query name.
-- `X-Adapter-Mode`: Existing adapter mode.
+- `X-Cache-Age-Seconds`: Seconds elapsed since the item was cached.
+- `X-Cache-TTL-Seconds`: Configured TTL for the cache entry.
+- `X-Data-Freshness-Policy`: Caching policy tier in use.
 
-### 4. Freshness Rules
+### 6. Freshness, Errors, and Empty State Handling
 
-- **Visibility of Age**: Cached evidence must prominently show its age in the frontend interface using the `FreshnessIndicator`.
-- **Freshness Thresholds**: Cached evidence older than the route TTL must not be returned as fresh.
-- **Stale-While-Error Behaviour**: If the remote source is unavailable, stale cached evidence may only be returned if the route explicitly declares `stale-while-error` support. In this case, `X-Cache-Status` must be set to `STALE` (or `FALLBACK`), and the response must carry a clear header indicating that the system is serving stale data as a fallback.
-- **Error vs Empty**: If stale data is not allowed to be served and the backend fails, the API must return the relevant Databricks error instead of returning an empty dataset.
-- **Empty Result Labelling**: A cached empty result must be cached as "empty evidence" rather than being conflated with a successful check (e.g. do not show "No issue found" if it represents a cached missing record).
-
-### 5. Truthfulness Rules & Forbidden Claims
-
-Caching must not introduce or mask forbidden claims. The presence of a cache hit is not evidence of correctness. The caching layer and UI indicators must never imply:
-
-- Safe, Approved, Released
-- Low risk, In control
-- Recall not required
-- No issue found (unless confirmed empty)
-- Healthy, Complete, On time, Fully contained
-
-### 6. Repository Integration
-
-- Caching logic belongs in a transparent wrapper around `DatabricksRepository.fetch` or the `QueryExecutor` layer.
-- Individual domain adapters and FastAPI routes must remain decoupled from specific cache store implementations.
-- The `QuerySpec` will carry the configured `cache_policy` and `cache_key`.
-- FastAPI route helpers will extract cache metadata to populate the HTTP response headers.
-
-### 7. Evaluation of Implementation Options
-
-1.  **In-Memory Cache (Recommended First Step)**:
-    - _Pros_: Extremely simple, zero infrastructure dependencies, appropriate for local development and single-instance Databricks App deployments.
-    - _Cons_: Not shared across horizontal app instances, lost on process restart.
-2.  **Redis / External Cache**:
-    - _Pros_: Persistent, shared across all scaled instances.
-    - _Cons_: Adds infrastructure complexity, security overhead, and connection management.
-3.  **Headers-only Instrument (Baseline)**:
-    - _Pros_: Extremely safe, establishes observability before caching logic.
-    - _Cons_: Offers no latency or cost reduction.
-
-**Decision**: Start with headers/freshness instrumentation and a small in-memory per-process cache only for low-risk evidence routes. Evaluate moving to Redis later if scale or performance demands it.
-
-### 8. Candidate Routes for Initial Caching
-
-Once this ADR is accepted, the first candidate routes for in-memory caching are:
-
-- `POST /api/spc/chart-data` (short per-user TTL)
-- `GET /api/spc/subgroups` (short per-user TTL)
-- `POST /api/quality/read-only-evidence` (only if clearly labelled with freshness and scoped per-user/per-catalog)
-
-**Excluded from Caching**:
-
-- Warehouse 360 overview blocked Gates 4/5.
-- Trace recall/containment decisioning.
-- Any endpoint backing active containment or recall decisions.
-
-### 9. UAT Guidance
-
-- UAT evidence capture sessions must record whether responses were a cache `HIT` or `MISS`.
-- Initial live UAT evidence must bypass the cache to validate source connectivity.
-- Offline smoke tests do not count as live Databricks evidence.
+- **Stale-While-Error**: If Databricks is offline, stale cache is returned only if the route permits, flagged as `X-Cache-Status: STALE` with a visible warning in the UI.
+- **No Silent Masking**: Authentication, permission, or configuration failures must propagate immediately; they cannot be satisfied by cache lookup.
+- **Empty Result vs Error**: A cached empty result is stored as empty, not as a source error.
 
 ---
 
 ## Consequences
 
-- **Positive**: Establishes strict safety controls so caching does not compromise product quality or recall decisions.
-- **Negative**: Introduces engineering overhead to manage cache key hashing, catalog isolation, and headers.
-- **Neutral**: The existing `CacheTier` enum and `QuerySpec` fields are reused to drive caching parameters.
+- **Positive**: Caching is isolated to safe tiers; headers allow trace validation during browser UAT.
+- **Negative**: Additional serialization/hashing logic required for cache keys containing cross-domain context.

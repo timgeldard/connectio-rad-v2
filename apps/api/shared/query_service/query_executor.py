@@ -121,12 +121,44 @@ class DatabricksRepository:
         self.max_attempts = max_attempts
         self.base_backoff = base_backoff
 
+    def _build_cache_key(self, spec: QuerySpec) -> str:
+        import hashlib
+        import json
+        from .cache_policy import CacheTier
+
+        # Normalize params
+        normalized_params = sorted(spec.params.items())
+        params_str = json.dumps(normalized_params, default=str)
+
+        # Scoping context components
+        components = [
+            spec.name,
+            spec.endpoint,
+            params_str,
+            self.identity.catalog_target or "default",
+            "databricks-api",  # adapter mode
+        ]
+
+        if spec.cache_policy == CacheTier.PER_USER_60S:
+            components.append(self.identity.user_id)
+
+        key_material = ":".join(components)
+        return hashlib.sha256(key_material.encode("utf-8")).hexdigest()
+
+    def _get_ttl_for_policy(self, policy: Any) -> int:
+        from .cache_policy import CacheTier
+        if policy == CacheTier.GLOBAL_300S:
+            return 300
+        if policy == CacheTier.PER_USER_60S:
+            return 60
+        return 0
+
     async def fetch(
         self,
         spec_factory: Callable[[], QuerySpec],
         mapper: Callable[[list[dict[str, Any]]], T],
     ) -> tuple[T, QuerySpec]:
-        """Execute a QuerySpec and return mapped results, applying retry logic.
+        """Execute a QuerySpec and return mapped results, applying retry logic and caching.
 
         Retries only ``DatabricksQueryTimeoutError`` and ``DatabricksRateLimitError``
         until ``max_attempts`` is exhausted. All other errors propagate immediately.
@@ -138,6 +170,32 @@ class DatabricksRepository:
         Returns:
             A tuple of (mapped_result, query_spec) so callers can set HTTP headers.
         """
+        import os
+        import time
+        from .cache_policy import CacheTier
+        from .cache import get_cache_store
+
+        spec = spec_factory()
+        cache_store = get_cache_store()
+        ttl = self._get_ttl_for_policy(spec.cache_policy)
+        cache_enabled = os.getenv("ENABLE_QUERY_CACHE", "false").lower() == "true"
+
+
+        if not cache_enabled:
+            spec.cache_status = "DISABLED"
+        elif spec.cache_policy == CacheTier.NONE or ttl <= 0:
+            spec.cache_status = "BYPASS"
+        else:
+            cache_key = self._build_cache_key(spec)
+            entry = await cache_store.get(cache_key)
+            if entry is not None:
+                spec.cache_status = "HIT"
+                spec.cache_age_seconds = int(time.time() - entry.cached_at)
+                spec.cache_ttl_seconds = entry.ttl
+                return mapper(entry.data), spec
+            else:
+                spec.cache_status = "MISS"
+
         last_retryable_error: Exception | None = None
 
         assert_allowed_catalog_target(self.identity.catalog_target)
@@ -148,9 +206,23 @@ class DatabricksRepository:
         try:
             for attempt_number in range(1, self.max_attempts + 1):
                 try:
-                    spec = spec_factory()
-                    rows = await self.executor.execute(spec, self.identity)
-                    return mapper(rows), spec
+                    # Evaluate spec per attempt in case dynamic values are needed
+                    current_spec = spec_factory()
+                    rows = await self.executor.execute(current_spec, self.identity)
+
+                    # Update the metadata on the returned spec
+                    current_spec.cache_status = spec.cache_status
+                    current_spec.cache_age_seconds = spec.cache_age_seconds
+                    current_spec.cache_ttl_seconds = spec.cache_ttl_seconds
+
+                    # Cache the raw rows on a successful MISS
+                    if cache_enabled and spec.cache_status == "MISS":
+                        cache_key = self._build_cache_key(current_spec)
+                        await cache_store.set(cache_key, rows, ttl)
+                        current_spec.cache_age_seconds = 0
+                        current_spec.cache_ttl_seconds = ttl
+
+                    return mapper(rows), current_spec
                 except RETRYABLE_ERRORS as exc:
                     last_retryable_error = exc
                     if attempt_number >= self.max_attempts:
@@ -174,3 +246,4 @@ class DatabricksRepository:
             )
         finally:
             catalog_context.reset(token)
+
