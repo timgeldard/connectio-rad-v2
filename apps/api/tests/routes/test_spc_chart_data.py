@@ -6,6 +6,13 @@ import pytest
 from httpx import ASGITransport
 
 from main import app
+from shared.query_service.errors import (
+    DatabricksPermissionError,
+    DatabricksQueryError,
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
+)
 
 def _make_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
@@ -37,6 +44,7 @@ def _databricks_env(monkeypatch):
     monkeypatch.setenv("TRACE_SCHEMA", "gold")
     monkeypatch.setenv("SPC_CATALOG", "connected_plant_uat")
     monkeypatch.setenv("SPC_SCHEMA", "gold")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog,connected_plant_uat")
 
 class TestSpcChartDataValidation:
     async def test_missing_operation_id_returns_422(self, monkeypatch):
@@ -151,6 +159,229 @@ class TestSpcChartDataLockedLimitsSemantics:
         assert data["controlLimits"]["limitProvenance"] == "unknown"
         assert len(data["warnings"]) == 1
         assert "locked_by is not treated as approval" in data["warnings"][0]
+
+class TestSpcChartDataRepositoryRoute:
+    async def test_response_headers_from_subgroups_spec(self, monkeypatch):
+        _databricks_env(monkeypatch)
+
+        async def _mock(self_obj, spec, identity):
+            return []
+
+        with patch("shared.query_service.query_executor.QueryExecutor.execute", _mock):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == 200
+        assert response.headers["X-Data-Source"] == "view:spc_quality_metric_subgroup_mv"
+        assert response.headers["X-Adapter-Mode"] == "databricks-api"
+        assert response.headers["X-Query-Name"] == "spc.get_chart_data"
+
+    async def test_missing_databricks_config_returns_503(self, monkeypatch):
+        _databricks_env(monkeypatch)
+        monkeypatch.delenv("DATABRICKS_HOST", raising=False)
+        monkeypatch.delenv("SQL_WAREHOUSE_ID", raising=False)
+
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/spc/chart-data",
+                json=_valid_payload(),
+                headers=_HEADERS_WITH_TOKEN,
+            )
+
+        assert response.status_code == 503
+        assert "DATABRICKS_HOST and SQL_WAREHOUSE_ID" in response.json()["detail"]
+
+    async def test_missing_catalog_returns_503(self, monkeypatch):
+        _databricks_env(monkeypatch)
+        monkeypatch.delenv("SPC_CATALOG", raising=False)
+        monkeypatch.delenv("TRACE_CATALOG", raising=False)
+
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/spc/chart-data",
+                json=_valid_payload(),
+                headers=_HEADERS_WITH_TOKEN,
+            )
+
+        assert response.status_code == 503
+        assert "Missing Unity Catalog identifier" in response.json()["detail"]
+
+    async def test_missing_oauth_returns_401(self, monkeypatch):
+        _databricks_env(monkeypatch)
+
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/spc/chart-data",
+                json=_valid_payload(),
+            )
+
+        assert response.status_code == 401
+        assert "OAuth token required" in response.json()["detail"]
+
+    async def test_unknown_catalog_override_returns_400_without_execute(self, monkeypatch):
+        _databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+        ) as execute:
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "bad_catalog",
+                    },
+                )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Unsupported Databricks catalog target"
+        execute.assert_not_awaited()
+
+    async def test_blank_catalog_header_treated_as_no_override(self, monkeypatch):
+        _databricks_env(monkeypatch)
+
+        async def _mock(self_obj, spec, identity):
+            return []
+
+        with patch("shared.query_service.query_executor.QueryExecutor.execute", _mock):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "   ",
+                    },
+                )
+
+        assert response.status_code == 200
+
+    async def test_allowlisted_catalog_override_applied_to_sql(self, monkeypatch):
+        _databricks_env(monkeypatch)
+        monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+        captured_sql: list[str] = []
+
+        async def capture_execute(spec, identity):
+            captured_sql.append(spec.sql)
+            return []
+
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            side_effect=capture_execute,
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "allowed_catalog",
+                    },
+                )
+
+        assert response.status_code == 200
+        assert "`allowed_catalog`." in captured_sql[0]
+
+    async def test_no_chart_type_skips_locked_limits_execute(self, monkeypatch):
+        _databricks_env(monkeypatch)
+
+        execute_calls: list[str] = []
+
+        async def capture_execute(spec, identity):
+            execute_calls.append(spec.name)
+            return []
+
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            side_effect=capture_execute,
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == 200
+        assert execute_calls == ["spc.get_chart_data"]
+
+    @pytest.mark.parametrize(
+        "error,expected_status,expected_detail",
+        [
+            (DatabricksPermissionError("spc.get_chart_data"), 403, "Permission denied"),
+            (DatabricksWarehouseConfigError("wh-missing"), 503, "SQL Warehouse"),
+            (DatabricksQueryError("spc.get_chart_data", "bad sql"), 502, "query execution failed"),
+        ],
+    )
+    async def test_maps_repository_errors(
+        self, monkeypatch, error, expected_status, expected_detail
+    ):
+        _databricks_env(monkeypatch)
+
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+        ) as execute:
+            execute.side_effect = error
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == expected_status
+        assert expected_detail in response.json()["detail"]
+
+    @pytest.mark.parametrize(
+        "error,expected_status",
+        [
+            (DatabricksQueryTimeoutError("spc.get_chart_data"), 504),
+            (DatabricksRateLimitError("spc.get_chart_data"), 429),
+        ],
+    )
+    async def test_maps_retried_repository_errors(self, monkeypatch, error, expected_status):
+        _databricks_env(monkeypatch)
+
+        with (
+            patch(
+                "shared.query_service.query_executor.QueryExecutor.execute",
+                new_callable=AsyncMock,
+            ) as execute,
+            patch("shared.query_service.query_executor.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            execute.side_effect = error
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/spc/chart-data",
+                    json=_valid_payload(),
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == expected_status
+        assert execute.await_count == 3
+
+    async def test_legacy_mode_still_requires_v1_proxy(self, monkeypatch):
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        monkeypatch.delenv("V1_SPC_API_BASE_URL", raising=False)
+
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/spc/chart-data",
+                json=_valid_payload(),
+                headers=_HEADERS_WITH_TOKEN,
+            )
+
+        assert response.status_code == 503
+        assert "V1_SPC_API_BASE_URL" in response.json()["detail"]
+
 
 class TestSpcChartDataGuardrails:
     async def test_capability_and_signals_guardrails(self, monkeypatch):

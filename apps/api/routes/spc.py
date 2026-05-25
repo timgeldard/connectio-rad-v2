@@ -39,17 +39,18 @@ from adapters.spc.spc_databricks_adapter import (
 from contracts.generated import SPCSubgroupResponse
 from contracts.spc import SpcChartDataRequest, SpcChartDataResponse
 from adapters.spc.spc_databricks_chart_adapter import (
-    get_spc_chart_subgroups_spec,
-    get_spc_locked_limits_spec,
+    SpcChartDataRepository,
     map_spc_chart_response,
 )
 import asyncio
 from datetime import datetime
 
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
     run_query,
+    run_repository_fetch,
     set_databricks_response_headers,
 )
 
@@ -220,6 +221,7 @@ async def spc_chart_data(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> dict | list:
     """Fetch subgroup chart data for a material/MIC combination."""
     mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
@@ -252,18 +254,31 @@ async def spc_chart_data(
             )
 
         host, warehouse_id = require_databricks_config()
-        identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
-        
-        async def fetch_subgroups():
-            return await run_query(lambda: get_spc_chart_subgroups_spec(body), identity, host, warehouse_id)
-            
-        async def fetch_limits():
-            if not body.chart_type:
-                return [], None
-            return await run_query(lambda: get_spc_locked_limits_spec(body), identity, host, warehouse_id)
+        identity = build_user_identity(
+            x_forwarded_access_token,
+            x_forwarded_user,
+            x_forwarded_email,
+            x_databricks_catalog,
+        )
+        chart_repository = SpcChartDataRepository(
+            build_databricks_repository(identity, host, warehouse_id)
+        )
 
-        (subgroups_rows, subgroups_spec), (limits_rows, limits_spec) = await asyncio.gather(fetch_subgroups(), fetch_limits())
-        
+        if body.chart_type:
+            (subgroups_rows, subgroups_spec), (limits_rows, _limits_spec) = await asyncio.gather(
+                run_repository_fetch(
+                    lambda: chart_repository.fetch_chart_subgroups(body)
+                ),
+                run_repository_fetch(
+                    lambda: chart_repository.fetch_locked_limits(body)
+                ),
+            )
+        else:
+            subgroups_rows, subgroups_spec = await run_repository_fetch(
+                lambda: chart_repository.fetch_chart_subgroups(body)
+            )
+            limits_rows = []
+
         set_databricks_response_headers(response, subgroups_spec)
         
         queried_at = datetime.utcnow().isoformat() + "Z"

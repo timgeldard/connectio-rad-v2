@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
+from shared.query_service.query_executor import DatabricksRepository
 from shared.query_service.query_spec import QuerySpec
 from contracts.spc import SpcChartDataRequest
 
@@ -11,6 +13,47 @@ MAX_SUBGROUPS = 200
 
 _SPC_MV = "spc_quality_metric_subgroup_mv"
 _LOCKED_LIMITS = "spc_locked_limits"
+
+
+@dataclass(frozen=True)
+class SpcChartDataQueryResult:
+    """Raw Databricks rows for chart-data assembly (mapping stays in the route)."""
+
+    subgroup_rows: list[dict]
+    limit_rows: list[dict]
+
+
+class SpcChartDataRepository:
+    """Repository wrapper for read-only SPC chart-data Databricks queries.
+
+    The route owns request validation and ``map_spc_chart_response`` assembly.
+    This class owns QuerySpec creation and repository execution.
+    """
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_chart_subgroups(
+        self,
+        request: SpcChartDataRequest,
+    ) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_spc_chart_subgroups_spec(request),
+            mapper=lambda rows: rows,
+        )
+
+    async def fetch_locked_limits(
+        self,
+        request: SpcChartDataRequest,
+    ) -> tuple[list[dict], QuerySpec | None]:
+        if not request.chart_type:
+            return [], None
+        rows, spec = await self._repository.fetch(
+            spec_factory=lambda: get_spc_locked_limits_spec(request),
+            mapper=lambda r: r,
+        )
+        return rows, spec
+
 
 def get_spc_chart_subgroups_spec(request: SpcChartDataRequest) -> QuerySpec:
     mv = resolve_domain_object("spc", _SPC_MV)
@@ -76,6 +119,7 @@ def get_spc_chart_subgroups_spec(request: SpcChartDataRequest) -> QuerySpec:
             "date_to": request.date_to,
         },
         cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:spc_quality_metric_subgroup_mv",
         tags=["spc", "chart-data", "subgroups"],
     )
 
@@ -108,6 +152,7 @@ def get_spc_locked_limits_spec(request: SpcChartDataRequest) -> QuerySpec:
             "resolved_chart_type": request.chart_type,
         },
         cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:spc_locked_limits",
         tags=["spc", "chart-data", "locked-limits"],
     )
 
