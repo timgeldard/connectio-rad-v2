@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
-from datetime import datetime, timezone
 
+from shared.query_service.query_executor import DatabricksRepository
 from shared.query_service.query_spec import QuerySpec
 from contracts.generated import (
-    QualityEvidenceResponse,
     QualityEvidenceSummary,
     QualityInspectionLotEvidence,
 )
@@ -39,6 +38,43 @@ class QualityUsageDecisionQuerySpec(QuerySpec):
 
     def cache_key(self) -> str:
         return f"quality_ud:{self.material_id}:{self.batch_id}:{self.plant_id or 'none'}"
+
+
+@dataclass(frozen=True)
+class QualityUsageDecisionEvidence:
+    """Mapped lot-level usage decision evidence returned by the repository."""
+
+    inspection_lots: list[QualityInspectionLotEvidence]
+    summary: QualityEvidenceSummary
+
+
+class QualityUsageDecisionRepository:
+    """Repository pilot for read-only Quality usage-decision evidence.
+
+    The route owns request validation and response assembly. This class owns
+    Databricks QuerySpec creation, execution, and row-to-contract mapping.
+    """
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_usage_decision_evidence(
+        self,
+        *,
+        material_id: str,
+        batch_id: str,
+        plant_id: Optional[str],
+        queried_at: str,
+    ) -> tuple[QualityUsageDecisionEvidence, QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_quality_usage_decision_spec(
+                material_id,
+                batch_id,
+                plant_id,
+            ),
+            mapper=lambda rows: map_quality_usage_decision_evidence(rows, queried_at),
+        )
+
 
 def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: Optional[str] = None) -> QuerySpec:
     from shared.query_service.object_resolver import resolve_domain_object
@@ -173,3 +209,14 @@ def map_quality_usage_decision_rows(rows: list[dict], queried_at: str) -> tuple[
     )
     
     return inspection_lots, summary
+
+
+def map_quality_usage_decision_evidence(
+    rows: list[dict],
+    queried_at: str,
+) -> QualityUsageDecisionEvidence:
+    inspection_lots, summary = map_quality_usage_decision_rows(rows, queried_at)
+    return QualityUsageDecisionEvidence(
+        inspection_lots=inspection_lots,
+        summary=summary,
+    )

@@ -2,13 +2,28 @@ import pytest
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
+from adapters.quality.quality_databricks_adapter import (
+    QualityUsageDecisionEvidence,
+    map_quality_usage_decision_rows,
+)
 from main import app
+from shared.query_service.errors import (
+    DatabricksPermissionError,
+    DatabricksQueryError,
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
+)
+from shared.query_service.query_spec import QuerySpec
 
 client = TestClient(app)
 
 @pytest.fixture
-def mock_run_query():
-    with patch("routes.quality.run_query", new_callable=AsyncMock) as mock:
+def mock_quality_repository():
+    with patch(
+        "routes.quality.QualityUsageDecisionRepository.fetch_usage_decision_evidence",
+        new_callable=AsyncMock,
+    ) as mock:
         yield mock
 
 def _databricks_env(monkeypatch) -> None:
@@ -18,17 +33,37 @@ def _databricks_env(monkeypatch) -> None:
     monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
 
 
-def test_get_read_only_evidence_databricks(mock_run_query, monkeypatch):
+def _quality_spec() -> QuerySpec:
+    return QuerySpec(
+        name="quality.get_usage_decision",
+        module="quality",
+        endpoint="/api/quality/read-only-evidence",
+        sql="SELECT 1",
+        source_badge="view:gold_inspection_usage_decision",
+    )
+
+
+def _repository_result(rows: list[dict]) -> tuple[QualityUsageDecisionEvidence, QuerySpec]:
+    inspection_lots, summary = map_quality_usage_decision_rows(rows, "2026-05-25T00:00:00Z")
+    return (
+        QualityUsageDecisionEvidence(
+            inspection_lots=inspection_lots,
+            summary=summary,
+        ),
+        _quality_spec(),
+    )
+
+
+def test_get_read_only_evidence_databricks(mock_quality_repository, monkeypatch):
     _databricks_env(monkeypatch)
 
-    mock_run_query.return_value = (
+    mock_quality_repository.return_value = _repository_result(
         [
             {
                 "INSPECTION_LOT_ID": "123",
                 "USAGE_DECISION_CODE": "A"
             }
-        ],
-        None
+        ]
     )
 
     response = client.post(
@@ -50,6 +85,9 @@ def test_get_read_only_evidence_databricks(mock_run_query, monkeypatch):
     assert lots[0]["inspectionLotId"] == "123"
     assert lots[0]["usageDecisionCode"] == "A"
     assert lots[0]["usageDecisionText"] == "Accepted"
+    assert response.headers["X-Data-Source"] == "view:gold_inspection_usage_decision"
+    assert response.headers["X-Adapter-Mode"] == "databricks-api"
+    assert response.headers["X-Query-Name"] == "quality.get_usage_decision"
 
 def test_get_read_only_evidence_pending_source_verification_if_not_databricks(monkeypatch):
     """When BACKEND_ADAPTER_MODE is not 'databricks-api', the route MUST NOT
@@ -91,6 +129,110 @@ def test_get_read_only_evidence_requires_batch_and_material(monkeypatch):
     assert "batchId and materialId are required" in response.json()["detail"]
 
 
+def test_get_read_only_evidence_missing_databricks_config_returns_503(monkeypatch):
+    monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+    monkeypatch.delenv("DATABRICKS_HOST", raising=False)
+    monkeypatch.delenv("SQL_WAREHOUSE_ID", raising=False)
+
+    response = client.post(
+        "/api/quality/read-only-evidence",
+        json={"materialId": "MAT1", "batchId": "BATCH1"},
+        headers={"x-forwarded-access-token": "tok"},
+    )
+
+    assert response.status_code == 503
+    assert "DATABRICKS_HOST and SQL_WAREHOUSE_ID" in response.json()["detail"]
+
+
+def test_get_read_only_evidence_missing_catalog_returns_503(monkeypatch):
+    _databricks_env(monkeypatch)
+    monkeypatch.delenv("CQ_CATALOG", raising=False)
+    monkeypatch.delenv("TRACE_CATALOG", raising=False)
+
+    response = client.post(
+        "/api/quality/read-only-evidence",
+        json={"materialId": "MAT1", "batchId": "BATCH1"},
+        headers={"x-forwarded-access-token": "tok"},
+    )
+
+    assert response.status_code == 503
+    assert "Missing Unity Catalog identifier" in response.json()["detail"]
+
+
+def test_get_read_only_evidence_missing_oauth_returns_401(monkeypatch):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "test_catalog")
+
+    response = client.post(
+        "/api/quality/read-only-evidence",
+        json={"materialId": "MAT1", "batchId": "BATCH1"},
+    )
+
+    assert response.status_code == 401
+    assert "OAuth token required" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "error,expected_status,expected_detail",
+    [
+        (DatabricksPermissionError("quality.get_usage_decision"), 403, "Permission denied"),
+        (DatabricksWarehouseConfigError("wh-missing"), 503, "SQL Warehouse"),
+        (DatabricksQueryError("quality.get_usage_decision", "bad sql"), 502, "query execution failed"),
+    ],
+)
+def test_get_read_only_evidence_maps_repository_errors(
+    monkeypatch,
+    error,
+    expected_status,
+    expected_detail,
+):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "test_catalog")
+
+    with patch(
+        "shared.query_service.query_executor.QueryExecutor.execute",
+        new_callable=AsyncMock,
+    ) as execute:
+        execute.side_effect = error
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+            headers={"x-forwarded-access-token": "tok"},
+        )
+
+    assert response.status_code == expected_status
+    assert expected_detail in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "error,expected_status",
+    [
+        (DatabricksQueryTimeoutError("quality.get_usage_decision"), 504),
+        (DatabricksRateLimitError("quality.get_usage_decision"), 429),
+    ],
+)
+def test_get_read_only_evidence_maps_retried_repository_errors(monkeypatch, error, expected_status):
+    _databricks_env(monkeypatch)
+    monkeypatch.setenv("CQ_CATALOG", "test_catalog")
+
+    with (
+        patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+        ) as execute,
+        patch("shared.query_service.query_executor.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        execute.side_effect = error
+        response = client.post(
+            "/api/quality/read-only-evidence",
+            json={"materialId": "MAT1", "batchId": "BATCH1"},
+            headers={"x-forwarded-access-token": "tok"},
+        )
+
+    assert response.status_code == expected_status
+    assert execute.await_count == 3
+
+
 # ---------------------------------------------------------------------------
 # POST /api/quality/read-only-evidence — response_model contract enforcement
 # ---------------------------------------------------------------------------
@@ -102,13 +244,12 @@ class TestQualityReadOnlyEvidenceResponseModel:
     databricks-api (live data) AND mode-guard (pending-source-verification).
     """
 
-    def test_databricks_path_validates_against_generated_contract(self, mock_run_query, monkeypatch):
+    def test_databricks_path_validates_against_generated_contract(self, mock_quality_repository, monkeypatch):
         from contracts.generated import QualityEvidenceResponse
 
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
-            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "A"}],
-            None,
+        mock_quality_repository.return_value = _repository_result(
+            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "A"}]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -132,16 +273,15 @@ class TestQualityReadOnlyEvidenceResponseModel:
         assert response.status_code == 200
         QualityEvidenceResponse.model_validate(response.json())
 
-    def test_multi_lot_preserves_warning_and_validates(self, mock_run_query, monkeypatch):
+    def test_multi_lot_preserves_warning_and_validates(self, mock_quality_repository, monkeypatch):
         from contracts.generated import QualityEvidenceResponse
 
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
+        mock_quality_repository.return_value = _repository_result(
             [
                 {"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "A"},
                 {"INSPECTION_LOT_ID": "101", "USAGE_DECISION_CODE": "R"},
-            ],
-            None,
+            ]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -155,11 +295,10 @@ class TestQualityReadOnlyEvidenceResponseModel:
         assert "Multiple inspection lots" in warning
         QualityEvidenceResponse.model_validate(data)
 
-    def test_unknown_code_surfaces_as_unverified(self, mock_run_query, monkeypatch):
+    def test_unknown_code_surfaces_as_unverified(self, mock_quality_repository, monkeypatch):
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
-            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "MYSTERY"}],
-            None,
+        mock_quality_repository.return_value = _repository_result(
+            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "MYSTERY"}]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -170,11 +309,10 @@ class TestQualityReadOnlyEvidenceResponseModel:
         assert lot["usageDecisionMappingStatus"] == "unverified"
         assert lot["usageDecisionText"] == "Unknown (MYSTERY)"
 
-    def test_null_code_surfaces_as_not_mapped(self, mock_run_query, monkeypatch):
+    def test_null_code_surfaces_as_not_mapped(self, mock_quality_repository, monkeypatch):
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
-            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": None}],
-            None,
+        mock_quality_repository.return_value = _repository_result(
+            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": None}]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -184,14 +322,13 @@ class TestQualityReadOnlyEvidenceResponseModel:
         lot = response.json()["inspectionLots"][0]
         assert lot["usageDecisionMappingStatus"] == "not-mapped"
 
-    def test_no_batch_level_release_or_approval_fields(self, mock_run_query, monkeypatch):
+    def test_no_batch_level_release_or_approval_fields(self, mock_quality_repository, monkeypatch):
         """QualityEvidenceResponse is strictly lot-level (Option A). The
         wire response MUST NOT carry batch-level release / approved /
         cleared / safe fields."""
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
-            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "A"}],
-            None,
+        mock_quality_repository.return_value = _repository_result(
+            [{"INSPECTION_LOT_ID": "100", "USAGE_DECISION_CODE": "A"}]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -219,7 +356,10 @@ class TestQualityReadOnlyEvidenceResponseModel:
         from fastapi import HTTPException
 
         _databricks_env(monkeypatch)
-        with patch("routes.quality.run_query", new_callable=AsyncMock) as mock:
+        with patch(
+            "routes.quality.QualityUsageDecisionRepository.fetch_usage_decision_evidence",
+            new_callable=AsyncMock,
+        ) as mock:
             mock.side_effect = HTTPException(status_code=502, detail="Databricks query execution failed")
             response = client.post(
                 "/api/quality/read-only-evidence",
@@ -240,9 +380,9 @@ class TestQualityLotIdentifiersOnWire:
     are the traceability anchors between the inspection lot and the batch
     under investigation."""
 
-    def test_lot_identifiers_on_wire(self, mock_run_query, monkeypatch):
+    def test_lot_identifiers_on_wire(self, mock_quality_repository, monkeypatch):
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
+        mock_quality_repository.return_value = _repository_result(
             [
                 {
                     "INSPECTION_LOT_ID": "LOT-FULL",
@@ -253,8 +393,7 @@ class TestQualityLotIdentifiersOnWire:
                     "PROCESS_ORDER_ID": "PO-2024-03-0847",
                     "USAGE_DECISION_CREATED_DATE": "2024-03-09T11:42:00",
                 }
-            ],
-            None,
+            ]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -268,12 +407,11 @@ class TestQualityLotIdentifiersOnWire:
         assert lot["plantId"] == "C351"
         assert lot["processOrderId"] == "PO-2024-03-0847"
 
-    def test_no_snake_case_keys_in_lots(self, mock_run_query, monkeypatch):
+    def test_no_snake_case_keys_in_lots(self, mock_quality_repository, monkeypatch):
         """All lot keys on the wire must use camelCase aliases — no snake_case leak."""
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = (
-            [{"INSPECTION_LOT_ID": "LOT-1", "USAGE_DECISION_CODE": "A"}],
-            None,
+        mock_quality_repository.return_value = _repository_result(
+            [{"INSPECTION_LOT_ID": "LOT-1", "USAGE_DECISION_CODE": "A"}]
         )
         response = client.post(
             "/api/quality/read-only-evidence",
@@ -288,12 +426,12 @@ class TestQualityLotIdentifiersOnWire:
         ):
             assert snake not in lot, f"snake_case key leaked to wire: {snake}"
 
-    def test_missing_lot_warning_on_empty_result(self, mock_run_query, monkeypatch):
+    def test_missing_lot_warning_on_empty_result(self, mock_quality_repository, monkeypatch):
         """When Databricks returns zero rows, the summary must carry
         missingLotWarning so the UI cannot silently show 'no lots' as
         a clean/cleared state."""
         _databricks_env(monkeypatch)
-        mock_run_query.return_value = ([], None)
+        mock_quality_repository.return_value = _repository_result([])
         response = client.post(
             "/api/quality/read-only-evidence",
             json={"materialId": "MAT1", "batchId": "BATCH1"},

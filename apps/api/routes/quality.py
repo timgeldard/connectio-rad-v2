@@ -4,13 +4,14 @@ from fastapi import APIRouter, Header, HTTPException, Response
 from contracts.generated import QualityEvidenceRequest, QualityEvidenceResponse, QualityEvidenceSummary
 
 from adapters.quality.quality_databricks_adapter import (
-    get_quality_usage_decision_spec,
-    map_quality_usage_decision_rows,
+    QualityUsageDecisionRepository,
 )
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
-    run_query,
+    run_repository_fetch,
+    set_databricks_response_headers,
 )
 
 router = APIRouter(prefix="/quality", tags=["quality"])
@@ -87,14 +88,18 @@ async def get_read_only_evidence(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email, x_databricks_catalog
     )
 
-    rows, _ = await run_query(
-        lambda: get_quality_usage_decision_spec(request.material_id, request.batch_id, request.plant_id),
-        identity,
-        host,
-        warehouse_id,
+    repository = QualityUsageDecisionRepository(
+        build_databricks_repository(identity, host, warehouse_id)
     )
-
-    inspection_lots, summary = map_quality_usage_decision_rows(rows, queried_at)
+    evidence, spec = await run_repository_fetch(
+        lambda: repository.fetch_usage_decision_evidence(
+            material_id=request.material_id,
+            batch_id=request.batch_id,
+            plant_id=request.plant_id,
+            queried_at=queried_at,
+        )
+    )
+    set_databricks_response_headers(response, spec)
 
     # See unavailable-skeleton note above: dump-then-coerce is required because
     # `QualityEvidenceResponse.request` / `.summary` / `.inspection_lots` are
@@ -102,8 +107,8 @@ async def get_read_only_evidence(
     # top-level QualityEvidence* classes.
     return QualityEvidenceResponse(
         request=request.model_dump(by_alias=True),
-        summary=summary.model_dump(by_alias=True),
-        inspectionLots=[lot.model_dump(by_alias=True) for lot in inspection_lots],
+        summary=evidence.summary.model_dump(by_alias=True),
+        inspectionLots=[lot.model_dump(by_alias=True) for lot in evidence.inspection_lots],
         micResults=[],
         usageDecision=None,
         coaResults=[]

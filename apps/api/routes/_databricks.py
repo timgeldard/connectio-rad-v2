@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 from fastapi import HTTPException, Response
 
@@ -25,8 +26,10 @@ from shared.query_service.errors import (
     DatabricksWarehouseConfigError,
 )
 from shared.query_service.identity import UserIdentity
-from shared.query_service.query_executor import QueryExecutor
+from shared.query_service.query_executor import DatabricksRepository, QueryExecutor
 from shared.query_service.query_spec import QuerySpec
+
+T = TypeVar("T")
 
 _MISSING_CONFIG_DETAIL = (
     "DATABRICKS_HOST and SQL_WAREHOUSE_ID must be configured "
@@ -66,33 +69,23 @@ def build_user_identity(
     )
 
 
-async def run_query(
-    spec_factory: Callable[[], QuerySpec],
+def build_databricks_repository(
     identity: UserIdentity,
     databricks_host: str,
     warehouse_id: str,
-) -> tuple[list[dict], QuerySpec]:
-    """Create a QuerySpec, execute it, and translate errors into HTTP exceptions.
+) -> DatabricksRepository:
+    """Build the shared DatabricksRepository for a request-scoped identity."""
+    client = StatementApiDatabricksClient(host=databricks_host)
+    executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
+    return DatabricksRepository(executor=executor, identity=identity)
 
-    Accepts a zero-argument factory so that spec-creation errors (e.g.
-    DatabricksConfigError from a missing catalog env var) are caught alongside
-    execution errors and mapped to the appropriate HTTP status code.
 
-    Returns (rows, spec) so the caller can set response headers from the spec.
-    """
-    from shared.query_service.query_executor import DatabricksRepository
+async def run_repository_fetch(
+    fetcher: Callable[[], Awaitable[tuple[T, QuerySpec]]],
+) -> tuple[T, QuerySpec]:
+    """Run a repository fetch and translate standard Databricks errors."""
     try:
-        client = StatementApiDatabricksClient(host=databricks_host)
-        executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
-        repository = DatabricksRepository(executor=executor, identity=identity)
-        
-        # We pass a simple lambda for the mapper since we just want the raw rows.
-        # This keeps backwards compatibility with existing route handlers that map the rows themselves.
-        rows, spec = await repository.fetch(
-            spec_factory=spec_factory,
-            mapper=lambda r: r
-        )
-        return rows, spec
+        return await fetcher()
     except DatabricksConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except DatabricksAuthRequiredError as exc:
@@ -115,3 +108,30 @@ async def run_query(
             getattr(exc, "detail", str(exc)),
         )
         raise HTTPException(status_code=502, detail="Databricks query execution failed") from exc
+
+
+async def run_query(
+    spec_factory: Callable[[], QuerySpec],
+    identity: UserIdentity,
+    databricks_host: str,
+    warehouse_id: str,
+) -> tuple[list[dict], QuerySpec]:
+    """Create a QuerySpec, execute it, and translate errors into HTTP exceptions.
+
+    Accepts a zero-argument factory so that spec-creation errors (e.g.
+    DatabricksConfigError from a missing catalog env var) are caught alongside
+    execution errors and mapped to the appropriate HTTP status code.
+
+    Returns (rows, spec) so the caller can set response headers from the spec.
+    """
+    repository = build_databricks_repository(identity, databricks_host, warehouse_id)
+
+    async def fetch_rows() -> tuple[list[dict], QuerySpec]:
+        # We pass a simple lambda for the mapper since legacy route handlers
+        # still map the rows themselves.
+        return await repository.fetch(
+            spec_factory=spec_factory,
+            mapper=lambda r: r
+        )
+
+    return await run_repository_fetch(fetch_rows)
