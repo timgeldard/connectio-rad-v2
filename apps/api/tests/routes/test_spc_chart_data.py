@@ -347,7 +347,9 @@ class TestSpcChartDataRepositoryRoute:
             (DatabricksRateLimitError("spc.get_chart_data"), 429),
         ],
     )
-    async def test_maps_retried_repository_errors(self, monkeypatch, error, expected_status):
+    async def test_maps_retryable_errors_with_three_total_attempts(
+        self, monkeypatch, error, expected_status
+    ):
         _databricks_env(monkeypatch)
 
         with (

@@ -145,12 +145,41 @@ Edge cases:
 Readiness:
 
 - Pattern is proven on two domains (Quality + SPC chart-data). A third small read-only adapter can follow the same steps.
-- Warehouse 360 and Trace Investigation remain deferred until retry semantics are clarified and another backend route is migrated.
+- Warehouse 360 and Trace Investigation remain deferred until another backend route is migrated.
+
+## Retry semantics
+
+`DatabricksRepository` uses **`max_attempts`** (total `QueryExecutor.execute` calls per
+`fetch()`), not an ambiguous “retry count”. The default is **3 total attempts** (one
+initial call plus up to two retries).
+
+**Retryable errors** (exponential backoff between attempts, configurable via
+`base_backoff` on the repository constructor):
+
+- `DatabricksQueryTimeoutError`
+- `DatabricksRateLimitError`
+
+**Not retried** (propagate immediately):
+
+- `DatabricksConfigError`
+- `DatabricksAuthRequiredError`
+- `DatabricksCatalogTargetError`
+- `DatabricksPermissionError`
+- `DatabricksWarehouseConfigError`
+- `DatabricksQueryError`
+- other unexpected errors
+
+When all attempts fail on a retryable error, the **last** retryable exception is
+re-raised and mapped by `run_repository_fetch` / route helpers (timeout → HTTP 504,
+rate limit → HTTP 429).
+
+`max_attempts=1` means a single execute call with no sleep. `max_attempts` must be
+at least 1 or construction raises `ValueError`.
+
+Tests live in `apps/api/tests/shared/test_query_executor.py`.
 
 ## Remaining Blockers Before Broad Migration
 
-- Retry semantics should be reviewed so total attempts and retries are named
-  distinctly.
 - Caching requires an ADR before implementation and must be tied to freshness
   policy.
 - Warehouse 360 and Trace Investigation should wait until at least one more
