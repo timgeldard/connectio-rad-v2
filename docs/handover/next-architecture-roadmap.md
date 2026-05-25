@@ -28,20 +28,16 @@ yet fully represented as first-class Nx project boundaries.
 
 ## High-Priority Next Workstreams
 
-- Quality usage-decision (`POST /api/quality/read-only-evidence`) — complete.
-- SPC chart-data (`POST /api/spc/chart-data`) — complete.
-- SPC subgroups (`GET /api/spc/subgroups`) — complete.
+- Quality usage-decision (`POST /api/quality/read-only-evidence`) — complete (proven repository migration).
+- SPC chart-data (`POST /api/spc/chart-data`) — complete (proven repository migration).
+- SPC subgroups (`GET /api/spc/subgroups`) — complete (proven repository migration).
 - `DatabricksHttpClientPool` app lifecycle — complete.
 - `DATABRICKS_ALLOWED_CATALOGS` catalog override allowlist — complete.
-- `max_attempts` retry semantics (default 3 total attempts) — complete.
+- `max_attempts` retry semantics (default 3 total attempts) — complete & clarified.
+- Cache/freshness ADR (ADR-027) — proposed (defines caching & freshness policy; implementation remains future work).
 - TODO: Migrate additional read-only adapters incrementally where routes remain on
   `run_query`, with full repository error/header tests per domain.
-- TODO: Define an ADR before implementing evidence-route caching. Caching must
-  be tied to freshness policy, cache hit/miss/age must be visible in headers,
-  stale cached evidence must not appear live, and decision-sensitive evidence
-  must not be cached silently.
-- TODO: Run focused Warehouse 360 and Trace Investigation UAT after CI and
-  repository reliability are stable.
+- TODO: Run focused Warehouse 360 and Trace Investigation UAT (using real browser/network evidence when Databricks access is available; cache bypass or MISS preferred for source connectivity validation).
 
 DatabricksRepository catalog overrides are allowlisted via
 `DATABRICKS_ALLOWED_CATALOGS`; deployment-specific approved catalog values remain
