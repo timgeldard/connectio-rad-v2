@@ -3,6 +3,7 @@ import pytest
 
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
+    Trace2BatchQualityPassportRequest,
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
     Trace2MassBalanceRequest,
@@ -10,6 +11,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     Trace2SupplierExposureRequest,
     TraceGraphRequest,
     get_batch_header_summary_spec,
+    get_batch_quality_passport_partial_spec,
     get_customer_delivery_spec,
     get_customer_exposure_spec,
     get_mass_balance_spec,
@@ -17,6 +19,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     get_supplier_exposure_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
+    map_batch_quality_passport_partial,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
     map_mass_balance_rows,
@@ -1751,3 +1754,192 @@ class TestMapProductionHistoryRows:
         row = _ph_row(batch_id="0000123456")
         result = map_production_history_rows([row], "70948010")
         assert result["rows"][0]["batchId"] == "0000123456"
+
+
+# ---------------------------------------------------------------------------
+# TestGetBatchQualityPassportPartialSpec
+#
+# Source-truthful guardrails for the post-audit (2026-05-25) rewrite of
+# ``get_batch_quality_passport_partial_spec``. Finding #2 of the Databricks
+# repository compatibility audit removed seven non-existent columns; these
+# tests pin the SQL so a future change cannot silently reintroduce them.
+# ---------------------------------------------------------------------------
+
+
+def _passport_request(
+    material_id: str = "0000020582002",
+    batch_id: str = "BATCH001",
+    plant_id: str = "",
+) -> Trace2BatchQualityPassportRequest:
+    return Trace2BatchQualityPassportRequest(
+        material_id=material_id,
+        batch_id=batch_id,
+        plant_id=plant_id,
+    )
+
+
+@pytest.fixture(autouse=False)
+def _passport_catalog(monkeypatch):
+    monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+    monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+
+class TestGetBatchQualityPassportPartialSpec:
+    def test_spec_properties(self, _passport_catalog) -> None:
+        spec = get_batch_quality_passport_partial_spec(_passport_request())
+        assert spec.name == "trace2.get_batch_quality_passport_partial"
+        assert spec.module == "trace2"
+        assert spec.endpoint == "/api/trace2/batch-quality-passport"
+        assert spec.cache_policy == CacheTier.PER_USER_60S
+        assert spec.params == {
+            "material_id": "0000020582002",
+            "batch_id": "BATCH001",
+            "plant_id": "",
+        }
+        # All five live views referenced.
+        for view in (
+            "gold_batch_stock_v",
+            "gold_batch_summary_v",
+            "gold_material",
+            "gold_plant",
+            "gold_batch_production_history_v",
+        ):
+            assert view in spec.sql, f"missing view reference {view!r}"
+
+    def test_spec_drops_columns_absent_from_live_ddl(self, _passport_catalog) -> None:
+        """Audit Finding #2: columns absent from live DDL must NOT be
+        reintroduced. b.PROCESS_ORDER_ID is gone (PROCESS_ORDER_ID lives
+        on ph, not b); the six ph.* fabricated columns are gone too."""
+        spec = get_batch_quality_passport_partial_spec(_passport_request())
+        for absent in (
+            "b.PROCESS_ORDER_ID",
+            "ph.START_DATE",
+            "ph.CONFIRMED_DATE",
+            "ph.PLANNED_QTY",
+            "ph.ACTUAL_QTY",
+            "ph.PRODUCTION_LINE",
+            "ph.OPERATOR",
+        ):
+            assert absent not in spec.sql, f"removed column {absent!r} leaked back into SQL"
+
+    def test_spec_uses_live_production_history_columns(self, _passport_catalog) -> None:
+        """The post-audit SQL must source process_order_id, started_at, and
+        actual_qty from the live production-history view."""
+        spec = get_batch_quality_passport_partial_spec(_passport_request())
+        for expected in (
+            "ph.PROCESS_ORDER_ID          AS process_order_id",
+            "ph.POSTING_DATE              AS production_started_at",
+            "ph.BATCH_QTY                 AS production_actual_qty",
+        ):
+            assert expected in spec.sql, f"missing expected projection: {expected!r}"
+
+    def test_spec_placeholders_bound_symmetrically(self, _passport_catalog) -> None:
+        """Every :placeholder must have a matching params key — no unbound
+        placeholders, no orphan params."""
+        spec = get_batch_quality_passport_partial_spec(_passport_request(plant_id="C351"))
+        for key in ("material_id", "batch_id", "plant_id"):
+            assert f":{key}" in spec.sql, f"missing placeholder :{key}"
+            assert key in spec.params, f"missing param {key!r}"
+        # No stale placeholders left over from removed columns.
+        for absent in (":start_date", ":confirmed_date", ":planned_qty", ":actual_qty"):
+            assert absent not in spec.sql, f"unexpected placeholder {absent} in SQL"
+
+
+class TestMapBatchQualityPassportPartial:
+    def test_maps_live_production_history_fields(self) -> None:
+        """Given the post-audit row shape, the mapper surfaces
+        processOrderId, startedAt, and actualQty from the live source."""
+        row = {
+            "material_id": "20582002",
+            "batch_id": "B1",
+            "plant_id": "C351",
+            "material_name": "Mat",
+            "plant_name": "Plant",
+            "manufacture_date": "2026-05-01",
+            "expiry_date": "2026-11-01",
+            "uom": "KG",
+            "unrestricted": 100,
+            "blocked": 0,
+            "quality_inspection": 0,
+            "restricted": 0,
+            "transit": 0,
+            "process_order_id": "1000123456",
+            "production_started_at": "2026-05-10",
+            "production_actual_qty": 1200.5,
+        }
+        result = map_batch_quality_passport_partial([row])
+        assert result is not None
+        assert result["identity"]["processOrderId"] == "1000123456"
+        assert result["production"]["orderId"] == "1000123456"
+        assert result["production"]["startedAt"] == "2026-05-10"
+        assert result["production"]["actualQty"] == 1200.5
+
+    def test_unavailable_production_fields_emit_null(self) -> None:
+        """gold_batch_production_history_v has no PRODUCTION_LINE, OPERATOR,
+        CONFIRMED_DATE, PLANNED_QTY, ORIGINATING_CUSTOMER, or NOTES
+        columns. The Zod source schema was relaxed to nullable+optional in
+        this PR so the mapper can emit ``None`` source-truthfully rather
+        than reassuring contract defaults (``""`` / ``0.0``)."""
+        row = {
+            "material_id": "M1",
+            "batch_id": "B1",
+            "plant_id": "P1",
+            "material_name": "Mat",
+            "plant_name": "Plant",
+            "manufacture_date": "2026-05-01",
+            "expiry_date": "2026-11-01",
+            "uom": "KG",
+            "unrestricted": 0,
+            "blocked": 0,
+            "quality_inspection": 0,
+            "restricted": 0,
+            "transit": 0,
+            "process_order_id": "PO1",
+            "production_started_at": "2026-05-10",
+            "production_actual_qty": 100.0,
+        }
+        result = map_batch_quality_passport_partial([row])
+        assert result is not None
+        production = result["production"]
+        assert production["line"] is None
+        assert production["operator"] is None
+        assert production["confirmedAt"] is None
+        assert production["plannedQty"] is None
+        assert production["yield"] is None
+        assert production["originatingCustomer"] is None
+        assert production["notes"] is None
+
+    def test_unverified_sections_uses_current_contract_field_names(self) -> None:
+        """The intermediate _unverifiedSections marker must reference the
+        current wire-contract field names. ``signoff`` was renamed to
+        ``usageDecisionEvidence`` long before this PR; the marker now
+        reflects that. ``production`` is included because the post-audit
+        SQL surfaces only three of the section's fields from live UAT."""
+        row = {
+            "material_id": "M1",
+            "batch_id": "B1",
+            "plant_id": "P1",
+            "material_name": "Mat",
+            "plant_name": "Plant",
+            "manufacture_date": "2026-05-01",
+            "expiry_date": "2026-11-01",
+            "uom": "KG",
+            "unrestricted": 0,
+            "blocked": 0,
+            "quality_inspection": 0,
+            "restricted": 0,
+            "transit": 0,
+        }
+        result = map_batch_quality_passport_partial([row])
+        assert result is not None
+        markers = result["_unverifiedSections"]
+        assert "production" in markers
+        assert "usageDecisionEvidence" in markers
+        assert "signoff" not in markers, (
+            "`signoff` was renamed to `usageDecisionEvidence` — the marker "
+            "must reflect the current wire-contract field name."
+        )
+
+    def test_empty_rows_returns_none(self) -> None:
+        """No batch in primary sources → caller must surface 404."""
+        assert map_batch_quality_passport_partial([]) is None

@@ -29,7 +29,17 @@ from adapters.trace2.trace2_databricks_adapter import (
 # ---------------------------------------------------------------------------
 
 def _identity_row(**overrides) -> dict:
-    """One row from gold_batch_stock_v + summary_v + material + plant + production_history JOIN."""
+    """One row from gold_batch_stock_v + summary_v + material + plant + production_history JOIN.
+
+    Production fields reflect the post-audit (2026-05-25) projection of
+    ``get_batch_quality_passport_partial_spec``: only
+    ``process_order_id``, ``production_started_at`` (← POSTING_DATE), and
+    ``production_actual_qty`` (← BATCH_QTY) come back from the live view.
+    ``production_line``, ``production_operator``, ``production_confirmed_at``,
+    and ``production_planned_qty`` are absent in the source DDL and are
+    intentionally omitted from the fixture so the mapper's contract
+    defaults are exercised.
+    """
     base = {
         "material_id": "20582002",
         "batch_id": "0008898869",
@@ -45,12 +55,10 @@ def _identity_row(**overrides) -> dict:
         "quality_inspection": 850,
         "restricted": 450,
         "transit": 1200,
-        "production_line": "Cheese line 3",
-        "production_operator": "J. Cremins",
-        "production_started_at": "2024-03-08T06:00:00",
-        "production_confirmed_at": "2024-03-08T16:30:00",
-        "production_planned_qty": 17050,
+        # gold_batch_production_history_v live columns only.
+        "production_started_at": "2024-03-08",
         "production_actual_qty": 17050,
+        "production_uom": "KG",
     }
     base.update(overrides)
     return base
