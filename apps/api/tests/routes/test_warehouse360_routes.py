@@ -243,24 +243,30 @@ class TestWarehouseOutboundRoute:
         assert response.status_code == 401
 
     async def test_returns_200_with_mapped_outbound_items(self, wh360_databricks_env) -> None:
+        # Row shape mirrors actual wh360_deliveries_v columns (verified
+        # live 2026-05-25 — see source-verification doc §3).
         fake_rows = [
             {
                 "delivery_id": "0080047212",
-                "delivery_item_id": "000010",
-                "customer_id": "0003829100",
-                "sales_order_id": "0010034921",
-                "material_id": "000000000000481234",
-                "material_description": "Emmental Block",
-                "batch_id": "0000045612",
+                "delivery_type": "LF",
                 "plant_id": "IE10",
-                "storage_location": "SL02",
-                "warehouse_number": "WH01",
-                "planned_goods_issue_date": "2026-05-18 15:00:00",
-                "actual_goods_issue_date": None,
-                "quantity": 960.0,
-                "unit_of_measure": "KG",
-                "status": "OPEN",
-                "exception_reason": "",
+                "customer_id": "0003829100",
+                "customer_name": "Acme Foods Ltd",
+                "carrier": "DHL",
+                "lgnum": "WH01",
+                "planned_gi_date": "2026-05-18 15:00:00",
+                "actual_gi_date": None,
+                "loading_date": "2026-05-18 14:00:00",
+                "delivery_date": "2026-05-19",
+                "gross_weight": 960.0,
+                "weight_uom": "KG",
+                "packages": "12",
+                "wm_status": "OPEN",
+                "mins_to_cutoff": 90.0,
+                "pick_pct": 0.85,
+                "line_count": 3,
+                "risk": "amber",
+                "shipped": False,
             }
         ]
 
@@ -280,8 +286,28 @@ class TestWarehouseOutboundRoute:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 1
-        assert data[0]["deliveryId"] == "0080047212"
-        assert data[0]["materialId"] == "000000000000481234"
+        item = data[0]
+        # Header-grain identifiers preserved.
+        assert item["deliveryId"] == "0080047212"
+        assert item["customerId"] == "0003829100"
+        assert item["plantId"] == "IE10"
+        assert item["warehouseNumber"] == "WH01"
+        assert item["plannedGoodsIssueDate"] == "2026-05-18T15:00:00"
+        assert item["quantity"] == 960.0
+        assert item["unitOfMeasure"] == "KG"
+        assert item["status"] == "OPEN"
+        # Line-grain fields absent from the delivery-header view stay null
+        # rather than being faked.
+        assert item["deliveryItemId"] is None
+        assert item["salesOrderId"] is None
+        assert item["materialDescription"] is None
+        assert item["batchId"] is None
+        assert item["storageLocation"] is None
+        assert item["exceptionReason"] is None
+        # Contract requires materialId: str — header-grain source has none.
+        # Empty string keeps the response body shape stable; see
+        # source-verification doc §5.
+        assert item["materialId"] == ""
         assert response.headers.get("x-query-name") == "warehouse360.get_outbound"
 
 
