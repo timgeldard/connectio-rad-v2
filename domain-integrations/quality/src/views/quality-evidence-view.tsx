@@ -3,6 +3,7 @@ import { CoAReadinessPanel } from '../panels/coa-readiness-panel.js'
 import { QualityReadOnlyEvidencePanel } from '../panels/quality-readonly-evidence-panel.js'
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { CoAReleaseStatusPanel, RiskSignalsPanel } from '@connectio/di-traceability'
+import { useQualityReadOnlyEvidence } from '../adapters/quality-readonly-evidence-queries.js'
 import type { QualityReleaseAdapterRequest } from '../adapters/quality-release-adapter.js'
 import type { QualityReadOnlyEvidenceAdapterRequest } from '../adapters/quality-readonly-evidence-adapter.js'
 // eslint-disable-next-line @nx/enforce-module-boundaries
@@ -33,6 +34,7 @@ export function QualityEvidenceView({ qualityRequest, traceRequest, readOnlyEvid
     plantId: qualityRequest.plantId,
     batchId: qualityRequest.batchId,
   }
+  const evidenceQuery = useQualityReadOnlyEvidence(evidenceRequest)
 
   return (
     <div
@@ -44,7 +46,10 @@ export function QualityEvidenceView({ qualityRequest, traceRequest, readOnlyEvid
         alignItems: 'start',
       }}
     >
-      <QualityReadOnlyEvidencePanel request={evidenceRequest} />
+      <QualityReadOnlyEvidencePanel
+        result={evidenceQuery.data}
+        isLoading={evidenceQuery.isLoading}
+      />
       <QualityResultsPanel request={qualityRequest} />
       <CoAReadinessPanel request={qualityRequest} />
       <CoAReleaseStatusPanel request={traceRequest} />

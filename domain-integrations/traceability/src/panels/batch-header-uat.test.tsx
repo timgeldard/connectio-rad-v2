@@ -4,6 +4,7 @@ import { BatchHeaderPanel } from './batch-header-panel.js'
 import { CustomerExposureNetworkPanel } from './customer-exposure-network-panel.js'
 import { expectNoForbiddenClaims } from '@connectio/test-support'
 import type { BatchHeaderSummary, CustomerExposureSummary } from '@connectio/data-contracts'
+import type { AdapterResult } from '@connectio/source-adapters'
 import * as queries from '../adapters/trace2-queries.js'
 
 vi.mock('../adapters/trace2-queries.js', () => ({
@@ -56,15 +57,14 @@ describe('Trace batch header + customer exposure (Offline UAT Smoke Check)', () 
       recallRecommended: null, // Critical: must be null for pre-UAT
     }
 
-    vi.mocked(queries.useCustomerExposureSummary).mockReturnValue({
-      data: { ok: true, data: mockData, fetchedAt: new Date().toISOString(), source: 'mock' },
-      isLoading: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    const result: AdapterResult<CustomerExposureSummary> = {
+      ok: true,
+      data: mockData,
+      fetchedAt: new Date().toISOString(),
+      source: 'mock',
+    }
 
-    const { container } = render(
-      <CustomerExposureNetworkPanel request={{ investigationId: 'INV-1', batchId: 'BATCH-001' }} />,
-    )
+    const { container } = render(<CustomerExposureNetworkPanel result={result} />)
 
     // The component should probably render something about governance pending or unavailable
     // since recallRecommended is null.

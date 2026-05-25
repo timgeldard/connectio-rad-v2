@@ -2,9 +2,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
-import { QualityReadOnlyEvidencePanel } from './quality-readonly-evidence-panel.js'
-import { useQualityReadOnlyEvidence } from '../adapters/quality-readonly-evidence-queries.js'
+import {
+  QualityReadOnlyEvidencePanel as ActualQualityReadOnlyEvidencePanel,
+} from './quality-readonly-evidence-panel.js'
 import type { QualityReadOnlyEvidenceAdapterRequest } from '../adapters/quality-readonly-evidence-adapter.js'
+import type { QualityEvidenceResponse } from '@connectio/data-contracts'
+import type { AdapterResult } from '@connectio/source-adapters'
 import {
   pendingSourceVerificationFixture,
   sourceVerifiedNotWiredFixture,
@@ -30,55 +33,59 @@ vi.mock('@connectio/evidence-panel-runtime', () => ({
   useEvidencePanel: () => ({ displayState: 'ready', markReady: vi.fn(), markError: vi.fn() }),
 }))
 
-vi.mock('../adapters/quality-readonly-evidence-queries.js', () => ({
-  useQualityReadOnlyEvidence: vi.fn(),
-}))
-
 const request: QualityReadOnlyEvidenceAdapterRequest = {
   plantId: 'C113',
   materialId: '000000000070373871',
   batchId: '0008602411',
 }
 
+let activeResult: AdapterResult<QualityEvidenceResponse> | undefined
+
+function QualityReadOnlyEvidencePanel({
+  request: _request,
+}: {
+  request: QualityReadOnlyEvidenceAdapterRequest
+}) {
+  void _request
+  return <ActualQualityReadOnlyEvidencePanel result={activeResult} isLoading={false} />
+}
+
 describe('QualityReadOnlyEvidencePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useQualityReadOnlyEvidence).mockReturnValue({
+    activeResult = {
+      ok: true,
+      fetchedAt: '2026-05-21T09:15:00.000Z',
+      source: 'databricks-api',
       data: {
-        ok: true,
-        fetchedAt: '2026-05-21T09:15:00.000Z',
-        source: 'databricks-api',
-        data: {
-          request,
-          summary: {
-            source: 'databricks-api',
-            status: 'pending-source-verification',
-            inspectionLotCount: 0,
-            micResultCount: 0,
-            usageDecisionStatus: 'source-unverified',
-            coaResultCount: 0,
-            unavailableEvidence: [
-              'inspection-lots',
-              'mic-results',
-              'usage-decision',
-              'coa-results',
-            ],
-            warnings: [
-              'Read-only Quality evidence is pending Databricks source verification.',
-              'Missing usage-decision evidence must not be interpreted as accepted or released.',
-              'CoA-like result evidence is not official CoA document approval.',
-            ],
-            queriedAt: '2026-05-21T09:15:00.000Z',
-            sourceFreshnessStatus: 'not-verified',
-          },
-          inspectionLots: [],
-          micResults: [],
-          usageDecision: null,
-          coaResults: [],
+        request,
+        summary: {
+          source: 'databricks-api',
+          status: 'pending-source-verification',
+          inspectionLotCount: 0,
+          micResultCount: 0,
+          usageDecisionStatus: 'source-unverified',
+          coaResultCount: 0,
+          unavailableEvidence: [
+            'inspection-lots',
+            'mic-results',
+            'usage-decision',
+            'coa-results',
+          ],
+          warnings: [
+            'Read-only Quality evidence is pending Databricks source verification.',
+            'Missing usage-decision evidence must not be interpreted as accepted or released.',
+            'CoA-like result evidence is not official CoA document approval.',
+          ],
+          queriedAt: '2026-05-21T09:15:00.000Z',
+          sourceFreshnessStatus: 'not-verified',
         },
-      },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useQualityReadOnlyEvidence>)
+        inspectionLots: [],
+        micResults: [],
+        usageDecision: null,
+        coaResults: [],
+      } as QualityEvidenceResponse,
+    }
   })
 
   it('renders pending source verification warning copy', () => {
@@ -128,11 +135,8 @@ describe('QualityReadOnlyEvidencePanel', () => {
  */
 const PROHIBITED_TERMS = ['Released', 'Can release', 'Approved', 'Cleared', 'Release ready']
 
-function mockWithFixture(fixture: ReturnType<typeof useQualityReadOnlyEvidence>['data']) {
-  vi.mocked(useQualityReadOnlyEvidence).mockReturnValue({
-    data: fixture,
-    isLoading: false,
-  } as unknown as ReturnType<typeof useQualityReadOnlyEvidence>)
+function mockWithFixture(fixture: AdapterResult<QualityEvidenceResponse> | undefined) {
+  activeResult = fixture
 }
 
 function assertNoProhibitedTerms(container: HTMLElement) {
@@ -168,25 +172,19 @@ describe('source-truthfulness states', () => {
 
   describe('pendingSourceVerificationFixture', () => {
     it('renders source-verification pending warning', () => {
-      mockWithFixture(
-        pendingSourceVerificationFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(pendingSourceVerificationFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/not yet source-verified/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        pendingSourceVerificationFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(pendingSourceVerificationFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
 
     it('renders no action buttons', () => {
-      mockWithFixture(
-        pendingSourceVerificationFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(pendingSourceVerificationFixture)
       render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(screen.queryByRole('button')).not.toBeInTheDocument()
     })
@@ -194,17 +192,13 @@ describe('source-truthfulness states', () => {
 
   describe('sourceVerifiedNotWiredFixture', () => {
     it('renders "not yet source-verified" warning', () => {
-      mockWithFixture(
-        sourceVerifiedNotWiredFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(sourceVerifiedNotWiredFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/not yet source-verified|Live source wiring pending/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        sourceVerifiedNotWiredFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(sourceVerifiedNotWiredFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -212,41 +206,31 @@ describe('source-truthfulness states', () => {
 
   describe('singleLotAcceptedStyleFixture', () => {
     it('renders raw code A', () => {
-      mockWithFixture(
-        singleLotAcceptedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotAcceptedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toContain('A')
     })
 
     it('renders "source UD label only" governed label', () => {
-      mockWithFixture(
-        singleLotAcceptedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotAcceptedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toContain('source UD label only')
     })
 
     it('renders read-only warning copy', () => {
-      mockWithFixture(
-        singleLotAcceptedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotAcceptedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/read-only|source evidence only/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        singleLotAcceptedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotAcceptedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
 
     it('renders no action buttons', () => {
-      mockWithFixture(
-        singleLotAcceptedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotAcceptedStyleFixture)
       render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(screen.queryByRole('button')).not.toBeInTheDocument()
     })
@@ -254,25 +238,19 @@ describe('source-truthfulness states', () => {
 
   describe('singleLotRejectedStyleFixture', () => {
     it('renders raw code R', () => {
-      mockWithFixture(
-        singleLotRejectedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotRejectedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toContain('R')
     })
 
     it('renders "source UD label only" governed label', () => {
-      mockWithFixture(
-        singleLotRejectedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotRejectedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toContain('source UD label only')
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        singleLotRejectedStyleFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(singleLotRejectedStyleFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -280,19 +258,19 @@ describe('source-truthfulness states', () => {
 
   describe('multipleLotsFixture', () => {
     it('renders multiple lots warning', () => {
-      mockWithFixture(multipleLotsFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(multipleLotsFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/Multiple inspection lots/i)
     })
 
     it('states a batch-level decision is not derived', () => {
-      mockWithFixture(multipleLotsFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(multipleLotsFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/batch-level release decision is not derived/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(multipleLotsFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(multipleLotsFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -300,17 +278,13 @@ describe('source-truthfulness states', () => {
 
   describe('missingInspectionLotFixture', () => {
     it('renders source gap warning', () => {
-      mockWithFixture(
-        missingInspectionLotFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(missingInspectionLotFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/source gap|No inspection lot found/i)
     })
 
     it('does NOT reassure the user there is no issue', () => {
-      mockWithFixture(
-        missingInspectionLotFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(missingInspectionLotFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       // Must not contain bare "no issue" as a reassurance claim.
       // "not confirmation of no issue" is acceptable (the source gap warning).
@@ -321,9 +295,7 @@ describe('source-truthfulness states', () => {
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        missingInspectionLotFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(missingInspectionLotFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -331,25 +303,19 @@ describe('source-truthfulness states', () => {
 
   describe('micPresentNoUsageDecisionFixture', () => {
     it('renders "not a release decision" copy for MIC', () => {
-      mockWithFixture(
-        micPresentNoUsageDecisionFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(micPresentNoUsageDecisionFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/MIC result valuation is not a release decision/i)
     })
 
     it('renders missing usage-decision warning', () => {
-      mockWithFixture(
-        micPresentNoUsageDecisionFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(micPresentNoUsageDecisionFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/usage.decision|No usage decision/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        micPresentNoUsageDecisionFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(micPresentNoUsageDecisionFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -357,17 +323,13 @@ describe('source-truthfulness states', () => {
 
   describe('coaLikeEvidenceFixture', () => {
     it('renders "not official CoA" copy', () => {
-      mockWithFixture(
-        coaLikeEvidenceFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(coaLikeEvidenceFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/not official CoA document approval/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        coaLikeEvidenceFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(coaLikeEvidenceFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -375,25 +337,19 @@ describe('source-truthfulness states', () => {
 
   describe('deviationSourceUnavailableFixture', () => {
     it('renders "do not interpret as no deviations" copy', () => {
-      mockWithFixture(
-        deviationSourceUnavailableFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(deviationSourceUnavailableFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/Do not interpret this as no deviations/i)
     })
 
     it('renders deviation unavailable warning', () => {
-      mockWithFixture(
-        deviationSourceUnavailableFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(deviationSourceUnavailableFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/Deviation source unavailable/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        deviationSourceUnavailableFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(deviationSourceUnavailableFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
@@ -401,33 +357,25 @@ describe('source-truthfulness states', () => {
 
   describe('simulatedReleasePanelFixture', () => {
     it('renders simulated panel warning', () => {
-      mockWithFixture(
-        simulatedReleasePanelFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(simulatedReleasePanelFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/SIMULATED RELEASE PANEL|demonstration only/i)
     })
 
     it('states panel does not authorise release', () => {
-      mockWithFixture(
-        simulatedReleasePanelFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(simulatedReleasePanelFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).toMatch(/does not authorise release/i)
     })
 
     it('does not render prohibited release terms', () => {
-      mockWithFixture(
-        simulatedReleasePanelFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(simulatedReleasePanelFixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       assertNoProhibitedTerms(container)
     })
 
     it('renders no release or reject action buttons', () => {
-      mockWithFixture(
-        simulatedReleasePanelFixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'],
-      )
+      mockWithFixture(simulatedReleasePanelFixture)
       render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(screen.queryByRole('button')).not.toBeInTheDocument()
     })
@@ -448,20 +396,20 @@ describe('source-truthfulness states', () => {
     ]
 
     it.each(allFixtures)('$name: does not render "Released" or "Can release"', ({ fixture }) => {
-      mockWithFixture(fixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(fixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).not.toContain('Released')
       expect(container.textContent).not.toContain('Can release')
     })
 
     it.each(allFixtures)('$name: does not render "Approved" or "Cleared"', ({ fixture }) => {
-      mockWithFixture(fixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(fixture)
       const { container } = render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(container.textContent).not.toContain('Cleared')
     })
 
     it.each(allFixtures)('$name: renders no release/reject action buttons', ({ fixture }) => {
-      mockWithFixture(fixture as ReturnType<typeof useQualityReadOnlyEvidence>['data'])
+      mockWithFixture(fixture)
       render(<QualityReadOnlyEvidencePanel request={request} />)
       expect(screen.queryByRole('button')).not.toBeInTheDocument()
     })

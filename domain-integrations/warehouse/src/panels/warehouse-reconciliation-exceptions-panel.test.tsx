@@ -1,72 +1,103 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
+import type { WarehouseReconciliationException } from '@connectio/data-contracts'
+import type { AdapterResult } from '@connectio/source-adapters'
 import { WarehouseReconciliationExceptionsPanel } from './warehouse-reconciliation-exceptions-panel.js'
-import type { Warehouse360AdapterRequest } from '../adapters/warehouse-360-adapter.js'
 
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0 } } })
+const exceptionsResult: AdapterResult<WarehouseReconciliationException[]> = {
+  ok: true,
+  data: [
+    {
+      exceptionId: 'RECON-00047',
+      severity: 'critical',
+      resolution: 'open',
+      exceptionType: 'quantity-mismatch',
+      materialDescription: 'Emmental Block 4 kg',
+      discrepancyQuantity: 12,
+      uom: 'KG',
+      batchId: 'BATCH-001',
+      storageLocationId: 'SL01',
+      ageHours: 6.5,
+    },
+    {
+      exceptionId: 'RECON-00046',
+      severity: 'high',
+      resolution: 'in-progress',
+      exceptionType: 'missing-in-wms',
+      materialDescription: 'Cheddar Barrel',
+      discrepancyQuantity: -4,
+      uom: 'KG',
+      batchId: 'BATCH-002',
+      storageLocationId: 'SL02',
+      ageHours: 12.3,
+    },
+    {
+      exceptionId: 'RECON-00044',
+      severity: 'medium',
+      resolution: 'open',
+      exceptionType: 'location-mismatch',
+      materialDescription: 'Gouda Wheel',
+      discrepancyQuantity: 0,
+      uom: 'KG',
+      batchId: 'BATCH-003',
+      storageLocationId: 'SL03',
+      ageHours: 3.1,
+    },
+  ] as unknown as WarehouseReconciliationException[],
+  fetchedAt: '2026-05-24T12:00:00Z',
+  source: 'mock',
 }
-
-function Wrapper({ children }: { children: React.ReactNode }) {
-  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>
-}
-
-const request: Warehouse360AdapterRequest = { warehouseId: 'WH-IE10-MAIN', plantId: 'IE10' }
 
 describe('WarehouseReconciliationExceptionsPanel', () => {
-  it('renders the panel container', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(document.querySelector('[data-testid="evidence-panel-warehouse-reconciliation-exceptions"]')).not.toBeNull()
-    })
+  it('renders the panel container', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(
+      document.querySelector('[data-testid="evidence-panel-warehouse-reconciliation-exceptions"]'),
+    ).not.toBeNull()
   })
 
-  it('renders the panel display name', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(screen.getByText('IM/WM Reconciliation Exceptions')).toBeInTheDocument()
-    })
+  it('renders the panel display name', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getByText('IM/WM Reconciliation Exceptions')).toBeInTheDocument()
   })
 
-  it('renders open exceptions count banner', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    // mock has 2 open exceptions (RECON-00047 and RECON-00044 are 'open'; RECON-00046 is 'in-progress')
-    await waitFor(() => {
-      expect(screen.getByText(/open exception/i)).toBeInTheDocument()
-    })
+  it('renders open exceptions count banner', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getByText(/open exceptions require attention/i)).toBeInTheDocument()
   })
 
-  it('renders quantity mismatch label', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(screen.getByText(/Qty mismatch/i)).toBeInTheDocument()
-    })
+  it('renders quantity mismatch label', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getByText(/Qty mismatch/i)).toBeInTheDocument()
   })
 
-  it('renders missing in WM label', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(screen.getByText(/Missing in WM/i)).toBeInTheDocument()
-    })
+  it('renders missing in WM label', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getByText(/Missing in WM/i)).toBeInTheDocument()
   })
 
-  it('renders material description for emmental', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(screen.getByText(/Emmental Block 4 kg/i)).toBeInTheDocument()
-    })
+  it('renders material description for emmental', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getByText(/Emmental Block 4 kg/i)).toBeInTheDocument()
   })
 
-  it('renders resolution status labels', async () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    await waitFor(() => {
-      expect(screen.getAllByText(/open|in-progress/i).length).toBeGreaterThan(0)
-    })
+  it('renders resolution status labels', () => {
+    render(<WarehouseReconciliationExceptionsPanel result={exceptionsResult} />)
+
+    expect(screen.getAllByText(/open|in-progress/i).length).toBeGreaterThan(0)
   })
 
   it('shows panel container before data loads', () => {
-    render(<Wrapper><WarehouseReconciliationExceptionsPanel request={request} /></Wrapper>)
-    expect(document.querySelector('[data-testid="evidence-panel-warehouse-reconciliation-exceptions"]')).not.toBeNull()
+    render(<WarehouseReconciliationExceptionsPanel isLoading={true} />)
+
+    expect(
+      document.querySelector('[data-testid="evidence-panel-warehouse-reconciliation-exceptions"]'),
+    ).not.toBeNull()
   })
 })
