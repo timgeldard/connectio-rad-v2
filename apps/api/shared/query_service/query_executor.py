@@ -10,22 +10,29 @@ principal fallback, no mock fallback.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from .catalog_policy import assert_allowed_catalog_target
 from .databricks_client import DatabricksQueryClient, NotImplementedDatabricksClient
 from .errors import (
-    DatabricksAuthRequiredError,
-    DatabricksPermissionError,
-    DatabricksQueryError,
     DatabricksQueryTimeoutError,
     DatabricksRateLimitError,
-    DatabricksWarehouseConfigError,
 )
 from .identity import UserIdentity
 from .query_spec import QuerySpec
 
 _log = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+# Transient errors retried up to ``DatabricksRepository.max_attempts`` total calls.
+RETRYABLE_ERRORS: tuple[type[Exception], ...] = (
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+)
 
 
 class QueryExecutor:
@@ -91,76 +98,79 @@ class QueryExecutor:
         )
 
 
-import asyncio
-from collections.abc import Callable
-from typing import TypeVar, Any
-
-T = TypeVar("T")
-
 class DatabricksRepository:
-    """Base repository class for executing queries and mapping results.
+    """Executes QuerySpecs with optional retry for transient Databricks errors.
 
-    Takes ownership of connection pooling, API error handling, retry backoff logic,
-    and JSON-to-dict parsing.
+    ``max_attempts`` is the total number of ``QueryExecutor.execute`` calls for
+    one ``fetch()`` — not "retries after the first attempt". The default of 3
+    means one initial attempt plus up to two retries on timeout or rate limit.
     """
 
-    def __init__(self, executor: QueryExecutor, identity: UserIdentity):
+    def __init__(
+        self,
+        executor: QueryExecutor,
+        identity: UserIdentity,
+        *,
+        max_attempts: int = 3,
+        base_backoff: float = 1.0,
+    ) -> None:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
         self.executor = executor
         self.identity = identity
+        self.max_attempts = max_attempts
+        self.base_backoff = base_backoff
 
     async def fetch(
         self,
         spec_factory: Callable[[], QuerySpec],
         mapper: Callable[[list[dict[str, Any]]], T],
-        max_retries: int = 3,
-        base_backoff: float = 1.0,
     ) -> tuple[T, QuerySpec]:
         """Execute a QuerySpec and return mapped results, applying retry logic.
 
+        Retries only ``DatabricksQueryTimeoutError`` and ``DatabricksRateLimitError``
+        until ``max_attempts`` is exhausted. All other errors propagate immediately.
+
         Args:
-            spec_factory: Zero-argument function returning a QuerySpec.
-            mapper: Function that converts raw Databricks rows (list of dicts) into
-                the target domain model.
-            max_retries: Maximum number of times to retry a failed query.
-            base_backoff: Base sleep time in seconds before retrying.
+            spec_factory: Zero-argument function returning a QuerySpec (evaluated per attempt).
+            mapper: Converts raw Databricks rows into the target domain model.
 
         Returns:
             A tuple of (mapped_result, query_spec) so callers can set HTTP headers.
         """
-        # Execute spec_factory inside the loop so catalog env vars are evaluated
-        # per attempt (e.g. if we switch context midway, though unlikely).
-        last_error: Exception | None = None
+        last_retryable_error: Exception | None = None
 
         assert_allowed_catalog_target(self.identity.catalog_target)
 
         from shared.query_service.object_resolver import catalog_context
+
         token = catalog_context.set(self.identity.catalog_target)
         try:
-            for attempt in range(max_retries):
+            for attempt_number in range(1, self.max_attempts + 1):
                 try:
                     spec = spec_factory()
                     rows = await self.executor.execute(spec, self.identity)
                     return mapper(rows), spec
-                except (DatabricksQueryTimeoutError, DatabricksRateLimitError) as exc:
-                    last_error = exc
-                    if attempt < max_retries - 1:
-                        sleep_time = base_backoff * (2 ** attempt)
-                        _log.warning(
-                            "Transient Databricks error on attempt %d: %s. Retrying in %.1fs...",
-                            attempt + 1,
-                            str(exc),
-                            sleep_time,
-                        )
-                        await asyncio.sleep(sleep_time)
-                except Exception as exc:
-                    # Non-retriable errors (Auth required, Syntax error, config error)
-                    raise exc
+                except RETRYABLE_ERRORS as exc:
+                    last_retryable_error = exc
+                    if attempt_number >= self.max_attempts:
+                        raise
+                    sleep_time = self.base_backoff * (2 ** (attempt_number - 1))
+                    _log.warning(
+                        "Transient Databricks error on attempt %d/%d: %s. "
+                        "Retrying in %.1fs...",
+                        attempt_number,
+                        self.max_attempts,
+                        exc,
+                        sleep_time,
+                    )
+                    await asyncio.sleep(sleep_time)
 
-            # If we exhausted retries, raise the last transient error
-            if last_error:
-                raise last_error
-            
-            # Fallback (should be unreachable if max_retries > 0)
-            raise RuntimeError("Exhausted retries without a clear error.")
+            if last_retryable_error:
+                raise last_retryable_error
+
+            raise RuntimeError(
+                "Exhausted fetch attempts without a result or retryable error."
+            )
         finally:
             catalog_context.reset(token)

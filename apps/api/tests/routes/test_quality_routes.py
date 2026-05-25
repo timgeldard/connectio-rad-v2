@@ -315,7 +315,9 @@ def test_get_read_only_evidence_maps_repository_errors(
         (DatabricksRateLimitError("quality.get_usage_decision"), 429),
     ],
 )
-def test_get_read_only_evidence_maps_retried_repository_errors(monkeypatch, error, expected_status):
+def test_get_read_only_evidence_maps_retryable_errors_with_three_total_attempts(
+    monkeypatch, error, expected_status
+):
     _databricks_env(monkeypatch)
     monkeypatch.setenv("CQ_CATALOG", "test_catalog")
 

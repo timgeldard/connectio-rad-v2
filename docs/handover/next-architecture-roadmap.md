@@ -44,8 +44,9 @@ yet fully represented as first-class Nx project boundaries.
 
 DatabricksRepository catalog overrides are allowlisted via
 `DATABRICKS_ALLOWED_CATALOGS`; deployment-specific approved catalog values remain
-environment configuration. Retry semantics must distinguish total attempts from
-retries.
+environment configuration. Retry semantics use `max_attempts` (default 3 total
+attempts); future adapter migrations should rely on that default unless a
+route-specific reason is documented.
 
 Broad Warehouse 360 and Trace Investigation `DatabricksRepository` migration
 remains deferred until the pattern is proven on at least one more backend route
