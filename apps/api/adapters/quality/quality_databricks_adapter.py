@@ -117,15 +117,17 @@ def get_quality_usage_decision_spec(material_id: str, batch_id: str, plant_id: O
       AND udr.BATCH_ID = :batch_id
     """
     
+    params: dict[str, object] = {"material_id": material_id, "batch_id": batch_id}
     if plant_id:
         sql += " AND udr.PLANT_ID = :plant_id"
+        params["plant_id"] = plant_id
 
     return QualityUsageDecisionQuerySpec(
         name="quality.get_usage_decision",
         module="quality",
         endpoint="/api/quality/read-only-evidence",
         sql=sql,
-        params={"material_id": material_id, "batch_id": batch_id, "plant_id": plant_id},
+        params=params,
         source_badge="view:gold_inspection_usage_decision",
         tags=["quality", "usage-decision", "lot-level-evidence"],
         material_id=material_id,
