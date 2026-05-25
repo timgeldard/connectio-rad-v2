@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -106,6 +106,8 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
     included in structured log output for observability.
     """
 
+    _shared_clients: ClassVar[dict[tuple[str, int], httpx.AsyncClient]] = {}
+
     def __init__(self, host: str) -> None:
         # Strip scheme (https:// or http://) if present, then whitespace and trailing slashes.
         # Prevents double-scheme URLs like https://https://... when DATABRICKS_HOST includes
@@ -115,13 +117,19 @@ class StatementApiDatabricksClient(DatabricksQueryClient):
             if h.lower().startswith(scheme):
                 h = h[len(scheme):]
         self._host = h.rstrip("/")
-        self._shared_clients: dict[int, httpx.AsyncClient] = {}
 
     def _get_client(self, timeout_seconds: int) -> httpx.AsyncClient:
-        # Cache clients by timeout so we can reuse HTTP connections efficiently
-        if timeout_seconds not in self._shared_clients:
-            self._shared_clients[timeout_seconds] = httpx.AsyncClient(timeout=timeout_seconds + 10)
-        return self._shared_clients[timeout_seconds]
+        # Cache clients at class scope so request-scoped wrappers still share pools.
+        key = (self._host, timeout_seconds)
+        if key not in self._shared_clients:
+            self._shared_clients[key] = httpx.AsyncClient(timeout=timeout_seconds + 10)
+        return self._shared_clients[key]
+
+    @classmethod
+    async def aclose_shared_clients(cls) -> None:
+        for client in cls._shared_clients.values():
+            await client.aclose()
+        cls._shared_clients.clear()
 
     async def execute(
         self,

@@ -1,6 +1,5 @@
 """Tests for the Databricks query client implementations (ADR-025)."""
 from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,6 +17,13 @@ from shared.query_service.errors import (
     DatabricksRateLimitError,
     DatabricksWarehouseConfigError,
 )
+
+
+@pytest.fixture(autouse=True)
+async def reset_shared_databricks_clients() -> None:
+    await StatementApiDatabricksClient.aclose_shared_clients()
+    yield
+    await StatementApiDatabricksClient.aclose_shared_clients()
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +330,31 @@ class TestStatementApiDatabricksClient:
             )
 
         assert "parameters" not in captured_bodies[0]
+
+    async def test_reuses_shared_http_client_across_instances(self) -> None:
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+        shared_client = _make_http_client_mock(response)
+
+        with patch("httpx.AsyncClient", return_value=shared_client) as factory:
+            first = StatementApiDatabricksClient(host="test.databricks.com")
+            second = StatementApiDatabricksClient(host="https://test.databricks.com")
+            await first.execute(**self._BASE_KWARGS)
+            await second.execute(**self._BASE_KWARGS)
+
+        assert factory.call_count == 1
+        assert shared_client.post.await_count == 2
+
+    async def test_aclose_shared_clients_closes_cached_clients(self) -> None:
+        response = _make_statement_response("SUCCEEDED", columns=[], data_array=[])
+        shared_client = _make_http_client_mock(response)
+
+        with patch("httpx.AsyncClient", return_value=shared_client):
+            client = StatementApiDatabricksClient(host="test.databricks.com")
+            await client.execute(**self._BASE_KWARGS)
+
+        await StatementApiDatabricksClient.aclose_shared_clients()
+
+        shared_client.aclose.assert_awaited_once()
 
     # ── Host normalisation ──────────────────────────────────────────────────
 

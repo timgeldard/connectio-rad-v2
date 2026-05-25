@@ -1732,8 +1732,9 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
       - gold_plant                  → plant name
       - gold_batch_production_history_v → production context (line / operator / yield)
 
-        # The 5-way join matches the existing get_batch_header_summary_spec join
-        # but with slightly different projections._history on (MATERIAL_ID, BATCH_ID).
+    The 5-way join matches the existing get_batch_header_summary_spec join
+    but with slightly different projections. Adds production_history on
+    (MATERIAL_ID, BATCH_ID).
 
     Plant filter is respected when supplied — leave plant_id='' to take the
     first row by sort order (consistent with the existing batch-header route).
@@ -2163,8 +2164,9 @@ def get_holds_ledger_spec(request: Trace2HoldsLedgerRequest) -> QuerySpec:
       - active / resolved holds from gold_batch_quality_lot_v entries with no
         usage decision (active) vs. those with a decision (resolved).
 
-        # Single-row join strategy — stock columns come from one stock_v row;
-        # identity comes from either base or stock depending on who is populated.lect.
+    Single-row join strategy — stock columns come from one stock_v row;
+    identity comes from either base or stock depending on which source is
+    populated. Quality lots are returned in a subselect.
     """
     tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
     tbl_ql = resolve_domain_object("trace2", "gold_batch_quality_lot_v")

@@ -11,6 +11,17 @@ from typing import Any, Optional
 from shared_db.core import sql_param
 
 _IDENTIFIER_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_AGGREGATE_EXPR_RE = re.compile(
+    r"^(?P<func>AVG|COUNT|MAX|MIN|SUM)\(\s*(?P<arg>[^()]+?)\s*\)"
+    r"(?:\s+AS\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?$",
+    re.IGNORECASE,
+)
+_MIC_IDENTIFIER_RE = re.compile(r"\b(mic|mic_id|mic_name|unified_mic_key)\b", re.IGNORECASE)
+_PLANT_IDENTIFIER_RE = re.compile(r"\bplant_id\b", re.IGNORECASE)
+_PLAN_IDENTIFIER_RE = re.compile(
+    r"\b(operation_id|inspection_lot_id|inspection_plan)\b",
+    re.IGNORECASE,
+)
 
 
 def _is_safe_identifier(identifier: str, *, allow_qualified: bool = True) -> bool:
@@ -39,6 +50,23 @@ def _is_safe_identifier(identifier: str, *, allow_qualified: bool = True) -> boo
         if not _IDENTIFIER_SEGMENT_RE.fullmatch(part):
             return False
     return True
+
+
+def _is_allowed_aggregate_expression(expression: str) -> bool:
+    """Return whether *expression* is a supported aggregate select item."""
+    match = _AGGREGATE_EXPR_RE.fullmatch(expression)
+    if not match:
+        return False
+
+    arg = match.group("arg").strip()
+    if arg.upper().startswith("DISTINCT "):
+        arg = arg[9:].strip()
+
+    if arg != "*" and not _is_safe_identifier(arg):
+        return False
+
+    alias = match.group("alias")
+    return alias is None or _is_safe_identifier(alias, allow_qualified=False)
 
 
 @dataclass
@@ -160,17 +188,19 @@ class QueryBuilder:
         """
         for col in self.columns:
             if col != "*" and not _is_safe_identifier(col):
-                if not ("(" in col and ")" in col):  # basic exception for aggregate functions like MAX(val)
+                if not _is_allowed_aggregate_expression(col):
                     raise ValueError(f"Invalid column identifier: {col!r}")
         cols = ", ".join(self.columns)
 
         # Enforce MIC grouping rule if aggregations or GROUP BY are used
-        is_aggregated = bool(self.group_by_columns) or any("(" in c and ")" in c for c in self.columns)
+        is_aggregated = bool(self.group_by_columns) or any(
+            _is_allowed_aggregate_expression(c) for c in self.columns
+        )
         if is_aggregated:
-            query_text = (cols + " " + " ".join(self.filters) + " " + " ".join(self.group_by_columns)).lower()
-            if "mic" in query_text:
-                has_plant = "plant_id" in query_text
-                has_plan = "operation_id" in query_text or "inspection_lot_id" in query_text or "inspection_plan" in query_text
+            query_text = cols + " " + " ".join(self.filters) + " " + " ".join(self.group_by_columns)
+            if _MIC_IDENTIFIER_RE.search(query_text):
+                has_plant = _PLANT_IDENTIFIER_RE.search(query_text) is not None
+                has_plan = _PLAN_IDENTIFIER_RE.search(query_text) is not None
                 if not (has_plant and has_plan):
                     raise ValueError(
                         "Severe cross-plant contamination risk: Aggregations on MICs MUST be scoped to a local "
