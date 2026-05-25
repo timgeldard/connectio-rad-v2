@@ -6,7 +6,7 @@ import {
   ConfirmedEmptyState,
   FreshnessBadge,
   EvidenceCaveatList,
-} from '../../index.js'
+} from '../index.js'
 
 describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   it('EvidenceErrorState does not render "no data"', () => {
@@ -18,7 +18,7 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   })
 
   it('ConfirmedEmptyState does not render "no issue found"', () => {
-    const { container } = render(<ConfirmedEmptyState entityName="deviations" />)
+    const { container } = render(<ConfirmedEmptyState description="No deviations recorded" />)
     const text = container.textContent ?? ''
 
     expect(text.toLowerCase()).not.toContain('no issue found')
@@ -26,10 +26,10 @@ describe('evidence-panel-runtime: Shared Evidence State Primitives', () => {
   })
 
   it('FreshnessBadge handles missing fetchedAt safely', () => {
-    const { container } = render(<FreshnessBadge fetchedAt={null} staleAfterSeconds={60} />)
+    const { container } = render(<FreshnessBadge fetchedAt={null} />)
     const text = container.textContent ?? ''
 
-    expect(text).toContain('Freshness unknown')
+    expect(text).toContain('Never refreshed')
   })
 
   it('EvidenceCaveatList renders caveats visibly', () => {

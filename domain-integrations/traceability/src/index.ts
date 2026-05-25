@@ -40,7 +40,9 @@ export type {
 // ---------------------------------------------------------------------------
 
 export { traceAppRegistration } from './trace-app-registration.js'
+export { traceConsumerRegistration } from './trace-consumer-registration.js'
 export { TraceAppWorkspace } from './trace-app-workspace.js'
+export { TraceConsumerWorkspace } from './trace-consumer-workspace.js'
 export type { TraceAppWorkspaceProps } from './trace-app-workspace.js'
 export { PLANTS, TRACE_APP_TABS } from './trace-app/plants.js'
 export type {
