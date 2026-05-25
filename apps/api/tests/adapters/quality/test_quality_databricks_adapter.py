@@ -28,6 +28,21 @@ def test_get_quality_usage_decision_spec():
     assert "udr.PLANT_ID = :plant_id" in spec.sql
 
 
+def test_no_plant_id_param_when_not_provided():
+    spec = get_quality_usage_decision_spec(material_id="123", batch_id="456")
+    assert "plant_id" not in spec.params
+
+
+def test_no_plant_filter_in_sql_when_not_provided():
+    spec = get_quality_usage_decision_spec(material_id="123", batch_id="456")
+    assert ":plant_id" not in spec.sql
+
+
+def test_plant_id_included_in_params_when_provided():
+    spec = get_quality_usage_decision_spec(material_id="123", batch_id="456", plant_id="P1")
+    assert spec.params["plant_id"] == "P1"
+
+
 class _FakeExecutor:
     def __init__(self, rows: list[dict] | None = None, error: Exception | None = None) -> None:
         self.rows = rows or []
