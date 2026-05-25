@@ -2,6 +2,10 @@
 
 Data products within ConnectIO-RAD progress through a formalized maturity lifecycle.
 
+> [!NOTE]
+> This data product maturity model tracks backend and API readiness. To view the framework for user-facing features, see the [Application Experience Maturity Model](../product-operating-model/application-experience-maturity-model.md).
+
+
 ## Maturity Levels
 
 - **L0 — Concept identified:** The business need or object is defined but unexplored.

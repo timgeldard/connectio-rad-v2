@@ -5,12 +5,13 @@ import { CharacteristicCapabilityPanel } from './characteristic-capability-panel
 import type { SPCMonitoringAdapterRequest } from '../adapters/spc-monitoring-adapter.js'
 import type { CharacteristicCapability } from '@connectio/data-contracts'
 
-// Mock the query hook
+// Mock the query hooks
 vi.mock('../adapters/spc-monitoring-queries.js', () => ({
   useCharacteristicCapability: vi.fn(),
+  useControlChartSeries: vi.fn(),
 }))
 
-import { useCharacteristicCapability } from '../adapters/spc-monitoring-queries.js'
+import { useCharacteristicCapability, useControlChartSeries } from '../adapters/spc-monitoring-queries.js'
 
 const request: SPCMonitoringAdapterRequest = { materialId: 'MAT-12345', plantId: 'IE10', characteristicId: 'CHAR-TEST-001' }
 
@@ -34,6 +35,10 @@ function makeResult(cap: CharacteristicCapability) {
 
 beforeEach(() => {
   vi.mocked(useCharacteristicCapability).mockReturnValue(makeResult(baseCapability) as ReturnType<typeof useCharacteristicCapability>)
+  vi.mocked(useControlChartSeries).mockReturnValue({
+    data: { ok: true, data: { points: [], chartType: 'imr' }, fetchedAt: '2024-03-08T10:00:00.000Z', source: 'mock' },
+    isLoading: false,
+  } as any)
 })
 
 describe('CharacteristicCapabilityPanel', () => {

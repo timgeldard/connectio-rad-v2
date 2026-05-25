@@ -1,6 +1,6 @@
 <!--
-App data layer PR template — enforces the operating model from
-docs/app-data-layer/agent-contribution-rules.md and the ADR.
+App data layer and consumer application PR template — enforces the operating model from
+docs/product-operating-model/consumer-grade-app-direction.md and the contribution rules.
 
 Fill in every section. PRs that leave sections blank or claim readiness
 without evidence will be requested-changes.
@@ -10,70 +10,68 @@ without evidence will be requested-changes.
 
 <!-- Choose ONE. PRs that span multiple categories must be split. -->
 
-- [ ] `ci-repo-hygiene`
-- [ ] `adr-operating-model`
-- [ ] `data-product-spec`
-- [ ] `source-verification`
-- [ ] `contract-definition`
-- [ ] `route-implementation`
-- [ ] `mapper-test-hardening`
-- [ ] `reference-consumer-adapter`
-- [ ] `reference-consumer-ui`
-- [ ] `readiness-doc-sync`
+- [ ] `consumer-application`
+- [ ] `governed-data-product`
+- [ ] `design-system`
+- [ ] `readiness-evidence`
+- [ ] `repo-hygiene`
 - [ ] `deployment-assets`
 
-## Data Product Impacted
+---
+
+## Application Impacted
+
+- App name: <!-- e.g. Trace Consumer, SPC Monitoring -->
+- Primary user: <!-- e.g. Food Safety Lead, Plant Operator -->
+- User job / workflow: <!-- e.g. Batch origin investigation -->
+- Application Maturity (A0-A6):
+  | Axis | Before | After |
+  |---|---|---|
+  | App Experience Maturity | | |
+
+---
+
+## Data Products Impacted
 
 <!-- Name(s) from docs/app-data-layer/domain-data-product-catalog.md. Write
-"none" only if the PR is `ci-repo-hygiene` or `adr-operating-model`. -->
+"none" only if the PR is `repo-hygiene` or `deployment-assets`. -->
 
-- Data product: <!-- e.g. SPCSubgroupSeries -->
+- Data product name: <!-- e.g. SPCSubgroupSeries -->
 - Business object: <!-- e.g. SPC inspection batch -->
-- Data-product pattern: <!-- evidence-pack / read-model / metric-view / etc -->
+- Data-product maturity (D0-D6):
+  | Axis | Before | After |
+  |---|---|---|
+  | Data Product Maturity | | |
+- Source impact: <!-- Databricks gold objects touched and their live verification state -->
 
-## Maturity Before/After
+---
 
-<!-- See docs/app-data-layer/data-product-maturity-model.md. Use the
-exact level names (concept-lab / source-verified / contract-defined /
-route-implemented / mapper-tested / reference-consumer / browser-uat /
-governed). -->
+## Governance & Caveat Handling
 
-| | Before | After |
-|---|---|---|
-| Maturity level | | |
+- Any governance-pending semantics? <!-- Yes/No - list fields -->
+- Any heuristic fields? <!-- Yes/No - list fields -->
+- Any unavailable fields? <!-- Yes/No - list fields -->
+- How are caveats surfaced to the user? <!-- e.g. Status banner on page, warning tooltips -->
 
-## Source Impact
+---
 
-<!-- Which Databricks gold objects does this PR depend on? Mark each as
-verified-in-uat / pending-verification / not-yet-exists. -->
+## Field Classifications Confirmation
 
-- [ ] No source impact (template / docs only)
-- Sources touched:
-  - `gold_<...>` — verified / pending / not-yet-exists
-
-## Field Classifications
-
-<!-- Every new schema field MUST carry a `.describe('[classification: X]')`
-marker from {source-field, source-derived, application-derived,
-application-heuristic, governed}. Confirm: -->
-
-- [ ] All new schema fields are classified
+- [ ] All new schema fields are classified (`.describe('[classification: X]')`)
 - [ ] No `application-heuristic` field is rendered as a governed value in the UI
-- [ ] No field defaults to a unit/value the source does not provide (e.g. no `"KG"` defaults)
-
-## Forbidden Claims Checklist
-
-<!-- The PR must NOT do any of the following. Tick each box to confirm. -->
-
+- [ ] No field defaults to a unit/value the source does not provide (no invented UOMs)
 - [ ] No silent mock fallback in non-mock adapter modes
-- [ ] No `recallRecommended: false` (or equivalent) without governed source
-- [ ] No `status: 'delivered'` (or equivalent operational status) without governed source
-- [ ] No `'in-control'` claim without governed signal source
-- [ ] No usage-decision evidence relabelled as `signoff` / `approved` / `e-signature`
-- [ ] No heuristic score presented as a governed metric
-- [ ] No invented UOM defaults
-- [ ] No SAP write-back, release/reject mutation, or e-signature workflow
-- [ ] No browser UAT or production-readiness claim without evidence captured in the PR body
+
+---
+
+## UX & Readiness Confirmation
+
+- [ ] Empty, loading, error, stale, and partial states are considered and handled in the UX
+- [ ] Browser UAT evidence captured or explicitly pending
+- [ ] No production-readiness claim without evidence
+- [ ] No recall, release, reject, or e-signature decision claim without governed source semantics
+
+---
 
 ## Tests Run
 
@@ -81,41 +79,5 @@ application-heuristic, governed}. Confirm: -->
 
 ```text
 # fill in: e.g.
-# npx nx run-many -t lint typecheck test --projects=di-traceability,data-contracts
-# uv run --project apps/api python -m pytest apps/api/tests/routes/test_<route>.py
+# npx nx run-many -t lint typecheck test --projects=di-spc,web
 ```
-
-## Readiness Status
-
-<!-- Use the readiness vocabulary from docs/app-data-layer/route-readiness-standard.md.
-Multi-select is allowed. -->
-
-- [ ] `code-fixed` — the source code change is complete
-- [ ] `source-verified` — gold object existence/columns verified live
-- [ ] `contract-defined` — Zod schema + generated Pydantic
-- [ ] `mapper-tested` — direct unit tests on the row mapper
-- [ ] `route-implemented` — FastAPI route + `response_model` enforced
-- [ ] `browser-uat-pending` — no end-to-end browser test captured yet
-- [ ] `governance-pending` — recall rules / approval / e-signature semantics still TBD
-- [ ] `production-blocked` — explicit reason(s) below
-
-Production-blocked reasons (if checked):
-<!-- e.g. mergeable=false, CI red, browser UAT not captured, source caveats unresolved -->
-
-## Generated Assets
-
-<!-- Generated files (apps/api/contracts/generated.py,
-packages/data-contracts/dist-schema/contracts.json, apps/api/static/**)
-must be committed only when intentional and noted here. -->
-
-- [ ] No generated assets in this PR
-- [ ] `apps/api/contracts/generated.py` regenerated and committed (sync-pydantic ran)
-- [ ] `packages/data-contracts/dist-schema/contracts.json` regenerated and committed
-- [ ] `apps/api/static/**` built bundles regenerated and committed — explain why:
-      <!-- only commit static assets when explicitly required for a deploy slice -->
-
-## Notes for Reviewer
-
-<!-- Anything reviewer should know: known caveats, follow-on work, browser UAT
-plan, expected CI status, etc. Be terse. Do not overclaim. -->
-
