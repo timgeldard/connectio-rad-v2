@@ -178,9 +178,46 @@ at least 1 or construction raises `ValueError`.
 
 Tests live in `apps/api/tests/shared/test_query_executor.py`.
 
+## Third adapter migration
+
+Migrated adapter:
+
+- `GET /api/spc/subgroups`
+- `apps/api/adapters/spc/spc_databricks_adapter.py` via `SpcSubgroupsRepository`
+
+Why low-risk:
+
+- Single QuerySpec and stable `SPCSubgroupResponse` shape (already the only native
+  SPC GET route; chart-data POST was migrated in the second adapter PR)
+- All required filters are mandatory query params — no optional bind-param edge case
+- Extensive existing route and adapter tests; databricks-api-only (legacy mode 503)
+
+What stayed unchanged:
+
+- SQL, contracts, frontend, catalog allowlist, pooling, `max_attempts` retry semantics
+- `POST /api/spc/chart-data` remains on `SpcChartDataRepository`
+- Other SPC proxy routes still use legacy-api or 503 in databricks-api mode
+- Row mapping stays in the route via `map_spc_subgroup_rows`
+
+Tests added:
+
+- `SpcSubgroupsRepository` unit tests (execution, catalog isolation/reset)
+- `TestSpcSubgroupsRepositoryBacked` route tests (headers, catalog override, 503/504/429)
+
+Edge cases:
+
+- Limit is embedded as a validated integer literal in SQL (not a bind param) — unchanged
+- P999 plant rejection remains in the route before repository construction
+
+Readiness:
+
+- Three repository-backed routes now share the same pattern (Quality, SPC chart-data,
+  SPC subgroups). Warehouse 360 and Trace Investigation remain deferred — multi-query
+  orchestration and higher UAT complexity.
+
 ## Remaining Blockers Before Broad Migration
 
 - Caching requires an ADR before implementation and must be tied to freshness
   policy.
-- Warehouse 360 and Trace Investigation should wait until at least one more
-  repository-backed route is proven beyond Quality and SPC chart-data.
+- Warehouse 360 and Trace Investigation should wait until a deliberate migration
+  plan addresses multi-query routes and UAT scope.

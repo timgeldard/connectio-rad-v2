@@ -13,12 +13,16 @@ import pytest
 
 from adapters.spc.spc_databricks_adapter import (
     MAX_SUBGROUPS,
+    SpcSubgroupsRepository,
     SubgroupsRequest,
     get_spc_subgroups_spec,
     map_spc_subgroup_rows,
 )
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.errors import DatabricksConfigError
+from shared.query_service.identity import UserIdentity
+from shared.query_service.object_resolver import resolve_domain_object
+from shared.query_service.query_executor import DatabricksRepository
 
 
 def _request(**kwargs) -> SubgroupsRequest:
@@ -303,6 +307,93 @@ class TestMapSpcSubgroupRows:
         for p in result["points"]:
             assert "status" not in p
             assert "inControl" not in p
+
+
+# ---------------------------------------------------------------------------
+# SpcSubgroupsRepository
+# ---------------------------------------------------------------------------
+
+
+class _FakeExecutor:
+    def __init__(self, rows: list[dict] | None = None, error: Exception | None = None) -> None:
+        self.rows = rows or []
+        self.error = error
+        self.sql_seen: str | None = None
+
+    async def execute(self, spec, identity):
+        self.sql_seen = spec.sql
+        if self.error:
+            raise self.error
+        return self.rows
+
+
+@pytest.fixture(autouse=True)
+def _catalog_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "DATABRICKS_ALLOWED_CATALOGS",
+        "override_catalog,connected_plant_uat,allowed_catalog",
+    )
+
+
+class TestSpcSubgroupsRepository:
+    async def test_fetch_subgroups_executes_spec(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SPC_CATALOG", "repo_catalog")
+        monkeypatch.setenv("SPC_SCHEMA", "gold")
+        executor = _FakeExecutor(rows=[_ph_row()])
+        repository = SpcSubgroupsRepository(
+            DatabricksRepository(
+                executor=executor,  # type: ignore[arg-type]
+                identity=UserIdentity(user_id="u001", raw_oauth_token="tok"),
+            )
+        )
+        rows, spec = await repository.fetch_subgroups(_request())
+        assert len(rows) == 1
+        assert spec.name == "spc.get_subgroups"
+        assert "`repo_catalog`.`gold`.`spc_quality_metric_subgroup_mv`" in executor.sql_seen
+
+    async def test_catalog_override_applied_without_leaking(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SPC_CATALOG", "env_catalog")
+        monkeypatch.setenv("SPC_SCHEMA", "gold")
+        executor = _FakeExecutor(rows=[])
+        repository = SpcSubgroupsRepository(
+            DatabricksRepository(
+                executor=executor,  # type: ignore[arg-type]
+                identity=UserIdentity(
+                    user_id="u001",
+                    raw_oauth_token="tok",
+                    catalog_target="override_catalog",
+                ),
+            )
+        )
+        await repository.fetch_subgroups(_request())
+        assert "`override_catalog`.`gold`.`spc_quality_metric_subgroup_mv`" in executor.sql_seen
+        assert "`env_catalog`.`gold`.`spc_quality_metric_subgroup_mv`" in resolve_domain_object(
+            "spc",
+            "spc_quality_metric_subgroup_mv",
+        )
+
+    async def test_catalog_override_resets_after_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SPC_CATALOG", "env_catalog")
+        monkeypatch.setenv("SPC_SCHEMA", "gold")
+        executor = _FakeExecutor(error=RuntimeError("query failed"))
+        repository = SpcSubgroupsRepository(
+            DatabricksRepository(
+                executor=executor,  # type: ignore[arg-type]
+                identity=UserIdentity(
+                    user_id="u001",
+                    raw_oauth_token="tok",
+                    catalog_target="override_catalog",
+                ),
+            )
+        )
+        with pytest.raises(RuntimeError, match="query failed"):
+            await repository.fetch_subgroups(_request())
+        assert "`env_catalog`.`gold`.`spc_quality_metric_subgroup_mv`" in resolve_domain_object(
+            "spc",
+            "spc_quality_metric_subgroup_mv",
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -28,13 +28,14 @@ yet fully represented as first-class Nx project boundaries.
 
 ## High-Priority Next Workstreams
 
-- Quality usage-decision pilot (`POST /api/quality/read-only-evidence`) — complete.
-- SPC chart-data (`POST /api/spc/chart-data`) — migrated to `SpcChartDataRepository`.
+- Quality usage-decision (`POST /api/quality/read-only-evidence`) — complete.
+- SPC chart-data (`POST /api/spc/chart-data`) — complete.
+- SPC subgroups (`GET /api/spc/subgroups`) — complete.
 - `DatabricksHttpClientPool` app lifecycle — complete.
 - `DATABRICKS_ALLOWED_CATALOGS` catalog override allowlist — complete.
-- TODO: Migrate additional small read-only adapters to `DatabricksRepository`
-  incrementally, with timeout, rate limit, permission, auth, and config error
-  tests for each migrated group.
+- `max_attempts` retry semantics (default 3 total attempts) — complete.
+- TODO: Migrate additional read-only adapters incrementally where routes remain on
+  `run_query`, with full repository error/header tests per domain.
 - TODO: Define an ADR before implementing evidence-route caching. Caching must
   be tied to freshness policy, cache hit/miss/age must be visible in headers,
   stale cached evidence must not appear live, and decision-sensitive evidence

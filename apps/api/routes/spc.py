@@ -32,8 +32,8 @@ from pydantic import BaseModel
 
 from adapters.spc.spc_databricks_adapter import (
     MAX_SUBGROUPS,
+    SpcSubgroupsRepository,
     SubgroupsRequest,
-    get_spc_subgroups_spec,
     map_spc_subgroup_rows,
 )
 from contracts.generated import SPCSubgroupResponse
@@ -49,7 +49,6 @@ from routes._databricks import (
     build_databricks_repository,
     build_user_identity,
     require_databricks_config,
-    run_query,
     run_repository_fetch,
     set_databricks_response_headers,
 )
@@ -312,6 +311,7 @@ async def spc_subgroups(
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
     x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
 ) -> SPCSubgroupResponse:
     """SPC subgroup chart data — databricks-api mode only (slice 1, 2026-05-22).
 
@@ -353,7 +353,12 @@ async def spc_subgroups(
     clamped_limit = max(1, min(limit, MAX_SUBGROUPS))
 
     host, warehouse_id = require_databricks_config()
-    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    identity = build_user_identity(
+        x_forwarded_access_token,
+        x_forwarded_user,
+        x_forwarded_email,
+        x_databricks_catalog,
+    )
 
     request = SubgroupsRequest(
         material_id=material_id,
@@ -365,7 +370,12 @@ async def spc_subgroups(
         limit=clamped_limit,
     )
 
-    rows, spec = await run_query(lambda: get_spc_subgroups_spec(request), identity, host, warehouse_id)
+    subgroups_repository = SpcSubgroupsRepository(
+        build_databricks_repository(identity, host, warehouse_id)
+    )
+    rows, spec = await run_repository_fetch(
+        lambda: subgroups_repository.fetch_subgroups(request)
+    )
     set_databricks_response_headers(response, spec)
 
     result = map_spc_subgroup_rows(rows, request)
