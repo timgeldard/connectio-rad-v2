@@ -485,19 +485,28 @@ function StockBreakdown({ stock }: { stock: PassportStock }) {
 }
 
 function ProductionContext({ production, isExternal }: { production: PassportProduction; isExternal: boolean }) {
+  const formatOptional = (value: string | null | undefined) => value ?? 'Unavailable'
+  const formatOptionalDate = (value: string | null | undefined) =>
+    value ? new Date(value).toLocaleString() : 'Unavailable'
+  const plannedQty = production.plannedQty != null
+    ? production.plannedQty.toLocaleString()
+    : 'Unavailable'
+  const yieldPct = production.yield != null
+    ? `${(production.yield * 100).toFixed(1)}%`
+    : 'Unavailable'
   const rows: { label: string; value: string; mono?: boolean }[] = [
     { label: 'Order', value: isExternal ? '[masked]' : production.orderId, mono: !isExternal },
-    { label: 'Line', value: isExternal ? '[masked]' : production.line },
-    { label: 'Operator', value: isExternal ? '[masked]' : production.operator },
-    { label: 'Started', value: new Date(production.startedAt).toLocaleString(), mono: true },
-    { label: 'Confirmed', value: new Date(production.confirmedAt).toLocaleString(), mono: true },
+    { label: 'Line', value: isExternal ? '[masked]' : formatOptional(production.line) },
+    { label: 'Operator', value: isExternal ? '[masked]' : formatOptional(production.operator) },
+    { label: 'Started', value: formatOptionalDate(production.startedAt), mono: true },
+    { label: 'Confirmed', value: formatOptionalDate(production.confirmedAt), mono: true },
     {
       label: 'Planned · Actual',
-      value: `${production.plannedQty.toLocaleString()} · ${production.actualQty.toLocaleString()} KG`,
+      value: `${plannedQty} · ${production.actualQty.toLocaleString()} KG`,
       mono: true,
     },
-    { label: 'Yield', value: `${(production.yield * 100).toFixed(1)}%` },
-    { label: 'Originating customer', value: production.originatingCustomer },
+    { label: 'Yield', value: yieldPct },
+    { label: 'Originating customer', value: formatOptional(production.originatingCustomer) },
   ]
   return (
     <div style={{ padding: 16, background: 'var(--shell-surface-2, #F8F7F0)', borderRadius: 8, border: '1px solid var(--shell-line, #E5E3D7)' }}>

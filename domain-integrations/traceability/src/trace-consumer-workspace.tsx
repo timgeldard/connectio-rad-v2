@@ -5,7 +5,6 @@ import { TimelinePanel } from './trace-app/TimelinePanel.js'
 import { RecallPanel } from './trace-app/RecallPanel.js'
 import { QualityPassportPanel } from './trace-app/QualityPassportPanel.js'
 import { buildTraceGenieReply } from './panels/trace-genie-pilot-engine.js'
-import { UAT_CANDIDATE } from './constants.js'
 
 interface ResolvedRequest {
   readonly materialId: string
