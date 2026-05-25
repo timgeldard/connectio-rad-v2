@@ -153,3 +153,39 @@ async def test_cache_key_isolation_by_catalog(monkeypatch):
     repo2 = DatabricksRepository(executor=executor, identity=_identity(catalog="other_catalog"))
     _, spec2 = await repo2.fetch(lambda: _spec(CacheTier.PER_USER_60S), lambda r: r)
     assert spec2.cache_status == "MISS"
+
+
+@pytest.mark.asyncio
+async def test_cache_store_graceful_degradation(monkeypatch):
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    # Mock CacheStore to throw exceptions
+    mock_store = AsyncMock()
+    mock_store.get.side_effect = Exception("Redis connection refused")
+    mock_store.set.side_effect = Exception("Redis connection refused")
+
+    with patch("shared.query_service.cache.get_cache_store", return_value=mock_store):
+        executor = _MockExecutor([{"result": 42}])
+        repo = DatabricksRepository(executor=executor, identity=_identity())
+
+        # fetch should still succeed even though CacheStore threw an exception during get
+        res, spec = await repo.fetch(lambda: _spec(CacheTier.PER_USER_60S), lambda r: r)
+        assert res == [{"result": 42}]
+        assert executor.call_count == 1
+        assert spec.cache_status == "BYPASS"
+
+        # Now mock get to succeed but set to fail
+        mock_store2 = AsyncMock()
+        mock_store2.get.return_value = None
+        mock_store2.set.side_effect = Exception("Redis write failed")
+
+        with patch("shared.query_service.cache.get_cache_store", return_value=mock_store2):
+            executor2 = _MockExecutor([{"result": 100}])
+            repo2 = DatabricksRepository(executor=executor2, identity=_identity())
+
+            res2, spec2 = await repo2.fetch(lambda: _spec(CacheTier.PER_USER_60S), lambda r: r)
+            assert res2 == [{"result": 100}]
+            assert executor2.call_count == 1
+            assert spec2.cache_status == "BYPASS"
+

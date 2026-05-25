@@ -180,20 +180,25 @@ class DatabricksRepository:
         ttl = self._get_ttl_for_policy(spec.cache_policy)
         cache_enabled = os.getenv("ENABLE_QUERY_CACHE", "false").lower() == "true"
 
-
+        entry = None
         if not cache_enabled:
             spec.cache_status = "DISABLED"
         elif spec.cache_policy == CacheTier.NONE or ttl <= 0:
             spec.cache_status = "BYPASS"
         else:
-            cache_key = self._build_cache_key(spec)
-            entry = await cache_store.get(cache_key)
+            try:
+                cache_key = self._build_cache_key(spec)
+                entry = await cache_store.get(cache_key)
+            except Exception as exc:
+                _log.error("Cache store get error (graceful degradation applied): %s", exc)
+                spec.cache_status = "BYPASS"
+
             if entry is not None:
                 spec.cache_status = "HIT"
                 spec.cache_age_seconds = int(time.time() - entry.cached_at)
                 spec.cache_ttl_seconds = entry.ttl
                 return mapper(entry.data), spec
-            else:
+            elif spec.cache_status != "BYPASS":
                 spec.cache_status = "MISS"
 
         last_retryable_error: Exception | None = None
@@ -217,10 +222,16 @@ class DatabricksRepository:
 
                     # Cache the raw rows on a successful MISS
                     if cache_enabled and spec.cache_status == "MISS":
-                        cache_key = self._build_cache_key(current_spec)
-                        await cache_store.set(cache_key, rows, ttl)
-                        current_spec.cache_age_seconds = 0
-                        current_spec.cache_ttl_seconds = ttl
+                        try:
+                            cache_key = self._build_cache_key(current_spec)
+                            await cache_store.set(cache_key, rows, ttl)
+                            current_spec.cache_age_seconds = 0
+                            current_spec.cache_ttl_seconds = ttl
+                        except Exception as exc:
+                            _log.error("Cache store set error (graceful degradation applied): %s", exc)
+                            current_spec.cache_status = "BYPASS"
+                            current_spec.cache_age_seconds = None
+                            current_spec.cache_ttl_seconds = None
 
                     return mapper(rows), current_spec
                 except RETRYABLE_ERRORS as exc:
