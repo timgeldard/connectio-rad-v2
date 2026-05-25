@@ -189,3 +189,177 @@ async def test_cache_store_graceful_degradation(monkeypatch):
             assert executor2.call_count == 1
             assert spec2.cache_status == "BYPASS"
 
+
+@pytest.mark.asyncio
+async def test_query_spec_default_cache_policy():
+    # A test proving a new QuerySpec defaults to CacheTier.NONE.
+    spec = QuerySpec(
+        name="test.default",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+    )
+    assert spec.cache_policy == CacheTier.NONE
+
+
+@pytest.mark.asyncio
+async def test_repository_cache_none_default_bypass(monkeypatch):
+    # A repository/cache test proving default NONE results in BYPASS when ENABLE_QUERY_CACHE=true.
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    executor = _MockExecutor([{"result": 1}])
+    repo = DatabricksRepository(executor=executor, identity=_identity())
+
+    spec_factory = lambda: QuerySpec(
+        name="test.default_none",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+    )
+    res, spec = await repo.fetch(spec_factory, lambda r: r)
+    assert spec.cache_status == "BYPASS"
+
+
+@pytest.mark.asyncio
+async def test_explicit_global_300s_caching(monkeypatch):
+    # A test proving explicitly configured GLOBAL_300S can still MISS then HIT.
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    executor = _MockExecutor([{"result": 99}])
+    repo = DatabricksRepository(executor=executor, identity=_identity())
+
+    spec_factory = lambda: QuerySpec(
+        name="test.explicit_global",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+        cache_policy=CacheTier.GLOBAL_300S,
+    )
+    # MISS
+    res1, spec1 = await repo.fetch(spec_factory, lambda r: r)
+    assert spec1.cache_status == "MISS"
+    assert executor.call_count == 1
+
+    # HIT
+    res2, spec2 = await repo.fetch(spec_factory, lambda r: r)
+    assert spec2.cache_status == "HIT"
+    assert executor.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_cache_key_isolation_by_overrides(monkeypatch):
+    # A cache key isolation test proving different catalog_override/schema_override values do not share cache entries.
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    executor = _MockExecutor([{"result": 1}])
+    repo = DatabricksRepository(executor=executor, identity=_identity())
+
+    # Spec 1: catalog_override="cat1", schema_override="sch1"
+    spec_f1 = lambda: QuerySpec(
+        name="test.override",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+        cache_policy=CacheTier.GLOBAL_300S,
+        catalog_override="cat1",
+        schema_override="sch1",
+    )
+    _, spec1 = await repo.fetch(spec_f1, lambda r: r)
+    assert spec1.cache_status == "MISS"
+
+    # Spec 2: catalog_override="cat2", schema_override="sch1" -> should MISS
+    spec_f2 = lambda: QuerySpec(
+        name="test.override",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+        cache_policy=CacheTier.GLOBAL_300S,
+        catalog_override="cat2",
+        schema_override="sch1",
+    )
+    _, spec2 = await repo.fetch(spec_f2, lambda r: r)
+    assert spec2.cache_status == "MISS"
+
+    # Spec 3: catalog_override="cat1", schema_override="sch2" -> should MISS
+    spec_f3 = lambda: QuerySpec(
+        name="test.override",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+        cache_policy=CacheTier.GLOBAL_300S,
+        catalog_override="cat1",
+        schema_override="sch2",
+    )
+    _, spec3 = await repo.fetch(spec_f3, lambda r: r)
+    assert spec3.cache_status == "MISS"
+
+
+@pytest.mark.asyncio
+async def test_cache_key_isolation_by_sql_fingerprint(monkeypatch):
+    # A cache key isolation test proving query SQL/spec fingerprint changes do not share cache entries.
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    executor = _MockExecutor([{"result": 1}])
+    repo = DatabricksRepository(executor=executor, identity=_identity())
+
+    # SQL 1
+    spec_f1 = lambda: QuerySpec(
+        name="test.fingerprint",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 1",
+        cache_policy=CacheTier.GLOBAL_300S,
+    )
+    _, spec1 = await repo.fetch(spec_f1, lambda r: r)
+    assert spec1.cache_status == "MISS"
+
+    # SQL 2 (fingerprint changes) -> should MISS
+    spec_f2 = lambda: QuerySpec(
+        name="test.fingerprint",
+        module="test",
+        endpoint="/api/test",
+        sql="SELECT 2",
+        cache_policy=CacheTier.GLOBAL_300S,
+    )
+    _, spec2 = await repo.fetch(spec_f2, lambda r: r)
+    assert spec2.cache_status == "MISS"
+
+
+@pytest.mark.asyncio
+async def test_disallowed_catalog_target_not_served_from_cache(monkeypatch):
+    """ADR-027 §7 "No Silent Masking": a request with a catalog target that
+    is no longer on the allow-list must NOT be answered from cache, even
+    if a previously-allowed identical request populated an entry."""
+    from shared.query_service.errors import DatabricksCatalogTargetError
+
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    # Allow-list starts permissive enough to populate the cache.
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog,other_catalog")
+
+    executor = _MockExecutor([{"result": 42}])
+    repo = DatabricksRepository(
+        executor=executor,
+        identity=_identity(catalog="other_catalog"),
+    )
+    spec_factory = lambda: _spec(CacheTier.GLOBAL_300S)
+
+    # Populate the cache as `other_catalog`.
+    _, spec1 = await repo.fetch(spec_factory, lambda r: r)
+    assert spec1.cache_status == "MISS"
+
+    # Tighten the allow-list — `other_catalog` is now rejected.
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+
+    # A subsequent fetch using the now-disallowed catalog MUST raise the
+    # catalog-target error rather than answer from the cache that was
+    # populated when the policy was looser.
+    with pytest.raises(DatabricksCatalogTargetError):
+        await repo.fetch(spec_factory, lambda r: r)
+
+    # The executor must not have been invoked a second time — the request
+    # was rejected before any work happened.
+    assert executor.call_count == 1
