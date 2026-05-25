@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { WarehouseReconciliationException } from '@connectio/data-contracts'
-import { useWarehouseExceptions } from '../adapters/warehouse-360-queries.js'
-import type { Warehouse360AdapterRequest } from '../adapters/warehouse-360-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'warehouse-reconciliation-exceptions',
@@ -43,11 +42,14 @@ const RESOLUTION_COLOR: Record<WarehouseReconciliationException['resolution'], s
 }
 
 export interface WarehouseReconciliationExceptionsPanelProps {
-  readonly request: Warehouse360AdapterRequest
+  readonly result?: AdapterResult<WarehouseReconciliationException[]>
+  readonly isLoading?: boolean
 }
 
-export function WarehouseReconciliationExceptionsPanel({ request }: WarehouseReconciliationExceptionsPanelProps) {
-  const { data: result, isLoading } = useWarehouseExceptions(request)
+export function WarehouseReconciliationExceptionsPanel({
+  result,
+  isLoading = false,
+}: WarehouseReconciliationExceptionsPanelProps) {
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { CustomerExposureSummary } from '@connectio/data-contracts'
-import { useCustomerExposureSummary } from '../adapters/trace2-queries.js'
-import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'customer-exposure-network',
@@ -32,7 +31,8 @@ const registration: EvidencePanelRegistration = {
 }
 
 export interface CustomerExposureNetworkPanelProps {
-  readonly request: Trace2AdapterRequest
+  readonly result?: AdapterResult<CustomerExposureSummary>
+  readonly isLoading?: boolean
 }
 
 type Severity = CustomerExposureSummary['highestSeverity']
@@ -98,8 +98,10 @@ function MetricTile({ label, value }: { label: string; value: string | number })
   )
 }
 
-export function CustomerExposureNetworkPanel({ request }: CustomerExposureNetworkPanelProps) {
-  const { data: result, isLoading } = useCustomerExposureSummary(request)
+export function CustomerExposureNetworkPanel({
+  result,
+  isLoading = false,
+}: CustomerExposureNetworkPanelProps) {
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

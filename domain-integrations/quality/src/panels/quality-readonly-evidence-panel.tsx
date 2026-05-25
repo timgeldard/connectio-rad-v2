@@ -11,8 +11,7 @@ import type {
   QualityMicResultEvidence,
   QualityCoaResultEvidence,
 } from '@connectio/data-contracts'
-import { useQualityReadOnlyEvidence } from '../adapters/quality-readonly-evidence-queries.js'
-import type { QualityReadOnlyEvidenceAdapterRequest } from '../adapters/quality-readonly-evidence-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 import { buildUsageDecisionDisplay } from '../lib/usage-decision-display.js'
 import { UnknownValue } from '@connectio/design-system'
 
@@ -37,15 +36,18 @@ const registration: EvidencePanelRegistration = {
 }
 
 export interface QualityReadOnlyEvidencePanelProps {
-  readonly request: QualityReadOnlyEvidenceAdapterRequest
+  readonly result?: AdapterResult<QualityEvidenceResponse>
+  readonly isLoading?: boolean
 }
 
 function formatStatusLabel(value: string) {
   return value.replace(/-/g, ' ')
 }
 
-export function QualityReadOnlyEvidencePanel({ request }: QualityReadOnlyEvidencePanelProps) {
-  const { data: result, isLoading } = useQualityReadOnlyEvidence(request)
+export function QualityReadOnlyEvidencePanel({
+  result,
+  isLoading = false,
+}: QualityReadOnlyEvidencePanelProps) {
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { BatchHeaderSummary } from '@connectio/data-contracts'
-import { useBatchHeaderSummary } from '../adapters/trace2-queries.js'
-import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'batch-header-network',
@@ -39,7 +38,8 @@ export interface StockBucket {
 }
 
 export interface BatchHeaderNetworkPanelProps {
-  readonly request: Trace2AdapterRequest
+  readonly result?: AdapterResult<BatchHeaderSummary>
+  readonly isLoading?: boolean
   readonly onStockBucketClick?: (bucket: StockBucket) => void
 }
 
@@ -174,10 +174,10 @@ function StockBucketRow({
 }
 
 export function BatchHeaderNetworkPanel({
-  request,
+  result,
+  isLoading = false,
   onStockBucketClick,
 }: BatchHeaderNetworkPanelProps) {
-  const { data: result, isLoading } = useBatchHeaderSummary(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { ProcessOrderConfirmation } from '@connectio/data-contracts'
-import { useOrderConfirmations } from '../adapters/process-order-review-queries.js'
-import type { ProcessOrderReviewAdapterRequest } from '../adapters/process-order-review-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'order-confirmations',
@@ -28,7 +27,8 @@ const registration: EvidencePanelRegistration = {
 }
 
 export interface OrderConfirmationsPanelProps {
-  readonly request: ProcessOrderReviewAdapterRequest
+  readonly result?: AdapterResult<ProcessOrderConfirmation[]>
+  readonly isLoading?: boolean
 }
 
 function varianceLabel(pct: number | undefined): string | null {
@@ -44,8 +44,10 @@ function varianceColor(pct: number | undefined): string {
   return '#D32F2F'
 }
 
-export function OrderConfirmationsPanel({ request }: OrderConfirmationsPanelProps) {
-  const { data: result, isLoading } = useOrderConfirmations(request)
+export function OrderConfirmationsPanel({
+  result,
+  isLoading = false,
+}: OrderConfirmationsPanelProps) {
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

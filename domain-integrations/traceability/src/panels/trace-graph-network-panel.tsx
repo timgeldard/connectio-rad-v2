@@ -3,8 +3,7 @@ import * as d3 from 'd3'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { TraceGraph, TraceNode } from '@connectio/data-contracts'
-import { useTraceGraph } from '../adapters/trace2-queries.js'
-import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import type { AdapterResult } from '@connectio/source-adapters'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'trace-graph-network',
@@ -35,7 +34,8 @@ const registration: EvidencePanelRegistration = {
 export type RiskFilter = 'all' | 'critical' | 'high' | 'medium' | 'low'
 
 export interface TraceGraphNetworkPanelProps {
-  readonly request: Trace2AdapterRequest
+  readonly result?: AdapterResult<TraceGraph>
+  readonly isLoading?: boolean
   readonly riskFilter?: RiskFilter
   readonly onNodeClick?: (node: TraceNode) => void
 }
@@ -85,11 +85,11 @@ interface SimEdge {
 }
 
 export function TraceGraphNetworkPanel({
-  request,
+  result,
+  isLoading = false,
   riskFilter = 'all',
   onNodeClick,
 }: TraceGraphNetworkPanelProps) {
-  const { data: result, isLoading } = useTraceGraph(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
     panelId: registration.panelId,

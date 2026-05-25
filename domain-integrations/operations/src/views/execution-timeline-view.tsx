@@ -5,6 +5,7 @@ import { OrderOperationsPanel } from '../panels/order-operations-panel.js'
 import { OrderConfirmationsPanel } from '../panels/order-confirmations-panel.js'
 import { ProcessOrderGoodsMovementsPanel } from '../panels/process-order-goods-movements-panel.js'
 import type { ProcessOrderReviewAdapterRequest } from '../adapters/process-order-review-adapter.js'
+import { useOrderConfirmations } from '../adapters/process-order-review-queries.js'
 
 const GRID: CSSProperties = {
   display: 'grid',
@@ -19,10 +20,15 @@ export interface ExecutionTimelineViewProps {
 }
 
 export function ExecutionTimelineView({ request }: ExecutionTimelineViewProps) {
+  const confirmationsQuery = useOrderConfirmations(request)
+
   return (
     <div style={GRID}>
       <OrderOperationsPanel request={request} />
-      <OrderConfirmationsPanel request={request} />
+      <OrderConfirmationsPanel
+        result={confirmationsQuery.data}
+        isLoading={confirmationsQuery.isLoading}
+      />
       <ProcessOrderGoodsMovementsPanel request={request} />
       <ExecutionTimelinePanel request={request} />
       <OrderProgressPanel request={request} />
