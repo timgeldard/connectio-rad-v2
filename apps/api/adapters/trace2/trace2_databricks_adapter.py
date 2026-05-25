@@ -26,6 +26,7 @@ file-skipping on the clustered (CHILD_MATERIAL_ID, CHILD_BATCH_ID) columns per h
 """
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass
 from typing import Optional
 
@@ -263,9 +264,9 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
     if row.get("uom"):
         result["uom"] = row["uom"]
     if row.get("manufacture_date"):
-        result["manufactureDate"] = row["manufacture_date"]
+        result["manufactureDate"] = _date_to_utc(row["manufacture_date"])
     if row.get("expiry_date"):
-        result["expiryDate"] = row["expiry_date"]
+        result["expiryDate"] = _date_to_utc(row["expiry_date"])
     if row.get("process_order_id"):
         result["processOrderId"] = row["process_order_id"]
 
@@ -1403,6 +1404,15 @@ def _derive_release_status(raw: Optional[str]) -> str:
     if raw is None:
         return "unknown"
     return _RELEASE_STATUS_MAP.get(str(raw).upper().strip(), "unknown")
+
+
+def _date_to_utc(v: object) -> str:
+    if isinstance(v, datetime.datetime):
+        return (v.replace(tzinfo=datetime.timezone.utc) if v.tzinfo is None else v).isoformat()
+    if isinstance(v, datetime.date):
+        return f"{v.isoformat()}T00:00:00Z"
+    s = str(v)
+    return s if len(s) > 10 else f"{s}T00:00:00Z"
 
 
 # ---------------------------------------------------------------------------

@@ -86,7 +86,10 @@
           "description": "[classification: source-field]"
         },
         "processOrderId": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "unrestricted": {
@@ -6486,7 +6489,10 @@
       "type": "object",
       "properties": {
         "processOrderId": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "batchId": {
@@ -6565,7 +6571,10 @@
             "type": "object",
             "properties": {
               "processOrderId": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "[classification: source-field]"
               },
               "batchId": {
@@ -12173,7 +12182,10 @@
           "description": "[classification: source-field]"
         },
         "processOrderId": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "[classification: source-field]"
         },
         "materialDocumentNumber": {
@@ -12577,7 +12589,10 @@
                 "description": "[classification: source-field]"
               },
               "processOrderId": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "[classification: source-field]"
               },
               "materialDocumentNumber": {
