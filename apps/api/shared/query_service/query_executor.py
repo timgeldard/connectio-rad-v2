@@ -136,7 +136,10 @@ class DatabricksRepository:
             spec.endpoint,
             params_str,
             self.identity.catalog_target or "default",
+            spec.catalog_override or "none",
+            spec.schema_override or "none",
             "databricks-api",  # adapter mode
+            hashlib.sha256((spec.sql or "").encode("utf-8")).hexdigest(), # SQL/spec fingerprint
         ]
 
         if spec.cache_policy == CacheTier.PER_USER_60S:

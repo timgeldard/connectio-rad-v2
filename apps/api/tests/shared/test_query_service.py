@@ -105,7 +105,7 @@ class TestQuerySpec:
 
     def test_default_cache_policy(self) -> None:
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
-        assert spec.cache_policy == CacheTier.GLOBAL_300S
+        assert spec.cache_policy == CacheTier.NONE
 
     def test_default_source_badge(self) -> None:
         spec = QuerySpec(name="x", module="x", endpoint="/x", sql="SELECT 1")
@@ -276,7 +276,7 @@ class TestQueryExecutor:
         assert tags["user_id"] == "user42"
         assert tags["poh"] == "true"
         assert tags["header"] == "true"
-        assert tags["cache_policy"] == "global_300s"
+        assert tags["cache_policy"] == "none"
         assert tags["source_badge"] == "databricks-api"
 
     async def test_does_not_read_service_principal_env_vars(self, monkeypatch) -> None:
