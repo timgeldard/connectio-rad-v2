@@ -30,6 +30,14 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - run: npm ci
 
       - name: Derive Nx affected range
@@ -44,6 +52,25 @@ jobs:
       # Prepend any command with "nx record --" to record its logs to Nx Cloud
       - run: npx nx record -- npx nx format:check --base="$NX_BASE"
       - run: npx nx affected -t lint test build typecheck e2e-ci --base="$NX_BASE" --head="$NX_HEAD"
+
+      # Backend and generated-contract checks run explicitly because Python
+      # routes, Databricks adapter code, and generated Pydantic models are not
+      # fully protected by the Nx affected project graph.
+      - name: Backend import smoke
+        run: uv run --project apps/api python -c "from main import app"
+
+      - name: Backend pytest
+        run: uv run --project apps/api pytest apps/api/tests
+
+      - name: Data contracts test
+        run: npx nx test data-contracts
+
+      - name: Data contracts typecheck
+        run: npx nx typecheck data-contracts
+
+      - name: Generated contract drift check
+        run: npx nx run data-contracts:check-pydantic
+
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: npx nx fix-ci
         if: always()
