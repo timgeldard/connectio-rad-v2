@@ -2,6 +2,10 @@
 
 No route should be added solely because a UI screen needs data. A route exposes a governed data product.
 
+> [!NOTE]
+> While backend routes are governed strictly by data-product specs, frontend features are structured to progress iteratively. See the [Consumer-Grade App Direction](../product-operating-model/consumer-grade-app-direction.md) for details on the two-axis operating model.
+
+
 ## Required Before Route Implementation
 
 Before writing the FastAPI route or Databricks adapter query, the following must be documented:
