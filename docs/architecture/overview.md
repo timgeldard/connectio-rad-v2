@@ -212,3 +212,4 @@ fallbacks in the repo.
 | ADR-009 | Phase 5 pilot workspace strategy                                                  |
 | ADR-023 | Rollout wave model and legacy retirement                                          |
 | ADR-026 | Cross-domain workspace context runtime                                            |
+| ADR-027 | Evidence route cache and freshness policy                                         |

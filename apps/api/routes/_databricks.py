@@ -57,6 +57,15 @@ def set_databricks_response_headers(response: Response, spec: QuerySpec) -> None
     response.headers["X-Data-Source"] = spec.source_badge
     response.headers["X-Adapter-Mode"] = "databricks-api"
     response.headers["X-Query-Name"] = spec.name
+    if spec.cache_status:
+        response.headers["X-Cache-Status"] = spec.cache_status
+    if spec.cache_age_seconds is not None:
+        response.headers["X-Cache-Age-Seconds"] = str(spec.cache_age_seconds)
+    if spec.cache_ttl_seconds is not None:
+        response.headers["X-Cache-TTL-Seconds"] = str(spec.cache_ttl_seconds)
+    if spec.cache_policy:
+        response.headers["X-Data-Freshness-Policy"] = spec.cache_policy.value
+
 
 
 def build_user_identity(

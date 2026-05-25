@@ -44,3 +44,9 @@ class QuerySpec:
     max_rows: int = 10_000
     timeout_seconds: int = 30
     tags: list[str] = field(default_factory=list)
+
+    # Cache execution metadata (populated at runtime by the repository/executor)
+    cache_status: Optional[str] = None
+    cache_age_seconds: Optional[int] = None
+    cache_ttl_seconds: Optional[int] = None
+
