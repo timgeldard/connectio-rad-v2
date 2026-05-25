@@ -1,0 +1,87 @@
+import type { ConsumerApplicationRegistration } from '@connectio/product-model'
+
+/**
+ * Registry of consumer-grade app experiences being assembled from design POCs.
+ *
+ * @remarks
+ * This is intentionally separate from `workspaceRegistry`: workspaces describe
+ * shell navigation, while this registry tracks the product/design consolidation
+ * path for Claude Design and other POC-origin applications.
+ */
+export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
+  {
+    appId: 'trace-consumer',
+    displayName: 'Batch Traceability',
+    primaryUser: 'Food Safety Lead',
+    jobToBeDone: 'Find a batch, understand lineage/exposure, and package evidence without navigating legacy Trace2 screens.',
+    designSource: 'claude-design',
+    assemblyMode: 'standalone-designed-app',
+    shellPresentation: 'fullscreen',
+    workspaceId: 'trace-consumer',
+    lifecycle: 'pilot',
+    appMaturity: 'A3',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'Surface mock/source mode wherever live data is not available.',
+      'Do not label recall or release decisions as governed recommendations.',
+      'Make unknown, unavailable, and not-evaluated states explicit.',
+    ],
+    designArtifacts: [
+      'docs/apps/trace-consumer/product-brief.md',
+      'docs/product-operating-model/design-drop-in-execution-plan.md',
+    ],
+  },
+  {
+    appId: 'warehouse-360-overview',
+    displayName: 'Warehouse 360 Cockpit',
+    primaryUser: 'Warehouse Supervisor',
+    jobToBeDone: 'See operational warehouse status, exceptions, and flow constraints in one cockpit experience.',
+    designSource: 'claude-design',
+    assemblyMode: 'standalone-designed-app',
+    shellPresentation: 'standard',
+    workspaceId: 'warehouse-360-overview',
+    lifecycle: 'pilot',
+    appMaturity: 'A3',
+    dataMaturity: 'D2',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'Differentiate source-backed values from unavailable or governance-pending values.',
+      'Do not imply all-clear from empty exception lists unless the source route confirms coverage.',
+    ],
+    designArtifacts: [
+      'domain-integrations/warehouse/src/views/warehouse-cockpit-view.tsx',
+      'docs/product-operating-model/design-drop-in-execution-plan.md',
+    ],
+  },
+  {
+    appId: 'spc-monitoring',
+    displayName: 'SPC Monitoring',
+    primaryUser: 'Quality Engineer',
+    jobToBeDone: 'Review process behaviour with interactive charts while keeping calculated limits and exclusions visibly caveated.',
+    designSource: 'claude-design',
+    assemblyMode: 'workspace-view',
+    shellPresentation: 'standard',
+    workspaceId: 'spc-monitoring',
+    lifecycle: 'pilot',
+    appMaturity: 'A4',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'Client-calculated control limits must not be presented as governed locked limits.',
+      'Manual exclusions are application state until a governed write-back path exists.',
+      'Not-evaluated signals must not be collapsed into in-control claims.',
+    ],
+    designArtifacts: [
+      'domain-integrations/spc/src/panels/control-chart-panel.tsx',
+      'domain-integrations/spc/src/components/interactive-control-chart.tsx',
+    ],
+  },
+]
+
+/** Resolve consumer-app metadata by mounted workspace id. */
+export function getConsumerAppForWorkspace(
+  workspaceId: string,
+): ConsumerApplicationRegistration | undefined {
+  return consumerAppRegistry.find(app => app.workspaceId === workspaceId)
+}

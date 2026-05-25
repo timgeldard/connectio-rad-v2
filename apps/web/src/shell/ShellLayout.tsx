@@ -3,6 +3,7 @@ import { GlobalHeader } from './GlobalHeader.js'
 import { ScopeBar } from './ScopeBar.js'
 import { MainBody } from './MainBody.js'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
+import { getConsumerAppForWorkspace } from '../registry/consumer-app-registry.js'
 
 /**
  * Root CSS grid shell for the ConnectIO unified interface.
@@ -18,6 +19,8 @@ import { useWorkspaceShellState } from './useWorkspaceShellState.js'
  */
 export function ShellLayout() {
   const { hasScope, workspaceId } = useWorkspaceShellState()
+  const consumerApp = workspaceId ? getConsumerAppForWorkspace(workspaceId) : undefined
+  const isFullscreenApp = consumerApp?.shellPresentation === 'fullscreen'
 
   return (
     <>
@@ -44,7 +47,7 @@ export function ShellLayout() {
         Skip to main content
       </a>
       <div
-        className={`connectio-shell${hasScope ? '' : ' no-scope'}${workspaceId === 'trace-consumer' ? ' fullscreen' : ''}`}
+        className={`connectio-shell${hasScope ? '' : ' no-scope'}${isFullscreenApp ? ' fullscreen' : ''}`}
         data-testid="workspace-shell"
       >
         <DomainSidebar />
