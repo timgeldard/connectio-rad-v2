@@ -1,4 +1,4 @@
-import { TraceInvestigationWorkspace, TraceAppWorkspace } from '@connectio/di-traceability'
+import { TraceInvestigationWorkspace, TraceAppWorkspace, TraceConsumerWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
@@ -50,6 +50,14 @@ export default function WorkspaceViews({ workspaceId }: Props) {
     return (
       <div className="connectio-page" data-testid="workspace-view-trace">
         <TraceAppWorkspace />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'trace-consumer') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-trace-consumer">
+        <TraceConsumerWorkspace />
       </div>
     )
   }

@@ -1,5 +1,5 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
-import { traceInvestigationRegistration, traceAppRegistration } from '@connectio/di-traceability'
+import { traceInvestigationRegistration, traceAppRegistration, traceConsumerRegistration } from '@connectio/di-traceability'
 import { batchReleaseRegistration } from '@connectio/di-quality'
 import { operationsPlanRiskRegistration } from '@connectio/di-operations'
 import { envmonRegistration } from '@connectio/di-envmon'
@@ -25,6 +25,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 5 — Trace App (search-driven standalone, pilot)
   traceAppRegistration,
+
+  // Consumer Grade Standalone Trace
+  traceConsumerRegistration,
 
   // Phase 2 — Quality Batch Release (cross-domain, fully implemented)
   batchReleaseRegistration,
