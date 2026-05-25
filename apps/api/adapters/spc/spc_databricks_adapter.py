@@ -1,7 +1,8 @@
 """SPC Databricks-api adapter — QuerySpec factories and row mappers.
 
 Implemented slices:
-  - get_spc_subgroups_spec / map_spc_subgroup_rows  (route wired in routes/spc.py)
+  - get_spc_subgroups_spec / map_spc_subgroup_rows / SpcSubgroupsRepository
+    (GET /api/spc/subgroups — DatabricksRepository)
 
 Column verification status (pp.txt, 2026-05-22 — UAT confirmed):
   spc_quality_metric_subgroup_mv (SPC_CATALOG / SPC_SCHEMA = "gold"):
@@ -59,6 +60,7 @@ from dataclasses import dataclass
 
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
+from shared.query_service.query_executor import DatabricksRepository
 from shared.query_service.query_spec import QuerySpec
 
 # Maximum subgroups returnable per request — prevents broad scans of the 73M-row MV.
@@ -66,6 +68,26 @@ from shared.query_service.query_spec import QuerySpec
 MAX_SUBGROUPS = 200
 
 _SPC_MV = "spc_quality_metric_subgroup_mv"
+
+
+class SpcSubgroupsRepository:
+    """Repository wrapper for read-only GET /api/spc/subgroups.
+
+    The route owns query-parameter validation and ``map_spc_subgroup_rows``
+    assembly. This class owns QuerySpec creation and repository execution.
+    """
+
+    def __init__(self, repository: DatabricksRepository) -> None:
+        self._repository = repository
+
+    async def fetch_subgroups(
+        self,
+        request: SubgroupsRequest,
+    ) -> tuple[list[dict], QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_spc_subgroups_spec(request),
+            mapper=lambda rows: rows,
+        )
 
 
 @dataclass
@@ -137,6 +159,7 @@ def get_spc_subgroups_spec(request: SubgroupsRequest) -> QuerySpec:
             "date_to": request.date_to,
         },
         cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:spc_quality_metric_subgroup_mv",
         tags=["spc", "subgroups", "chart-data"],
     )
 

@@ -16,6 +16,11 @@ import pytest
 from httpx import ASGITransport
 
 from main import app
+from shared.query_service.errors import (
+    DatabricksQueryTimeoutError,
+    DatabricksRateLimitError,
+    DatabricksWarehouseConfigError,
+)
 
 
 def _make_client() -> httpx.AsyncClient:
@@ -38,6 +43,17 @@ _SUBGROUPS_URL = (
     "&date_to=2025-12-31"
     "&limit=10"
 )
+
+
+def _databricks_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+    monkeypatch.setenv("DATABRICKS_HOST", "test.databricks.com")
+    monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh-test")
+    monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+    monkeypatch.setenv("TRACE_SCHEMA", "gold")
+    monkeypatch.setenv("SPC_CATALOG", "connected_plant_uat")
+    monkeypatch.setenv("SPC_SCHEMA", "gold")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog,connected_plant_uat")
 
 _FAKE_SUBGROUP_ROW = {
     "batch_id": "B0001",
@@ -478,15 +494,17 @@ class TestSpcSubgroupsResponseShape:
         for p in response.json()["points"]:
             assert "status" not in p
 
-    async def test_sets_x_query_name_header(self, monkeypatch) -> None:
+    async def test_sets_standard_databricks_response_headers(self, monkeypatch) -> None:
         self._databricks_env(monkeypatch)
         with patch(
-            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            "shared.query_service.query_executor.QueryExecutor.execute",
             new_callable=AsyncMock,
             return_value=[_FAKE_SUBGROUP_ROW],
         ):
             async with _make_client() as client:
                 response = await client.get(_SUBGROUPS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.headers.get("x-data-source") == "view:spc_quality_metric_subgroup_mv"
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
         assert response.headers.get("x-query-name") == "spc.get_subgroups"
 
     async def test_response_model_schema_registered(self) -> None:
@@ -677,3 +695,100 @@ class TestSpcSubgroupsParameterValidation:
                 await client.get(url, headers=_HEADERS_WITH_TOKEN)
 
         assert called == []
+
+
+class TestSpcSubgroupsRepositoryBacked:
+    async def test_unknown_catalog_override_returns_400_without_execute(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+        ) as execute:
+            async with _make_client() as client:
+                response = await client.get(
+                    _SUBGROUPS_URL,
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "bad_catalog",
+                    },
+                )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Unsupported Databricks catalog target"
+        execute.assert_not_awaited()
+
+    async def test_blank_catalog_header_treated_as_no_override(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+            return_value=[_FAKE_SUBGROUP_ROW],
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SUBGROUPS_URL,
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "   ",
+                    },
+                )
+        assert response.status_code == 200
+
+    async def test_allowlisted_catalog_override_applied_to_sql(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+        captured_sql: list[str] = []
+
+        async def capture_execute(spec, identity):
+            captured_sql.append(spec.sql)
+            return []
+
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            side_effect=capture_execute,
+        ):
+            async with _make_client() as client:
+                response = await client.get(
+                    _SUBGROUPS_URL,
+                    headers={
+                        **_HEADERS_WITH_TOKEN,
+                        "x-databricks-catalog": "allowed_catalog",
+                    },
+                )
+        assert response.status_code == 200
+        assert "`allowed_catalog`." in captured_sql[0]
+
+    async def test_warehouse_config_error_returns_503(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "shared.query_service.query_executor.QueryExecutor.execute",
+            new_callable=AsyncMock,
+            side_effect=DatabricksWarehouseConfigError("wh-missing"),
+        ):
+            async with _make_client() as client:
+                response = await client.get(_SUBGROUPS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == 503
+        assert "SQL Warehouse" in response.json()["detail"]
+
+    @pytest.mark.parametrize(
+        "error,expected_status",
+        [
+            (DatabricksQueryTimeoutError("spc.get_subgroups"), 504),
+            (DatabricksRateLimitError("spc.get_subgroups"), 429),
+        ],
+    )
+    async def test_retryable_errors_use_three_total_attempts(
+        self, monkeypatch, error, expected_status
+    ) -> None:
+        _databricks_env(monkeypatch)
+        with (
+            patch(
+                "shared.query_service.query_executor.QueryExecutor.execute",
+                new_callable=AsyncMock,
+            ) as execute,
+            patch("shared.query_service.query_executor.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            execute.side_effect = error
+            async with _make_client() as client:
+                response = await client.get(_SUBGROUPS_URL, headers=_HEADERS_WITH_TOKEN)
+        assert response.status_code == expected_status
+        assert execute.await_count == 3
