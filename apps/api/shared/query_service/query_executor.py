@@ -130,7 +130,14 @@ class DatabricksRepository:
         normalized_params = sorted(spec.params.items())
         params_str = json.dumps(normalized_params, default=str)
 
-        # Scoping context components
+        # Scoping context components — every field that could change the
+        # rows returned for the same query name MUST be included so cache
+        # entries cannot be shared across boundaries (catalog overrides,
+        # schema overrides, SQL changes, adapter mode, identity for
+        # PER_USER tiers).
+        sql_fingerprint = hashlib.sha256(
+            (spec.sql or "").encode("utf-8")
+        ).hexdigest()
         components = [
             spec.name,
             spec.endpoint,
@@ -138,8 +145,11 @@ class DatabricksRepository:
             self.identity.catalog_target or "default",
             spec.catalog_override or "none",
             spec.schema_override or "none",
-            "databricks-api",  # adapter mode
-            hashlib.sha256((spec.sql or "").encode("utf-8")).hexdigest(), # SQL/spec fingerprint
+            # Adapter mode — pinning this in the cache key prevents an
+            # ill-defined "mock" / "legacy-api" entry from being served
+            # under a "databricks-api" request.
+            "databricks-api",
+            sql_fingerprint,
         ]
 
         if spec.cache_policy == CacheTier.PER_USER_60S:
@@ -179,6 +189,14 @@ class DatabricksRepository:
         from .cache import get_cache_store
 
         spec = spec_factory()
+        # Catalog override allow-list is enforced BEFORE any cache lookup
+        # so a previously-cached entry cannot satisfy a request that the
+        # current configuration policy would now reject. ADR-027 §7
+        # ("No Silent Masking") requires that auth / permission /
+        # configuration failures propagate immediately and cannot be
+        # answered from cache.
+        assert_allowed_catalog_target(self.identity.catalog_target)
+
         cache_store = get_cache_store()
         ttl = self._get_ttl_for_policy(spec.cache_policy)
         cache_enabled = os.getenv("ENABLE_QUERY_CACHE", "false").lower() == "true"
@@ -205,8 +223,6 @@ class DatabricksRepository:
                 spec.cache_status = "MISS"
 
         last_retryable_error: Exception | None = None
-
-        assert_allowed_catalog_target(self.identity.catalog_target)
 
         from shared.query_service.object_resolver import catalog_context
 
