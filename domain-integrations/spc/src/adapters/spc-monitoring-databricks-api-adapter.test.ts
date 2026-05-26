@@ -416,6 +416,110 @@ describe('SPCMonitoringDatabricksApiAdapter', () => {
     })
   })
 
+  describe('getMonitoredCharacteristics', () => {
+    it('returns error if materialId is empty', async () => {
+      const result = await adapter.getMonitoredCharacteristics({ materialId: '' })
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe('not-found')
+        expect(result.source).toBe('databricks-api')
+      }
+    })
+
+    it('fetches characteristics and maps response to MonitoredSPCCharacteristic[]', async () => {
+      const mockCharacteristics = [
+        {
+          mic_id: 'MIC-001',
+          mic_name: 'Moisture Content',
+          plant_id: 'IE10',
+          material_id: 'MAT-001',
+          operation_id: '00000001',
+          chart_type: 'imr',
+          batch_count: 42,
+          sample_count: 42,
+          has_active_signal: false,
+        },
+        {
+          mic_id: 'MIC-002',
+          mic_name: 'Fat Content',
+          plant_id: 'IE10',
+          material_id: 'MAT-001',
+          operation_id: '00000001',
+          chart_type: 'xbar_r',
+          batch_count: 38,
+          sample_count: 76,
+          has_active_signal: false,
+        },
+      ]
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockCharacteristics),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getMonitoredCharacteristics({
+        materialId: 'MAT-001',
+        plantId: 'IE10',
+      })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/spc/characteristics?material_id=MAT-001&plant_id=IE10'),
+        expect.objectContaining({ method: 'GET' }),
+      )
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.source).toBe('databricks-api')
+        expect(result.data).toHaveLength(2)
+        expect(result.data[0].characteristicId).toBe('MIC-001')
+        expect(result.data[0].chartType).toBe('individuals') // imr → individuals
+        expect(result.data[0].batchCount).toBe(42)
+        expect(result.data[0].avgSamplesPerBatch).toBe(1)
+        expect(result.data[0].operationId).toBe('00000001')
+        expect(result.data[0].chartTypeSource).toBe('heuristic')
+        expect(result.data[1].chartType).toBe('xbar-r') // xbar_r → xbar-r
+        expect(result.data[1].avgSamplesPerBatch).toBe(2) // 76/38
+      }
+    })
+
+    it('maps p_chart chart type to p-chart', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              mic_id: 'MIC-003',
+              mic_name: 'Defect Rate',
+              operation_id: '00000001',
+              chart_type: 'p_chart',
+              batch_count: 10,
+              sample_count: 50,
+              has_active_signal: false,
+            },
+          ]),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getMonitoredCharacteristics({ materialId: 'MAT-001' })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data[0].chartType).toBe('p-chart')
+      }
+    })
+
+    it('maps 401 response to unauthorized error', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401 })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await adapter.getMonitoredCharacteristics({ materialId: 'MAT-001' })
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe('unauthorized')
+        expect(result.source).toBe('databricks-api')
+      }
+    })
+  })
+
   describe('getCharacteristicCapability', () => {
     it('returns unavailable per guardrails', async () => {
       const result = await adapter.getCharacteristicCapability({
