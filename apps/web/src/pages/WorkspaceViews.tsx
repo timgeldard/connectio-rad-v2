@@ -1,5 +1,5 @@
 import { TraceInvestigationWorkspace, TraceAppWorkspace, TraceConsumerWorkspace } from '@connectio/di-traceability'
-import { BatchReleaseWorkspace } from '@connectio/di-quality'
+import { BatchReleaseWorkspace, ConnectedQualityLabBoardStandaloneApp } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
@@ -71,6 +71,14 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           viewId={viewId ?? 'release-queue'}
           onSelectCase={setReleaseCaseId}
         />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'connected-quality-lab-board') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-connected-quality-lab-board">
+        <ConnectedQualityLabBoardStandaloneApp />
       </div>
     )
   }

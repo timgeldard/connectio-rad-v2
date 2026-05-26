@@ -1,6 +1,6 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration, traceAppRegistration, traceConsumerRegistration } from '@connectio/di-traceability'
-import { batchReleaseRegistration } from '@connectio/di-quality'
+import { batchReleaseRegistration, connectedQualityLabBoardStandaloneRegistration } from '@connectio/di-quality'
 import { operationsPlanRiskRegistration } from '@connectio/di-operations'
 import { envmonRegistration } from '@connectio/di-envmon'
 import { productionStagingRegistration } from '@connectio/di-warehouse'
@@ -31,6 +31,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 2 — Quality Batch Release (cross-domain, fully implemented)
   batchReleaseRegistration,
+
+  // Claude Design export — standalone ConnectedQuality Lab Board
+  connectedQualityLabBoardStandaloneRegistration,
 
   // Phase 3 — Operations Plan Risk (cross-domain, fully implemented)
   operationsPlanRiskRegistration,

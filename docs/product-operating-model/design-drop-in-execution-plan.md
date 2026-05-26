@@ -52,6 +52,7 @@ without pretending its data products are production-ready.
 - Create a `consumerAppRegistry` alongside `workspaceRegistry`.
 - Register the current designed/POC-derived experiences:
   - Batch Traceability / `trace-consumer`
+  - ConnectedQuality Lab Board / `connected-quality-lab-board`
   - Warehouse 360 Cockpit / `warehouse-360-overview`
   - SPC Monitoring / `spc-monitoring`
 
@@ -97,6 +98,8 @@ This branch implements Phase 1 groundwork:
 - starts the Trace Consumer pilot split under `domain-integrations/traceability/src/trace-consumer/`
   by extracting search fixtures, typed bindings, caveat copy, and workspace
   registration from the monolithic designed workspace
+- adds the ConnectedQuality Lab Board standalone Claude export as a fullscreen
+  static POC screen under `domain-integrations/quality/src/lab-board-standalone/`
 
 ## Review checklist
 
