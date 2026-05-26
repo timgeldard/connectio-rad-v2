@@ -50,6 +50,8 @@ class Trace2BatchHeaderRequest:
 class Trace2BatchSearchRequest:
     query: str
     max_rows: int = 25
+    material_id: str = ""
+    batch_id: str = ""
 
 
 @dataclass
@@ -334,9 +336,17 @@ def get_batch_search_spec(request: Trace2BatchSearchRequest) -> QuerySpec:
         ph.POSTING_DATE        AS latest_posting_date,
         ph.BATCH_QTY           AS batch_qty,
         ph.UOM                 AS uom,
-        CASE WHEN UPPER(s.MATERIAL_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS material_match,
+        CASE
+            WHEN (:material_id <> '' AND UPPER(s.MATERIAL_ID) = UPPER(:material_id))
+              OR UPPER(s.MATERIAL_ID) LIKE :search_pattern THEN 1
+            ELSE 0
+        END AS material_match,
         CASE WHEN UPPER(m.MATERIAL_NAME) LIKE :search_pattern THEN 1 ELSE 0 END AS description_match,
-        CASE WHEN UPPER(s.BATCH_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS batch_match,
+        CASE
+            WHEN (:batch_id <> '' AND UPPER(s.BATCH_ID) = UPPER(:batch_id))
+              OR UPPER(s.BATCH_ID) LIKE :search_pattern THEN 1
+            ELSE 0
+        END AS batch_match,
         CASE
             WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern THEN 1
             ELSE 0
@@ -352,37 +362,40 @@ def get_batch_search_spec(request: Trace2BatchSearchRequest) -> QuerySpec:
        AND s.PLANT_ID = ph.PLANT_ID
     WHERE s.BATCH_ID IS NOT NULL
       AND (
-        UPPER(s.MATERIAL_ID) LIKE :search_pattern
-        OR UPPER(m.MATERIAL_NAME) LIKE :search_pattern
-        OR UPPER(s.BATCH_ID) LIKE :search_pattern
-        OR (ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern)
+        (
+          :material_id <> ''
+          AND :batch_id <> ''
+          AND UPPER(s.MATERIAL_ID) = UPPER(:material_id)
+          AND UPPER(s.BATCH_ID) = UPPER(:batch_id)
+        )
+        OR (
+          (:material_id = '' OR :batch_id = '')
+          AND (
+            UPPER(s.MATERIAL_ID) LIKE :search_pattern
+            OR UPPER(m.MATERIAL_NAME) LIKE :search_pattern
+            OR UPPER(s.BATCH_ID) LIKE :search_pattern
+            OR (ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern)
+          )
+        )
       )
     ORDER BY
-        CASE
-          WHEN UPPER(s.BATCH_ID) = :query_upper THEN 0
-          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper THEN 1
-          WHEN UPPER(s.MATERIAL_ID) = :query_upper THEN 2
-          WHEN UPPER(s.MATERIAL_ID) LIKE :prefix_pattern THEN 3
-          WHEN UPPER(s.BATCH_ID) LIKE :prefix_pattern THEN 4
-          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :prefix_pattern THEN 5
-          ELSE 6
-        END,
-        s.MATERIAL_ID,
+        ph.POSTING_DATE DESC NULLS LAST,
+        COALESCE(ph.BATCH_QTY, s.total_stock) DESC NULLS LAST,
         s.BATCH_ID,
+        s.MATERIAL_ID,
         s.PLANT_ID
     LIMIT :max_rows
     """
 
-    query_upper = request.query.strip().upper()
     return QuerySpec(
         name="trace2.batch_search",
         module="trace2",
         endpoint="/api/trace2/batch-search",
         sql=sql,
         params={
-            "query_upper": query_upper,
-            "search_pattern": _to_search_like_pattern(query_upper),
-            "prefix_pattern": f"{query_upper.replace('*', '%')}%",
+            "search_pattern": _to_search_like_pattern(request.query.strip().upper()),
+            "material_id": request.material_id,
+            "batch_id": request.batch_id,
             "max_rows": request.max_rows,
         },
         cache_policy=CacheTier.PER_USER_60S,
