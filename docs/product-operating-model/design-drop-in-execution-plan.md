@@ -99,7 +99,8 @@ This branch implements Phase 1 groundwork:
   by extracting search fixtures, typed bindings, caveat copy, and workspace
   registration from the monolithic designed workspace
 - adds the ConnectedQuality Lab Board standalone Claude export as a fullscreen
-  static POC screen under `domain-integrations/quality/src/lab-board-standalone/`
+  adapter-wired POC screen under `domain-integrations/quality/src/lab-board-standalone/`,
+  including a live plant filter defaulting to C351 for UAT checks
 
 ## Review checklist
 
