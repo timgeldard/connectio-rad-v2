@@ -424,8 +424,8 @@ function FailCard({ failure }: { readonly failure: ConnectedQualityLabFailure })
       <div className="fc-body">
         <Field label="Material Number" value={failure.matNo} />
         <Field label="Inspection Lot" value={failure.lot} />
-        <Field label="Batch Number" value={failure.batch} />
-        <Field label="Process Line" value={failure.line} />
+        {failure.batch && <Field label="Batch Number" value={failure.batch} />}
+        {failure.line && <Field label="Process Line" value={failure.line} />}
         <Field label="Inspection Characteristic" value={failure.char} />
         <Field label="Inspection Text" value={failure.text} />
         <ResultRow failure={failure} />
@@ -450,15 +450,29 @@ function Field({ label, value }: { readonly label: string; readonly value: strin
 }
 
 function ResultRow({ failure }: { readonly failure: ConnectedQualityLabFailure }) {
-  const inSpec = failure.res >= failure.lo && failure.res <= failure.hi
-  const span = failure.hi - failure.lo
-  const pad = span * 0.6
-  const min = failure.lo - pad
-  const max = failure.hi + pad
-  const pos = Math.max(0, Math.min(100, ((failure.res - min) / (max - min)) * 100))
-  const loPos = ((failure.lo - min) / (max - min)) * 100
-  const hiPos = ((failure.hi - min) / (max - min)) * 100
   const precision = failure.res < 10 ? 4 : 2
+
+  if (failure.lo === undefined || failure.hi === undefined) {
+    return (
+      <div className="fc-result">
+        <div className="row-top">
+          <span className="lbl">Result</span>
+          <span className="val bad">{failure.res.toFixed(precision)}<span className="u"> {failure.units}</span></span>
+        </div>
+      </div>
+    )
+  }
+
+  const lo = failure.lo
+  const hi = failure.hi
+  const inSpec = failure.res >= lo && failure.res <= hi
+  const span = hi - lo
+  const pad = span * 0.6
+  const min = lo - pad
+  const max = hi + pad
+  const pos = Math.max(0, Math.min(100, ((failure.res - min) / (max - min)) * 100))
+  const loPos = ((lo - min) / (max - min)) * 100
+  const hiPos = ((hi - min) / (max - min)) * 100
 
   return (
     <div className="fc-result">
@@ -466,14 +480,14 @@ function ResultRow({ failure }: { readonly failure: ConnectedQualityLabFailure }
         <span className="lbl">Result</span>
         <span className={`val ${inSpec ? 'ok' : 'bad'}`}>{failure.res.toFixed(precision)}<span className="u"> {failure.units}</span></span>
         <span className="lbl right">Spec</span>
-        <span className="val mono">{failure.lo} - {failure.hi}</span>
+        <span className="val mono">{lo} - {hi}</span>
       </div>
       <div className="spec-bar">
         <div className="track" />
         <div className="band" style={{ left: `${loPos}%`, width: `${hiPos - loPos}%` }} />
         <div className={`marker ${inSpec ? 'ok' : 'bad'}`} style={{ left: `${pos}%` }} />
-        <span className="tick" style={{ left: `${loPos}%` }}>{failure.lo}</span>
-        <span className="tick" style={{ left: `${hiPos}%` }}>{failure.hi}</span>
+        <span className="tick" style={{ left: `${loPos}%` }}>{lo}</span>
+        <span className="tick" style={{ left: `${hiPos}%` }}>{hi}</span>
       </div>
     </div>
   )

@@ -100,7 +100,10 @@ interface FailCardProps {
 }
 
 function FailCard({ failure }: FailCardProps) {
-  const outOfSpec = failure.res < failure.lo || failure.res > failure.hi
+  const outOfSpec =
+    failure.lo !== undefined && failure.hi !== undefined
+      ? failure.res < failure.lo || failure.res > failure.hi
+      : true
   const severityColor = SEV_COLOR[failure.sev] ?? '#9E9E9E'
   const tsLabel = failure.ts
     ? new Date(failure.ts).toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })
@@ -162,8 +165,12 @@ function FailCard({ failure }: FailCardProps) {
         }}
       >
         <span>{failure.lot}</span>
-        <span>·</span>
-        <span>{failure.line}</span>
+        {failure.line && (
+          <>
+            <span>·</span>
+            <span>{failure.line}</span>
+          </>
+        )}
         <span>·</span>
         <span>Type {failure.lotType}</span>
       </div>
@@ -185,11 +192,15 @@ function FailCard({ failure }: FailCardProps) {
         >
           {failure.res} {failure.units}
         </span>
-        <span style={{ fontSize: 11, color: 'var(--shell-fg-2)' }}>
-          [{failure.lo}–{failure.hi}]
-        </span>
+        {failure.lo !== undefined && failure.hi !== undefined && (
+          <span style={{ fontSize: 11, color: 'var(--shell-fg-2)' }}>
+            [{failure.lo}–{failure.hi}]
+          </span>
+        )}
       </div>
-      <SpecBar res={failure.res} lo={failure.lo} hi={failure.hi} sev={failure.sev} />
+      {failure.lo !== undefined && failure.hi !== undefined && (
+        <SpecBar res={failure.res} lo={failure.lo} hi={failure.hi} sev={failure.sev} />
+      )}
       <div
         style={{ fontSize: 10, color: 'var(--shell-fg-3)', marginTop: 'auto' }}
       >
