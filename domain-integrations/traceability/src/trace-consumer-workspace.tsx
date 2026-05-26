@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useBatchHeaderSummary, useTraceGraph } from './adapters/trace2-queries.js'
+import { trace2Adapter } from './adapters/trace2-adapter-factory.js'
 import { TraceGraphPanel } from './panels/trace-graph-panel.js'
 import { TimelinePanel } from './trace-app/TimelinePanel.js'
 import { RecallPanel } from './trace-app/RecallPanel.js'
@@ -12,11 +13,24 @@ import {
   type TraceConsumerMatchedBatch,
   type TraceConsumerMatchedMaterial,
   type TraceConsumerPlantOption,
+  type TraceConsumerSearchMatchType,
   type TraceConsumerSearchStep,
   type TraceConsumerTab,
 } from './trace-consumer/bindings.js'
 import { TRACE_CONSUMER_REQUIRED_CAVEATS } from './trace-consumer/caveats.js'
-import { TRACE_CONSUMER_SEARCH_FIXTURES } from './trace-consumer/fixtures.js'
+
+type SearchStatus = 'idle' | 'loading' | 'error'
+
+const MATCH_TYPE_LABELS: Record<TraceConsumerSearchMatchType, string> = {
+  'material-id': 'Material ID',
+  description: 'Description',
+  'batch-id': 'Batch ID',
+  'process-order-id': 'Process order',
+}
+
+function formatMatchTypes(matchTypes: readonly TraceConsumerSearchMatchType[]): string {
+  return matchTypes.map(type => MATCH_TYPE_LABELS[type]).join(', ')
+}
 
 export function TraceConsumerWorkspace() {
   const [request, setRequest] = useState<ResolvedTraceConsumerRequest | null>(null)
@@ -24,8 +38,16 @@ export function TraceConsumerWorkspace() {
   
   const [searchQuery, setSearchQuery] = useState('')
   const [searchStep, setSearchStep] = useState<TraceConsumerSearchStep>('idle')
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle')
+  const [searchError, setSearchError] = useState('')
+  const [searchMeta, setSearchMeta] = useState<{
+    readonly total: number
+    readonly truncated: boolean
+    readonly wildcardApplied: boolean
+    readonly source?: string
+  } | null>(null)
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; description: string } | null>(null)
-  const [selectedBatch, setSelectedBatch] = useState<string>('')
+  const [selectedBatch, setSelectedBatch] = useState<string | null>(null)
   const [tempMaterialId, setTempMaterialId] = useState('')
   const [tempBatchId, setTempBatchId] = useState('')
   const [matchedBatches, setMatchedBatches] = useState<TraceConsumerMatchedBatch[]>([])
@@ -62,12 +84,35 @@ export function TraceConsumerWorkspace() {
     genieInsights = reply.text
   }
 
-  const handleWebSearch = (e: React.FormEvent) => {
+  const handleWebSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     const query = searchQuery.trim()
     if (!query) return
 
-    const searchResult = resolveTraceConsumerSearch(query, TRACE_CONSUMER_SEARCH_FIXTURES)
+    setSearchStatus('loading')
+    setSearchError('')
+    setSearchStep('idle')
+    setMatchedBatches([])
+    setMatchedMaterials([])
+    setPlantsToSelect([])
+    setSearchMeta(null)
+
+    const adapterResult = await trace2Adapter.searchBatches({ query, maxRows: 25 })
+    if (!adapterResult.ok) {
+      setSearchStatus('error')
+      setSearchError(adapterResult.error.message)
+      return
+    }
+
+    setSearchStatus('idle')
+    setSearchMeta({
+      total: adapterResult.data.total,
+      truncated: adapterResult.data.truncated,
+      wildcardApplied: adapterResult.data.wildcardApplied,
+      source: adapterResult.source,
+    })
+
+    const searchResult = resolveTraceConsumerSearch(query, adapterResult.data.items)
     if (searchResult.step === 'batches-for-material') {
       setMatchedBatches(searchResult.batches)
       setSelectedMaterial(searchResult.selectedMaterial)
@@ -146,6 +191,9 @@ export function TraceConsumerWorkspace() {
     setRequest(null)
     setSearchQuery('')
     setSearchStep('idle')
+    setSearchStatus('idle')
+    setSearchError('')
+    setSearchMeta(null)
     setMatchedBatches([])
     setMatchedMaterials([])
     setPlantsToSelect([])
@@ -195,7 +243,7 @@ export function TraceConsumerWorkspace() {
               Batch Traceability Portal
             </h1>
             <p style={{ color: '#475569', fontSize: 14, margin: '0 0 32px', lineHeight: 1.6, textAlign: 'center' }}>
-              Search by Material ID, Description, or Batch ID to locate traceability genealogy.
+              Search by material ID, description, batch ID, or process order ID to locate traceability genealogy. Use * for wildcards.
             </p>
 
             <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 12, padding: 14, marginBottom: 24 }}>
@@ -211,9 +259,10 @@ export function TraceConsumerWorkspace() {
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type="text"
-                  placeholder="Enter Material ID, Name or Batch ID..."
+                  placeholder="Enter material, description, batch, or process order..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
+                  disabled={searchStatus === 'loading'}
                   style={{ width: '100%', padding: '16px 20px', paddingRight: 60, borderRadius: 30, border: '2px solid #E2E8F0', fontSize: 16, outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'border-color 0.2s' }}
                   onFocus={e => e.currentTarget.style.borderColor = '#047857'}
                   onBlur={e => e.currentTarget.style.borderColor = '#E2E8F0'}
@@ -222,6 +271,7 @@ export function TraceConsumerWorkspace() {
                 <button
                   type="submit"
                   id="web-search-submit"
+                  disabled={searchStatus === 'loading'}
                   style={{
                     position: 'absolute',
                     right: 8,
@@ -234,7 +284,8 @@ export function TraceConsumerWorkspace() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
-                    cursor: 'pointer',
+                    cursor: searchStatus === 'loading' ? 'wait' : 'pointer',
+                    opacity: searchStatus === 'loading' ? 0.7 : 1,
                   }}
                   title="Search"
                 >
@@ -243,6 +294,18 @@ export function TraceConsumerWorkspace() {
                   </svg>
                 </button>
               </div>
+
+              {searchStatus === 'loading' && (
+                <div style={{ background: '#F0FDF4', color: '#065F46', border: '1px solid #BBF7D0', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+                  Searching batches, materials, descriptions, and process orders...
+                </div>
+              )}
+
+              {searchStatus === 'error' && (
+                <div style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FEE2E2', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+                  {searchError || 'Search is unavailable right now.'}
+                </div>
+              )}
 
               {/* Suggestions */}
               {searchStep === 'idle' && (
@@ -255,28 +318,47 @@ export function TraceConsumerWorkspace() {
                   <button type="button" onClick={() => loadDemoValue('8000049668')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Batch (8000049668)</button>
                   <span>·</span>
                   <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Batch (CH-240308-0047)</button>
+                  <span>·</span>
+                  <button type="button" onClick={() => loadDemoValue('PO-240308-1189')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Order (PO-240308-1189)</button>
                 </div>
               )}
 
               {/* Step: Batches for Material */}
-              {searchStep === 'batches-for-material' && selectedMaterial && (
+              {searchStep === 'batches-for-material' && (
                 <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: 0 }}>
-                      Select a Batch for <span style={{ color: '#0F172A' }}>{selectedMaterial.description} ({selectedMaterial.id})</span>:
+                      {selectedMaterial ? (
+                        <>Select a Batch for <span style={{ color: '#0F172A' }}>{selectedMaterial.description} ({selectedMaterial.id})</span>:</>
+                      ) : (
+                        <>Select a Batch from <span style={{ color: '#0F172A' }}>{matchedBatches.length}</span> matching results:</>
+                      )}
                     </h3>
+                    {searchMeta && (
+                      <span style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
+                        {searchMeta.source ?? 'source'} · {searchMeta.truncated ? 'showing first ' : ''}{searchMeta.total} result{searchMeta.total === 1 ? '' : 's'}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {matchedBatches.map(b => (
                       <button
-                        key={b.batchId}
+                        key={`${b.materialId}:${b.batchId}`}
                         type="button"
                         onClick={() => selectBatch(b.batchId, b.materialId, b.plants)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = '#047857'; e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.backgroundColor = 'white'; }}
                       >
-                        <span style={{ fontWeight: 600, color: '#0F172A' }}>Batch: {b.batchId}</span>
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <span style={{ fontWeight: 700, color: '#0F172A' }}>Batch: {b.batchId}</span>
+                          <span style={{ fontSize: 12, color: '#475569' }}>{b.materialDescription} ({b.materialId})</span>
+                          <span style={{ fontSize: 11, color: '#64748B' }}>
+                            {b.processOrderId ? `Order ${b.processOrderId}` : 'No process order shown'}
+                            {b.quantity != null ? ` · ${b.quantity.toLocaleString()} ${b.uom ?? ''}` : ''}
+                            {b.matchTypes.length ? ` · Matched ${formatMatchTypes(b.matchTypes)}` : ''}
+                          </span>
+                        </span>
                         <span style={{ fontSize: 12, color: '#64748B' }}>
                           {b.plants.length} plant{b.plants.length > 1 ? 's' : ''} available →
                         </span>
@@ -289,15 +371,24 @@ export function TraceConsumerWorkspace() {
               {/* Step: Materials for Batch */}
               {searchStep === 'materials-for-batch' && (
                 <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: 0 }}>
-                      Select Material associated with Batch <span style={{ color: '#0F172A' }}>{selectedBatch}</span>:
+                      {selectedBatch ? (
+                        <>Select Material associated with Batch <span style={{ color: '#0F172A' }}>{selectedBatch}</span>:</>
+                      ) : (
+                        <>Select a material and batch from <span style={{ color: '#0F172A' }}>{matchedMaterials.length}</span> matching results:</>
+                      )}
                     </h3>
+                    {searchMeta && (
+                      <span style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
+                        {searchMeta.source ?? 'source'} · {searchMeta.truncated ? 'showing first ' : ''}{searchMeta.total} result{searchMeta.total === 1 ? '' : 's'}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {matchedMaterials.map(m => (
                       <button
-                        key={m.materialId}
+                        key={`${m.materialId}:${m.batchId}`}
                         type="button"
                         onClick={() => selectMaterial(m.materialId, m.batchId, m.plants)}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
@@ -306,7 +397,12 @@ export function TraceConsumerWorkspace() {
                       >
                         <span style={{ fontWeight: 600, color: '#0F172A' }}>{m.description}</span>
                         <span style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-                          Material ID: {m.materialId} | {m.plants.length} plant{m.plants.length > 1 ? 's' : ''}
+                          Material ID: {m.materialId} | Batch: {m.batchId} | {m.plants.length} plant{m.plants.length > 1 ? 's' : ''}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                          {m.processOrderId ? `Order ${m.processOrderId}` : 'No process order shown'}
+                          {m.quantity != null ? ` · ${m.quantity.toLocaleString()} ${m.uom ?? ''}` : ''}
+                          {m.matchTypes.length ? ` · Matched ${formatMatchTypes(m.matchTypes)}` : ''}
                         </span>
                       </button>
                     ))}
@@ -341,8 +437,8 @@ export function TraceConsumerWorkspace() {
               {/* Step: No Results */}
               {searchStep === 'no-results' && (
                 <div style={{ background: '#FEF2F2', padding: 20, borderRadius: 12, border: '1px solid #FEE2E2', marginTop: 10, textAlign: 'center' }}>
-                  <p style={{ color: '#991B1B', fontWeight: 600, fontSize: 14, margin: '0 0 8px' }}>No matches found in the search database.</p>
-                  <p style={{ color: '#7F1D1D', fontSize: 13, margin: '0 0 16px' }}>Try searching for one of the validated demo values below:</p>
+                  <p style={{ color: '#991B1B', fontWeight: 600, fontSize: 14, margin: '0 0 8px' }}>No matching batch context found.</p>
+                  <p style={{ color: '#7F1D1D', fontSize: 13, margin: '0 0 16px' }}>Try a material ID, partial description, batch ID, process order ID, or wildcard such as 200*.</p>
                   <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                     <button type="button" onClick={() => loadDemoValue('20035129')} style={{ background: 'white', border: '1px solid #FCA5A5', color: '#991B1B', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cheese Powder</button>
                     <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'white', border: '1px solid #FCA5A5', color: '#991B1B', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Emmental Batch</button>

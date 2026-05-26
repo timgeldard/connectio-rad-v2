@@ -14,7 +14,18 @@ export interface TraceConsumerSearchItem {
   readonly batchId: string
   readonly plantId: string
   readonly plantName: string
+  readonly processOrderId?: string | null
+  readonly latestPostingDate?: string | null
+  readonly quantity?: number | null
+  readonly uom?: string | null
+  readonly matchTypes?: readonly TraceConsumerSearchMatchType[]
 }
+
+export type TraceConsumerSearchMatchType =
+  | 'material-id'
+  | 'description'
+  | 'batch-id'
+  | 'process-order-id'
 
 /** Plant option shown when a material/batch exists in more than one plant. */
 export interface TraceConsumerPlantOption {
@@ -27,6 +38,11 @@ export interface TraceConsumerMatchedBatch {
   readonly batchId: string
   readonly materialId: string
   readonly materialDescription: string
+  readonly processOrderId?: string | null
+  readonly latestPostingDate?: string | null
+  readonly quantity?: number | null
+  readonly uom?: string | null
+  readonly matchTypes: readonly TraceConsumerSearchMatchType[]
   readonly plants: TraceConsumerPlantOption[]
 }
 
@@ -35,6 +51,11 @@ export interface TraceConsumerMatchedMaterial {
   readonly materialId: string
   readonly description: string
   readonly batchId: string
+  readonly processOrderId?: string | null
+  readonly latestPostingDate?: string | null
+  readonly quantity?: number | null
+  readonly uom?: string | null
+  readonly matchTypes: readonly TraceConsumerSearchMatchType[]
   readonly plants: TraceConsumerPlantOption[]
 }
 
@@ -58,12 +79,12 @@ export type TraceConsumerSearchResult =
   | {
       readonly step: 'batches-for-material'
       readonly batches: TraceConsumerMatchedBatch[]
-      readonly selectedMaterial: { readonly id: string; readonly description: string }
+      readonly selectedMaterial: { readonly id: string; readonly description: string } | null
     }
   | {
       readonly step: 'materials-for-batch'
       readonly materials: TraceConsumerMatchedMaterial[]
-      readonly selectedBatch: string
+      readonly selectedBatch: string | null
     }
   | {
       readonly step: 'resolved'
@@ -88,80 +109,123 @@ export function createTraceConsumerAdapterRequest(
   }
 }
 
-/** Resolve free-text POC search input into the next designed-app search state. */
+/** Resolve free-text search input into the next designed-app search state. */
 export function resolveTraceConsumerSearch(
   rawQuery: string,
   searchItems: readonly TraceConsumerSearchItem[],
 ): TraceConsumerSearchResult {
   const query = rawQuery.trim()
-  const itemsByMaterial = searchItems.filter(
-    item =>
-      item.materialId === query ||
-      item.materialDescription.toLowerCase().includes(query.toLowerCase()),
+  if (!query) return { step: 'no-results' }
+
+  const matchedItems = searchItems
+    .map(item => ({ item, matchTypes: getTraceConsumerMatchTypes(item, query) }))
+    .filter(entry => entry.matchTypes.length > 0)
+
+  const itemsByMaterial = matchedItems.filter(
+    entry =>
+      entry.matchTypes.includes('material-id') ||
+      entry.matchTypes.includes('description'),
   )
-  const itemsByBatch = searchItems.filter(
-    item => item.batchId.toLowerCase() === query.toLowerCase(),
+  const itemsByBatchContext = matchedItems.filter(
+    entry =>
+      entry.matchTypes.includes('batch-id') ||
+      entry.matchTypes.includes('process-order-id'),
   )
 
   if (itemsByMaterial.length > 0) {
     const batchesMap: Record<string, TraceConsumerMatchedBatch> = {}
-    itemsByMaterial.forEach(item => {
-      if (!batchesMap[item.batchId]) {
-        batchesMap[item.batchId] = {
+    itemsByMaterial.forEach(({ item, matchTypes }) => {
+      const key = `${item.materialId}:${item.batchId}`
+      if (!batchesMap[key]) {
+        batchesMap[key] = {
           batchId: item.batchId,
           materialId: item.materialId,
           materialDescription: item.materialDescription,
+          processOrderId: item.processOrderId,
+          latestPostingDate: item.latestPostingDate,
+          quantity: item.quantity,
+          uom: item.uom,
+          matchTypes,
           plants: [],
         }
       }
-      if (!batchesMap[item.batchId].plants.some(plant => plant.id === item.plantId)) {
-        batchesMap[item.batchId].plants.push({ id: item.plantId, name: item.plantName })
+      if (!batchesMap[key].plants.some(plant => plant.id === item.plantId)) {
+        batchesMap[key].plants.push({ id: item.plantId, name: item.plantName })
       }
     })
     const batches = Object.values(batchesMap)
+    const materialIds = new Set(batches.map(batch => batch.materialId))
     return {
       step: 'batches-for-material',
       batches,
-      selectedMaterial: {
-        id: batches[0].materialId,
-        description: batches[0].materialDescription,
-      },
+      selectedMaterial:
+        materialIds.size === 1
+          ? {
+              id: batches[0].materialId,
+              description: batches[0].materialDescription,
+            }
+          : null,
     }
   }
 
-  if (itemsByBatch.length > 0) {
+  if (itemsByBatchContext.length > 0) {
     const materialsMap: Record<string, TraceConsumerMatchedMaterial> = {}
-    itemsByBatch.forEach(item => {
-      if (!materialsMap[item.materialId]) {
-        materialsMap[item.materialId] = {
+    itemsByBatchContext.forEach(({ item, matchTypes }) => {
+      const key = `${item.materialId}:${item.batchId}`
+      if (!materialsMap[key]) {
+        materialsMap[key] = {
           materialId: item.materialId,
           description: item.materialDescription,
           batchId: item.batchId,
+          processOrderId: item.processOrderId,
+          latestPostingDate: item.latestPostingDate,
+          quantity: item.quantity,
+          uom: item.uom,
+          matchTypes,
           plants: [],
         }
       }
-      if (!materialsMap[item.materialId].plants.some(plant => plant.id === item.plantId)) {
-        materialsMap[item.materialId].plants.push({ id: item.plantId, name: item.plantName })
+      if (!materialsMap[key].plants.some(plant => plant.id === item.plantId)) {
+        materialsMap[key].plants.push({ id: item.plantId, name: item.plantName })
       }
     })
     const materials = Object.values(materialsMap)
+    const batchIds = new Set(materials.map(material => material.batchId))
     return {
       step: 'materials-for-batch',
       materials,
-      selectedBatch: materials[0].batchId,
-    }
-  }
-
-  if (/^\d{8}$/.test(query)) {
-    return { step: 'no-results' }
-  }
-
-  if (query.includes('-') || query.length >= 10) {
-    return {
-      step: 'resolved',
-      request: { materialId: '', batchId: query, plantId: '' },
+      selectedBatch: batchIds.size === 1 ? materials[0].batchId : null,
     }
   }
 
   return { step: 'no-results' }
+}
+
+function getTraceConsumerMatchTypes(
+  item: TraceConsumerSearchItem,
+  query: string,
+): readonly TraceConsumerSearchMatchType[] {
+  if (item.matchTypes?.length) return item.matchTypes
+
+  const matchTypes: TraceConsumerSearchMatchType[] = []
+  if (matchesQuery(item.materialId, query)) matchTypes.push('material-id')
+  if (matchesQuery(item.materialDescription, query)) matchTypes.push('description')
+  if (matchesQuery(item.batchId, query)) matchTypes.push('batch-id')
+  if (matchesQuery(item.processOrderId ?? '', query)) matchTypes.push('process-order-id')
+  return matchTypes
+}
+
+function matchesQuery(value: string, rawQuery: string): boolean {
+  const query = rawQuery.trim()
+  if (!value || !query) return false
+
+  if (!query.includes('*') && !query.includes('%')) {
+    return value.toLowerCase().includes(query.toLowerCase())
+  }
+
+  const regex = new RegExp(
+    `^${query.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/[*%]/g, '.*')}$`,
+    'i',
+  )
+  return regex.test(value)
 }

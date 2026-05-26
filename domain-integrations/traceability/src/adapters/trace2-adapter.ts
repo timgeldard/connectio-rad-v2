@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type {
   TraceInvestigationContext,
   BatchHeaderSummary,
@@ -45,6 +46,45 @@ export interface Trace2AdapterRequest {
   readonly maxEdges?: number
 }
 
+export const Trace2BatchSearchMatchTypeSchema = z.enum([
+  'material-id',
+  'description',
+  'batch-id',
+  'process-order-id',
+])
+
+export type Trace2BatchSearchMatchType = z.infer<typeof Trace2BatchSearchMatchTypeSchema>
+
+export const Trace2BatchSearchItemSchema = z.object({
+  materialId: z.string(),
+  materialDescription: z.string(),
+  batchId: z.string(),
+  plantId: z.string(),
+  plantName: z.string(),
+  processOrderId: z.string().nullable().optional(),
+  latestPostingDate: z.string().nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  uom: z.string().nullable().optional(),
+  matchTypes: z.array(Trace2BatchSearchMatchTypeSchema),
+})
+
+export type Trace2BatchSearchItem = z.infer<typeof Trace2BatchSearchItemSchema>
+
+export const Trace2BatchSearchResponseSchema = z.object({
+  query: z.string(),
+  total: z.number().int().min(0),
+  truncated: z.boolean(),
+  wildcardApplied: z.boolean(),
+  items: z.array(Trace2BatchSearchItemSchema),
+})
+
+export type Trace2BatchSearchResponse = z.infer<typeof Trace2BatchSearchResponseSchema>
+
+export interface Trace2BatchSearchRequest {
+  readonly query: string
+  readonly maxRows?: number
+}
+
 /**
  * Resolves to an ISO 8601 timestamp representing "now".
  * Extracted so tests can override it without mocking `Date`.
@@ -52,6 +92,79 @@ export interface Trace2AdapterRequest {
 export type NowFn = () => string
 
 const defaultNow: NowFn = () => new Date().toISOString()
+
+const MOCK_TRACE_BATCH_SEARCH_ITEMS: readonly Omit<Trace2BatchSearchItem, 'matchTypes'>[] = [
+  {
+    materialId: '20035129',
+    materialDescription: 'CHEESE POWDER BLEND 25KG',
+    batchId: '8000049668',
+    plantId: 'C061',
+    plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964801',
+    quantity: 1000,
+    uom: 'KG',
+  },
+  {
+    materialId: '20035129',
+    materialDescription: 'CHEESE POWDER BLEND 25KG',
+    batchId: '8000049669',
+    plantId: 'C061',
+    plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964802',
+    quantity: 925,
+    uom: 'KG',
+  },
+  {
+    materialId: '20035130',
+    materialDescription: 'WHEY POWDER BLEND 25KG',
+    batchId: '8000049668',
+    plantId: 'C061',
+    plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964803',
+    quantity: 775,
+    uom: 'KG',
+  },
+  {
+    materialId: '100023847',
+    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
+    batchId: 'CH-240308-0047',
+    plantId: 'IE10',
+    plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1189',
+    quantity: 2400,
+    uom: 'KG',
+  },
+  {
+    materialId: '100023847',
+    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
+    batchId: 'CH-240308-0047',
+    plantId: 'IE11',
+    plantName: 'Kerry Charleville (IE11)',
+    processOrderId: 'PO-240308-1189',
+    quantity: 2400,
+    uom: 'KG',
+  },
+  {
+    materialId: '100023847',
+    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
+    batchId: 'CH-240308-0048',
+    plantId: 'IE10',
+    plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1190',
+    quantity: 2350,
+    uom: 'KG',
+  },
+  {
+    materialId: '100023848',
+    materialDescription: 'CHEDDAR CHEESE NATURAL 100KG',
+    batchId: 'CH-240308-0047',
+    plantId: 'IE10',
+    plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1191',
+    quantity: 1800,
+    uom: 'KG',
+  },
+]
 
 /**
  * Creates a successful {@link AdapterResult} wrapping the given data.
@@ -77,6 +190,37 @@ function err<T>(code: AdapterError['code'], message: string): AdapterResult<T> {
     error: { code, message, retryable: code !== 'unauthorized' && code !== 'not-found' },
     displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
   }
+}
+
+function hasWildcard(query: string): boolean {
+  return query.includes('*') || query.includes('%')
+}
+
+function matchesSearch(value: string | null | undefined, rawQuery: string): boolean {
+  const query = rawQuery.trim()
+  if (!value || !query) return false
+
+  if (!hasWildcard(query)) {
+    return value.toLowerCase().includes(query.toLowerCase())
+  }
+
+  const regex = new RegExp(
+    `^${query.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/[*%]/g, '.*')}$`,
+    'i',
+  )
+  return regex.test(value)
+}
+
+function getSearchMatchTypes(
+  item: Omit<Trace2BatchSearchItem, 'matchTypes'>,
+  query: string,
+): Trace2BatchSearchMatchType[] {
+  const matchTypes: Trace2BatchSearchMatchType[] = []
+  if (matchesSearch(item.materialId, query)) matchTypes.push('material-id')
+  if (matchesSearch(item.materialDescription, query)) matchTypes.push('description')
+  if (matchesSearch(item.batchId, query)) matchTypes.push('batch-id')
+  if (matchesSearch(item.processOrderId, query)) matchTypes.push('process-order-id')
+  return matchTypes
 }
 
 /**
@@ -110,6 +254,41 @@ export class Trace2Adapter {
   private async delay(): Promise<void> {
     if (this.simulatedDelayMs > 0) {
       await new Promise<void>(resolve => setTimeout(resolve, this.simulatedDelayMs))
+    }
+  }
+
+  /**
+   * Searches known trace batches by material, description, batch, or process order.
+   *
+   * @remarks
+   * The mock tier uses the same designed consumer-search candidates as the
+   * Trace Consumer workspace. The legacy/databricks tiers override this method
+   * with a live Databricks-backed search.
+   */
+  async searchBatches(
+    request: Trace2BatchSearchRequest,
+  ): Promise<AdapterResult<Trace2BatchSearchResponse>> {
+    await this.delay()
+    const query = request.query.trim()
+    if (!query) return err('not-found', 'Enter a material, description, batch, or process order.')
+
+    const maxRows = Math.min(Math.max(request.maxRows ?? 25, 1), 50)
+    const matched = MOCK_TRACE_BATCH_SEARCH_ITEMS
+      .map(item => ({ ...item, matchTypes: getSearchMatchTypes(item, query) }))
+      .filter(item => item.matchTypes.length > 0)
+    const items = Trace2BatchSearchItemSchema.array().parse(matched.slice(0, maxRows))
+
+    return {
+      ok: true,
+      data: {
+        query,
+        total: items.length,
+        truncated: matched.length > maxRows,
+        wildcardApplied: hasWildcard(query),
+        items,
+      },
+      fetchedAt: this.now(),
+      source: 'mock',
     }
   }
 

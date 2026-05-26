@@ -107,6 +107,43 @@ _FAKE_BATCH_HEADER_ROW = {
     "expiry_date": "2025-03-01T00:00:00Z",
 }
 
+_BATCH_SEARCH_URL = "/api/trace2/batch-search"
+
+_FAKE_BATCH_SEARCH_ROWS = [
+    {
+        "material_id": "20035129",
+        "batch_id": "8000049668",
+        "plant_id": "C061",
+        "total_stock": 1000.0,
+        "material_name": "CHEESE POWDER BLEND 25KG",
+        "plant_name": "Kerry Cork",
+        "process_order_id": "007006964801",
+        "latest_posting_date": "2025-06-04",
+        "batch_qty": 1000.0,
+        "uom": "KG",
+        "material_match": 0,
+        "description_match": 1,
+        "batch_match": 0,
+        "process_order_match": 0,
+    },
+    {
+        "material_id": "20035129",
+        "batch_id": "8000049669",
+        "plant_id": "C061",
+        "total_stock": 925.0,
+        "material_name": "CHEESE POWDER BLEND 25KG",
+        "plant_name": "Kerry Cork",
+        "process_order_id": "007006964802",
+        "latest_posting_date": "2025-06-05",
+        "batch_qty": 925.0,
+        "uom": "KG",
+        "material_match": 0,
+        "description_match": 1,
+        "batch_match": 0,
+        "process_order_match": 0,
+    },
+]
+
 
 # ---------------------------------------------------------------------------
 # Batch header — databricks-api mode
@@ -251,6 +288,106 @@ class TestBatchHeaderResponseModel:
         # And the contract's release/quality fields stay source-truthful.
         assert data["releaseStatus"] != "released"
         assert data["qualityStatus"] != "accepted"
+
+
+# ---------------------------------------------------------------------------
+# Batch search — databricks-api mode
+# ---------------------------------------------------------------------------
+
+class TestBatchSearchDatabricksMode:
+    async def test_200_returns_consumer_batch_search_results(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor(_FAKE_BATCH_SEARCH_ROWS):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_SEARCH_URL,
+                    json={"query": "cheese", "max_rows": 25},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["query"] == "cheese"
+        assert data["total"] == 2
+        assert data["truncated"] is False
+        assert data["items"][0]["materialId"] == "20035129"
+        assert data["items"][0]["batchId"] == "8000049668"
+        assert data["items"][0]["processOrderId"] == "007006964801"
+        assert data["items"][0]["matchTypes"] == ["description"]
+
+    async def test_search_sets_databricks_headers(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor(_FAKE_BATCH_SEARCH_ROWS):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_SEARCH_URL,
+                    json={"query": "cheese"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.headers.get("x-adapter-mode") == "databricks-api"
+        assert "gold_batch_stock_v" in response.headers.get("x-data-source", "")
+        assert "production_history_v" in response.headers.get("x-data-source", "")
+
+    async def test_search_reports_truncation(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor(_FAKE_BATCH_SEARCH_ROWS):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_SEARCH_URL,
+                    json={"query": "cheese", "max_rows": 1},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        data = response.json()
+        assert data["total"] == 1
+        assert data["truncated"] is True
+
+    async def test_search_supports_wildcard_indicator(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor(_FAKE_BATCH_SEARCH_ROWS[:1]):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_SEARCH_URL,
+                    json={"query": "200*"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+
+        assert response.status_code == 200
+        assert response.json()["wildcardApplied"] is True
+
+    async def test_search_requires_databricks_mode(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(
+                _BATCH_SEARCH_URL,
+                json={"query": "cheese"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+
+        assert response.status_code == 503
+
+    async def test_search_rejects_blank_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        async with _make_client() as client:
+            response = await client.post(
+                _BATCH_SEARCH_URL,
+                json={"query": "   "},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+
+        assert response.status_code == 422
+
+    async def test_search_requires_user_oauth(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor(_FAKE_BATCH_SEARCH_ROWS):
+            async with _make_client() as client:
+                response = await client.post(
+                    _BATCH_SEARCH_URL,
+                    json={"query": "cheese"},
+                )
+
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

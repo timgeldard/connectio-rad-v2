@@ -12,6 +12,7 @@ from pydantic import BaseModel, field_validator
 
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
+    Trace2BatchSearchRequest,
     Trace2BatchQualityPassportRequest,
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
@@ -26,6 +27,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     TraceGraphRequest,
     build_batch_quality_passport,
     get_batch_header_summary_spec,
+    get_batch_search_spec,
     get_batch_quality_passport_balance_spec,
     get_batch_quality_passport_coa_spec,
     get_batch_quality_passport_lots_spec,
@@ -44,6 +46,7 @@ from adapters.trace2.trace2_databricks_adapter import (
     get_mass_balance_spec,
     get_trace_graph_recursive_spec,
     map_batch_header_rows,
+    map_batch_search_rows,
     map_customer_delivery_rows,
     map_customer_exposure_rows,
     map_holds_ledger_rows,
@@ -90,6 +93,39 @@ class BatchRequest(BaseModel):
     material_id: str
     batch_id: str
     plant_id: str = ""
+
+
+class BatchSearchRequest(BaseModel):
+    query: str
+    max_rows: int = 25
+
+    @field_validator("query")
+    @classmethod
+    def _validate_query(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("query must not be blank")
+        return value.strip()
+
+
+class BatchSearchItem(BaseModel):
+    materialId: str
+    materialDescription: str
+    batchId: str
+    plantId: str
+    plantName: str
+    processOrderId: str | None = None
+    latestPostingDate: str | None = None
+    quantity: float | None = None
+    uom: str | None = None
+    matchTypes: list[str]
+
+
+class BatchSearchResponse(BaseModel):
+    query: str
+    total: int
+    truncated: bool
+    wildcardApplied: bool
+    items: list[BatchSearchItem]
 
 
 async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
@@ -148,6 +184,45 @@ async def batch_header(
         body.model_dump(exclude_none=True),
         x_forwarded_access_token,
     )
+
+
+@router.post("/trace2/batch-search", response_model=BatchSearchResponse)
+async def batch_search(
+    body: BatchSearchRequest,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+):
+    """POST /api/trace2/batch-search — Databricks-backed consumer batch search.
+
+    This is intentionally Databricks-only: no V1 proxy route exists for this
+    consumer search surface. It returns complete batch context so the Trace
+    Consumer workspace can launch evidence panels with material, batch, and
+    plant identifiers populated.
+    """
+    if os.getenv("BACKEND_ADAPTER_MODE", "") != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="batch-search requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token, x_forwarded_user, x_forwarded_email
+    )
+    max_rows = min(max(body.max_rows, 1), 50)
+    request = Trace2BatchSearchRequest(
+        query=body.query,
+        max_rows=max_rows + 1,
+    )
+    rows, spec = await run_query(
+        lambda: get_batch_search_spec(request),
+        identity, host, warehouse_id,
+    )
+    result = map_batch_search_rows(rows, body.query, max_rows)
+    set_databricks_response_headers(response, spec)
+    return result
 
 
 # ---------------------------------------------------------------------------
