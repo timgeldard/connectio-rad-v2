@@ -20,6 +20,10 @@ export { spcMonitoringRegistration } from './spc-monitoring-registration.js'
 export { SPCMonitoringWorkspace } from './spc-monitoring-workspace.js'
 export type { SPCMonitoringWorkspaceProps, SPCMonitoringViewId } from './spc-monitoring-workspace.js'
 
+// SPC Consumer workspace
+export { spcConsumerRegistration } from './spc-consumer-registration.js'
+export { SPCConsumerWorkspace } from './spc-consumer-workspace.js'
+
 export { SPCMonitoringAdapter, spcMonitoringAdapter, toSPCMonitoringAdapterError } from './adapters/spc-monitoring-adapter.js'
 export type { SPCMonitoringAdapterRequest, SPCMonitoringAdapterOptions } from './adapters/spc-monitoring-adapter.js'
 

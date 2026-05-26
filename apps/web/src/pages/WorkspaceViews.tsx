@@ -3,7 +3,7 @@ import { BatchReleaseWorkspace, ConnectedQualityLabBoardStandaloneApp } from '@c
 import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
-import { SPCMonitoringWorkspace } from '@connectio/di-spc'
+import { SPCMonitoringWorkspace, SPCConsumerWorkspace } from '@connectio/di-spc'
 import { MaintenanceReliabilityWorkspace } from '@connectio/di-maintenance'
 import { useWorkspaceShellState } from '../shell/useWorkspaceShellState.js'
 import { useAuthScope } from '@connectio/auth-scope'
@@ -127,6 +127,14 @@ export default function WorkspaceViews({ workspaceId }: Props) {
           scope={activeScope}
           viewId={viewId ?? 'chart-overview'}
         />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'spc-consumer') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-spc-consumer">
+        <SPCConsumerWorkspace />
       </div>
     )
   }
