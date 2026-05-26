@@ -7,6 +7,12 @@ export interface ResolvedTraceConsumerRequest {
   readonly plantId: string
 }
 
+/** Structured criteria parsed from a two-part SAP material + batch search. */
+export interface TraceConsumerCombinedSearchCriteria {
+  readonly materialId: string
+  readonly batchId: string
+}
+
 /** Search fixture row used by the Trace Consumer POC search flow. */
 export interface TraceConsumerSearchItem {
   readonly materialId: string
@@ -87,11 +93,37 @@ export type TraceConsumerSearchResult =
       readonly selectedBatch: string | null
     }
   | {
+      readonly step: 'select-plant'
+      readonly materialId: string
+      readonly batchId: string
+      readonly plants: readonly TraceConsumerPlantOption[]
+    }
+  | {
       readonly step: 'resolved'
       readonly request: ResolvedTraceConsumerRequest
     }
   | {
+      readonly step: 'missing-plant'
+      readonly message: string
+    }
+  | {
       readonly step: 'no-results'
+    }
+
+export type TraceConsumerSelectionResult =
+  | {
+      readonly step: 'select-plant'
+      readonly materialId: string
+      readonly batchId: string
+      readonly plants: readonly TraceConsumerPlantOption[]
+    }
+  | {
+      readonly step: 'resolved'
+      readonly request: ResolvedTraceConsumerRequest
+    }
+  | {
+      readonly step: 'missing-plant'
+      readonly message: string
     }
 
 /** Convert the designed-app request into the existing Trace2 query contract. */
@@ -109,6 +141,57 @@ export function createTraceConsumerAdapterRequest(
   }
 }
 
+export function parseTraceConsumerCombinedSearch(
+  rawQuery: string,
+): TraceConsumerCombinedSearchCriteria | null {
+  const tokens = rawQuery
+    .trim()
+    .split(/[\s/,]+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+
+  if (tokens.length !== 2) return null
+  if (!tokens.every(token => /\d/.test(token))) return null
+
+  return {
+    materialId: tokens[0],
+    batchId: tokens[1],
+  }
+}
+
+export function resolveTraceConsumerSelection(
+  materialId: string,
+  batchId: string,
+  plants: readonly TraceConsumerPlantOption[],
+): TraceConsumerSelectionResult {
+  const validPlants = plants.filter(plant => plant.id.trim())
+
+  if (validPlants.length > 1) {
+    return {
+      step: 'select-plant',
+      materialId,
+      batchId,
+      plants: validPlants,
+    }
+  }
+
+  if (validPlants.length === 1) {
+    return {
+      step: 'resolved',
+      request: {
+        materialId,
+        batchId,
+        plantId: validPlants[0].id,
+      },
+    }
+  }
+
+  return {
+    step: 'missing-plant',
+    message: `Plant context is required before launching trace for material ${materialId} and batch ${batchId}.`,
+  }
+}
+
 /** Resolve free-text search input into the next designed-app search state. */
 export function resolveTraceConsumerSearch(
   rawQuery: string,
@@ -116,6 +199,11 @@ export function resolveTraceConsumerSearch(
 ): TraceConsumerSearchResult {
   const query = rawQuery.trim()
   if (!query) return { step: 'no-results' }
+
+  const combinedCriteria = parseTraceConsumerCombinedSearch(query)
+  if (combinedCriteria) {
+    return resolveCombinedMaterialBatchSearch(combinedCriteria, searchItems)
+  }
 
   const matchedItems = searchItems
     .map(item => ({ item, matchTypes: getTraceConsumerMatchTypes(item, query) }))
@@ -149,11 +237,12 @@ export function resolveTraceConsumerSearch(
           plants: [],
         }
       }
-      if (!batchesMap[key].plants.some(plant => plant.id === item.plantId)) {
-        batchesMap[key].plants.push({ id: item.plantId, name: item.plantName })
+      const plantId = item.plantId.trim()
+      if (plantId && !batchesMap[key].plants.some(plant => plant.id === plantId)) {
+        batchesMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
       }
     })
-    const batches = Object.values(batchesMap)
+    const batches = Object.values(batchesMap).sort(compareMatchedBatches)
     const materialIds = new Set(batches.map(batch => batch.materialId))
     return {
       step: 'batches-for-material',
@@ -185,11 +274,12 @@ export function resolveTraceConsumerSearch(
           plants: [],
         }
       }
-      if (!materialsMap[key].plants.some(plant => plant.id === item.plantId)) {
-        materialsMap[key].plants.push({ id: item.plantId, name: item.plantName })
+      const plantId = item.plantId.trim()
+      if (plantId && !materialsMap[key].plants.some(plant => plant.id === plantId)) {
+        materialsMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
       }
     })
-    const materials = Object.values(materialsMap)
+    const materials = Object.values(materialsMap).sort(compareMatchedMaterials)
     const batchIds = new Set(materials.map(material => material.batchId))
     return {
       step: 'materials-for-batch',
@@ -199,6 +289,24 @@ export function resolveTraceConsumerSearch(
   }
 
   return { step: 'no-results' }
+}
+
+function resolveCombinedMaterialBatchSearch(
+  criteria: TraceConsumerCombinedSearchCriteria,
+  searchItems: readonly TraceConsumerSearchItem[],
+): TraceConsumerSearchResult {
+  const exactItems = searchItems
+    .filter(item =>
+      identifiersMatch(item.materialId, criteria.materialId) &&
+      identifiersMatch(item.batchId, criteria.batchId),
+    )
+    .sort(compareSearchItems)
+
+  if (exactItems.length === 0) return { step: 'no-results' }
+
+  const first = exactItems[0]
+  const plants = uniquePlants(exactItems)
+  return resolveTraceConsumerSelection(first.materialId, first.batchId, plants)
 }
 
 function getTraceConsumerMatchTypes(
@@ -213,6 +321,72 @@ function getTraceConsumerMatchTypes(
   if (matchesQuery(item.batchId, query)) matchTypes.push('batch-id')
   if (matchesQuery(item.processOrderId ?? '', query)) matchTypes.push('process-order-id')
   return matchTypes
+}
+
+function uniquePlants(items: readonly TraceConsumerSearchItem[]): TraceConsumerPlantOption[] {
+  const plants: TraceConsumerPlantOption[] = []
+  items.forEach(item => {
+    const plantId = item.plantId.trim()
+    if (!plantId) return
+    if (!plants.some(plant => plant.id === plantId)) {
+      plants.push({ id: plantId, name: item.plantName || plantId })
+    }
+  })
+  return plants
+}
+
+function identifiersMatch(value: string, expected: string): boolean {
+  return value.trim().toLowerCase() === expected.trim().toLowerCase()
+}
+
+function compareSearchItems(a: TraceConsumerSearchItem, b: TraceConsumerSearchItem): number {
+  return (
+    compareDatesDesc(a.latestPostingDate, b.latestPostingDate) ||
+    compareNumbersDesc(a.quantity, b.quantity) ||
+    a.batchId.localeCompare(b.batchId) ||
+    a.materialId.localeCompare(b.materialId) ||
+    a.plantId.localeCompare(b.plantId)
+  )
+}
+
+function compareMatchedBatches(a: TraceConsumerMatchedBatch, b: TraceConsumerMatchedBatch): number {
+  return (
+    compareDatesDesc(a.latestPostingDate, b.latestPostingDate) ||
+    compareNumbersDesc(a.quantity, b.quantity) ||
+    a.batchId.localeCompare(b.batchId) ||
+    a.materialId.localeCompare(b.materialId)
+  )
+}
+
+function compareMatchedMaterials(a: TraceConsumerMatchedMaterial, b: TraceConsumerMatchedMaterial): number {
+  return (
+    compareDatesDesc(a.latestPostingDate, b.latestPostingDate) ||
+    compareNumbersDesc(a.quantity, b.quantity) ||
+    a.batchId.localeCompare(b.batchId) ||
+    a.materialId.localeCompare(b.materialId)
+  )
+}
+
+function compareDatesDesc(a: string | null | undefined, b: string | null | undefined): number {
+  const aTime = toTime(a)
+  const bTime = toTime(b)
+  if (aTime === null && bTime === null) return 0
+  if (aTime === null) return 1
+  if (bTime === null) return -1
+  return bTime - aTime
+}
+
+function compareNumbersDesc(a: number | null | undefined, b: number | null | undefined): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return b - a
+}
+
+function toTime(value: string | null | undefined): number | null {
+  if (!value) return null
+  const time = Date.parse(value)
+  return Number.isNaN(time) ? null : time
 }
 
 function matchesQuery(value: string, rawQuery: string): boolean {

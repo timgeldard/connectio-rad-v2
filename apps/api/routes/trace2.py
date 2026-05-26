@@ -6,6 +6,7 @@ POST /trace2/trace-graph  — native Databricks WITH RECURSIVE lineage graph.
 import asyncio
 import dataclasses
 import os
+import re
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel, field_validator
@@ -97,6 +98,8 @@ class BatchRequest(BaseModel):
 
 class BatchSearchRequest(BaseModel):
     query: str
+    material_id: str = ""
+    batch_id: str = ""
     max_rows: int = 25
 
     @field_validator("query")
@@ -126,6 +129,15 @@ class BatchSearchResponse(BaseModel):
     truncated: bool
     wildcardApplied: bool
     items: list[BatchSearchItem]
+
+
+def _parse_combined_batch_search(query: str) -> tuple[str, str] | None:
+    tokens = [token.strip() for token in re.split(r"[\s/,]+", query.strip()) if token.strip()]
+    if len(tokens) != 2:
+        return None
+    if not all(any(ch.isdigit() for ch in token) for token in tokens):
+        return None
+    return tokens[0], tokens[1]
 
 
 async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
@@ -212,9 +224,18 @@ async def batch_search(
         x_forwarded_access_token, x_forwarded_user, x_forwarded_email
     )
     max_rows = min(max(body.max_rows, 1), 50)
+    material_id = body.material_id.strip()
+    batch_id = body.batch_id.strip()
+    if not material_id or not batch_id:
+        parsed = _parse_combined_batch_search(body.query)
+        if parsed is not None:
+            material_id, batch_id = parsed
+
     request = Trace2BatchSearchRequest(
         query=body.query,
         max_rows=max_rows + 1,
+        material_id=material_id,
+        batch_id=batch_id,
     )
     rows, spec = await run_query(
         lambda: get_batch_search_spec(request),
