@@ -356,6 +356,14 @@ class TestBatchSearchDatabricksMode:
         assert response.status_code == 200
         assert response.json()["wildcardApplied"] is True
 
+    def test_route_parser_extracts_combined_material_batch_terms(self) -> None:
+        from routes.trace2 import _parse_combined_batch_search
+
+        assert _parse_combined_batch_search("20035129 8000049668") == ("20035129", "8000049668")
+        assert _parse_combined_batch_search("20035129/8000049668") == ("20035129", "8000049668")
+        assert _parse_combined_batch_search("20035129, 8000049668") == ("20035129", "8000049668")
+        assert _parse_combined_batch_search("cheese powder") is None
+
     def test_search_spec_does_not_match_null_process_orders_for_wildcard(self, monkeypatch) -> None:
         from adapters.trace2.trace2_databricks_adapter import (
             Trace2BatchSearchRequest,
@@ -369,7 +377,45 @@ class TestBatchSearchDatabricksMode:
 
         assert "COALESCE(ph.PROCESS_ORDER_ID" not in spec.sql
         assert "ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern" in spec.sql
-        assert "ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper" in spec.sql
+        assert "ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper" not in spec.sql
+
+    def test_search_spec_supports_exact_material_batch_criteria(self, monkeypatch) -> None:
+        from adapters.trace2.trace2_databricks_adapter import (
+            Trace2BatchSearchRequest,
+            get_batch_search_spec,
+        )
+
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+        spec = get_batch_search_spec(
+            Trace2BatchSearchRequest(
+                query="20035129 8000049668",
+                material_id="20035129",
+                batch_id="8000049668",
+            )
+        )
+
+        assert "UPPER(s.MATERIAL_ID) = UPPER(:material_id)" in spec.sql
+        assert "UPPER(s.BATCH_ID) = UPPER(:batch_id)" in spec.sql
+        assert spec.params["material_id"] == "20035129"
+        assert spec.params["batch_id"] == "8000049668"
+
+    def test_search_spec_orders_operational_batch_lists(self, monkeypatch) -> None:
+        from adapters.trace2.trace2_databricks_adapter import (
+            Trace2BatchSearchRequest,
+            get_batch_search_spec,
+        )
+
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+        spec = get_batch_search_spec(Trace2BatchSearchRequest(query="cheese"))
+
+        assert "ph.POSTING_DATE DESC NULLS LAST" in spec.sql
+        assert "COALESCE(ph.BATCH_QTY, s.total_stock) DESC NULLS LAST" in spec.sql
+        order_by = spec.sql.rsplit("ORDER BY", 1)[1].split("LIMIT", 1)[0]
+        assert order_by.index("ph.POSTING_DATE") < order_by.index("s.BATCH_ID")
 
     def test_search_mapping_preserves_falsy_source_ids(self) -> None:
         from adapters.trace2.trace2_databricks_adapter import map_batch_search_rows

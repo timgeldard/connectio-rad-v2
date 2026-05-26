@@ -82,6 +82,8 @@ export type Trace2BatchSearchResponse = z.infer<typeof Trace2BatchSearchResponse
 
 export interface Trace2BatchSearchRequest {
   readonly query: string
+  readonly materialId?: string
+  readonly batchId?: string
   readonly maxRows?: number
 }
 
@@ -223,6 +225,42 @@ function getSearchMatchTypes(
   return matchTypes
 }
 
+function identifiersMatch(value: string, expected: string): boolean {
+  return value.trim().toLowerCase() === expected.trim().toLowerCase()
+}
+
+function compareBatchSearchItems(a: Trace2BatchSearchItem, b: Trace2BatchSearchItem): number {
+  return (
+    compareDatesDesc(a.latestPostingDate, b.latestPostingDate) ||
+    compareNumbersDesc(a.quantity, b.quantity) ||
+    a.batchId.localeCompare(b.batchId) ||
+    a.materialId.localeCompare(b.materialId) ||
+    a.plantId.localeCompare(b.plantId)
+  )
+}
+
+function compareDatesDesc(a: string | null | undefined, b: string | null | undefined): number {
+  const aTime = toTime(a)
+  const bTime = toTime(b)
+  if (aTime === null && bTime === null) return 0
+  if (aTime === null) return 1
+  if (bTime === null) return -1
+  return bTime - aTime
+}
+
+function compareNumbersDesc(a: number | null | undefined, b: number | null | undefined): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return b - a
+}
+
+function toTime(value: string | null | undefined): number | null {
+  if (!value) return null
+  const time = Date.parse(value)
+  return Number.isNaN(time) ? null : time
+}
+
 /**
  * Trace2 source adapter.
  *
@@ -273,9 +311,24 @@ export class Trace2Adapter {
     if (!query) return err('not-found', 'Enter a material, description, batch, or process order.')
 
     const maxRows = Math.min(Math.max(request.maxRows ?? 25, 1), 50)
+    const materialId = request.materialId?.trim()
+    const batchId = request.batchId?.trim()
     const matched = MOCK_TRACE_BATCH_SEARCH_ITEMS
-      .map(item => ({ ...item, matchTypes: getSearchMatchTypes(item, query) }))
+      .map(item => {
+        if (materialId && batchId) {
+          return {
+            ...item,
+            matchTypes:
+              identifiersMatch(item.materialId, materialId) && identifiersMatch(item.batchId, batchId)
+                ? (['material-id', 'batch-id'] satisfies Trace2BatchSearchMatchType[])
+                : [],
+          }
+        }
+
+        return { ...item, matchTypes: getSearchMatchTypes(item, query) }
+      })
       .filter(item => item.matchTypes.length > 0)
+      .sort(compareBatchSearchItems)
     const items = Trace2BatchSearchItemSchema.array().parse(matched.slice(0, maxRows))
 
     return {

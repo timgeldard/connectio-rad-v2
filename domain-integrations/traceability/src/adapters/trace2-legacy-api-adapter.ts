@@ -120,6 +120,8 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
         body: JSON.stringify({
           query,
           max_rows: request.maxRows ?? 25,
+          ...(request.materialId ? { material_id: request.materialId } : {}),
+          ...(request.batchId ? { batch_id: request.batchId } : {}),
         }),
       })
 

@@ -8,11 +8,14 @@ import { QualityPassportPanel } from './trace-app/QualityPassportPanel.js'
 import { buildTraceGenieReply } from './panels/trace-genie-pilot-engine.js'
 import {
   createTraceConsumerAdapterRequest,
+  parseTraceConsumerCombinedSearch,
   resolveTraceConsumerSearch,
+  resolveTraceConsumerSelection,
   type ResolvedTraceConsumerRequest,
   type TraceConsumerMatchedBatch,
   type TraceConsumerMatchedMaterial,
   type TraceConsumerPlantOption,
+  type TraceConsumerSelectionResult,
   type TraceConsumerSearchMatchType,
   type TraceConsumerSearchStep,
   type TraceConsumerTab,
@@ -99,7 +102,17 @@ export function TraceConsumerWorkspace() {
     setPlantsToSelect([])
     setSearchMeta(null)
 
-    const adapterResult = await trace2Adapter.searchBatches({ query, maxRows: 25 })
+    const combinedCriteria = parseTraceConsumerCombinedSearch(query)
+    const adapterResult = await trace2Adapter.searchBatches({
+      query,
+      maxRows: 25,
+      ...(combinedCriteria
+        ? {
+            materialId: combinedCriteria.materialId,
+            batchId: combinedCriteria.batchId,
+          }
+        : {}),
+    })
     if (!adapterResult.ok) {
       setSearchStatus('error')
       setSearchError(adapterResult.error.message)
@@ -123,56 +136,51 @@ export function TraceConsumerWorkspace() {
       setMatchedMaterials(searchResult.materials)
       setSelectedBatch(searchResult.selectedBatch)
       setSearchStep('materials-for-batch')
+    } else if (searchResult.step === 'select-plant') {
+      setTempMaterialId(searchResult.materialId)
+      setTempBatchId(searchResult.batchId)
+      setPlantsToSelect([...searchResult.plants])
+      setSearchStep('select-plant')
     } else if (searchResult.step === 'resolved') {
       setRequest(searchResult.request)
+    } else if (searchResult.step === 'missing-plant') {
+      setSearchStatus('error')
+      setSearchError(searchResult.message)
+      setSearchStep('idle')
     } else {
       setSearchStep('no-results')
     }
   }
 
-  const selectBatch = (batchId: string, materialId: string, plants: TraceConsumerPlantOption[]) => {
-    if (plants.length > 1) {
-      setTempMaterialId(materialId)
-      setTempBatchId(batchId)
-      setPlantsToSelect(plants)
+  const applySelectionResult = (selection: TraceConsumerSelectionResult) => {
+    if (selection.step === 'select-plant') {
+      setTempMaterialId(selection.materialId)
+      setTempBatchId(selection.batchId)
+      setPlantsToSelect([...selection.plants])
       setSearchStep('select-plant')
-    } else if (plants.length === 1) {
-      setRequest({
-        materialId,
-        batchId,
-        plantId: plants[0].id
-      })
+    } else if (selection.step === 'resolved') {
+      setRequest(selection.request)
     } else {
-      setRequest({
-        materialId,
-        batchId,
-        plantId: ''
-      })
+      setSearchStatus('error')
+      setSearchError(selection.message)
+      setSearchStep('idle')
     }
+  }
+
+  const selectBatch = (batchId: string, materialId: string, plants: TraceConsumerPlantOption[]) => {
+    applySelectionResult(resolveTraceConsumerSelection(materialId, batchId, plants))
   }
 
   const selectMaterial = (materialId: string, batchId: string, plants: TraceConsumerPlantOption[]) => {
-    if (plants.length > 1) {
-      setTempMaterialId(materialId)
-      setTempBatchId(batchId)
-      setPlantsToSelect(plants)
-      setSearchStep('select-plant')
-    } else if (plants.length === 1) {
-      setRequest({
-        materialId,
-        batchId,
-        plantId: plants[0].id
-      })
-    } else {
-      setRequest({
-        materialId,
-        batchId,
-        plantId: ''
-      })
-    }
+    applySelectionResult(resolveTraceConsumerSelection(materialId, batchId, plants))
   }
 
   const selectPlant = (plantId: string) => {
+    if (!plantId.trim()) {
+      setSearchStatus('error')
+      setSearchError('Plant context is required before launching trace.')
+      return
+    }
     setRequest({
       materialId: tempMaterialId,
       batchId: tempBatchId,

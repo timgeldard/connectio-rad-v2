@@ -88,13 +88,20 @@ describe('Trace2LegacyApiAdapter.searchBatches', () => {
   it('calls POST /api/trace2/batch-search with query and max_rows', async () => {
     vi.stubGlobal('fetch', mockFetch(200, SEARCH_RESPONSE_OK))
 
-    await adapter.searchBatches({ query: 'cheese', maxRows: 10 })
+    await adapter.searchBatches({
+      query: '20035129 8000049668',
+      materialId: '20035129',
+      batchId: '8000049668',
+      maxRows: 10,
+    })
 
     const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
     expect(String(url)).toContain('/api/trace2/batch-search')
     expect(opts?.method).toBe('POST')
     const body = JSON.parse(String(opts?.body))
-    expect(body.query).toBe('cheese')
+    expect(body.query).toBe('20035129 8000049668')
+    expect(body.material_id).toBe('20035129')
+    expect(body.batch_id).toBe('8000049668')
     expect(body.max_rows).toBe(10)
   })
 

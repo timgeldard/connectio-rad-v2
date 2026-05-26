@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Trace2Adapter } from './trace2-adapter.js'
+import { Trace2Adapter, Trace2BatchSearchResponseSchema } from './trace2-adapter.js'
 import {
   TraceInvestigationContextSchema,
   BatchHeaderSummarySchema,
@@ -45,6 +45,22 @@ describe('Trace2Adapter', () => {
     expect(parsed.success).toBe(true)
     expect(result.data.batchId).toBe('CH-240308-0047')
     expect(result.data.releaseStatus).toBe('blocked')
+  })
+
+  it('searchBatches supports structured material and batch criteria in mock mode', async () => {
+    const result = await adapter.searchBatches({
+      query: '20035129 8000049668',
+      materialId: '20035129',
+      batchId: '8000049668',
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(Trace2BatchSearchResponseSchema.safeParse(result.data).success).toBe(true)
+    expect(result.data.items).toHaveLength(1)
+    expect(result.data.items[0].materialId).toBe('20035129')
+    expect(result.data.items[0].batchId).toBe('8000049668')
+    expect(result.data.items[0].matchTypes).toEqual(['material-id', 'batch-id'])
   })
 
   it('getTraceGraph returns ok: true with valid contract data', async () => {
