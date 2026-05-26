@@ -43,12 +43,12 @@ export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
     shellPresentation: 'fullscreen',
     workspaceId: 'connected-quality-lab-board',
     lifecycle: 'pilot',
-    appMaturity: 'A2',
-    dataMaturity: 'D0',
-    dataBinding: 'static-poc',
+    appMaturity: 'A3',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
     requiredCaveats: [
-      'Static Claude Design export data - not a governed SAP QM live feed.',
-      'Failure and warning cards are visual examples until connected to app-facing contracts.',
+      'Plant and failure data are read through the Connected Quality lab adapter.',
+      'Mock adapter mode remains non-live even though the standalone screen is data-wired.',
       'Do not use this standalone wallboard for production release, reject, or hold decisions.',
     ],
     designArtifacts: [

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ConnectedQualityLabFailure } from '@connectio/data-contracts'
+import {
+  useConnectedQualityLabFailures,
+  useConnectedQualityLabPlants,
+} from '../adapters/connected-quality-lab-queries.js'
 import { LAB_BOARD_STANDALONE_CAVEATS } from './caveats.js'
-import { LAB_BOARD_FAILURES, type LabBoardFailure } from './fixtures.js'
 
 const PAGE_SIZE = 6
 const ROTATION_SECONDS = 30
@@ -229,21 +233,74 @@ const styles = `
 .cq-lab-standalone .lab-foot .leg .d.warn { background: var(--cq-warn); }
 .cq-lab-standalone .lab-foot .leg .d.info { background: var(--jade); }
 .cq-lab-standalone .spacer { flex: 1; }
+.cq-lab-standalone .lab-control {
+  margin-top: 4px;
+  width: 150px;
+  border: 1px solid #c9d2d6;
+  border-radius: 4px;
+  padding: 5px 7px;
+  color: var(--valentia-slate);
+  font: 700 13px var(--font-sans);
+  background: #fff;
+}
+.cq-lab-standalone .lab-control.small { width: 92px; }
+.cq-lab-standalone .lab-state {
+  margin: 0 72px 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cq-lab-standalone .lab-state.error { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; }
+.cq-lab-standalone .lab-state.empty { color: #31546a; background: #f8fafc; border: 1px solid #c9d2d6; }
 `
 
 export function ConnectedQualityLabBoardStandaloneApp() {
   const [tick, setTick] = useState(24)
   const [page, setPage] = useState(0)
-  const pages = Math.max(1, Math.ceil(LAB_BOARD_FAILURES.length / PAGE_SIZE))
+  const [plantId, setPlantId] = useState('C351')
+  const [lotType, setLotType] = useState('04')
+  const effectivePlantId = plantId.trim() || undefined
+  const effectiveLotType = lotType || undefined
+
+  const failuresQuery = useConnectedQualityLabFailures({
+    plantId: effectivePlantId,
+    lotType: effectiveLotType,
+  })
+  const plantsQuery = useConnectedQualityLabPlants()
+
+  const failuresResult = failuresQuery.data
+  const plantsResult = plantsQuery.data
+  const failures = failuresResult?.ok ? failuresResult.data.fails : []
+  const dataAvailable = failuresResult?.ok ? failuresResult.data.dataAvailable : true
+  const noDataReason = failuresResult?.ok && !failuresResult.data.dataAvailable
+    ? failuresResult.data.reason
+    : undefined
+  const plants = plantsResult?.ok ? plantsResult.data.plants : []
+  const selectedPlant = plants.find(plant => plant.plantId === plantId)
+  const sourceLabel = failuresResult?.source === 'databricks-api'
+    ? 'Databricks API'
+    : failuresResult?.source === 'legacy-api'
+      ? 'Connected Quality API'
+      : failuresResult?.source === 'mock'
+        ? 'Mock adapter'
+        : 'Waiting for source'
+
+  const pages = Math.max(1, Math.ceil(failures.length / PAGE_SIZE))
   const visible = useMemo(
-    () => LAB_BOARD_FAILURES.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
-    [page],
+    () => failures.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [failures, page],
   )
-  const stamp = useMemo(
-    () => new Date().toLocaleString('en-GB', { hour12: false }).replace(',', ' -'),
-    [tick],
-  )
-  const openFails = LAB_BOARD_FAILURES.filter(failure => failure.sev === 'fail').length
+  const stamp = failuresResult?.ok
+    ? new Date(failuresResult.fetchedAt).toLocaleString('en-GB', { hour12: false }).replace(',', ' -')
+    : new Date().toLocaleString('en-GB', { hour12: false }).replace(',', ' -')
+  const openFails = failures.filter(failure => failure.sev === 'fail').length
+  const errorMessage = failuresResult && !failuresResult.ok ? failuresResult.error.message : undefined
+
+  useEffect(() => {
+    setPage(0)
+    setTick(ROTATION_SECONDS)
+  }, [effectivePlantId, effectiveLotType, failures.length])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -284,22 +341,52 @@ export function ConnectedQualityLabBoardStandaloneApp() {
       </header>
 
       <div className="lab-ctx">
-        <div className="lab-ctx-field"><span className="lbl">Plant</span><span className="val">P806 - Clark North</span></div>
-        <div className="lab-ctx-field"><span className="lbl">Work centers</span><span className="val">All</span></div>
-        <div className="lab-ctx-field"><span className="lbl">Inspection lot type</span><span className="val">04</span></div>
-        <div className="lab-ctx-field"><span className="lbl">Severity</span><span className="val">Fail - Warn</span></div>
-        <div className="lab-ctx-field grow"><span className="lbl">Next refresh in</span><span className="val refresh">{tick} <span className="u">s</span></span></div>
+        <div className="lab-ctx-field">
+          <span className="lbl">Plant</span>
+          <input
+            className="lab-control"
+            list="cq-lab-plant-options"
+            value={plantId}
+            onChange={event => setPlantId(event.target.value.toUpperCase())}
+            aria-label="Plant filter"
+          />
+          <datalist id="cq-lab-plant-options">
+            {plants.map(plant => <option key={plant.plantId} value={plant.plantId}>{plant.plantName}</option>)}
+          </datalist>
+        </div>
+        <div className="lab-ctx-field"><span className="lbl">Plant name</span><span className="val">{selectedPlant?.plantName ?? 'Manual entry'}</span></div>
+        <div className="lab-ctx-field"><span className="lbl">Inspection lot type</span>
+          <select className="lab-control small" value={lotType} onChange={event => setLotType(event.target.value)} aria-label="Inspection lot type filter">
+            <option value="">All</option>
+            <option value="04">04</option>
+            <option value="89">89</option>
+          </select>
+        </div>
+        <div className="lab-ctx-field"><span className="lbl">Source</span><span className="val">{sourceLabel}</span></div>
+        <div className="lab-ctx-field grow"><span className="lbl">Next board rotation in</span><span className="val refresh">{tick} <span className="u">s</span></span></div>
         <div className="lab-ctx-field"><span className="lbl">Page</span><span className="val">{page + 1} / {pages}</span></div>
         <div className="lab-ctx-field"><span className="lbl">Open fails</span><span className="val crit">{openFails}</span></div>
-        <button className="lab-iconbtn small" title="Settings" type="button">S</button>
       </div>
 
       <div className="lab-caveats" role="status">
-        <strong>POC consolidation caveats</strong>
+        <strong>Data-link caveats</strong>
         <ul>
           {LAB_BOARD_STANDALONE_CAVEATS.map(caveat => <li key={caveat}>{caveat}</li>)}
         </ul>
       </div>
+
+      {failuresQuery.isLoading && (
+        <div className="lab-state empty">Loading lab failures for plant {plantId}...</div>
+      )}
+      {errorMessage && (
+        <div className="lab-state error">Lab failure query failed: {errorMessage}</div>
+      )}
+      {!failuresQuery.isLoading && !errorMessage && !dataAvailable && (
+        <div className="lab-state empty">{noDataReason ?? `No lab data published for plant ${plantId}.`}</div>
+      )}
+      {!failuresQuery.isLoading && !errorMessage && dataAvailable && failures.length === 0 && (
+        <div className="lab-state empty">No failures or warnings returned for plant {plantId}.</div>
+      )}
 
       <div className="lab-grid-wrap">
         <button className="lab-arrow left" onClick={goPrev} title="Previous" type="button">&lt;</button>
@@ -310,9 +397,9 @@ export function ConnectedQualityLabBoardStandaloneApp() {
       </div>
 
       <footer className="lab-foot">
-        <span className="dot-live" /> STATIC POC FROM CLAUDE DESIGN - {stamp}
+        <span className="dot-live" /> {sourceLabel} - {stamp}
         <span className="sep" />
-        Auto-rotate every 30s - Click arrows to override
+        Plant {plantId || 'unset'} - auto-rotate every 30s - click arrows to override
         <span className="spacer" />
         <span className="leg"><span className="d fail" /> Fail</span>
         <span className="leg"><span className="d warn" /> Warn</span>
@@ -322,12 +409,11 @@ export function ConnectedQualityLabBoardStandaloneApp() {
   )
 }
 
-function FailCard({ failure }: { readonly failure: LabBoardFailure }) {
+function FailCard({ failure }: { readonly failure: ConnectedQualityLabFailure }) {
   const statusText = failure.sev === 'fail' ? 'RESULT - FAIL' : 'RESULT - OUT OF WARNING'
-  const syntheticTime = useMemo(
-    () => new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString('en-GB', { hour12: false }),
-    [],
-  )
+  const timestamp = failure.ts
+    ? new Date(failure.ts).toLocaleTimeString('en-GB', { hour12: false })
+    : 'pending'
 
   return (
     <article className={`fail-card ${failure.sev}`}>
@@ -348,7 +434,7 @@ function FailCard({ failure }: { readonly failure: LabBoardFailure }) {
         <span className="status-dot" />
         <span>{statusText}</span>
         <span className="spacer" />
-        <span className="ts">{syntheticTime}</span>
+        <span className="ts">{timestamp}</span>
       </div>
     </article>
   )
@@ -363,7 +449,7 @@ function Field({ label, value }: { readonly label: string; readonly value: strin
   )
 }
 
-function ResultRow({ failure }: { readonly failure: LabBoardFailure }) {
+function ResultRow({ failure }: { readonly failure: ConnectedQualityLabFailure }) {
   const inSpec = failure.res >= failure.lo && failure.res <= failure.hi
   const span = failure.hi - failure.lo
   const pad = span * 0.6
