@@ -5,98 +5,34 @@ import { TimelinePanel } from './trace-app/TimelinePanel.js'
 import { RecallPanel } from './trace-app/RecallPanel.js'
 import { QualityPassportPanel } from './trace-app/QualityPassportPanel.js'
 import { buildTraceGenieReply } from './panels/trace-genie-pilot-engine.js'
-
-interface ResolvedRequest {
-  readonly materialId: string
-  readonly batchId: string
-  readonly plantId: string
-}
-
-interface MockDatabaseItem {
-  readonly materialId: string
-  readonly materialDescription: string
-  readonly batchId: string
-  readonly plantId: string
-  readonly plantName: string
-}
-
-const SEARCH_DATABASE: readonly MockDatabaseItem[] = [
-  {
-    materialId: '20035129',
-    materialDescription: 'CHEESE POWDER BLEND 25KG',
-    batchId: '8000049668',
-    plantId: 'C061',
-    plantName: 'Kerry Cork (C061)',
-  },
-  {
-    materialId: '20035129',
-    materialDescription: 'CHEESE POWDER BLEND 25KG',
-    batchId: '8000049669',
-    plantId: 'C061',
-    plantName: 'Kerry Cork (C061)',
-  },
-  {
-    materialId: '20035130',
-    materialDescription: 'WHEY POWDER BLEND 25KG',
-    batchId: '8000049668',
-    plantId: 'C061',
-    plantName: 'Kerry Cork (C061)',
-  },
-  {
-    materialId: '100023847',
-    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
-    batchId: 'CH-240308-0047',
-    plantId: 'IE10',
-    plantName: 'Kerry Listowel (IE10)',
-  },
-  {
-    materialId: '100023847',
-    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
-    batchId: 'CH-240308-0047',
-    plantId: 'IE11',
-    plantName: 'Kerry Charleville (IE11)',
-  },
-  {
-    materialId: '100023847',
-    materialDescription: 'EMMENTAL BLOCK NATURAL 100KG',
-    batchId: 'CH-240308-0048',
-    plantId: 'IE10',
-    plantName: 'Kerry Listowel (IE10)',
-  },
-  {
-    materialId: '100023848',
-    materialDescription: 'CHEDDAR CHEESE NATURAL 100KG',
-    batchId: 'CH-240308-0047',
-    plantId: 'IE10',
-    plantName: 'Kerry Listowel (IE10)',
-  },
-]
+import {
+  createTraceConsumerAdapterRequest,
+  resolveTraceConsumerSearch,
+  type ResolvedTraceConsumerRequest,
+  type TraceConsumerMatchedBatch,
+  type TraceConsumerMatchedMaterial,
+  type TraceConsumerPlantOption,
+  type TraceConsumerSearchStep,
+  type TraceConsumerTab,
+} from './trace-consumer/bindings.js'
+import { TRACE_CONSUMER_REQUIRED_CAVEATS } from './trace-consumer/caveats.js'
+import { TRACE_CONSUMER_SEARCH_FIXTURES } from './trace-consumer/fixtures.js'
 
 export function TraceConsumerWorkspace() {
-  const [request, setRequest] = useState<ResolvedRequest | null>(null)
-  const [activeTab, setActiveTab] = useState<'lineage' | 'timeline' | 'risks' | 'insights' | 'passport'>('lineage')
+  const [request, setRequest] = useState<ResolvedTraceConsumerRequest | null>(null)
+  const [activeTab, setActiveTab] = useState<TraceConsumerTab>('lineage')
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchStep, setSearchStep] = useState<'idle' | 'batches-for-material' | 'materials-for-batch' | 'select-plant' | 'no-results'>('idle')
+  const [searchStep, setSearchStep] = useState<TraceConsumerSearchStep>('idle')
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; description: string } | null>(null)
   const [selectedBatch, setSelectedBatch] = useState<string>('')
   const [tempMaterialId, setTempMaterialId] = useState('')
   const [tempBatchId, setTempBatchId] = useState('')
-  const [matchedBatches, setMatchedBatches] = useState<Array<{ batchId: string; materialId: string; materialDescription: string; plants: Array<{ id: string; name: string }> }>>([])
-  const [matchedMaterials, setMatchedMaterials] = useState<Array<{ materialId: string; description: string; batchId: string; plants: Array<{ id: string; name: string }> }>>([])
-  const [plantsToSelect, setPlantsToSelect] = useState<Array<{ id: string; name: string }>>([])
+  const [matchedBatches, setMatchedBatches] = useState<TraceConsumerMatchedBatch[]>([])
+  const [matchedMaterials, setMatchedMaterials] = useState<TraceConsumerMatchedMaterial[]>([])
+  const [plantsToSelect, setPlantsToSelect] = useState<TraceConsumerPlantOption[]>([])
 
-  const adapterRequest = request
-    ? {
-        materialId: request.materialId,
-        batchId: request.batchId,
-        plantId: request.plantId,
-        investigationId: 'consumer-trace',
-        direction: 'both' as const,
-        maxDepth: 2,
-        maxEdges: 100,
-      }
-    : null
+  const adapterRequest = request ? createTraceConsumerAdapterRequest(request) : null
 
   const batchHeaderQuery = useBatchHeaderSummary(adapterRequest ?? { materialId: '', batchId: '', plantId: '' }, {
     enabled: request !== null,
@@ -131,69 +67,23 @@ export function TraceConsumerWorkspace() {
     const query = searchQuery.trim()
     if (!query) return
 
-    // 1. Check if input is a known Material ID or description
-    const itemsByMaterial = SEARCH_DATABASE.filter(
-      item => item.materialId === query || item.materialDescription.toLowerCase().includes(query.toLowerCase())
-    )
-
-    // 2. Check if input is a known Batch ID
-    const itemsByBatch = SEARCH_DATABASE.filter(
-      item => item.batchId.toLowerCase() === query.toLowerCase()
-    )
-
-    if (itemsByMaterial.length > 0) {
-      const batchesMap: Record<string, { batchId: string; materialId: string; materialDescription: string; plants: Array<{ id: string; name: string }> }> = {}
-      itemsByMaterial.forEach(item => {
-        if (!batchesMap[item.batchId]) {
-          batchesMap[item.batchId] = {
-            batchId: item.batchId,
-            materialId: item.materialId,
-            materialDescription: item.materialDescription,
-            plants: []
-          }
-        }
-        if (!batchesMap[item.batchId].plants.some(p => p.id === item.plantId)) {
-          batchesMap[item.batchId].plants.push({ id: item.plantId, name: item.plantName })
-        }
-      })
-      const batches = Object.values(batchesMap)
-      setMatchedBatches(batches)
-      setSelectedMaterial({ id: batches[0].materialId, description: batches[0].materialDescription })
+    const searchResult = resolveTraceConsumerSearch(query, TRACE_CONSUMER_SEARCH_FIXTURES)
+    if (searchResult.step === 'batches-for-material') {
+      setMatchedBatches(searchResult.batches)
+      setSelectedMaterial(searchResult.selectedMaterial)
       setSearchStep('batches-for-material')
-    } else if (itemsByBatch.length > 0) {
-      const materialsMap: Record<string, { materialId: string; description: string; batchId: string; plants: Array<{ id: string; name: string }> }> = {}
-      itemsByBatch.forEach(item => {
-        if (!materialsMap[item.materialId]) {
-          materialsMap[item.materialId] = {
-            materialId: item.materialId,
-            description: item.materialDescription,
-            batchId: item.batchId,
-            plants: []
-          }
-        }
-        if (!materialsMap[item.materialId].plants.some(p => p.id === item.plantId)) {
-          materialsMap[item.materialId].plants.push({ id: item.plantId, name: item.plantName })
-        }
-      })
-      const materials = Object.values(materialsMap)
-      setMatchedMaterials(materials)
-      setSelectedBatch(materials[0].batchId)
+    } else if (searchResult.step === 'materials-for-batch') {
+      setMatchedMaterials(searchResult.materials)
+      setSelectedBatch(searchResult.selectedBatch)
       setSearchStep('materials-for-batch')
+    } else if (searchResult.step === 'resolved') {
+      setRequest(searchResult.request)
     } else {
-      // Direct pass for unmatched custom queries to allow debugging or custom inputs
-      if (/^\d{8}$/.test(query)) {
-        // Material number format: assume custom material, no batches
-        setSearchStep('no-results')
-      } else if (query.includes('-') || query.length >= 10) {
-        // Batch format: assume custom batch
-        setRequest({ materialId: '', batchId: query, plantId: '' })
-      } else {
-        setSearchStep('no-results')
-      }
+      setSearchStep('no-results')
     }
   }
 
-  const selectBatch = (batchId: string, materialId: string, plants: Array<{ id: string; name: string }>) => {
+  const selectBatch = (batchId: string, materialId: string, plants: TraceConsumerPlantOption[]) => {
     if (plants.length > 1) {
       setTempMaterialId(materialId)
       setTempBatchId(batchId)
@@ -214,7 +104,7 @@ export function TraceConsumerWorkspace() {
     }
   }
 
-  const selectMaterial = (materialId: string, batchId: string, plants: Array<{ id: string; name: string }>) => {
+  const selectMaterial = (materialId: string, batchId: string, plants: TraceConsumerPlantOption[]) => {
     if (plants.length > 1) {
       setTempMaterialId(materialId)
       setTempBatchId(batchId)
@@ -307,6 +197,15 @@ export function TraceConsumerWorkspace() {
             <p style={{ color: '#475569', fontSize: 14, margin: '0 0 32px', lineHeight: 1.6, textAlign: 'center' }}>
               Search by Material ID, Description, or Batch ID to locate traceability genealogy.
             </p>
+
+            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 12, padding: 14, marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#047857', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>
+                POC consolidation caveats
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: '#065F46', fontSize: 12, lineHeight: 1.5 }}>
+                {TRACE_CONSUMER_REQUIRED_CAVEATS.map(caveat => <li key={caveat}>{caveat}</li>)}
+              </ul>
+            </div>
 
             <form onSubmit={handleWebSearch} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>

@@ -29,6 +29,7 @@ export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
     ],
     designArtifacts: [
       'docs/apps/trace-consumer/product-brief.md',
+      'domain-integrations/traceability/src/trace-consumer/',
       'docs/product-operating-model/design-drop-in-execution-plan.md',
     ],
   },

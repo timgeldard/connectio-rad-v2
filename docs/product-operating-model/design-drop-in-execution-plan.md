@@ -85,7 +85,7 @@ without pretending its data products are production-ready.
 - Treat old legacy adapters as optional migration scaffolding, not the source of
   truth for what the app should become.
 
-## First implemented slice
+## Implemented slices
 
 This branch implements Phase 1 groundwork:
 
@@ -94,6 +94,9 @@ This branch implements Phase 1 groundwork:
   experiences in `apps/web`
 - documents the revised execution path away from legacy parity and toward POC
   consolidation
+- starts the Trace Consumer pilot split under `domain-integrations/traceability/src/trace-consumer/`
+  by extracting search fixtures, typed bindings, caveat copy, and workspace
+  registration from the monolithic designed workspace
 
 ## Review checklist
 
