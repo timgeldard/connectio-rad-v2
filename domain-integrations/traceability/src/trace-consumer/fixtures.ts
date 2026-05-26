@@ -14,6 +14,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: '8000049668',
     plantId: 'C061',
     plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964801',
   },
   {
     materialId: '20035129',
@@ -21,6 +22,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: '8000049669',
     plantId: 'C061',
     plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964802',
   },
   {
     materialId: '20035130',
@@ -28,6 +30,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: '8000049668',
     plantId: 'C061',
     plantName: 'Kerry Cork (C061)',
+    processOrderId: '007006964803',
   },
   {
     materialId: '100023847',
@@ -35,6 +38,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: 'CH-240308-0047',
     plantId: 'IE10',
     plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1189',
   },
   {
     materialId: '100023847',
@@ -42,6 +46,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: 'CH-240308-0047',
     plantId: 'IE11',
     plantName: 'Kerry Charleville (IE11)',
+    processOrderId: 'PO-240308-1189',
   },
   {
     materialId: '100023847',
@@ -49,6 +54,7 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: 'CH-240308-0048',
     plantId: 'IE10',
     plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1190',
   },
   {
     materialId: '100023848',
@@ -56,5 +62,6 @@ export const TRACE_CONSUMER_SEARCH_FIXTURES: readonly TraceConsumerSearchItem[] 
     batchId: 'CH-240308-0047',
     plantId: 'IE10',
     plantName: 'Kerry Listowel (IE10)',
+    processOrderId: 'PO-240308-1191',
   },
 ]

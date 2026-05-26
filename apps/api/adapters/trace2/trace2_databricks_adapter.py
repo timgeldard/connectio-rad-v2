@@ -47,6 +47,12 @@ class Trace2BatchHeaderRequest:
 
 
 @dataclass
+class Trace2BatchSearchRequest:
+    query: str
+    max_rows: int = 25
+
+
+@dataclass
 class TraceGraphRequest:
     material_id: str
     batch_id: str
@@ -271,6 +277,167 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
         result["processOrderId"] = row["process_order_id"]
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Slice 1a — Trace Consumer batch search
+# ---------------------------------------------------------------------------
+
+def get_batch_search_spec(request: Trace2BatchSearchRequest) -> QuerySpec:
+    """Return a QuerySpec for Trace Consumer unified batch search.
+
+    Sources are the verified Databricks gold views already used by Trace2:
+    stock for material/batch/plant context, material for descriptions, plant
+    for display names, and production history for process order context.
+    """
+    tbl_stock = resolve_domain_object("trace2", "gold_batch_stock_v")
+    tbl_material = resolve_domain_object("trace2", "gold_material")
+    tbl_plant = resolve_domain_object("trace2", "gold_plant")
+    tbl_prod = resolve_domain_object("trace2", "gold_batch_production_history_v")
+
+    sql = f"""
+    WITH latest_prod AS (
+        SELECT
+            MATERIAL_ID,
+            BATCH_ID,
+            PLANT_ID,
+            PROCESS_ORDER_ID,
+            POSTING_DATE,
+            BATCH_QTY,
+            UOM
+        FROM (
+            SELECT
+                MATERIAL_ID,
+                BATCH_ID,
+                PLANT_ID,
+                PROCESS_ORDER_ID,
+                POSTING_DATE,
+                BATCH_QTY,
+                UOM,
+                ROW_NUMBER() OVER (
+                    PARTITION BY MATERIAL_ID, BATCH_ID, PLANT_ID
+                    ORDER BY POSTING_DATE DESC, PROCESS_ORDER_ID DESC
+                ) AS rn
+            FROM {tbl_prod}
+            WHERE BATCH_ID IS NOT NULL
+        ) ranked_prod
+        WHERE rn = 1
+    )
+    SELECT
+        s.MATERIAL_ID          AS material_id,
+        s.BATCH_ID             AS batch_id,
+        s.PLANT_ID             AS plant_id,
+        s.total_stock          AS total_stock,
+        m.MATERIAL_NAME        AS material_name,
+        p.PLANT_NAME           AS plant_name,
+        ph.PROCESS_ORDER_ID    AS process_order_id,
+        ph.POSTING_DATE        AS latest_posting_date,
+        ph.BATCH_QTY           AS batch_qty,
+        ph.UOM                 AS uom,
+        CASE WHEN UPPER(s.MATERIAL_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS material_match,
+        CASE WHEN UPPER(m.MATERIAL_NAME) LIKE :search_pattern THEN 1 ELSE 0 END AS description_match,
+        CASE WHEN UPPER(s.BATCH_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS batch_match,
+        CASE
+            WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern THEN 1
+            ELSE 0
+        END AS process_order_match
+    FROM {tbl_stock} s
+    JOIN {tbl_material} m
+        ON s.MATERIAL_ID = m.MATERIAL_ID AND m.LANGUAGE_ID = 'E'
+    JOIN {tbl_plant} p
+        ON s.PLANT_ID = p.PLANT_ID
+    LEFT JOIN latest_prod ph
+        ON s.MATERIAL_ID = ph.MATERIAL_ID
+       AND s.BATCH_ID = ph.BATCH_ID
+       AND s.PLANT_ID = ph.PLANT_ID
+    WHERE s.BATCH_ID IS NOT NULL
+      AND (
+        UPPER(s.MATERIAL_ID) LIKE :search_pattern
+        OR UPPER(m.MATERIAL_NAME) LIKE :search_pattern
+        OR UPPER(s.BATCH_ID) LIKE :search_pattern
+        OR (ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern)
+      )
+    ORDER BY
+        CASE
+          WHEN UPPER(s.BATCH_ID) = :query_upper THEN 0
+          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper THEN 1
+          WHEN UPPER(s.MATERIAL_ID) = :query_upper THEN 2
+          WHEN UPPER(s.MATERIAL_ID) LIKE :prefix_pattern THEN 3
+          WHEN UPPER(s.BATCH_ID) LIKE :prefix_pattern THEN 4
+          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :prefix_pattern THEN 5
+          ELSE 6
+        END,
+        s.MATERIAL_ID,
+        s.BATCH_ID,
+        s.PLANT_ID
+    LIMIT :max_rows
+    """
+
+    query_upper = request.query.strip().upper()
+    return QuerySpec(
+        name="trace2.batch_search",
+        module="trace2",
+        endpoint="/api/trace2/batch-search",
+        sql=sql,
+        params={
+            "query_upper": query_upper,
+            "search_pattern": _to_search_like_pattern(query_upper),
+            "prefix_pattern": f"{query_upper.replace('*', '%')}%",
+            "max_rows": request.max_rows,
+        },
+        cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:gold_batch_stock_v+material+plant+production_history_v",
+        tags=["trace2", "trace-consumer", "batch-search"],
+    )
+
+
+def map_batch_search_rows(rows: list[dict], query: str, max_rows: int) -> dict:
+    """Map Trace Consumer search rows to the frontend search contract."""
+    limited_rows = rows[:max_rows]
+    items: list[dict] = []
+
+    for row in limited_rows:
+        match_types: list[str] = []
+        if row.get("material_match"):
+            match_types.append("material-id")
+        if row.get("description_match"):
+            match_types.append("description")
+        if row.get("batch_match"):
+            match_types.append("batch-id")
+        if row.get("process_order_match"):
+            match_types.append("process-order-id")
+
+        quantity = row.get("batch_qty")
+        if quantity is None:
+            quantity = row.get("total_stock")
+
+        item: dict = {
+            "materialId": _string_or_empty(row.get("material_id")),
+            "materialDescription": _string_or_empty(row.get("material_name")),
+            "batchId": _string_or_empty(row.get("batch_id")),
+            "plantId": _string_or_empty(row.get("plant_id")),
+            "plantName": _string_or_empty(
+                row.get("plant_name") if row.get("plant_name") is not None else row.get("plant_id")
+            ),
+            "matchTypes": match_types,
+        }
+        if row.get("process_order_id") is not None:
+            item["processOrderId"] = str(row["process_order_id"])
+        if row.get("latest_posting_date") is not None:
+            item["latestPostingDate"] = str(row["latest_posting_date"])
+        if quantity is not None:
+            item["quantity"] = float(quantity)
+        if row.get("uom") is not None:
+            item["uom"] = str(row["uom"])
+        items.append(item)
+
+    return {
+        "query": query,
+        "total": len(items),
+        "truncated": len(rows) > max_rows,
+        "wildcardApplied": "*" in query or "%" in query,
+        "items": items,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1194,6 +1361,19 @@ def map_production_history_rows(rows: list[dict], material_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+def _to_search_like_pattern(query_upper: str) -> str:
+    """Convert a consumer search term to a Databricks LIKE pattern."""
+    pattern = query_upper.replace("*", "%")
+    if "%" not in pattern:
+        pattern = f"%{pattern}%"
+    return pattern
+
+
+def _string_or_empty(value: object) -> str:
+    """Preserve falsy-but-valid source identifiers such as numeric 0."""
+    return str(value) if value is not None else ""
+
 
 def _node_key(material_id: str, batch_id: str) -> str:
     """Unique key for a batch node — 2-tuple (material_id:batch_id).

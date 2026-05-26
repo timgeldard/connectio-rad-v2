@@ -37,4 +37,29 @@ describe('Trace2Adapter Factory Gating', () => {
     const adapter = createTrace2Adapter()
     expect(adapter).toBeInstanceOf(Trace2LegacyApiAdapter)
   })
+
+  it('returns the HTTP adapter when VITE_ADAPTER_MODE is databricks-api and featureFlag is true', () => {
+    vi.stubEnv('VITE_ADAPTER_MODE', 'databricks-api')
+    setFeatureFlags({
+      'traceability.databricksApi': true,
+    })
+
+    const adapter = createTrace2Adapter()
+    expect(adapter).toBeInstanceOf(Trace2LegacyApiAdapter)
+  })
+
+  it('returns a disabled adapter when databricks-api mode is feature-flagged off', async () => {
+    vi.stubEnv('VITE_ADAPTER_MODE', 'databricks-api')
+    setFeatureFlags({
+      'traceability.databricksApi': false,
+    })
+
+    const adapter = createTrace2Adapter()
+    const result = await adapter.searchBatches({ query: 'cheese' })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.error.message).toContain('disabled')
+  })
 })

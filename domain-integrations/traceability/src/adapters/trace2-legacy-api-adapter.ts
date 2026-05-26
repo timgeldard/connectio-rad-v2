@@ -16,7 +16,12 @@ import type {
 } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { Trace2Adapter } from './trace2-adapter.js'
-import type { Trace2AdapterRequest } from './trace2-adapter.js'
+import {
+  Trace2BatchSearchResponseSchema,
+  type Trace2AdapterRequest,
+  type Trace2BatchSearchRequest,
+  type Trace2BatchSearchResponse,
+} from './trace2-adapter.js'
 import { mapBackendTraceGraph } from './trace2-graph-mapper.js'
 
 interface V1BatchHeaderResponse {
@@ -84,6 +89,80 @@ export class Trace2LegacyApiAdapter extends Trace2Adapter {
   constructor(baseUrl: string) {
     super()
     this.baseUrl = baseUrl.replace(/\/$/, '')
+  }
+
+  /**
+   * Tier: databricks-api — searches verified trace gold views for complete
+   * batch context before launching the consumer investigation canvas.
+   */
+  override async searchBatches(
+    request: Trace2BatchSearchRequest,
+  ): Promise<AdapterResult<Trace2BatchSearchResponse>> {
+    const query = request.query.trim()
+    if (!query) {
+      return {
+        ok: false,
+        error: {
+          code: 'not-found',
+          message: 'Enter a material, description, batch, or process order.',
+          retryable: false,
+        },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/trace2/batch-search`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          max_rows: request.maxRows ?? 25,
+        }),
+      })
+
+      if (!response.ok) {
+        let detail = `Batch search unavailable (HTTP ${response.status})`
+        try {
+          const json = (await response.json()) as Record<string, unknown>
+          if (typeof json.detail === 'string') detail = json.detail
+        } catch {
+          /* ignore parse errors */
+        }
+
+        const code =
+          response.status === 401
+            ? ('unauthorized' as const)
+            : response.status === 404
+              ? ('not-found' as const)
+              : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: detail,
+            retryable: response.status >= 500 && response.status !== 503,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'databricks-api',
+        }
+      }
+
+      const raw = await response.json()
+      const data = Trace2BatchSearchResponseSchema.parse(raw)
+      return { ok: true, data, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      const code = message.includes('parse') || message.includes('schema') ? 'invalid-data' : 'unknown'
+      return {
+        ok: false,
+        error: { code, message: `Batch search unavailable (${message})`, retryable: code === 'unknown' },
+        displayState: 'error',
+        source: 'databricks-api',
+      }
+    }
   }
 
   /**

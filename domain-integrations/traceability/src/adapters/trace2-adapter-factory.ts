@@ -18,6 +18,15 @@ export function createTrace2Adapter(): Trace2Adapter {
     }
     return new Trace2LegacyApiAdapter(traceBaseUrl)
   }
+  if (adapterMode === 'databricks-api') {
+    if (!featureFlags.traceability.databricksApi) {
+      return createDisabledAdapter<Trace2Adapter>(
+        'databricks-api',
+        'Traceability Databricks API adapter is disabled by feature flags.'
+      )
+    }
+    return new Trace2LegacyApiAdapter(traceBaseUrl)
+  }
   return new Trace2Adapter()
 }
 
@@ -26,5 +35,6 @@ export function createTrace2Adapter(): Trace2Adapter {
  * Mode is determined by VITE_ADAPTER_MODE at build time:
  *   - 'mock'       → returns realistic fixtures (default)
  *   - 'legacy-api' → calls V1 via V2 proxy; requires VITE_TRACE_API_BASE_URL
+ *   - 'databricks-api' → calls V2 FastAPI routes backed by Databricks
  */
 export const trace2Adapter: Trace2Adapter = createTrace2Adapter()

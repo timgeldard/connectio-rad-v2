@@ -40,6 +40,26 @@ const partialRequest: Trace2AdapterRequest = {
   // batchId and materialId intentionally absent
 }
 
+const SEARCH_RESPONSE_OK = {
+  query: 'cheese',
+  total: 1,
+  truncated: false,
+  wildcardApplied: false,
+  items: [
+    {
+      materialId: '20035129',
+      materialDescription: 'CHEESE POWDER BLEND 25KG',
+      batchId: '8000049668',
+      plantId: 'C061',
+      plantName: 'Kerry Cork',
+      processOrderId: '007006964801',
+      quantity: 1000,
+      uom: 'KG',
+      matchTypes: ['description'],
+    },
+  ],
+}
+
 function mockFetch(status: number, body: unknown, ok = status >= 200 && status < 300) {
   return vi.fn().mockResolvedValue({
     ok,
@@ -63,6 +83,66 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe('Trace2LegacyApiAdapter.searchBatches', () => {
+  it('calls POST /api/trace2/batch-search with query and max_rows', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, SEARCH_RESPONSE_OK))
+
+    await adapter.searchBatches({ query: 'cheese', maxRows: 10 })
+
+    const [url, opts] = vi.mocked(global.fetch).mock.calls[0]
+    expect(String(url)).toContain('/api/trace2/batch-search')
+    expect(opts?.method).toBe('POST')
+    const body = JSON.parse(String(opts?.body))
+    expect(body.query).toBe('cheese')
+    expect(body.max_rows).toBe(10)
+  })
+
+  it('returns source=databricks-api and validates search results', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, SEARCH_RESPONSE_OK))
+
+    const result = await adapter.searchBatches({ query: 'cheese' })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.source).toBe('databricks-api')
+    expect(result.data.items[0].materialId).toBe('20035129')
+    expect(result.data.items[0].matchTypes).toEqual(['description'])
+  })
+
+  it('returns ok:false without fetch for blank search', async () => {
+    const result = await adapter.searchBatches({ query: '   ' })
+
+    expect(result.ok).toBe(false)
+    expect(vi.mocked(global.fetch)).not.toHaveBeenCalled()
+    if (result.ok) return
+    expect(result.error.code).toBe('not-found')
+    expect(result.source).toBe('databricks-api')
+  })
+
+  it('surfaces 401 as unauthorized', async () => {
+    vi.stubGlobal('fetch', mockFetch(401, { detail: 'Unauthorized' }, false))
+
+    const result = await adapter.searchBatches({ query: 'cheese' })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('unauthorized')
+    expect(result.displayState).toBe('unauthorized')
+    expect(result.source).toBe('databricks-api')
+  })
+
+  it('does not fall back to mock on backend outage', async () => {
+    vi.stubGlobal('fetch', mockFetch(503, { detail: 'batch-search requires BACKEND_ADAPTER_MODE=databricks-api' }, false))
+
+    const result = await adapter.searchBatches({ query: 'cheese' })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('network')
+    expect(result.source).toBe('databricks-api')
+  })
+})
 
 describe('Trace2LegacyApiAdapter.getBatchHeaderSummary', () => {
   it('returns ok:true with source=legacy-api on a successful V1 response', async () => {
