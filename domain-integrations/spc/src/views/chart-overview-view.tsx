@@ -55,23 +55,22 @@ export function ChartOverviewView({ request }: ChartOverviewViewProps) {
       
       <VerificationStatusBanner
         title="Statistical Process Control (SPC) Quality Metrics"
-        status="mock-demo"
-        sourceLabel="In-Memory Mock Simulation"
+        status="partial-native"
+        sourceLabel="Unity Catalog — gold_batch_quality_result_v, spc_quality_metric_subgroup_mv"
         routes={[
-          'GET /api/spc/summary',
-          'GET /api/spc/active-signals',
-          'GET /api/spc/monitored-characteristics',
-          'GET /api/spc/control-chart'
+          'GET /api/spc/characteristics (databricks-api)',
+          'GET /api/spc/subgroups (databricks-api)',
         ]}
         sourceObjects={[
-          'spc_quality_metrics_v'
+          'gold_batch_quality_result_v',
+          'spc_quality_metric_subgroup_mv',
         ]}
         limitations={[
-          'Demo-Only sandbox environment',
-          'Not linked to live production data',
-          'Native Databricks integration pending catalog alignment'
+          'SPC Summary and Active Signals: unavailable — no source view in UAT',
+          'Control limits: client-side calculation only (no locked limits)',
+          'Point status: not-evaluated — no stored Nelson rule flags',
         ]}
-        lastVerified="Pending UAT Catalog Alignment"
+        lastVerified="2026-05-26 (connected_plant_uat)"
       />
 
       <SourceConfidenceStrip
@@ -200,10 +199,10 @@ export function SPCSandboxBanner() {
       </div>
       <div>
         <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--shell-warn, #C7821C)' }}>
-          SPC Sandbox Mode — Simulated Data
+          SPC Partial Native — Characteristics and charts are live; summary and signals are unavailable
         </h4>
         <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--shell-fg-2)', lineHeight: 1.4 }}>
-          SPC sandbox mode — values are for workflow validation and are not production control evidence. Control limits and signals shown here must be validated against approved SPC rules before operational use. Native Databricks integration is pending catalog alignment of the <code style={{ background: 'var(--shell-surface-2)', padding: '1px 4px', borderRadius: '3px' }}>spc_quality_metrics</code> schema in UAT.
+          Monitored characteristics and control chart subgroups are sourced from Unity Catalog UAT. Control limits are calculated client-side only — no locked limits or approved limit sets. Point status is <code style={{ background: 'var(--shell-surface-2)', padding: '1px 4px', borderRadius: '3px' }}>not-evaluated</code>; Nelson rule flags are not stored in this catalog. SPC Summary and Active Signals panels are unavailable pending source views.
         </p>
       </div>
     </div>

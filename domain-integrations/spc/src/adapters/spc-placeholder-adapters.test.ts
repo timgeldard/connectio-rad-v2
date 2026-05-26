@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest'
 import { SPCMonitoringDatabricksApiAdapter } from './spc-monitoring-databricks-api-adapter.js'
 import { SPCMonitoringLegacyApiAdapter } from './spc-monitoring-legacy-api-adapter.js'
 import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
@@ -12,6 +12,14 @@ const request: SPCMonitoringAdapterRequest = {
 describe('SPC Placeholder Adapters', () => {
   describe('SPCMonitoringDatabricksApiAdapter', () => {
     const adapter = new SPCMonitoringDatabricksApiAdapter()
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')))
+    })
+
+    afterAll(() => {
+      vi.unstubAllGlobals()
+    })
 
     it('returns error for getSPCSummary', async () => {
       const result = await adapter.getSPCSummary(request)
@@ -41,12 +49,14 @@ describe('SPC Placeholder Adapters', () => {
       }
     })
 
-    it('returns unavailable for getMonitoredCharacteristics', async () => {
+    it('returns error for getMonitoredCharacteristics on network failure', async () => {
       const result = await adapter.getMonitoredCharacteristics(request)
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.source).toBe('databricks-api')
-        expect(result.error.code).toBe('not-found')
+        // getMonitoredCharacteristics is now wired — a network failure produces 'network',
+        // not the 'not-found' sentinel used by hardcoded-unavailable methods.
+        expect(result.error.code).toBe('network')
       }
     })
 

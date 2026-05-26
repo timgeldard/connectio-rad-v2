@@ -14,6 +14,19 @@ import {
 } from '@connectio/data-contracts'
 import type { SPCMonitoringAdapterRequest } from './spc-monitoring-adapter.js'
 
+function mapChartType(
+  v1Type: string | undefined,
+): MonitoredSPCCharacteristic['chartType'] {
+  switch (v1Type) {
+    case 'imr': return 'individuals'
+    case 'xbar_r': return 'xbar-r'
+    case 'xbar_s': return 'xbar-s'
+    case 'p_chart': return 'p-chart'
+    case 'np_chart': return 'np-chart'
+    default: return 'individuals'
+  }
+}
+
 async function proxyGet(
   baseUrl: string,
   path: string,
@@ -228,9 +241,42 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
   }
 
   override async getMonitoredCharacteristics(
-    _request: SPCMonitoringAdapterRequest,
+    request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
-    return this.unavailable()
+    if (!request.materialId) {
+      return this.unavailable('Missing required materialId for getMonitoredCharacteristics.')
+    }
+
+    try {
+      const params: Record<string, string> = { material_id: request.materialId }
+      if (request.plantId) params['plant_id'] = request.plantId
+
+      const raw = await proxyGet(this.baseUrl, '/api/spc/characteristics', params) as Array<Record<string, unknown>>
+      const items: MonitoredSPCCharacteristic[] = (Array.isArray(raw) ? raw : []).map((c) => {
+        const batchCount = typeof c['batch_count'] === 'number' ? c['batch_count'] : 0
+        const sampleCount = typeof c['sample_count'] === 'number' ? c['sample_count'] : 0
+        return {
+          characteristicId: String(c['mic_id'] ?? ''),
+          characteristicName: String(c['mic_name'] ?? ''),
+          micId: String(c['mic_id'] ?? ''),
+          chartType: mapChartType(typeof c['chart_type'] === 'string' ? c['chart_type'] : undefined),
+          batchCount,
+          avgSamplesPerBatch: batchCount > 0 ? sampleCount / batchCount : undefined,
+          hasActiveSignal: Boolean(c['has_active_signal']),
+          operationId: typeof c['operation_id'] === 'string' ? c['operation_id'] : undefined,
+          chartTypeSource: 'heuristic' as const,
+        }
+      })
+
+      return {
+        ok: true,
+        data: items,
+        fetchedAt: new Date().toISOString(),
+        source: 'databricks-api',
+      }
+    } catch (err) {
+      return toErrorResult(err)
+    }
   }
 
   override async getSPCAlarmHistory(
