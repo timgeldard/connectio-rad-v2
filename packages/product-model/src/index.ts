@@ -20,6 +20,15 @@ export type {
   ActionFlowRegistration,
 } from './types/registration.js'
 export type {
+  ApplicationExperienceMaturity,
+  ConsumerAppAssemblyMode,
+  ConsumerAppDataBinding,
+  ConsumerAppDesignSource,
+  ConsumerAppShellPresentation,
+  ConsumerApplicationRegistration,
+  DataProductMaturity,
+} from './types/consumer-application.js'
+export type {
   ReadinessStatus,
   ReadinessSeverity,
   ReadinessFinding,

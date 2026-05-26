@@ -123,6 +123,9 @@ export type { ConnectedQualityLabBoardPanelProps } from './panels/connected-qual
 export { LabBoardView } from './views/lab-board-view.js'
 export type { LabBoardViewProps } from './views/lab-board-view.js'
 
+export { ConnectedQualityLabBoardStandaloneApp } from './lab-board-standalone/app.js'
+export { connectedQualityLabBoardStandaloneRegistration } from './lab-board-standalone/registration.js'
+
 // Actions
 export { ReleaseActionsPanel, ActionSheet, Field, SheetActions, SuccessMessage, ActionButton } from './actions/release-actions-panel.js'
 export type { ReleaseActionsPanelProps, ActionButtonVariant, ActionButtonProps } from './actions/release-actions-panel.js'
