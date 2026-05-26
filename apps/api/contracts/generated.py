@@ -682,13 +682,13 @@ class ConnectedQualityLabFailure(BaseModel):
     mat: str
     mat_no: str = Field(..., alias='matNo')
     lot: str
-    batch: str
-    line: str
+    batch: Optional[str] = None
+    line: Optional[str] = None
     char: str
     text: str
     res: float
-    lo: float
-    hi: float
+    lo: Optional[float] = None
+    hi: Optional[float] = None
     units: str
     sev: Literal['fail', 'warn']
     ts: Optional[str]
@@ -703,13 +703,13 @@ class Fail(BaseModel):
     mat: str
     mat_no: str = Field(..., alias='matNo')
     lot: str
-    batch: str
-    line: str
+    batch: Optional[str] = None
+    line: Optional[str] = None
     char: str
     text: str
     res: float
-    lo: float
-    hi: float
+    lo: Optional[float] = None
+    hi: Optional[float] = None
     units: str
     sev: Literal['fail', 'warn']
     ts: Optional[str]

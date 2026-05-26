@@ -48,6 +48,29 @@ describe('ConnectedQualityLabFailureSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('parses a record with absent batch, lo, hi and line fields', () => {
+    const raw = {
+      mat: 'Kerry Gold Butter 500g',
+      matNo: 'MAT-KG-500',
+      lot: 'LOT-2026-00881',
+      char: 'CHAR-PH-001',
+      text: 'pH Value',
+      res: 5.12,
+      units: 'pH',
+      sev: 'fail',
+      ts: '2026-05-14T09:30:00.000Z',
+      lotType: '89',
+    }
+    const result = ConnectedQualityLabFailureSchema.safeParse(raw)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.line).toBeUndefined()
+      expect(result.data.batch).toBeUndefined()
+      expect(result.data.lo).toBeUndefined()
+      expect(result.data.hi).toBeUndefined()
+    }
+  })
+
   it('rejects an invalid severity value', () => {
     const raw = {
       mat: 'Test',
