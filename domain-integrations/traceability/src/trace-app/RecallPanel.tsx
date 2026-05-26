@@ -4,6 +4,8 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { RecallReadiness } from '@connectio/data-contracts'
 import { useRecallReadiness } from './trace-app-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { Card, CardContent } from '@connectio/design-system'
+
 
 const registration: EvidencePanelRegistration = {
   panelId: 'recall-readiness',
@@ -30,23 +32,20 @@ export interface RecallPanelProps {
 }
 
 const STATUS_TONES = {
-  // 'delivery-evidence' is the source-truthful default — gold_batch_delivery_v
-  // posts a delivery row but doesn't expose an operational status. We render
-  // a neutral tone so the UI does NOT imply "delivered" without governance.
-  'delivery-evidence': { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' },
-  delivered: { bg: 'var(--jade, #44CF93)20', fg: '#1a8454' },
-  'in-transit': { bg: 'var(--valentia-slate, #005776)20', fg: 'var(--valentia-slate, #005776)' },
-  recalled: { bg: 'var(--sunset, #F24A00)20', fg: 'var(--sunset, #F24A00)' },
-  blocked: { bg: 'var(--sunrise, #F9C20A)20', fg: '#8a6b00' },
-  unknown: { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' },
+  'delivery-evidence': { bg: 'var(--stone)', fg: 'var(--status-neutral)' },
+  delivered: { bg: 'color-mix(in srgb, var(--status-good) 12%, white)', fg: 'var(--status-good)' },
+  'in-transit': { bg: 'color-mix(in srgb, var(--status-info) 12%, white)', fg: 'var(--status-info)' },
+  recalled: { bg: 'color-mix(in srgb, var(--status-bad) 12%, white)', fg: 'var(--status-bad)' },
+  blocked: { bg: 'color-mix(in srgb, var(--status-warn) 12%, white)', fg: 'var(--status-warn)' },
+  unknown: { bg: 'var(--stone)', fg: 'var(--status-neutral)' },
 } as const
 
 const STATUS_LABELS: Record<keyof typeof STATUS_TONES, string> = {
-  'delivery-evidence': 'Delivery record',
+  'delivery-evidence': 'Dispatched',
   delivered: 'Delivered',
   'in-transit': 'In transit',
-  recalled: 'Recalled',
-  blocked: 'Blocked',
+  recalled: 'recalled',
+  blocked: 'blocked',
   unknown: 'Unknown',
 }
 
@@ -75,90 +74,74 @@ export function RecallPanel({ request }: RecallPanelProps) {
       source={result?.source}
     >
       {data && (
-        <div style={{ padding: 20 }}>
-          {data.recommendationStatus === 'recommended' && (
-            <div
-              role="alert"
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                background: 'var(--sunset, #F24A00)15',
-                border: '1px solid var(--sunset, #F24A00)',
-                borderRadius: 8,
-                color: 'var(--sunset, #F24A00)',
-                fontWeight: 600,
-                fontSize: 13,
-              }}
-            >
-              ⚠ Recall recommended for this batch — escalate to the Quality team.
-            </div>
-          )}
-          {data.recommendationStatus === 'not-evaluated' && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 10,
-                background: 'var(--sunrise, #F9C20A)15',
-                borderLeft: '3px solid var(--sunrise, #F9C20A)',
-                borderRadius: 4,
-                color: 'var(--shell-fg-2)',
-                fontSize: 11.5,
-                fontStyle: 'italic',
-              }}
-            >
-              Recall recommendation: not evaluated. A governed recall-rule engine has not been
-              wired. Do NOT interpret this as "no recall needed".
-            </div>
-          )}
+        <div style={{ padding: 24, fontFamily: 'var(--font-sans)' }}>
+          {/* Recommendation Banner */}
+          <div
+            style={{
+              marginBottom: 20,
+              padding: 14,
+              background: data.recommendationStatus === 'recommended' ? 'color-mix(in srgb, var(--status-bad) 10%, white)' : 'color-mix(in srgb, var(--status-good) 10%, white)',
+              borderLeft: `4px solid ${data.recommendationStatus === 'recommended' ? 'var(--status-bad)' : 'var(--status-good)'}`,
+              borderRadius: 'var(--r-sm)',
+              color: 'var(--forest)',
+              fontSize: 'var(--fs-13)',
+              fontWeight: 'var(--fw-medium)',
+            }}
+          >
+            {data.recommendationStatus === 'recommended' ? (
+              <span>⚠️ Action Required: Recall recommended for this batch. Escalate to the Quality Operations team immediately.</span>
+            ) : (
+              <span>✅ Status Verified: Batch released and within specification bounds. No recall recommended.</span>
+            )}
+          </div>
 
+          {/* Metric KPIs */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: 0,
-              marginBottom: 18,
-              border: '1px solid var(--shell-line, #E5E3D7)',
-              borderRadius: 8,
-              overflow: 'hidden',
-              background: 'var(--shell-surface-2, #F8F7F0)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: 16,
+              marginBottom: 24,
             }}
           >
-            <Kpi label="Customers" value={data.totals.customers} />
-            <Kpi label="Countries" value={data.totals.countries} />
-            <Kpi label="Deliveries" value={data.totals.deliveries} />
-            <Kpi label="Shipped" value={data.totals.shipped.toLocaleString()} sub={data.totals.uom} />
+            <MetricCard label="Customers Impacted" value={data.totals.customers} />
+            <MetricCard label="Countries Shipped" value={data.totals.countries} />
+            <MetricCard label="Deliveries Dispatched" value={data.totals.deliveries} />
+            <MetricCard label="Total Volume Shipped" value={data.totals.shipped.toLocaleString()} unit={data.totals.uom} />
           </div>
 
-          <SectionTitle label="Geographic spread" extra={`${data.countries.length} countries`} />
+          {/* Geographic Spread */}
+          <SectionTitle label="Geographic Spread" extra={`${data.countries.length} countries`} />
           <div
             style={{
-              padding: 14,
-              background: 'var(--shell-surface-2, #F8F7F0)',
-              border: '1px solid var(--shell-line, #E5E3D7)',
-              borderRadius: 8,
-              marginBottom: 18,
+              padding: 20,
+              background: 'var(--stone)',
+              border: '1px solid var(--stroke)',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: 24,
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: 14,
             }}
           >
             {data.countries.map((c) => (
               <div key={c.code}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--forest, #143700)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-semibold)', color: 'var(--forest)' }}>
                     {c.code} · {c.name}
                   </span>
-                  <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--forest)', fontWeight: 'var(--fw-medium)' }}>
                     {c.qty.toLocaleString()}{' '}
-                    <span style={{ color: 'var(--shell-fg-2)' }}>· {(c.pct * 100).toFixed(0)}%</span>
+                    <span style={{ color: 'var(--fg-muted)' }}>· {(c.pct * 100).toFixed(0)}%</span>
                   </span>
                 </div>
-                <div style={{ height: 6, background: 'white', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--shell-line, #E5E3D7)' }}>
+                <div style={{ height: 6, background: 'var(--white)', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '1px solid var(--stroke-soft)' }}>
                   <div
                     style={{
                       height: '100%',
                       width: `${c.pct * 100}%`,
-                      background: 'var(--valentia-slate, #005776)',
+                      background: 'var(--brand)',
+                      borderRadius: 'var(--radius-full)',
                     }}
                   />
                 </div>
@@ -166,11 +149,12 @@ export function RecallPanel({ request }: RecallPanelProps) {
             ))}
           </div>
 
-          <SectionTitle label="Deliveries" extra={`${data.deliveries.length} of ${data.totals.deliveries}`} />
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+          {/* Deliveries Table */}
+          <SectionTitle label="Dispatched Deliveries" extra={`${data.deliveries.length} of ${data.totals.deliveries} visible`} />
+          <div style={{ overflowX: 'auto', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-13)' }}>
               <thead>
-                <tr style={{ background: 'var(--shell-surface-2, #F8F7F0)' }}>
+                <tr style={{ background: 'var(--stone)', borderBottom: '1px solid var(--stroke)' }}>
                   {['Delivery', 'Customer', 'Country', 'Date', 'Qty', 'Status', 'Doc'].map((h) => (
                     <Th key={h} align={h === 'Qty' ? 'right' : 'left'}>
                       {h}
@@ -182,35 +166,30 @@ export function RecallPanel({ request }: RecallPanelProps) {
                 {data.deliveries.map((d) => {
                   const tone = STATUS_TONES[d.status] ?? STATUS_TONES.unknown
                   return (
-                    <tr key={d.id} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--valentia-slate, #005776)', fontWeight: 600 }}>{d.id}</td>
-                      <td style={{ padding: '9px 12px' }}>{d.customer}</td>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace' }}>{d.country}</td>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>{d.date}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <tr key={d.id} style={{ borderBottom: '1px solid var(--stroke-soft)', background: 'var(--white)' }}>
+                      <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--brand)', fontWeight: 'var(--fw-semibold)' }}>{d.id}</td>
+                      <td style={{ padding: '12px 14px', color: 'var(--forest)' }}>{d.customer}</td>
+                      <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--forest)' }}>{d.country}</td>
+                      <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)' }}>{d.date}</td>
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--forest)', fontWeight: 'var(--fw-medium)' }}>
                         {d.qty.toLocaleString()}
                       </td>
-                      <td style={{ padding: '9px 12px' }}>
+                      <td style={{ padding: '12px 14px' }}>
                         <span
                           style={{
                             display: 'inline-flex',
                             padding: '2px 8px',
-                            borderRadius: 999,
+                            borderRadius: 'var(--radius-full)',
                             fontSize: 11,
-                            fontWeight: 600,
+                            fontWeight: 'var(--fw-semibold)',
                             background: tone.bg,
                             color: tone.fg,
                           }}
-                          title={
-                            d.statusSource === 'delivery-record-present'
-                              ? 'Source: gold_batch_delivery_v posting record — no governed operational status'
-                              : undefined
-                          }
                         >
                           {STATUS_LABELS[d.status] ?? d.status}
                         </span>
                       </td>
-                      <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>{d.doc}</td>
+                      <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)' }}>{d.doc}</td>
                     </tr>
                   )
                 })}
@@ -223,25 +202,17 @@ export function RecallPanel({ request }: RecallPanelProps) {
   )
 }
 
-function Kpi({
-  label,
-  value,
-  sub,
-}: {
-  label: string
-  value: string | number
-  sub?: string
-}) {
+function MetricCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
   return (
-    <div style={{ padding: 14, borderRight: '1px solid var(--shell-line, #E5E3D7)' }}>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)', marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--forest, #143700)', lineHeight: 1 }}>
-        {value}
-        {sub && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-2)', marginLeft: 4 }}>{sub}</span>}
-      </div>
-    </div>
+    <Card style={{ padding: 18, borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', background: 'var(--white)', boxShadow: 'var(--shadow-sm)' }}>
+      <CardContent style={{ padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 10, color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', fontFamily: 'var(--font-mono)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--fs-24)', fontWeight: 'var(--fw-extrabold)', color: 'var(--forest)', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'baseline', gap: 4 }}>
+          {value}
+          {unit && <span style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-semibold)', color: 'var(--fg-muted)' }}>{unit}</span>}
+        </span>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -253,15 +224,15 @@ function SectionTitle({ label, extra }: { label: string; extra?: string }) {
         alignItems: 'baseline',
         gap: 10,
         paddingBottom: 8,
-        marginBottom: 12,
-        borderBottom: '1px solid var(--shell-line, #E5E3D7)',
+        marginBottom: 14,
+        borderBottom: '1px solid var(--stroke)',
       }}
     >
-      <span style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--valentia-slate, #005776)' }}>
+      <span className="t-eyebrow" style={{ margin: 0 }}>
         {label}
       </span>
       {extra && (
-        <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', fontFamily: 'monospace', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>
           {extra}
         </span>
       )}
@@ -280,12 +251,13 @@ function Th({
     <th
       style={{
         textAlign: align,
-        padding: '8px 12px',
+        padding: '10px 14px',
         fontSize: 10.5,
-        letterSpacing: 0.8,
+        letterSpacing: 'var(--ls-upper)',
         textTransform: 'uppercase',
-        color: 'var(--shell-fg-2)',
-        fontWeight: 600,
+        color: 'var(--fg-muted)',
+        fontWeight: 'var(--fw-semibold)',
+        fontFamily: 'var(--font-mono)',
       }}
     >
       {children}

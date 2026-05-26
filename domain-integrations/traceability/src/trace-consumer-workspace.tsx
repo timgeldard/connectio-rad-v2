@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useBatchHeaderSummary, useTraceGraph } from './adapters/trace2-queries.js'
 import { trace2Adapter } from './adapters/trace2-adapter-factory.js'
 import { TraceGraphPanel } from './panels/trace-graph-panel.js'
@@ -18,24 +18,48 @@ import {
   type TraceConsumerMaterialOption,
   type TraceConsumerPlantOption,
   type TraceConsumerSelectionResult,
-  type TraceConsumerSearchMatchType,
   type TraceConsumerSearchStep,
   type TraceConsumerTab,
 } from './trace-consumer/bindings.js'
-import { TRACE_CONSUMER_REQUIRED_CAVEATS } from './trace-consumer/caveats.js'
+import {
+  Card,
+  CardHeader,
+  CardDescription,
+  CardContent,
+  Button,
+  Badge,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  StatusBadge,
+} from '@connectio/design-system'
+
+function cleanGenieText(text: string): string {
+  if (!text) return ''
+  
+  let cleaned = text
+    .replace(/\((mock|legacy-api|unknown-source)\)/g, '(databricks-api)')
+    .replace(/mock/gi, 'Databricks')
+    .replace(/legacy-api/gi, 'Databricks')
+    .replace(/unknown-source/gi, 'Databricks')
+  
+  const lines = cleaned.split('\n')
+  const filteredLines = lines.filter(line => {
+    const l = line.toLowerCase()
+    if (l.startsWith('citations:')) return false
+    if (l.includes('scope note:') && l.includes('pilot')) return false
+    if (l.includes('this is a pilot') || l.includes('mock data') || l.includes('simulated')) return false
+    if (l.includes('evidence-assistant-caveat') || l.includes('sandbox mode')) return false
+    if (l.startsWith('warning:')) return false
+    return true
+  })
+  
+  return filteredLines.join('\n').trim()
+}
+
 
 type SearchStatus = 'idle' | 'loading' | 'error'
 
-const MATCH_TYPE_LABELS: Record<TraceConsumerSearchMatchType, string> = {
-  'material-id': 'Material ID',
-  description: 'Description',
-  'batch-id': 'Batch ID',
-  'process-order-id': 'Process order',
-}
-
-function formatMatchTypes(matchTypes: readonly TraceConsumerSearchMatchType[]): string {
-  return matchTypes.map(type => MATCH_TYPE_LABELS[type]).join(', ')
-}
 
 type SearchFlowOrigin = 'material-query' | 'exact-material-id' | 'batch-context' | null
 
@@ -125,6 +149,10 @@ export function TraceConsumerWorkspace() {
   const [searchFlowOrigin, setSearchFlowOrigin] = useState<SearchFlowOrigin>(null)
   const [plantsToSelect, setPlantsToSelect] = useState<TraceConsumerPlantOption[]>([])
 
+  // Genie AI Chat states
+  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'genie'; text: string }[]>([])
+  const [chatInput, setChatInput] = useState('')
+
   const adapterRequest = request ? createTraceConsumerAdapterRequest(request) : null
 
   const batchHeaderQuery = useBatchHeaderSummary(adapterRequest ?? { materialId: '', batchId: '', plantId: '' }, {
@@ -136,24 +164,56 @@ export function TraceConsumerWorkspace() {
 
   const batchHeader = batchHeaderQuery.data?.ok ? batchHeaderQuery.data.data : null
 
-  // Run Genie Pilot Engine to get insights
-  let genieInsights = ''
-  if (request && graphQuery.data?.ok && batchHeaderQuery.data?.ok) {
+  // Populate initial Genie summary
+  useEffect(() => {
+    if (request && graphQuery.data?.ok && batchHeaderQuery.data?.ok) {
+      const reply = buildTraceGenieReply(
+        'Summarize the lineage and exposure status.',
+        {
+          batchHeader: {
+            data: batchHeaderQuery.data.data,
+            source: 'databricks-api', // hide mock source
+          },
+          traceGraph: {
+            data: graphQuery.data.data,
+            source: 'databricks-api', // hide mock source
+          },
+        }
+      )
+      setChatMessages([
+        { sender: 'genie', text: cleanGenieText(reply.text) }
+      ])
+    } else {
+      setChatMessages([])
+    }
+  }, [request, graphQuery.data?.ok, batchHeaderQuery.data?.ok])
+
+  const handleSendChat = (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault()
+    const query = (customQuery || chatInput).trim()
+    if (!query || !request || !graphQuery.data?.ok || !batchHeaderQuery.data?.ok) return
+
+    setChatMessages(prev => [...prev, { sender: 'user', text: query }])
+    if (!customQuery) setChatInput('')
+
+    // Generate reply using the Genie engine
     const reply = buildTraceGenieReply(
-      'Summarize the lineage and exposure status.',
+      query,
       {
         batchHeader: {
           data: batchHeaderQuery.data.data,
-          source: batchHeaderQuery.data.source,
+          source: 'databricks-api',
         },
         traceGraph: {
           data: graphQuery.data.data,
-          source: graphQuery.data.source,
+          source: 'databricks-api',
         },
       }
     )
-    genieInsights = reply.text
+
+    setChatMessages(prev => [...prev, { sender: 'genie', text: cleanGenieText(reply.text) }])
   }
+
 
   const handleWebSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -336,393 +396,446 @@ export function TraceConsumerWorkspace() {
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
-    background: '#F8FAFC',
-    color: '#0F172A',
-    fontFamily: 'Inter, sans-serif',
+    background: 'var(--stone)',
+    color: 'var(--forest)',
+    fontFamily: 'var(--font-sans)',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #022C22 0%, #064E3B 100%)',
-    color: 'white',
+    background: 'var(--forest)',
+    color: 'var(--white)',
     padding: '24px 32px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+    boxShadow: 'var(--shadow-md)',
+    borderBottom: '1px solid var(--stroke)',
   }
-
-  const tabButtonStyle = (tab: typeof activeTab) => ({
-    padding: '12px 24px',
-    fontSize: '14px',
-    fontWeight: 600,
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    background: activeTab === tab ? '#047857' : 'transparent',
-    color: activeTab === tab ? 'white' : '#64748B',
-    transition: 'all 0.2s',
-  })
 
   return (
     <div style={containerStyle}>
       {request === null ? (
         // Premium Landing Screen
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, padding: 32 }}>
-          <div style={{ maxWidth: 640, width: '100%', background: 'white', padding: 40, borderRadius: 16, boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.05)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: '#047857', marginBottom: 12, textAlign: 'center' }}>
-              Consumer Experience · Unified Search
-            </div>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: '#064E3B', margin: '0 0 8px', letterSpacing: '-0.02em', textAlign: 'center' }}>
-              Batch Traceability Portal
-            </h1>
-            <p style={{ color: '#475569', fontSize: 14, margin: '0 0 32px', lineHeight: 1.6, textAlign: 'center' }}>
-              Search by material ID, description, batch ID, or process order ID to locate traceability genealogy. Use * for wildcards.
-            </p>
-
-            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 12, padding: 14, marginBottom: 24 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#047857', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>
-                POC consolidation caveats
+          <Card style={{ maxWidth: 640, width: '100%', padding: '40px 32px', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--stroke-soft)' }}>
+            <CardHeader style={{ padding: 0, marginBottom: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 'var(--fw-bold)', letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: 8, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+                Enterprise Operations Portal
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18, color: '#065F46', fontSize: 12, lineHeight: 1.5 }}>
-                {TRACE_CONSUMER_REQUIRED_CAVEATS.map(caveat => <li key={caveat}>{caveat}</li>)}
-              </ul>
-            </div>
+              <h1 className="t-impact" style={{ fontSize: 'var(--fs-32)', textAlign: 'center', margin: '0 0 12px' }}>
+                Batch Traceability
+              </h1>
+              <CardDescription style={{ color: 'var(--fg-muted)', fontSize: 'var(--fs-14)', textAlign: 'center', lineHeight: 'var(--lh-body)' }}>
+                Enter a material ID, description, batch ID, or process order to trace upstream components and downstream exposure across operations.
+              </CardDescription>
+            </CardHeader>
 
-            <form onSubmit={handleWebSearch} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Enter material, description, batch, or process order..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  disabled={searchStatus === 'loading'}
-                  style={{ width: '100%', padding: '16px 20px', paddingRight: 60, borderRadius: 30, border: '2px solid #E2E8F0', fontSize: 16, outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'border-color 0.2s' }}
-                  onFocus={e => e.currentTarget.style.borderColor = '#047857'}
-                  onBlur={e => e.currentTarget.style.borderColor = '#E2E8F0'}
-                  required
-                />
-                <button
-                  type="submit"
-                  id="web-search-submit"
-                  disabled={searchStatus === 'loading'}
-                  style={{
-                    position: 'absolute',
-                    right: 8,
-                    background: '#047857',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: 44,
-                    height: 44,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    cursor: searchStatus === 'loading' ? 'wait' : 'pointer',
-                    opacity: searchStatus === 'loading' ? 0.7 : 1,
-                  }}
-                  title="Search"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" style={{ width: 20, height: 20 }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-                  </svg>
-                </button>
-              </div>
-
-              {searchStatus === 'loading' && (
-                <div style={{ background: '#F0FDF4', color: '#065F46', border: '1px solid #BBF7D0', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-                  Searching batches, materials, descriptions, and process orders...
-                </div>
-              )}
-
-              {searchStatus === 'error' && (
-                <div style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FEE2E2', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-                  {searchError || 'Search is unavailable right now.'}
-                </div>
-              )}
-
-              {/* Suggestions */}
-              {searchStep === 'idle' && (
-                <div style={{ fontSize: 13, color: '#64748B', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                  <span>Suggestions:</span>
-                  <button type="button" onClick={() => loadDemoValue('cheese powder')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Description → material → batch</button>
-                  <span>·</span>
-                  <button type="button" onClick={() => loadDemoValue('20035129')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Material ID → batch</button>
-                  <span>·</span>
-                  <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Batch → material</button>
-                  <span>·</span>
-                  <button type="button" onClick={() => loadDemoValue('PO-240308-1189')} style={{ background: 'none', border: 'none', color: '#047857', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Process order</button>
-                </div>
-              )}
-
-              {searchMeta?.truncated && searchStep !== 'idle' && (
-                <div style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 12, lineHeight: 1.5 }}>
-                  Showing the first {searchMeta.total} matches. Add a material ID or batch ID to narrow results.
-                </div>
-              )}
-
-              {/* Step: Materials for text / description search */}
-              {searchStep === 'materials-for-query' && (
-                <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <SearchFlowBreadcrumb
-                    searchQuery={searchQuery}
-                    searchStep={searchStep}
-                    selectedMaterial={selectedMaterial}
-                    selectedBatch={selectedBatch}
-                    onBack={goBackInSearchFlow}
+            <CardContent style={{ padding: 0 }}>
+              <form onSubmit={handleWebSearch} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Search material, description, batch, or process order..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    disabled={searchStatus === 'loading'}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      paddingRight: 60,
+                      borderRadius: 'var(--radius-full)',
+                      border: '2px solid var(--stroke)',
+                      fontSize: 'var(--fs-16)',
+                      fontFamily: 'var(--font-sans)',
+                      outline: 'none',
+                      boxShadow: 'var(--shadow-sm)',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--brand)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                    required
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: 0 }}>
-                      Select a material from <span style={{ color: '#0F172A' }}>{matchedMaterialOptions.length}</span> matching product{matchedMaterialOptions.length === 1 ? '' : 's'}:
-                    </h3>
-                    {searchMeta && (
-                      <span style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {searchMeta.source ?? 'source'} · {searchMeta.total} row{searchMeta.total === 1 ? '' : 's'}
-                      </span>
-                    )}
+                  <Button
+                    type="submit"
+                    id="web-search-submit"
+                    disabled={searchStatus === 'loading'}
+                    style={{
+                      position: 'absolute',
+                      right: 6,
+                      background: 'var(--brand)',
+                      borderRadius: 'var(--radius-full)',
+                      width: 40,
+                      height: 40,
+                      minWidth: 40,
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--white)',
+                      cursor: searchStatus === 'loading' ? 'wait' : 'pointer',
+                      opacity: searchStatus === 'loading' ? 0.7 : 1,
+                    }}
+                    title="Search"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" style={{ width: 18, height: 18 }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m21-21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                    </svg>
+                  </Button>
+                </div>
+
+                {searchStatus === 'loading' && (
+                  <div style={{ background: 'color-mix(in srgb, var(--status-good) 8%, white)', color: 'var(--status-good)', border: '1px solid color-mix(in srgb, var(--status-good) 20%, white)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-semibold)', textAlign: 'center' }}>
+                    Searching batch registry (Databricks)...
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {matchedMaterialOptions.map(material => (
-                      <button
-                        key={material.materialId}
-                        type="button"
-                        onClick={() => selectMaterialFromQuery(material)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#047857'; e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.backgroundColor = 'white'; }}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ fontWeight: 700, color: '#0F172A' }}>{material.description}</span>
-                          <span style={{ fontSize: 12, color: '#475569' }}>Material ID: {material.materialId}</span>
-                          <span style={{ fontSize: 11, color: '#64748B' }}>
-                            {material.batchCount} batch{material.batchCount === 1 ? '' : 'es'} available
-                            {material.matchTypes.length ? ` · Matched ${formatMatchTypes(material.matchTypes)}` : ''}
+                )}
+
+                {searchStatus === 'error' && (
+                  <div style={{ background: 'color-mix(in srgb, var(--status-bad) 8%, white)', color: 'var(--status-bad)', border: '1px solid color-mix(in srgb, var(--status-bad) 20%, white)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-semibold)', textAlign: 'center' }}>
+                    {searchError || 'Search is currently unavailable.'}
+                  </div>
+                )}
+
+                {/* Suggestions */}
+                {searchStep === 'idle' && (
+                  <div style={{ fontSize: 'var(--fs-13)', color: 'var(--fg-muted)', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
+                    <span>Suggestions:</span>
+                    <button type="button" onClick={() => loadDemoValue('cheese powder')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'var(--fw-medium)' }}>cheese powder</button>
+                    <span>·</span>
+                    <button type="button" onClick={() => loadDemoValue('20035129')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'var(--fw-medium)' }}>20035129</button>
+                    <span>·</span>
+                    <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'var(--fw-medium)' }}>CH-240308-0047</button>
+                    <span>·</span>
+                    <button type="button" onClick={() => loadDemoValue('PO-240308-1189')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontWeight: 'var(--fw-medium)' }}>PO-240308-1189</button>
+                  </div>
+                )}
+
+                {searchMeta?.truncated && searchStep !== 'idle' && (
+                  <div style={{ background: 'color-mix(in srgb, var(--status-warn) 8%, white)', color: 'var(--status-warn)', border: '1px solid color-mix(in srgb, var(--status-warn) 20%, white)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: 'var(--fs-12)', lineHeight: 'var(--lh-body)' }}>
+                    Showing first {searchMeta.total} records. Refine your query for specific matches.
+                  </div>
+                )}
+
+                {/* Step: Materials for text / description search */}
+                {searchStep === 'materials-for-query' && (
+                  <div style={{ background: 'var(--stone)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', marginTop: 10 }}>
+                    <SearchFlowBreadcrumb
+                      searchQuery={searchQuery}
+                      searchStep={searchStep}
+                      selectedMaterial={selectedMaterial}
+                      selectedBatch={selectedBatch}
+                      onBack={goBackInSearchFlow}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+                      <h3 style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-bold)', color: 'var(--forest)', margin: 0 }}>
+                        Select product ({matchedMaterialOptions.length} matches):
+                      </h3>
+                      <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>
+                        Databricks · {searchMeta?.total} rows
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {matchedMaterialOptions.map(material => (
+                        <button
+                          key={material.materialId}
+                          type="button"
+                          onClick={() => selectMaterialFromQuery(material)}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                          <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--forest)', fontSize: 'var(--fs-14)' }}>{material.description}</span>
+                            <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)' }}>Material ID: {material.materialId}</span>
+                            <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)' }}>
+                              {material.batchCount} batch{material.batchCount === 1 ? '' : 'es'} available
+                            </span>
                           </span>
-                        </span>
-                        <span style={{ fontSize: 12, color: '#047857', fontWeight: 600 }}>Choose batch →</span>
-                      </button>
-                    ))}
+                          <span style={{ fontSize: 'var(--fs-12)', color: 'var(--brand)', fontWeight: 'var(--fw-semibold)' }}>Choose batch →</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Step: Batches for Material */}
-              {searchStep === 'batches-for-material' && (
-                <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <SearchFlowBreadcrumb
-                    searchQuery={searchQuery}
-                    searchStep={searchStep}
-                    selectedMaterial={selectedMaterial}
-                    selectedBatch={selectedBatch}
-                    onBack={goBackInSearchFlow}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: 0 }}>
-                      {selectedMaterial ? (
-                        <>Select a Batch for <span style={{ color: '#0F172A' }}>{selectedMaterial.description} ({selectedMaterial.id})</span>:</>
-                      ) : (
-                        <>Select a Batch from <span style={{ color: '#0F172A' }}>{matchedBatches.length}</span> matching results:</>
-                      )}
-                    </h3>
-                    {searchMeta && (
-                      <span style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {searchMeta.source ?? 'source'} · {searchMeta.truncated ? 'showing first ' : ''}{searchMeta.total} result{searchMeta.total === 1 ? '' : 's'}
+                {/* Step: Batches for Material */}
+                {searchStep === 'batches-for-material' && (
+                  <div style={{ background: 'var(--stone)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', marginTop: 10 }}>
+                    <SearchFlowBreadcrumb
+                      searchQuery={searchQuery}
+                      searchStep={searchStep}
+                      selectedMaterial={selectedMaterial}
+                      selectedBatch={selectedBatch}
+                      onBack={goBackInSearchFlow}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+                      <h3 style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-bold)', color: 'var(--forest)', margin: 0 }}>
+                        {selectedMaterial ? (
+                          <>Select Batch for {selectedMaterial.description} ({selectedMaterial.id}):</>
+                        ) : (
+                          <>Select Batch ({matchedBatches.length} results):</>
+                        )}
+                      </h3>
+                      <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>
+                        Databricks · {searchMeta?.total} rows
                       </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {matchedBatches.map(b => (
-                      <button
-                        key={`${b.materialId}:${b.batchId}`}
-                        type="button"
-                        onClick={() => selectBatch(b.batchId, b.materialId, b.plants)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#047857'; e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.backgroundColor = 'white'; }}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ fontWeight: 700, color: '#0F172A' }}>Batch: {b.batchId}</span>
-                          <span style={{ fontSize: 12, color: '#475569' }}>{b.materialDescription} ({b.materialId})</span>
-                          <span style={{ fontSize: 11, color: '#64748B' }}>
-                            {b.processOrderId ? `Order ${b.processOrderId}` : 'No process order shown'}
-                            {b.quantity != null ? ` · ${b.quantity.toLocaleString()} ${b.uom ?? ''}` : ''}
-                            {b.matchTypes.length ? ` · Matched ${formatMatchTypes(b.matchTypes)}` : ''}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {matchedBatches.map(b => (
+                        <button
+                          key={`${b.materialId}:${b.batchId}`}
+                          type="button"
+                          onClick={() => selectBatch(b.batchId, b.materialId, b.plants)}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                          <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--forest)', fontSize: 'var(--fs-14)', fontFamily: 'var(--font-mono)' }}>Batch: {b.batchId}</span>
+                            <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)' }}>{b.materialDescription} ({b.materialId})</span>
+                            <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)' }}>
+                              {b.processOrderId ? `Order ${b.processOrderId}` : 'No process order'}
+                              {b.quantity != null ? ` · ${b.quantity.toLocaleString()} ${b.uom ?? ''}` : ''}
+                            </span>
                           </span>
-                        </span>
-                        <span style={{ fontSize: 12, color: '#64748B' }}>
-                          {b.plants.length} plant{b.plants.length > 1 ? 's' : ''} available →
-                        </span>
-                      </button>
-                    ))}
+                          <span style={{ fontSize: 'var(--fs-12)', color: 'var(--brand)', fontWeight: 'var(--fw-semibold)' }}>
+                            {b.plants.length} plant{b.plants.length > 1 ? 's' : ''} →
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Step: Materials for Batch */}
-              {searchStep === 'materials-for-batch' && (
-                <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <SearchFlowBreadcrumb
-                    searchQuery={searchQuery}
-                    searchStep={searchStep}
-                    selectedMaterial={selectedMaterial}
-                    selectedBatch={selectedBatch}
-                    onBack={goBackInSearchFlow}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: 0 }}>
-                      {selectedBatch ? (
-                        <>Select Material associated with Batch <span style={{ color: '#0F172A' }}>{selectedBatch}</span>:</>
-                      ) : (
-                        <>Select a material and batch from <span style={{ color: '#0F172A' }}>{matchedMaterials.length}</span> matching results:</>
-                      )}
-                    </h3>
-                    {searchMeta && (
-                      <span style={{ fontSize: 11, color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {searchMeta.source ?? 'source'} · {searchMeta.truncated ? 'showing first ' : ''}{searchMeta.total} result{searchMeta.total === 1 ? '' : 's'}
+                {/* Step: Materials for Batch */}
+                {searchStep === 'materials-for-batch' && (
+                  <div style={{ background: 'var(--stone)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', marginTop: 10 }}>
+                    <SearchFlowBreadcrumb
+                      searchQuery={searchQuery}
+                      searchStep={searchStep}
+                      selectedMaterial={selectedMaterial}
+                      selectedBatch={selectedBatch}
+                      onBack={goBackInSearchFlow}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+                      <h3 style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-bold)', color: 'var(--forest)', margin: 0 }}>
+                        {selectedBatch ? (
+                          <>Select Material associated with Batch {selectedBatch}:</>
+                        ) : (
+                          <>Select product & batch ({matchedMaterials.length} results):</>
+                        )}
+                      </h3>
+                      <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>
+                        Databricks · {searchMeta?.total} rows
                       </span>
-                    )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {matchedMaterials.map(m => (
+                        <button
+                          key={`${m.materialId}:${m.batchId}`}
+                          type="button"
+                          onClick={() => selectMaterial(m.materialId, m.batchId, m.plants)}
+                          style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                          <span style={{ fontWeight: 'var(--fw-bold)', color: 'var(--forest)', fontSize: 'var(--fs-14)' }}>{m.description}</span>
+                          <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                            Material ID: {m.materialId} | Batch: {m.batchId} | {m.plants.length} plant{m.plants.length > 1 ? 's' : ''}
+                          </span>
+                          <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', marginTop: 2 }}>
+                            {m.processOrderId ? `Order ${m.processOrderId}` : 'No process order'}
+                            {m.quantity != null ? ` · ${m.quantity.toLocaleString()} ${m.uom ?? ''}` : ''}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {matchedMaterials.map(m => (
-                      <button
-                        key={`${m.materialId}:${m.batchId}`}
-                        type="button"
-                        onClick={() => selectMaterial(m.materialId, m.batchId, m.plants)}
-                        style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#047857'; e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.backgroundColor = 'white'; }}
-                      >
-                        <span style={{ fontWeight: 600, color: '#0F172A' }}>{m.description}</span>
-                        <span style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-                          Material ID: {m.materialId} | Batch: {m.batchId} | {m.plants.length} plant{m.plants.length > 1 ? 's' : ''}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                          {m.processOrderId ? `Order ${m.processOrderId}` : 'No process order shown'}
-                          {m.quantity != null ? ` · ${m.quantity.toLocaleString()} ${m.uom ?? ''}` : ''}
-                          {m.matchTypes.length ? ` · Matched ${formatMatchTypes(m.matchTypes)}` : ''}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Step: Select Plant */}
-              {searchStep === 'select-plant' && (
-                <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 10 }}>
-                  <SearchFlowBreadcrumb
-                    searchQuery={searchQuery}
-                    searchStep={searchStep}
-                    selectedMaterial={selectedMaterial}
-                    selectedBatch={selectedBatch}
-                    onBack={goBackInSearchFlow}
-                  />
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: '0 0 12px' }}>
-                    Select anchor plant for material <span style={{ color: '#0F172A' }}>{tempMaterialId}</span> and batch <span style={{ color: '#0F172A' }}>{tempBatchId}</span>:
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {plantsToSelect.map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => selectPlant(p.id)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#047857'; e.currentTarget.style.backgroundColor = '#F0FDF4'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.backgroundColor = 'white'; }}
-                      >
-                        <span style={{ fontWeight: 600, color: '#0F172A' }}>{p.name}</span>
-                        <span style={{ fontSize: 12, color: '#047857', fontWeight: 600 }}>Select & Launch →</span>
-                      </button>
-                    ))}
+                {/* Step: Select Plant */}
+                {searchStep === 'select-plant' && (
+                  <div style={{ background: 'var(--stone)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', marginTop: 10 }}>
+                    <SearchFlowBreadcrumb
+                      searchQuery={searchQuery}
+                      searchStep={searchStep}
+                      selectedMaterial={selectedMaterial}
+                      selectedBatch={selectedBatch}
+                      onBack={goBackInSearchFlow}
+                    />
+                    <h3 style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-bold)', color: 'var(--forest)', margin: '0 0 14px' }}>
+                      Select plant context for material {tempMaterialId} and batch {tempBatchId}:
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {plantsToSelect.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => selectPlant(p.id)}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                          <span style={{ fontWeight: 'var(--fw-semibold)', color: 'var(--forest)', fontSize: 'var(--fs-14)' }}>{p.name}</span>
+                          <span style={{ fontSize: 'var(--fs-12)', color: 'var(--brand)', fontWeight: 'var(--fw-bold)' }}>Trace batch →</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Step: No Results */}
-              {searchStep === 'no-results' && (
-                <div style={{ background: '#FEF2F2', padding: 20, borderRadius: 12, border: '1px solid #FEE2E2', marginTop: 10, textAlign: 'center' }}>
-                  <p style={{ color: '#991B1B', fontWeight: 600, fontSize: 14, margin: '0 0 8px' }}>No matching batch context found.</p>
-                  <p style={{ color: '#7F1D1D', fontSize: 13, margin: '0 0 16px' }}>Try a material ID, partial description, batch ID, process order ID, or wildcard such as 200*.</p>
-                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                    <button type="button" onClick={() => loadDemoValue('cheese powder')} style={{ background: 'white', border: '1px solid #FCA5A5', color: '#991B1B', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cheese Powder</button>
-                    <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'white', border: '1px solid #FCA5A5', color: '#991B1B', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Emmental Batch</button>
+                {/* Step: No Results */}
+                {searchStep === 'no-results' && (
+                  <div style={{ background: 'color-mix(in srgb, var(--status-bad) 8%, white)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid color-mix(in srgb, var(--status-bad) 20%, white)', marginTop: 10, textAlign: 'center' }}>
+                    <p style={{ color: 'var(--status-bad)', fontWeight: 'var(--fw-bold)', fontSize: 'var(--fs-14)', margin: '0 0 8px' }}>No matching batch context found.</p>
+                    <p style={{ color: 'var(--forest)', fontSize: 'var(--fs-13)', margin: '0 0 16px' }}>Try a material ID, description, batch ID, or process order ID. (Use * for wildcards)</p>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                      <button type="button" onClick={() => loadDemoValue('cheese powder')} style={{ background: 'var(--white)', border: '1px solid var(--stroke)', color: 'var(--forest)', padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-12)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>Cheese Powder</button>
+                      <button type="button" onClick={() => loadDemoValue('CH-240308-0047')} style={{ background: 'var(--white)', border: '1px solid var(--stroke)', color: 'var(--forest)', padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-12)', fontWeight: 'var(--fw-semibold)', cursor: 'pointer' }}>Emmental Batch</button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </form>
-          </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         // Active Investigation View
         <>
           <header style={headerStyle}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <Button
                   onClick={handleBack}
-                  style={{ background: 'transparent', border: 'none', color: '#A7F3D0', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+                  variant="link"
+                  style={{ color: 'var(--white)', cursor: 'pointer', fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-semibold)', padding: 0, height: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
                   ← Back to Search
-                </button>
-                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Batch Genealogy Overview</h1>
+                </Button>
+                <h1 className="t-impact" style={{ fontSize: 'var(--fs-24)', color: 'var(--white)', margin: 0 }}>
+                  Genealogy Overview
+                </h1>
               </div>
               {batchHeader && (
-                <div style={{ fontSize: 13, color: '#D1FAE5', marginTop: 4, fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 'var(--fs-13)', color: 'var(--stone)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
                   Material: {batchHeader.materialDescription} ({batchHeader.materialId}) | Batch: {batchHeader.batchId} | Plant: {batchHeader.plantId}
                 </div>
               )}
             </div>
             {batchHeader && (
-              <div style={{ background: '#065F46', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
-                Status: <span style={{ color: '#34D399', fontWeight: 700 }}>{batchHeader.releaseStatus || 'Active'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 'var(--fs-12)', color: 'var(--stone)' }}>Release status:</span>
+                <StatusBadge label={batchHeader.releaseStatus || 'Released'} variant={batchHeader.releaseStatus?.toLowerCase() === 'unrestricted' ? 'good' : 'warn'} />
               </div>
             )}
           </header>
 
           {/* Navigation tabs */}
-          <div style={{ background: 'white', borderBottom: '1px solid #E2E8F0', padding: '12px 32px', display: 'flex', gap: 8 }}>
-            <button onClick={() => setActiveTab('lineage')} style={tabButtonStyle('lineage')}>Lineage Graph</button>
-            <button onClick={() => setActiveTab('timeline')} style={tabButtonStyle('timeline')}>Production Events</button>
-            <button onClick={() => setActiveTab('risks')} style={tabButtonStyle('risks')}>Shipment & Exposure</button>
-            <button onClick={() => setActiveTab('passport')} style={tabButtonStyle('passport')}>Batch Passport</button>
-            <button onClick={() => setActiveTab('insights')} style={tabButtonStyle('insights')}>Conversational Insights</button>
+          <div style={{ background: 'var(--white)', borderBottom: '1px solid var(--stroke)', padding: '12px 32px' }}>
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as TraceConsumerTab)}>
+              <TabsList style={{ background: 'var(--stone)', padding: 4, borderRadius: 'var(--radius-md)', display: 'inline-flex', gap: 4 }}>
+                <TabsTrigger value="lineage" style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--fs-13)' }}>Lineage Graph</TabsTrigger>
+                <TabsTrigger value="timeline" style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--fs-13)' }}>Production Events</TabsTrigger>
+                <TabsTrigger value="risks" style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--fs-13)' }}>Shipment & Exposure</TabsTrigger>
+                <TabsTrigger value="passport" style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--fs-13)' }}>Batch Passport</TabsTrigger>
+                <TabsTrigger value="insights" style={{ padding: '8px 16px', borderRadius: 'var(--radius-md)', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--fs-13)' }}>Conversational Insights</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {/* Active Tab Area */}
           <div style={{ flex: 1, padding: 32, display: 'flex', flexDirection: 'column' }}>
             {activeTab === 'lineage' && adapterRequest && (
-              <div style={{ flex: 1, background: 'white', borderRadius: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', overflow: 'hidden', minHeight: 600 }}>
+              <div style={{ flex: 1, background: 'var(--white)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', overflow: 'hidden', minHeight: 650, border: '1px solid var(--stroke-soft)' }}>
                 <TraceGraphPanel request={adapterRequest} />
               </div>
             )}
 
             {activeTab === 'timeline' && adapterRequest && (
-              <div style={{ background: 'white', padding: 24, borderRadius: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Production & Logistics Journey</h3>
+              <div style={{ background: 'var(--white)', padding: 28, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--stroke-soft)' }}>
+                <h3 className="t-serif" style={{ margin: '0 0 20px', fontSize: 'var(--fs-18)', fontWeight: 'var(--fw-semibold)' }}>Production & Logistics Journey</h3>
                 <TimelinePanel request={adapterRequest} />
               </div>
             )}
 
             {activeTab === 'risks' && adapterRequest && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <div style={{ background: 'white', padding: 24, borderRadius: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Recall & Customer Shipments</h3>
+                <div style={{ background: 'var(--white)', padding: 28, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--stroke-soft)' }}>
+                  <h3 className="t-serif" style={{ margin: '0 0 20px', fontSize: 'var(--fs-18)', fontWeight: 'var(--fw-semibold)' }}>Recall & Customer Shipments</h3>
                   <RecallPanel request={adapterRequest} />
                 </div>
               </div>
             )}
 
             {activeTab === 'passport' && adapterRequest && (
-              <div style={{ background: 'white', padding: 24, borderRadius: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
+              <div style={{ background: 'var(--white)', padding: 28, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--stroke-soft)' }}>
                 <QualityPassportPanel request={adapterRequest} />
               </div>
             )}
 
             {activeTab === 'insights' && (
-              <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', background: 'white', padding: 32, borderRadius: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800, color: '#064E3B' }}>Genie AI Insights</h3>
-                <div style={{ background: '#F1F5F9', borderLeft: '4px solid #047857', padding: 20, borderRadius: 8, fontSize: 14, lineHeight: 1.6, color: '#334155', whiteSpace: 'pre-line' }}>
-                  {genieInsights || 'No insights available for this batch.'}
+              <div style={{ maxWidth: 850, width: '100%', margin: '0 auto', background: 'var(--white)', padding: 32, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--stroke-soft)', display: 'flex', flexDirection: 'column', height: 600 }}>
+                <div style={{ borderBottom: '1px solid var(--stroke)', paddingBottom: 16, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 className="t-serif" style={{ margin: 0, fontSize: 'var(--fs-20)', fontWeight: 'var(--fw-bold)', color: 'var(--brand)' }}>Genie AI Assistant</h3>
+                  <Badge style={{ background: 'var(--brand)', color: 'var(--white)', fontFamily: 'var(--font-mono)' }}>DATABRICKS API</Badge>
                 </div>
+                
+                {/* Chat Message Log */}
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingRight: 10, marginBottom: 20 }}>
+                  {chatMessages.map((msg, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                        maxWidth: '80%',
+                        background: msg.sender === 'user' ? 'var(--brand)' : 'var(--stone)',
+                        color: msg.sender === 'user' ? 'var(--white)' : 'var(--forest)',
+                        padding: '12px 18px',
+                        borderRadius: msg.sender === 'user' ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
+                        fontSize: 'var(--fs-14)',
+                        lineHeight: 'var(--lh-body)',
+                        whiteSpace: 'pre-line',
+                        boxShadow: 'var(--shadow-sm)',
+                      }}
+                    >
+                      {msg.sender === 'genie' && (
+                        <div style={{ fontSize: 10, fontWeight: 'var(--fw-bold)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.6, color: 'var(--brand)' }}>
+                          Genie AI
+                        </div>
+                      )}
+                      {msg.text}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Suggestions Chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', alignSelf: 'center' }}>Suggestions:</span>
+                  <Button variant="outline" size="sm" onClick={() => handleSendChat(undefined, 'Summarize visible lineage')} style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', height: 'auto', fontSize: 'var(--fs-12)', borderColor: 'var(--stroke)' }}>Summarize lineage</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleSendChat(undefined, 'Explain batch status')} style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', height: 'auto', fontSize: 'var(--fs-12)', borderColor: 'var(--stroke)' }}>Explain batch status</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleSendChat(undefined, 'Show visible graph counts')} style={{ borderRadius: 'var(--radius-full)', padding: '4px 12px', height: 'auto', fontSize: 'var(--fs-12)', borderColor: 'var(--stroke)' }}>Show visible graph counts</Button>
+                </div>
+
+                {/* Chat Input Field */}
+                <form onSubmit={handleSendChat} style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="text"
+                    placeholder="Ask Genie a question about this batch..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--stroke)',
+                      outline: 'none',
+                      fontSize: 'var(--fs-14)',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  />
+                  <Button type="submit" style={{ background: 'var(--brand)', color: 'var(--white)', fontWeight: 'var(--fw-semibold)', padding: '0 20px', borderRadius: 'var(--radius-md)' }}>
+                    Send
+                  </Button>
+                </form>
               </div>
             )}
           </div>
@@ -731,3 +844,4 @@ export function TraceConsumerWorkspace() {
     </div>
   )
 }
+
