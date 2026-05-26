@@ -337,7 +337,10 @@ def get_batch_search_spec(request: Trace2BatchSearchRequest) -> QuerySpec:
         CASE WHEN UPPER(s.MATERIAL_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS material_match,
         CASE WHEN UPPER(m.MATERIAL_NAME) LIKE :search_pattern THEN 1 ELSE 0 END AS description_match,
         CASE WHEN UPPER(s.BATCH_ID) LIKE :search_pattern THEN 1 ELSE 0 END AS batch_match,
-        CASE WHEN UPPER(COALESCE(ph.PROCESS_ORDER_ID, '')) LIKE :search_pattern THEN 1 ELSE 0 END AS process_order_match
+        CASE
+            WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern THEN 1
+            ELSE 0
+        END AS process_order_match
     FROM {tbl_stock} s
     JOIN {tbl_material} m
         ON s.MATERIAL_ID = m.MATERIAL_ID AND m.LANGUAGE_ID = 'E'
@@ -352,16 +355,16 @@ def get_batch_search_spec(request: Trace2BatchSearchRequest) -> QuerySpec:
         UPPER(s.MATERIAL_ID) LIKE :search_pattern
         OR UPPER(m.MATERIAL_NAME) LIKE :search_pattern
         OR UPPER(s.BATCH_ID) LIKE :search_pattern
-        OR UPPER(COALESCE(ph.PROCESS_ORDER_ID, '')) LIKE :search_pattern
+        OR (ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern)
       )
     ORDER BY
         CASE
           WHEN UPPER(s.BATCH_ID) = :query_upper THEN 0
-          WHEN UPPER(COALESCE(ph.PROCESS_ORDER_ID, '')) = :query_upper THEN 1
+          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper THEN 1
           WHEN UPPER(s.MATERIAL_ID) = :query_upper THEN 2
           WHEN UPPER(s.MATERIAL_ID) LIKE :prefix_pattern THEN 3
           WHEN UPPER(s.BATCH_ID) LIKE :prefix_pattern THEN 4
-          WHEN UPPER(COALESCE(ph.PROCESS_ORDER_ID, '')) LIKE :prefix_pattern THEN 5
+          WHEN ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :prefix_pattern THEN 5
           ELSE 6
         END,
         s.MATERIAL_ID,
@@ -409,11 +412,13 @@ def map_batch_search_rows(rows: list[dict], query: str, max_rows: int) -> dict:
             quantity = row.get("total_stock")
 
         item: dict = {
-            "materialId": str(row.get("material_id") or ""),
-            "materialDescription": str(row.get("material_name") or ""),
-            "batchId": str(row.get("batch_id") or ""),
-            "plantId": str(row.get("plant_id") or ""),
-            "plantName": str(row.get("plant_name") or row.get("plant_id") or ""),
+            "materialId": _string_or_empty(row.get("material_id")),
+            "materialDescription": _string_or_empty(row.get("material_name")),
+            "batchId": _string_or_empty(row.get("batch_id")),
+            "plantId": _string_or_empty(row.get("plant_id")),
+            "plantName": _string_or_empty(
+                row.get("plant_name") if row.get("plant_name") is not None else row.get("plant_id")
+            ),
             "matchTypes": match_types,
         }
         if row.get("process_order_id") is not None:
@@ -1363,6 +1368,11 @@ def _to_search_like_pattern(query_upper: str) -> str:
     if "%" not in pattern:
         pattern = f"%{pattern}%"
     return pattern
+
+
+def _string_or_empty(value: object) -> str:
+    """Preserve falsy-but-valid source identifiers such as numeric 0."""
+    return str(value) if value is not None else ""
 
 
 def _node_key(material_id: str, batch_id: str) -> str:

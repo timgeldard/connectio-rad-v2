@@ -356,6 +356,51 @@ class TestBatchSearchDatabricksMode:
         assert response.status_code == 200
         assert response.json()["wildcardApplied"] is True
 
+    def test_search_spec_does_not_match_null_process_orders_for_wildcard(self, monkeypatch) -> None:
+        from adapters.trace2.trace2_databricks_adapter import (
+            Trace2BatchSearchRequest,
+            get_batch_search_spec,
+        )
+
+        monkeypatch.setenv("TRACE_CATALOG", "connected_plant_uat")
+        monkeypatch.setenv("TRACE_SCHEMA", "gold")
+
+        spec = get_batch_search_spec(Trace2BatchSearchRequest(query="*"))
+
+        assert "COALESCE(ph.PROCESS_ORDER_ID" not in spec.sql
+        assert "ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) LIKE :search_pattern" in spec.sql
+        assert "ph.PROCESS_ORDER_ID IS NOT NULL AND UPPER(ph.PROCESS_ORDER_ID) = :query_upper" in spec.sql
+
+    def test_search_mapping_preserves_falsy_source_ids(self) -> None:
+        from adapters.trace2.trace2_databricks_adapter import map_batch_search_rows
+
+        result = map_batch_search_rows(
+            [
+                {
+                    "material_id": 0,
+                    "batch_id": 0,
+                    "plant_id": 0,
+                    "material_name": "",
+                    "plant_name": None,
+                    "process_order_id": 0,
+                    "material_match": 1,
+                    "description_match": 0,
+                    "batch_match": 1,
+                    "process_order_match": 1,
+                }
+            ],
+            "0",
+            25,
+        )
+
+        item = result["items"][0]
+        assert item["materialId"] == "0"
+        assert item["batchId"] == "0"
+        assert item["plantId"] == "0"
+        assert item["plantName"] == "0"
+        assert item["processOrderId"] == "0"
+        assert item["matchTypes"] == ["material-id", "batch-id", "process-order-id"]
+
     async def test_search_requires_databricks_mode(self, monkeypatch) -> None:
         monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
         async with _make_client() as client:
