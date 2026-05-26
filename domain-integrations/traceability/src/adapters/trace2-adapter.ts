@@ -56,26 +56,26 @@ export const Trace2BatchSearchMatchTypeSchema = z.enum([
 export type Trace2BatchSearchMatchType = z.infer<typeof Trace2BatchSearchMatchTypeSchema>
 
 export const Trace2BatchSearchItemSchema = z.object({
-  materialId: z.string(),
-  materialDescription: z.string(),
-  batchId: z.string(),
-  plantId: z.string(),
-  plantName: z.string(),
-  processOrderId: z.string().nullable().optional(),
-  latestPostingDate: z.string().nullable().optional(),
-  quantity: z.number().nullable().optional(),
-  uom: z.string().nullable().optional(),
-  matchTypes: z.array(Trace2BatchSearchMatchTypeSchema),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  plantName: z.string().describe('[classification: source-field]'),
+  processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
+  latestPostingDate: z.string().nullable().optional().describe('[classification: source-field]'),
+  quantity: z.number().nullable().optional().describe('[classification: source-field]'),
+  uom: z.string().nullable().optional().describe('[classification: source-field]'),
+  matchTypes: z.array(Trace2BatchSearchMatchTypeSchema).describe('[classification: application-derived]'),
 })
 
 export type Trace2BatchSearchItem = z.infer<typeof Trace2BatchSearchItemSchema>
 
 export const Trace2BatchSearchResponseSchema = z.object({
-  query: z.string(),
-  total: z.number().int().min(0),
-  truncated: z.boolean(),
-  wildcardApplied: z.boolean(),
-  items: z.array(Trace2BatchSearchItemSchema),
+  query: z.string().describe('[classification: application-derived]'),
+  total: z.number().int().min(0).describe('[classification: application-derived]'),
+  truncated: z.boolean().describe('[classification: application-derived]'),
+  wildcardApplied: z.boolean().describe('[classification: application-derived]'),
+  items: z.array(Trace2BatchSearchItemSchema).describe('[classification: source-derived]'),
 })
 
 export type Trace2BatchSearchResponse = z.infer<typeof Trace2BatchSearchResponseSchema>
