@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   parseTraceConsumerCombinedSearch,
+  resolveTraceConsumerBatchesForMaterial,
   resolveTraceConsumerSearch,
   resolveTraceConsumerSelection,
   type TraceConsumerSearchItem,
@@ -8,8 +9,29 @@ import {
 import { TRACE_CONSUMER_SEARCH_FIXTURES } from './fixtures.js'
 
 describe('resolveTraceConsumerSearch', () => {
-  it('matches material descriptions by partial text', () => {
+  it('matches material descriptions by partial text via material-first step', () => {
     const result = resolveTraceConsumerSearch('cheese powder', TRACE_CONSUMER_SEARCH_FIXTURES)
+
+    expect(result.step).toBe('materials-for-query')
+    if (result.step !== 'materials-for-query') return
+    expect(result.materials).toHaveLength(1)
+    expect(result.materials[0].materialId).toBe('20035129')
+    expect(result.materials[0].batchCount).toBe(2)
+    expect(result.batches.map(batch => batch.batchId)).toEqual(['8000049668', '8000049669'])
+  })
+
+  it('matches material ids with wildcards via material-first step', () => {
+    const result = resolveTraceConsumerSearch('10002384*', TRACE_CONSUMER_SEARCH_FIXTURES)
+
+    expect(result.step).toBe('materials-for-query')
+    if (result.step !== 'materials-for-query') return
+    expect(result.materials.map(material => material.materialId)).toEqual(
+      expect.arrayContaining(['100023847', '100023848']),
+    )
+  })
+
+  it('exact material id skips material picker and goes straight to batches', () => {
+    const result = resolveTraceConsumerSearch('20035129', TRACE_CONSUMER_SEARCH_FIXTURES)
 
     expect(result.step).toBe('batches-for-material')
     if (result.step !== 'batches-for-material') return
@@ -17,14 +39,15 @@ describe('resolveTraceConsumerSearch', () => {
     expect(result.batches.map(batch => batch.batchId)).toEqual(['8000049668', '8000049669'])
   })
 
-  it('matches material ids with wildcards', () => {
-    const result = resolveTraceConsumerSearch('10002384*', TRACE_CONSUMER_SEARCH_FIXTURES)
+  it('ambiguous description text matches multiple materials', () => {
+    const result = resolveTraceConsumerSearch('cheese', TRACE_CONSUMER_SEARCH_FIXTURES)
 
-    expect(result.step).toBe('batches-for-material')
-    if (result.step !== 'batches-for-material') return
-    expect(result.selectedMaterial).toBeNull()
-    expect(result.batches.map(batch => batch.materialId)).toContain('100023847')
-    expect(result.batches.map(batch => batch.materialId)).toContain('100023848')
+    expect(result.step).toBe('materials-for-query')
+    if (result.step !== 'materials-for-query') return
+    expect(result.materials.length).toBeGreaterThan(1)
+    expect(result.materials.map(material => material.materialId)).toEqual(
+      expect.arrayContaining(['20035129', '100023848']),
+    )
   })
 
   it('matches batch ids and preserves multi-plant options', () => {
@@ -151,8 +174,16 @@ describe('resolveTraceConsumerSearch', () => {
 
     const result = resolveTraceConsumerSearch('Cheese', rows)
 
-    expect(result.step).toBe('batches-for-material')
-    if (result.step !== 'batches-for-material') return
-    expect(result.batches.map(batch => batch.batchId)).toEqual(['B-003', 'B-001', 'B-002'])
+    expect(result.step).toBe('materials-for-query')
+    if (result.step !== 'materials-for-query') return
+    expect(result.materials).toHaveLength(1)
+    expect(result.materials[0].batchCount).toBe(3)
+
+    const batches = resolveTraceConsumerBatchesForMaterial(
+      'MAT-1',
+      'Cheese blend',
+      result.batches,
+    )
+    expect(batches.batches.map(batch => batch.batchId)).toEqual(['B-003', 'B-001', 'B-002'])
   })
 })

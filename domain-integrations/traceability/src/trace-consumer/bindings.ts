@@ -52,7 +52,7 @@ export interface TraceConsumerMatchedBatch {
   readonly plants: TraceConsumerPlantOption[]
 }
 
-/** Material search result grouped for the designed picker. */
+/** Material search result grouped for the designed picker (batch-centric queries). */
 export interface TraceConsumerMatchedMaterial {
   readonly materialId: string
   readonly description: string
@@ -65,9 +65,19 @@ export interface TraceConsumerMatchedMaterial {
   readonly plants: TraceConsumerPlantOption[]
 }
 
+/** Material option for description / ambiguous text search (material-first step). */
+export interface TraceConsumerMaterialOption {
+  readonly materialId: string
+  readonly description: string
+  readonly batchCount: number
+  readonly latestPostingDate?: string | null
+  readonly matchTypes: readonly TraceConsumerSearchMatchType[]
+}
+
 /** Search steps in the designed Trace Consumer journey. */
 export type TraceConsumerSearchStep =
   | 'idle'
+  | 'materials-for-query'
   | 'batches-for-material'
   | 'materials-for-batch'
   | 'select-plant'
@@ -82,6 +92,11 @@ export type TraceConsumerTab =
   | 'passport'
 
 export type TraceConsumerSearchResult =
+  | {
+      readonly step: 'materials-for-query'
+      readonly materials: readonly TraceConsumerMaterialOption[]
+      readonly batches: readonly TraceConsumerMatchedBatch[]
+    }
   | {
       readonly step: 'batches-for-material'
       readonly batches: TraceConsumerMatchedBatch[]
@@ -125,6 +140,11 @@ export type TraceConsumerSelectionResult =
       readonly step: 'missing-plant'
       readonly message: string
     }
+
+type MatchedSearchEntry = {
+  readonly item: TraceConsumerSearchItem
+  readonly matchTypes: readonly TraceConsumerSearchMatchType[]
+}
 
 /** Convert the designed-app request into the existing Trace2 query contract. */
 export function createTraceConsumerAdapterRequest(
@@ -192,6 +212,27 @@ export function resolveTraceConsumerSelection(
   }
 }
 
+/** Filter batch candidates after the user picks a material in the material-first flow. */
+export function resolveTraceConsumerBatchesForMaterial(
+  materialId: string,
+  description: string,
+  batches: readonly TraceConsumerMatchedBatch[],
+): {
+  readonly step: 'batches-for-material'
+  readonly batches: TraceConsumerMatchedBatch[]
+  readonly selectedMaterial: { readonly id: string; readonly description: string }
+} {
+  const filtered = batches
+    .filter(batch => identifiersMatch(batch.materialId, materialId))
+    .sort(compareMatchedBatches)
+
+  return {
+    step: 'batches-for-material',
+    batches: filtered,
+    selectedMaterial: { id: materialId, description },
+  }
+}
+
 /** Resolve free-text search input into the next designed-app search state. */
 export function resolveTraceConsumerSearch(
   rawQuery: string,
@@ -221,28 +262,16 @@ export function resolveTraceConsumerSearch(
   )
 
   if (itemsByMaterial.length > 0) {
-    const batchesMap: Record<string, TraceConsumerMatchedBatch> = {}
-    itemsByMaterial.forEach(({ item, matchTypes }) => {
-      const key = `${item.materialId}:${item.batchId}`
-      if (!batchesMap[key]) {
-        batchesMap[key] = {
-          batchId: item.batchId,
-          materialId: item.materialId,
-          materialDescription: item.materialDescription,
-          processOrderId: item.processOrderId,
-          latestPostingDate: item.latestPostingDate,
-          quantity: item.quantity,
-          uom: item.uom,
-          matchTypes,
-          plants: [],
-        }
+    const batches = buildMatchedBatches(itemsByMaterial)
+
+    if (shouldPickMaterialFirst(query, itemsByMaterial)) {
+      return {
+        step: 'materials-for-query',
+        materials: buildMaterialOptions(itemsByMaterial),
+        batches,
       }
-      const plantId = item.plantId.trim()
-      if (plantId && !batchesMap[key].plants.some(plant => plant.id === plantId)) {
-        batchesMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
-      }
-    })
-    const batches = Object.values(batchesMap).sort(compareMatchedBatches)
+    }
+
     const materialIds = new Set(batches.map(batch => batch.materialId))
     return {
       step: 'batches-for-material',
@@ -309,6 +338,95 @@ function resolveCombinedMaterialBatchSearch(
   return resolveTraceConsumerSelection(first.materialId, first.batchId, plants)
 }
 
+function shouldPickMaterialFirst(query: string, itemsByMaterial: readonly MatchedSearchEntry[]): boolean {
+  const materialIds = new Set(itemsByMaterial.map(entry => entry.item.materialId))
+  if (materialIds.size > 1) return true
+  if (hasWildcard(query)) return true
+
+  const hasDescriptionOnlyMatch = itemsByMaterial.some(
+    entry =>
+      entry.matchTypes.includes('description') && !entry.matchTypes.includes('material-id'),
+  )
+  if (hasDescriptionOnlyMatch) return true
+
+  if (materialIds.size === 1) {
+    const materialId = [...materialIds][0]
+    if (
+      itemsByMaterial.some(entry => entry.matchTypes.includes('material-id')) &&
+      isExactMaterialIdQuery(query, materialId)
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function buildMatchedBatches(itemsByMaterial: readonly MatchedSearchEntry[]): TraceConsumerMatchedBatch[] {
+  const batchesMap: Record<string, TraceConsumerMatchedBatch> = {}
+  itemsByMaterial.forEach(({ item, matchTypes }) => {
+    const key = `${item.materialId}:${item.batchId}`
+    if (!batchesMap[key]) {
+      batchesMap[key] = {
+        batchId: item.batchId,
+        materialId: item.materialId,
+        materialDescription: item.materialDescription,
+        processOrderId: item.processOrderId,
+        latestPostingDate: item.latestPostingDate,
+        quantity: item.quantity,
+        uom: item.uom,
+        matchTypes,
+        plants: [],
+      }
+    }
+    const plantId = item.plantId.trim()
+    if (plantId && !batchesMap[key].plants.some(plant => plant.id === plantId)) {
+      batchesMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
+    }
+  })
+  return Object.values(batchesMap).sort(compareMatchedBatches)
+}
+
+type MutableMaterialOption = {
+  materialId: string
+  description: string
+  batchCount: number
+  latestPostingDate?: string | null
+  matchTypes: TraceConsumerSearchMatchType[]
+  batchIds: Set<string>
+}
+
+function buildMaterialOptions(itemsByMaterial: readonly MatchedSearchEntry[]): TraceConsumerMaterialOption[] {
+  const materialsMap: Record<string, MutableMaterialOption> = {}
+
+  itemsByMaterial.forEach(({ item, matchTypes }) => {
+    const materialId = item.materialId
+    if (!materialsMap[materialId]) {
+      materialsMap[materialId] = {
+        materialId,
+        description: item.materialDescription,
+        batchCount: 0,
+        latestPostingDate: item.latestPostingDate,
+        matchTypes: [...matchTypes],
+        batchIds: new Set(),
+      }
+    }
+
+    const option = materialsMap[materialId]
+    option.batchIds.add(item.batchId)
+    option.batchCount = option.batchIds.size
+    option.latestPostingDate = pickLatestPostingDate(option.latestPostingDate, item.latestPostingDate)
+    option.matchTypes = [...mergeMatchTypes(option.matchTypes, matchTypes)]
+  })
+
+  return Object.values(materialsMap)
+    .map(({ batchIds: _batchIds, matchTypes, ...option }) => ({
+      ...option,
+      matchTypes,
+    }))
+    .sort(compareMaterialOptions)
+}
+
 function getTraceConsumerMatchTypes(
   item: TraceConsumerSearchItem,
   query: string,
@@ -317,7 +435,7 @@ function getTraceConsumerMatchTypes(
 
   const matchTypes: TraceConsumerSearchMatchType[] = []
   if (matchesQuery(item.materialId, query)) matchTypes.push('material-id')
-  if (matchesQuery(item.materialDescription, query)) matchTypes.push('description')
+  if (matchesDescriptionQuery(item.materialDescription, query)) matchTypes.push('description')
   if (matchesQuery(item.batchId, query)) matchTypes.push('batch-id')
   if (matchesQuery(item.processOrderId ?? '', query)) matchTypes.push('process-order-id')
   return matchTypes
@@ -337,6 +455,33 @@ function uniquePlants(items: readonly TraceConsumerSearchItem[]): TraceConsumerP
 
 function identifiersMatch(value: string, expected: string): boolean {
   return value.trim().toLowerCase() === expected.trim().toLowerCase()
+}
+
+function isExactMaterialIdQuery(query: string, materialId: string): boolean {
+  if (hasWildcard(query)) return false
+  return identifiersMatch(materialId, query)
+}
+
+function hasWildcard(query: string): boolean {
+  return query.includes('*') || query.includes('%')
+}
+
+function mergeMatchTypes(
+  current: readonly TraceConsumerSearchMatchType[],
+  next: readonly TraceConsumerSearchMatchType[],
+): readonly TraceConsumerSearchMatchType[] {
+  return [...new Set([...current, ...next])]
+}
+
+function pickLatestPostingDate(
+  current: string | null | undefined,
+  candidate: string | null | undefined,
+): string | null | undefined {
+  const currentTime = toTime(current)
+  const candidateTime = toTime(candidate)
+  if (currentTime === null) return candidate
+  if (candidateTime === null) return current
+  return candidateTime > currentTime ? candidate : current
 }
 
 function compareSearchItems(a: TraceConsumerSearchItem, b: TraceConsumerSearchItem): number {
@@ -367,6 +512,14 @@ function compareMatchedMaterials(a: TraceConsumerMatchedMaterial, b: TraceConsum
   )
 }
 
+function compareMaterialOptions(a: TraceConsumerMaterialOption, b: TraceConsumerMaterialOption): number {
+  return (
+    compareDatesDesc(a.latestPostingDate, b.latestPostingDate) ||
+    a.description.localeCompare(b.description) ||
+    a.materialId.localeCompare(b.materialId)
+  )
+}
+
 function compareDatesDesc(a: string | null | undefined, b: string | null | undefined): number {
   const aTime = toTime(a)
   const bTime = toTime(b)
@@ -393,7 +546,7 @@ function matchesQuery(value: string, rawQuery: string): boolean {
   const query = rawQuery.trim()
   if (!value || !query) return false
 
-  if (!query.includes('*') && !query.includes('%')) {
+  if (!hasWildcard(query)) {
     return value.toLowerCase().includes(query.toLowerCase())
   }
 
@@ -402,4 +555,32 @@ function matchesQuery(value: string, rawQuery: string): boolean {
     'i',
   )
   return regex.test(value)
+}
+
+/** Description matches use token boundaries to reduce accidental substring hits. */
+function matchesDescriptionQuery(description: string, rawQuery: string): boolean {
+  const query = rawQuery.trim()
+  if (!description || !query) return false
+
+  if (hasWildcard(query)) {
+    return matchesQuery(description, query)
+  }
+
+  const tokens = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+
+  if (tokens.length === 0) return false
+
+  const haystack = description.toLowerCase()
+  return tokens.every(token => {
+    const pattern = new RegExp(`(?:^|[\\s,/\\-])${escapeRegExp(token)}`, 'i')
+    return pattern.test(haystack) || haystack.startsWith(token)
+  })
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
 }
