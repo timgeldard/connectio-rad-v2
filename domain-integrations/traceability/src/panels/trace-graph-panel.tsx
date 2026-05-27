@@ -15,12 +15,9 @@ import {
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { TraceNode, TraceEdge } from '@connectio/data-contracts'
-import { useTraceGraph } from '../adapters/trace2-queries.js'
+import { useTraceGraph, useBatchHeaderSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 import {
-  RISK_BORDER,
-  RISK_BG,
-  RISK_TEXT,
   NODE_TYPE_LABEL,
   NODE_WIDTH,
   NODE_HEIGHT,
@@ -56,10 +53,8 @@ const registration: EvidencePanelRegistration = {
 
 function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
   const { node, isRoot, isSelected } = data
-  const risk = node.riskLevel ?? 'none'
-  const border = isSelected ? 'var(--brand)' : RISK_BORDER[risk] ?? 'var(--stroke)'
-  const bg = isSelected ? 'color-mix(in srgb, var(--brand) 6%, white)' : RISK_BG[risk] ?? 'var(--white)'
-  const textColor = RISK_TEXT[risk] ?? 'var(--forest)'
+  const border = isSelected ? 'var(--brand)' : 'var(--stroke)'
+  const bg = isSelected ? 'color-mix(in srgb, var(--brand) 6%, white)' : 'var(--white)'
 
   return (
     <div
@@ -82,7 +77,7 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
       <Handle type="target" position={Position.Top} style={{ background: border, width: 8, height: 8 }} />
       <Handle type="source" position={Position.Bottom} style={{ background: border, width: 8, height: 8 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
-        <span style={{ fontSize: 9, fontWeight: 'var(--fw-bold)', color: textColor, textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', flexShrink: 0 }}>
+        <span style={{ fontSize: 9, fontWeight: 'var(--fw-bold)', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', flexShrink: 0 }}>
           {node.type ? (NODE_TYPE_LABEL[node.type] ?? node.type) : undefined}
         </span>
         {isRoot && (
@@ -107,23 +102,11 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
           {node.plantId}
         </div>
       )}
-      <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
-        <span
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
-            background: border,
-            flexShrink: 0,
-            display: 'inline-block',
-          }}
-          aria-label={`Risk: ${risk}`}
-        />
-        <span style={{ fontSize: 9, color: textColor, textTransform: 'capitalize', fontWeight: 'var(--fw-medium)' }}>{risk} risk</span>
-        {node.status === 'unresolved' && (
-          <span style={{ fontSize: 9, color: 'var(--status-bad)', marginLeft: 'auto', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
-        )}
-      </div>
+      {node.status === 'unresolved' && (
+        <div style={{ display: 'flex', marginTop: 4 }}>
+          <span style={{ fontSize: 9, color: 'var(--status-bad)', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -134,13 +117,22 @@ const nodeTypes = { traceNode: TraceNodeCard }
 // Selected node detail panel
 // ---------------------------------------------------------------------------
 
-function SelectedNodeDetail({ node, graphEdges, onClose }: { node: TraceNode; graphEdges: TraceEdge[]; onClose: () => void }) {
-  const risk = node.riskLevel ?? 'none'
-  const borderColor = RISK_BORDER[risk] ?? 'var(--stroke)'
-  const bg = RISK_BG[risk] ?? 'var(--white)'
-  const textColor = RISK_TEXT[risk] ?? 'var(--forest)'
+function SelectedNodeDetail({ node, graphEdges, nodes, baseRequest, onClose }: { node: TraceNode; graphEdges: TraceEdge[]; nodes: TraceNode[]; baseRequest: Trace2AdapterRequest; onClose: () => void }) {
   const inboundEdges = graphEdges.filter(e => e.target === node.id)
   const outboundEdges = graphEdges.filter(e => e.source === node.id)
+
+  const nodeRequest: Trace2AdapterRequest = {
+    ...baseRequest,
+    materialId: node.materialId,
+    batchId: node.batchId ?? undefined,
+    plantId: node.plantId ?? undefined,
+  }
+  const { data: batchHeader } = useBatchHeaderSummary(nodeRequest, { enabled: !!node.batchId })
+  const manufactureDate = batchHeader?.ok ? batchHeader.data.manufactureDate : undefined
+  const expiryDate = batchHeader?.ok ? batchHeader.data.expiryDate : undefined
+
+  const vendorReceiptEdge = inboundEdges.find(e => e.relationshipType === 'vendor-receipt')
+  const vendorBatch = vendorReceiptEdge ? nodes.find(n => n.id === vendorReceiptEdge.source)?.batchId : undefined
 
   return (
     <div aria-label="Selected node details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -149,18 +141,14 @@ function SelectedNodeDetail({ node, graphEdges, onClose }: { node: TraceNode; gr
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
       </div>
 
-      <div style={{ padding: 12, background: bg, border: `1px solid ${borderColor}`, borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ width: 10, height: 10, borderRadius: '50%', background: borderColor }} />
-        <span style={{ fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-bold)', color: textColor, textTransform: 'capitalize' }}>
-          {risk} Risk Material
-        </span>
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Detail label="Material ID" value={node.materialId} mono />
         <Detail label="Description" value={node.materialDescription} />
         {node.batchId && <Detail label="Batch ID" value={node.batchId} mono />}
         {node.plantId && <Detail label="Plant" value={node.plantId} mono />}
+        {manufactureDate && <Detail label="Date of Manufacture" value={manufactureDate.slice(0, 10)} mono />}
+        {expiryDate && <Detail label="Expiry Date" value={expiryDate.slice(0, 10)} mono />}
+        {vendorBatch && <Detail label="Vendor Batch Number" value={vendorBatch} mono />}
         {node.depth != null && <Detail label="Lineage Depth" value={String(node.depth)} />}
         <Detail label="Focal Anchor" value={node.isAnchor ? 'Yes' : 'No'} />
         <Detail label="Inbound edges" value={String(inboundEdges.length)} />
@@ -495,6 +483,8 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
                     <SelectedNodeDetail
                       node={selectedNode}
                       graphEdges={directedGraph?.edges ?? []}
+                      nodes={directedGraph?.nodes ?? []}
+                      baseRequest={request}
                       onClose={() => setSelectedId(null)}
                     />
                   )}
