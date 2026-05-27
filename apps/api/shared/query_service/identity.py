@@ -45,11 +45,11 @@ class UserIdentity:
 # TODO: Verify these header names in a live Databricks Apps environment.
 # Databricks Apps injects OAuth proxy headers into every request. Based on
 # Databricks documentation and community reports the expected header names are:
-#   x-forwarded-access-token — end-user OAuth2 bearer token  (ASSUMED)
-#   x-forwarded-user         — user identifier / subject      (ASSUMED)
-#   x-forwarded-email        — user email address             (ASSUMED)
-# If the names differ in practice, update this function and
-# docs/deployment/databricks-apps.md accordingly.
+#   x-forwarded-access-token — end-user OAuth2 bearer token  (UNVERIFIED — must be confirmed in live Databricks Apps environment before production)
+#   x-forwarded-user         — user identifier / subject      (UNVERIFIED — must be confirmed in live Databricks Apps environment before production)
+#   x-forwarded-email        — user email address             (UNVERIFIED — must be confirmed in live Databricks Apps environment before production)
+# Verification steps: deploy with ENABLE_AUTH_DIAGNOSTICS=true, hit /api/diagnostics/auth-headers,
+# confirm the three header names match, then remove the UNVERIFIED markers and the startup warning in main.py.
 
 
 def extract_user_identity(

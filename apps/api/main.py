@@ -1,5 +1,6 @@
 """ConnectIO V2 FastAPI application entry point."""
 from contextlib import asynccontextmanager
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,8 +20,17 @@ from routes.quality import router as quality_router
 from shared.query_service.databricks_client import databricks_http_client_pool
 
 
+_log = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if os.getenv("APP_ENV", "development") != "production":
+        _log.warning(
+            "STARTUP: x-forwarded-* header names have not been verified against a live "
+            "Databricks Apps environment. See TODO in shared/query_service/identity.py. "
+            "Deploy with ENABLE_AUTH_DIAGNOSTICS=true and hit /api/diagnostics/auth-headers to verify."
+        )
     yield
     await databricks_http_client_pool.aclose()
 
