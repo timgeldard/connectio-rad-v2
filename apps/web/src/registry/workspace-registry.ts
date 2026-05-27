@@ -4,7 +4,7 @@ import { batchReleaseRegistration, connectedQualityLabBoardStandaloneRegistratio
 import { operationsPlanRiskRegistration } from '@connectio/di-operations'
 import { envmonRegistration } from '@connectio/di-envmon'
 import { productionStagingRegistration } from '@connectio/di-warehouse'
-import { spcMonitoringRegistration } from '@connectio/di-spc'
+import { spcMonitoringRegistration, spcConsumerRegistration } from '@connectio/di-spc'
 import { processOrderReviewRegistration } from '@connectio/di-operations'
 import { warehouse360Registration } from '@connectio/di-warehouse'
 import { maintenanceReliabilityRegistration } from '@connectio/di-maintenance'
@@ -46,6 +46,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 5 — SPC Monitoring (pilot)
   spcMonitoringRegistration,
+
+  // SPC Consumer (pilot)
+  spcConsumerRegistration,
 
   // Phase 5 — Process Order Review (pilot)
   processOrderReviewRegistration,

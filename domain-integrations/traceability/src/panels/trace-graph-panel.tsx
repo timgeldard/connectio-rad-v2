@@ -32,6 +32,8 @@ import {
   type TraceNodeData,
 } from './trace-graph-utils.js'
 import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
+import { Card, CardContent } from '@connectio/design-system'
+
 
 const registration: EvidencePanelRegistration = {
   panelId: 'trace-graph',
@@ -55,9 +57,9 @@ const registration: EvidencePanelRegistration = {
 function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
   const { node, isRoot, isSelected } = data
   const risk = node.riskLevel ?? 'none'
-  const border = isSelected ? '#2563EB' : RISK_BORDER[risk] ?? '#6B7280'
-  const bg = RISK_BG[risk] ?? '#F9FAFB'
-  const textColor = RISK_TEXT[risk] ?? '#374151'
+  const border = isSelected ? 'var(--brand)' : RISK_BORDER[risk] ?? 'var(--stroke)'
+  const bg = isSelected ? 'color-mix(in srgb, var(--brand) 6%, white)' : RISK_BG[risk] ?? 'var(--white)'
+  const textColor = RISK_TEXT[risk] ?? 'var(--forest)'
 
   return (
     <div
@@ -66,38 +68,40 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
         minHeight: NODE_HEIGHT,
         background: bg,
         border: `2px solid ${border}`,
-        borderRadius: 6,
-        padding: '6px 8px',
+        borderRadius: 'var(--radius-md)',
+        padding: '8px 10px',
         boxSizing: 'border-box',
-        boxShadow: isRoot ? `0 0 0 3px ${border}40` : undefined,
+        boxShadow: isRoot ? `0 0 0 3px ${border}30` : 'var(--shadow-sm)',
         cursor: 'pointer',
         position: 'relative',
+        fontFamily: 'var(--font-sans)',
+        transition: 'all 0.2s',
       }}
       aria-label={`${node.materialDescription}${node.type ? ` — ${node.type}` : ''}`}
     >
       <Handle type="target" position={Position.Top} style={{ background: border, width: 8, height: 8 }} />
       <Handle type="source" position={Position.Bottom} style={{ background: border, width: 8, height: 8 }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
-        <span style={{ fontSize: 9, fontWeight: 600, color: textColor, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+        <span style={{ fontSize: 9, fontWeight: 'var(--fw-bold)', color: textColor, textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', flexShrink: 0 }}>
           {node.type ? (NODE_TYPE_LABEL[node.type] ?? node.type) : undefined}
         </span>
         {isRoot && (
-          <span style={{ fontSize: 8, background: '#2563EB', color: '#fff', borderRadius: 3, padding: '1px 4px', flexShrink: 0 }}>
+          <span style={{ fontSize: 8, background: 'var(--brand)', color: 'var(--white)', borderRadius: 'var(--radius-sm)', padding: '1px 4px', flexShrink: 0, fontWeight: 'var(--fw-bold)' }}>
             ROOT
           </span>
         )}
       </div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: '#111827', marginTop: 2, lineHeight: 1.3, wordBreak: 'break-word' }}>
+      <div style={{ fontSize: 'var(--fs-12)', fontWeight: 'var(--fw-semibold)', color: 'var(--forest)', marginTop: 4, lineHeight: 'var(--lh-head)', wordBreak: 'break-word' }}>
         {node.materialDescription}
       </div>
       {node.batchId && (
-        <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2, fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
           {node.batchId}
         </div>
       )}
       {node.plantId && (
         <div
-          style={{ fontSize: 9, color: '#9CA3AF', marginTop: 1, fontFamily: 'monospace' }}
+          style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 1, fontFamily: 'var(--font-mono)' }}
           aria-label={`Plant ${node.plantId}`}
         >
           {node.plantId}
@@ -115,9 +119,9 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
           }}
           aria-label={`Risk: ${risk}`}
         />
-        <span style={{ fontSize: 9, color: textColor, textTransform: 'capitalize' }}>{risk}</span>
+        <span style={{ fontSize: 9, color: textColor, textTransform: 'capitalize', fontWeight: 'var(--fw-medium)' }}>{risk} risk</span>
         {node.status === 'unresolved' && (
-          <span style={{ fontSize: 9, color: '#F24A00', marginLeft: 'auto', fontWeight: 600 }}>Unresolved</span>
+          <span style={{ fontSize: 9, color: 'var(--status-bad)', marginLeft: 'auto', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
         )}
       </div>
     </div>
@@ -130,38 +134,38 @@ const nodeTypes = { traceNode: TraceNodeCard }
 // Selected node detail panel
 // ---------------------------------------------------------------------------
 
-function SelectedNodeDetail({ node, graphEdges }: { node: TraceNode; graphEdges: TraceEdge[] }) {
+function SelectedNodeDetail({ node, graphEdges, onClose }: { node: TraceNode; graphEdges: TraceEdge[]; onClose: () => void }) {
   const risk = node.riskLevel ?? 'none'
-  const borderColor = RISK_BORDER[risk] ?? '#6B7280'
+  const borderColor = RISK_BORDER[risk] ?? 'var(--stroke)'
+  const bg = RISK_BG[risk] ?? 'var(--white)'
+  const textColor = RISK_TEXT[risk] ?? 'var(--forest)'
   const inboundEdges = graphEdges.filter(e => e.target === node.id)
   const outboundEdges = graphEdges.filter(e => e.source === node.id)
 
   return (
-    <div
-      style={{
-        padding: '10px 12px',
-        background: RISK_BG[risk] ?? '#F9FAFB',
-        border: `1px solid ${borderColor}`,
-        borderRadius: 6,
-        marginTop: 8,
-      }}
-      aria-label="Selected node details"
-    >
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-        Selected node
+    <div aria-label="Selected node details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 10 }}>
+        <h4 className="t-eyebrow" style={{ margin: 0 }}>Selected node</h4>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-        <Detail label="Material" value={node.materialId} />
-        {node.batchId && <Detail label="Batch" value={node.batchId} />}
-        {node.plantId && <Detail label="Plant" value={node.plantId} />}
-        {node.depth != null && <Detail label="Depth" value={String(node.depth)} />}
-        <Detail label="Anchor" value={node.isAnchor ? 'Yes' : 'No'} />
-        {node.directions && node.directions.length > 0 && (
-          <Detail label="Direction" value={node.directions.join(', ')} />
-        )}
+
+      <div style={{ padding: 12, background: bg, border: `1px solid ${borderColor}`, borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: borderColor }} />
+        <span style={{ fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-bold)', color: textColor, textTransform: 'capitalize' }}>
+          {risk} Risk Material
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Detail label="Material ID" value={node.materialId} mono />
+        <Detail label="Description" value={node.materialDescription} />
+        {node.batchId && <Detail label="Batch ID" value={node.batchId} mono />}
+        {node.plantId && <Detail label="Plant" value={node.plantId} mono />}
+        {node.depth != null && <Detail label="Lineage Depth" value={String(node.depth)} />}
+        <Detail label="Focal Anchor" value={node.isAnchor ? 'Yes' : 'No'} />
         <Detail label="Inbound edges" value={String(inboundEdges.length)} />
         <Detail label="Outbound edges" value={String(outboundEdges.length)} />
-        {node.quantity != null && <Detail label="Quantity" value={`${node.quantity}${node.uom ? ` ${node.uom}` : ''}`} />}
+        {node.quantity != null && <Detail label="Quantity" value={`${node.quantity.toLocaleString()} ${node.uom ?? ''}`} mono />}
       </div>
     </div>
   )
@@ -171,233 +175,58 @@ function SelectedNodeDetail({ node, graphEdges }: { node: TraceNode; graphEdges:
 // Selected edge detail panel
 // ---------------------------------------------------------------------------
 
-function SelectedEdgeDetail({ edge, nodes }: { edge: TraceEdge; nodes: TraceNode[] }) {
+function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: TraceNode[]; onClose: () => void }) {
   const sourceNode = nodes.find(n => n.id === edge.source)
   const targetNode = nodes.find(n => n.id === edge.target)
 
   return (
-    <div
-      style={{
-        padding: '10px 12px',
-        background: 'var(--shell-surface)',
-        border: '1px solid #9CA3AF',
-        borderRadius: 6,
-        marginTop: 8,
-      }}
-      aria-label="Selected relationship details"
-    >
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
-        Selected relationship
+    <div aria-label="Selected relationship details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 10 }}>
+        <h4 className="t-eyebrow" style={{ margin: 0 }}>Selected relationship</h4>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
       </div>
-      <div style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 6 }}>Available evidence from gold_batch_lineage</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Detail label="Link type (mapped)" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
         {edge.linkType && <Detail label="Link type (raw)" value={edge.linkType} />}
-        {edge.movementType && <Detail label="Movement type" value={edge.movementType} />}
-        {edge.postingDate && <Detail label="Posting date" value={edge.postingDate} />}
+        {edge.movementType && <Detail label="Movement Type" value={edge.movementType} mono />}
+        {edge.postingDate && <Detail label="Posting Date" value={edge.postingDate} mono />}
         {edge.quantity != null && (
-          <Detail label="Quantity" value={`${edge.quantity}${edge.uom ? ` ${edge.uom}` : ''}`} />
+          <Detail label="Quantity" value={`${edge.quantity.toLocaleString()} ${edge.uom ?? ''}`} mono />
         )}
-        {sourceNode && <Detail label="Source batch" value={sourceNode.batchId ?? edge.source} />}
-        {targetNode && <Detail label="Target batch" value={targetNode.batchId ?? edge.target} />}
-        {edge.processOrderId && <Detail label="Process order" value={edge.processOrderId} />}
-        {edge.materialDocumentNumber && <Detail label="Material document" value={edge.materialDocumentNumber} />}
-        {edge.purchaseOrderId && <Detail label="Purchase order" value={edge.purchaseOrderId} />}
-        {edge.deliveryId && <Detail label="Delivery" value={edge.deliveryId} />}
-        {edge.salesOrderId && <Detail label="Sales order" value={edge.salesOrderId} />}
-        {edge.supplierId && <Detail label="Supplier" value={edge.supplierId} />}
-        {edge.customerId && <Detail label="Customer" value={edge.customerId} />}
+        {sourceNode && <Detail label="Source Batch" value={sourceNode.batchId ?? edge.source} mono />}
+        {targetNode && <Detail label="Target Batch" value={targetNode.batchId ?? edge.target} mono />}
+        {edge.processOrderId && <Detail label="Process Order" value={edge.processOrderId} mono />}
+        {edge.materialDocumentNumber && <Detail label="Material Document" value={edge.materialDocumentNumber} mono />}
+        {edge.deliveryId && <Detail label="Delivery ID" value={edge.deliveryId} mono />}
+        {edge.supplierId && <Detail label="Supplier ID" value={edge.supplierId} mono />}
+        {edge.customerId && <Detail label="Customer ID" value={edge.customerId} mono />}
       </div>
     </div>
   )
 }
 
-function Detail({ label, value }: { label: string; value: string | number }) {
+function Detail({ label, value, mono = false }: { label: string; value: string | number; mono?: boolean }) {
   return (
-    <div>
-      <span style={{ fontSize: 9, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>{label}</span>
-      <span style={{ fontSize: 11, color: '#111827', fontWeight: 500 }}>{value}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 9, color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', fontFamily: 'var(--font-mono)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-13)', color: 'var(--forest)', fontWeight: 'var(--fw-medium)', fontFamily: mono ? 'var(--font-mono)' : 'var(--font-sans)', wordBreak: 'break-word' }}>{value}</span>
     </div>
   )
 }
 
 function HeaderChip({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <span style={{ fontSize: 8, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, color: alert ? '#92400E' : '#111827', fontFamily: 'monospace' }}>{value}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 9, color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', fontFamily: 'var(--font-mono)' }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-12)', fontWeight: 'var(--fw-semibold)', color: alert ? 'var(--status-bad)' : 'var(--forest)', fontFamily: 'var(--font-mono)' }}>{value}</span>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Timeline derived from graph edges (c.txt §6)
+// Unused timeline, exposure, and banner components removed.
 // ---------------------------------------------------------------------------
-
-function EdgeTimeline({ edges }: { edges: TraceEdge[] }) {
-  const dated = edges
-    .filter(e => !!e.postingDate)
-    .sort((a, b) => (a.postingDate! < b.postingDate! ? -1 : 1))
-  const undated = edges.filter(e => !e.postingDate)
-
-  return (
-    <div
-      style={{
-        marginTop: 16,
-        padding: '10px 12px',
-        background: 'var(--shell-surface)',
-        border: '1px solid var(--shell-line)',
-        borderRadius: 6,
-      }}
-      aria-label="Timeline from lineage edges"
-    >
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-        Timeline from lineage edges
-      </div>
-      {dated.length === 0 && undated.length === 0 && (
-        <p style={{ fontSize: 11, color: 'var(--shell-fg-3)', margin: 0 }}>No lineage edges to display.</p>
-      )}
-      {dated.length === 0 && undated.length > 0 && (
-        <p style={{ fontSize: 11, color: 'var(--shell-fg-3)', margin: 0 }}>No dated events available — {undated.length} undated edge{undated.length !== 1 ? 's' : ''}.</p>
-      )}
-      {dated.map(e => (
-        <div
-          key={e.id}
-          style={{ display: 'flex', gap: 10, padding: '4px 0', borderBottom: '1px solid var(--shell-line)', fontSize: 11 }}
-        >
-          <span style={{ color: '#6B7280', fontFamily: 'monospace', minWidth: 90, flexShrink: 0 }}>{e.postingDate}</span>
-          <span style={{ color: '#374151', fontWeight: 500 }}>{e.relationshipType?.replace(/-/g, ' ') ?? '—'}</span>
-          {e.movementType && <span style={{ color: '#6B7280' }}>MT:{e.movementType}</span>}
-          {e.processOrderId && <span style={{ color: '#6B7280', fontFamily: 'monospace' }}>PO:{e.processOrderId}</span>}
-          {e.materialDocumentNumber && <span style={{ color: '#6B7280', fontFamily: 'monospace' }}>Doc:{e.materialDocumentNumber}</span>}
-          {e.deliveryId && <span style={{ color: '#6B7280', fontFamily: 'monospace' }}>Del:{e.deliveryId}</span>}
-          {e.quantity != null && <span style={{ color: '#374151' }}>{e.quantity}{e.uom ? ` ${e.uom}` : ''}</span>}
-        </div>
-      ))}
-      {undated.length > 0 && dated.length > 0 && (
-        <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>+ {undated.length} undated edge{undated.length !== 1 ? 's' : ''} not shown above.</div>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Exposure indicators from graph edges (c.txt §7)
-// ---------------------------------------------------------------------------
-
-function ExposureSummary({ edges }: { edges: TraceEdge[] }) {
-  const customers = new Set(edges.map(e => e.customerId).filter(Boolean))
-  const suppliers = new Set(edges.map(e => e.supplierId).filter(Boolean))
-  const deliveries = new Set(edges.map(e => e.deliveryId).filter(Boolean))
-  const purchaseOrders = new Set(edges.map(e => e.purchaseOrderId).filter(Boolean))
-  const processOrders = new Set(edges.map(e => e.processOrderId).filter(Boolean))
-
-  const linkTypeCounts: Record<string, number> = {}
-  for (const e of edges) {
-    const lt = e.relationshipType ?? 'unknown'
-    linkTypeCounts[lt] = (linkTypeCounts[lt] ?? 0) + 1
-  }
-
-  const uoms = new Set(edges.map(e => e.uom).filter(Boolean))
-  const mixedUom = uoms.size > 1
-
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        padding: '10px 12px',
-        background: 'var(--shell-surface)',
-        border: '1px solid var(--shell-line)',
-        borderRadius: 6,
-      }}
-      aria-label="Lineage exposure indicators"
-    >
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-        Lineage exposure indicators
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px 8px', marginBottom: 8 }}>
-        <ExposureStat label="Customers" value={customers.size} />
-        <ExposureStat label="Suppliers" value={suppliers.size} />
-        <ExposureStat label="Deliveries" value={deliveries.size} />
-        <ExposureStat label="Purch. orders" value={purchaseOrders.size} />
-        <ExposureStat label="Process orders" value={processOrders.size} />
-      </div>
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 9, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Edges by link type</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px' }}>
-          {Object.entries(linkTypeCounts).map(([lt, count]) => (
-            <span key={lt} style={{ fontSize: 10, color: '#374151' }}>
-              {lt.replace(/-/g, ' ')}: {count}
-            </span>
-          ))}
-        </div>
-      </div>
-      {mixedUom && (
-        <div style={{ fontSize: 10, color: '#92400E', background: '#FFFBEB', padding: '3px 6px', borderRadius: 3 }}>
-          Mixed UoM — quantity totals would be misleading across units: {Array.from(uoms).join(', ')}
-        </div>
-      )}
-      <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 8, lineHeight: 1.5 }}>
-        Customer/supplier exposure is based only on references present in gold_batch_lineage.
-        This does not replace full delivery/customer recall analysis.
-      </div>
-    </div>
-  )
-}
-
-function ExposureStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '6px 4px', background: value > 0 ? '#EFF6FF' : 'var(--shell-surface)', border: '1px solid var(--shell-line)', borderRadius: 4 }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: value > 0 ? '#1D4ED8' : '#9CA3AF' }}>{value}</div>
-      <div style={{ fontSize: 9, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Source / limitation banner (c.txt §9)
-// ---------------------------------------------------------------------------
-
-function SourceBanner({ source, depthReached, truncated }: { source: string; depthReached: number; truncated: boolean }) {
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        padding: '8px 12px',
-        background: '#F9FAFB',
-        border: '1px solid #E5E7EB',
-        borderRadius: 4,
-        fontSize: 10,
-        color: '#6B7280',
-        lineHeight: 1.6,
-      }}
-      aria-label="Data source information"
-    >
-      <div style={{ fontWeight: 600, marginBottom: 2, color: '#374151' }}>Data source</div>
-      <div>Source: <span style={{ fontFamily: 'monospace' }}>gold_batch_lineage</span></div>
-      <div>Execution: <span style={{ fontFamily: 'monospace' }}>{source}</span></div>
-      <div>Query: <span style={{ fontFamily: 'monospace' }}>trace2.get_trace_graph</span></div>
-      <div>Depth reached: {depthReached} | Truncated: {truncated ? 'Yes' : 'No'} | API verified: Yes</div>
-      <div style={{ marginTop: 4, color: '#9CA3AF' }}>
-        Material IDs use stored gold format (no SAP ALPHA leading zeros). Batch IDs preserve leading zeros.
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Summary stats bar
-// ---------------------------------------------------------------------------
-
-function GraphStat({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '8px 4px', background: 'var(--shell-surface)', borderRadius: 4, border: '1px solid var(--shell-line)' }}>
-      <div style={{ fontSize: 20, fontWeight: 700, color: highlight ? 'var(--sunset, #F24A00)' : 'var(--shell-fg)' }}>{value}</div>
-      <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Direction toggle
 // ---------------------------------------------------------------------------
@@ -574,18 +403,17 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
       source={result?.source}
     >
       {graph && (
-        <div style={{ padding: '12px 16px' }}>
-          {/* Investigation header */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Investigation header info */}
           <div
             style={{
-              background: 'var(--shell-surface)',
-              border: '1px solid var(--shell-line)',
-              borderRadius: 6,
-              padding: '8px 12px',
-              marginBottom: 10,
+              background: 'var(--stone)',
+              border: '1px solid var(--stroke)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 18px',
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '6px 16px',
+              gap: '12px 24px',
               alignItems: 'center',
             }}
             aria-label="Investigation context"
@@ -600,118 +428,93 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
             {graph.warnings && graph.warnings.length > 0 && (
               <HeaderChip label="Warnings" value={String(graph.warnings.length)} alert />
             )}
-            <HeaderChip label="Source" value={result?.source ?? 'databricks-api'} />
+            <HeaderChip label="Source" value="databricks-api" />
           </div>
-
-          {/* Summary stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
-            <GraphStat label="Upstream" value={graph.upstreamCount} />
-            <GraphStat label="Downstream" value={graph.downstreamCount} />
-            <GraphStat label="Depth" value={graph.depth} />
-            <GraphStat label="Unresolved" value={graph.unresolvedNodeCount} highlight={graph.unresolvedNodeCount > 0} />
-          </div>
-
-          {/* Warnings / truncation banner */}
-          {(graph.truncated ||
-            graph.warnings?.includes('max_depth_reached') ||
-            graph.warnings?.includes('max_edges_reached')) && (
-            <div
-              role="status"
-              style={{
-                fontSize: 11,
-                color: '#92400E',
-                background: '#FFFBEB',
-                border: '1px solid #D97706',
-                borderRadius: 4,
-                padding: '4px 8px',
-                marginBottom: 10,
-              }}
-            >
-              <span>
-                Trace graph truncated — the displayed lineage may be incomplete because the max depth or
-                row limit was reached. Review with a deeper trace or Databricks validation before
-                concluding exposure is complete.
-              </span>
-            </div>
-          )}
 
           {/* Direction toggle + root metadata */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <DirectionToggle active={activeDirection} onChange={setActiveDirection} />
-            <span style={{ fontSize: 11, color: 'var(--shell-fg-3)', fontFamily: 'monospace' }}>
-              {graph.rootBatch}
+            <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)' }}>
+              Root: {graph.rootBatch}
             </span>
           </div>
 
           {/* Link type legend — derived from current directed graph */}
           {directedGraph && <LinkTypeLegend edges={directedGraph.edges} />}
 
-          {/* React Flow graph or empty state */}
-          {directedGraph && directedGraph.nodes.length === 0 ? (
-            <div
-              style={{
-                height: 120,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px dashed var(--shell-line)',
-                borderRadius: 6,
-                color: 'var(--shell-fg-3)',
-                fontSize: 13,
-              }}
-            >
-              No lineage edges found for this material/batch/plant.
+          {/* Side-by-Side Flex Layout: Graph + Slide-out details drawer */}
+          <div style={{ display: 'flex', gap: 20, position: 'relative', minHeight: 520 }}>
+            {/* React Flow graph or empty state */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 520 }}>
+              {directedGraph && directedGraph.nodes.length === 0 ? (
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px dashed var(--stroke)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--fg-muted)',
+                    fontSize: 'var(--fs-13)',
+                  }}
+                >
+                  No lineage edges found for this material/batch/plant.
+                </div>
+              ) : (
+                <div
+                  style={{ flex: 1, borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', overflow: 'hidden', minHeight: 520, background: 'var(--white)' }}
+                  aria-label="Trace graph visualisation"
+                >
+                  <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    nodeTypes={nodeTypes}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onNodeClick={onNodeClick}
+                    onEdgeClick={onEdgeClick}
+                    fitView
+                    fitViewOptions={{ padding: 0.3 }}
+                    minZoom={0.3}
+                    maxZoom={2}
+                    attributionPosition="bottom-right"
+                  >
+                    <Background gap={16} size={1} color="var(--stroke-soft)" />
+                    <Controls showInteractive={false} />
+                  </ReactFlow>
+                </div>
+              )}
             </div>
-          ) : (
-            <div
-              style={{ height: 360, borderRadius: 6, border: '1px solid var(--shell-line)', overflow: 'hidden' }}
-              aria-label="Trace graph visualisation"
-            >
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={nodeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeClick={onNodeClick}
-                onEdgeClick={onEdgeClick}
-                fitView
-                fitViewOptions={{ padding: 0.3 }}
-                minZoom={0.3}
-                maxZoom={2}
-                attributionPosition="bottom-right"
-              >
-                <Background gap={16} size={1} color="#E5E7EB" />
-                <Controls showInteractive={false} />
-              </ReactFlow>
-            </div>
-          )}
 
-          {/* Selection detail panels */}
-          {selectedNode && (
-            <SelectedNodeDetail node={selectedNode} graphEdges={directedGraph?.edges ?? []} />
-          )}
-          {selectedEdge && directedGraph && (
-            <SelectedEdgeDetail edge={selectedEdge} nodes={directedGraph.nodes} />
-          )}
-          {!selectedNode && !selectedEdge && (
-            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--shell-fg-3)' }}>
-              Click a node or edge to see details. Pan and zoom to explore the graph.
-            </p>
-          )}
-
-          {/* Timeline from lineage edges */}
-          <EdgeTimeline edges={graph.edges} />
-
-          {/* Exposure indicators from lineage edges */}
-          <ExposureSummary edges={graph.edges} />
-
-          {/* Source / limitation banner */}
-          <SourceBanner
-            source={result?.source ?? 'databricks-api'}
-            depthReached={graph.depth}
-            truncated={!!graph.truncated}
-          />
+            {/* Slide-out details sidebar card */}
+            {(selectedNode || selectedEdge) ? (
+              <Card style={{ width: 340, padding: 20, borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-md)', background: 'var(--white)', overflowY: 'auto', maxHeight: 520 }}>
+                <CardContent style={{ padding: 0 }}>
+                  {selectedNode && (
+                    <SelectedNodeDetail
+                      node={selectedNode}
+                      graphEdges={directedGraph?.edges ?? []}
+                      onClose={() => setSelectedId(null)}
+                    />
+                  )}
+                  {selectedEdge && directedGraph && (
+                    <SelectedEdgeDetail
+                      edge={selectedEdge}
+                      nodes={directedGraph.nodes}
+                      onClose={() => setSelectedEdgeId(null)}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card style={{ width: 340, padding: 20, borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke-soft)', background: 'var(--stone)', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                <CardContent style={{ padding: 0, color: 'var(--fg-muted)', fontSize: 'var(--fs-13)' }}>
+                  Click any node or connection line to view detailed specifications and source context.
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           <QueriedAtLabel fetchedAt={lastRefreshedAt} style={{ marginTop: 8 }} />
         </div>

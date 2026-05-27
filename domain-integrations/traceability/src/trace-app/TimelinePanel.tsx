@@ -30,11 +30,11 @@ export interface TimelinePanelProps {
 }
 
 const TONE_COLORS: Record<TimelineEvent['tone'], string> = {
-  good: '#1a8454',
-  warn: '#8a6b00',
-  bad: '#c63b00',
-  brand: 'var(--valentia-slate, #005776)',
-  neutral: 'var(--shell-fg-2)',
+  good: 'var(--status-good)',
+  warn: 'var(--status-warn)',
+  bad: 'var(--status-bad)',
+  brand: 'var(--brand)',
+  neutral: 'var(--status-neutral)',
 }
 
 const TYPE_LABELS: Record<TimelineEvent['type'], string> = {
@@ -73,7 +73,7 @@ export function TimelinePanel({ request }: TimelinePanelProps) {
       source={result?.source}
     >
       {data && (
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 24, fontFamily: 'var(--font-sans)' }}>
           <div style={{ position: 'relative', paddingLeft: 28 }}>
             <div
               style={{
@@ -82,7 +82,7 @@ export function TimelinePanel({ request }: TimelinePanelProps) {
                 bottom: 6,
                 left: 9,
                 width: 2,
-                background: 'var(--shell-line, #E5E3D7)',
+                background: 'var(--stroke-soft)',
               }}
             />
             {data.events.map((e, i) => (
@@ -101,27 +101,27 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
   const dateLabel = isNaN(date.getTime()) ? event.ts : date.toLocaleString()
 
   return (
-    <div style={{ position: 'relative', paddingBottom: 18 }}>
+    <div style={{ position: 'relative', paddingBottom: 22 }}>
       <div
         style={{
           position: 'absolute',
-          left: -22,
+          left: -24,
           top: 6,
-          width: 12,
-          height: 12,
+          width: 10,
+          height: 10,
           borderRadius: '50%',
           background: dotColor,
-          border: '2px solid white',
-          boxShadow: '0 0 0 1px var(--shell-line, #E5E3D7)',
+          border: '2px solid var(--white)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       />
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <span
           style={{
-            fontSize: 11,
-            fontFamily: 'monospace',
-            color: 'var(--shell-fg-2)',
-            minWidth: 130,
+            fontSize: 'var(--fs-12)',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--fg-muted)',
+            minWidth: 140,
           }}
         >
           {dateLabel}
@@ -129,19 +129,19 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
         <span
           style={{
             display: 'inline-block',
-            padding: '1px 6px',
-            borderRadius: 4,
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-sm)',
             fontSize: 10,
-            fontWeight: 700,
+            fontWeight: 'var(--fw-bold)',
             textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            background: `${dotColor}1A`,
+            letterSpacing: '0.04em',
+            background: `color-mix(in srgb, ${dotColor} 12%, white)`,
             color: dotColor,
           }}
         >
           {TYPE_LABELS[event.type]}
         </span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--forest, #143700)' }}>
+        <span style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-semibold)', color: 'var(--forest)' }}>
           {event.label}
         </span>
         {event.sourceSystem && (
@@ -149,19 +149,20 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
             style={{
               marginLeft: 'auto',
               fontSize: 10,
-              fontWeight: 600,
-              color: 'var(--shell-fg-2)',
-              padding: '1px 6px',
-              borderRadius: 999,
-              border: '1px solid var(--shell-line, #E5E3D7)',
+              fontWeight: 'var(--fw-semibold)',
+              color: 'var(--fg-muted)',
+              padding: '2px 6px',
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid var(--stroke-soft)',
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {event.sourceSystem}
           </span>
         )}
       </div>
-      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--shell-fg-2)' }}>
-        {event.detail} · <span style={{ fontStyle: 'italic' }}>{event.actor}</span>
+      <div style={{ marginTop: 6, fontSize: 'var(--fs-13)', color: 'var(--fg-muted)', paddingLeft: 152 }}>
+        {event.detail} · <span style={{ fontStyle: 'italic', color: 'var(--forest)' }}>{event.actor}</span>
       </div>
     </div>
   )

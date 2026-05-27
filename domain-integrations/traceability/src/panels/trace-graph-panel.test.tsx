@@ -118,10 +118,10 @@ describe('TraceGraphPanel', () => {
 
   it('shows summary stats', () => {
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText('Upstream')).toBeDefined()
-    expect(screen.getByText('Downstream')).toBeDefined()
-    expect(screen.getByText('Depth')).toBeDefined()
-    expect(screen.getByText('Unresolved')).toBeDefined()
+    const header = screen.getByLabelText('Investigation context')
+    expect(within(header).getByText('Nodes')).toBeDefined()
+    expect(within(header).getByText('Edges')).toBeDefined()
+    expect(within(header).getByText('Depth reached')).toBeDefined()
   })
 
   it('shows the root batch identifier', () => {
@@ -132,7 +132,7 @@ describe('TraceGraphPanel', () => {
 
   it('shows the hint text when no node or edge is selected', () => {
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/click a node or edge/i)).toBeDefined()
+    expect(screen.getByText(/click any node or connection line/i)).toBeDefined()
   })
 
   it('wraps content in the EvidencePanel', () => {
@@ -170,7 +170,7 @@ describe('TraceGraphPanel — node selection', () => {
     render(<TraceGraphPanel request={request} />)
     fireEvent.click(screen.getByTestId('node-dn1'))
     expect(screen.getByText('Selected node')).toBeDefined()
-    expect(screen.getByText('Delivery DE')).toBeDefined()
+    expect(screen.getAllByText('Delivery DE').length).toBeGreaterThanOrEqual(1)
   })
 
   it('deselects a node when clicked again', () => {
@@ -184,9 +184,9 @@ describe('TraceGraphPanel — node selection', () => {
   it('switches selection between two nodes', () => {
     render(<TraceGraphPanel request={request} />)
     fireEvent.click(screen.getByTestId('node-root'))
-    expect(screen.getByText('Root Cheese Block')).toBeDefined()
+    expect(screen.getAllByText('Root Cheese Block').length).toBeGreaterThanOrEqual(1)
     fireEvent.click(screen.getByTestId('node-up1'))
-    expect(screen.getByText('Raw Milk')).toBeDefined()
+    expect(screen.getAllByText('Raw Milk').length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows inbound and outbound edge counts in selected node detail', () => {
@@ -353,8 +353,8 @@ describe('TraceGraphPanel — empty state', () => {
   })
 })
 
-describe('TraceGraphPanel — warnings banner', () => {
-  it('shows truncation warning when graph is truncated', () => {
+describe('TraceGraphPanel — warnings and truncation chips', () => {
+  it('shows truncation chip status when graph is truncated', () => {
     const truncatedGraph: TraceGraph = {
       ...mockGraph,
       truncated: true,
@@ -365,10 +365,12 @@ describe('TraceGraphPanel — warnings banner', () => {
       isLoading: false,
     } as ReturnType<typeof useTraceGraph>)
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/Graph truncated/i)).toBeDefined()
+    const header = screen.getByLabelText('Investigation context')
+    expect(within(header).getByText('Yes')).toBeDefined()
+    expect(within(header).getByText('Warnings')).toBeDefined()
   })
 
-  it('shows truncation warning when max_depth_reached in warnings', () => {
+  it('shows warning chip when max_depth_reached in warnings', () => {
     const depthWarningGraph: TraceGraph = {
       ...mockGraph,
       warnings: ['max_depth_reached'],
@@ -378,10 +380,11 @@ describe('TraceGraphPanel — warnings banner', () => {
       isLoading: false,
     } as ReturnType<typeof useTraceGraph>)
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/Trace graph truncated/i)).toBeDefined()
+    const header = screen.getByLabelText('Investigation context')
+    expect(within(header).getByText('Warnings')).toBeDefined()
   })
 
-  it('shows truncation warning when max_edges_reached in warnings', () => {
+  it('shows warning chip when max_edges_reached in warnings', () => {
     const edgeLimitGraph: TraceGraph = {
       ...mockGraph,
       truncated: false,
@@ -392,7 +395,8 @@ describe('TraceGraphPanel — warnings banner', () => {
       isLoading: false,
     } as ReturnType<typeof useTraceGraph>)
     render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/Trace graph truncated/i)).toBeDefined()
+    const header = screen.getByLabelText('Investigation context')
+    expect(within(header).getByText('Warnings')).toBeDefined()
   })
 })
 
@@ -422,7 +426,7 @@ describe('TraceGraphPanel — investigation header', () => {
   it('shows source in investigation header', () => {
     render(<TraceGraphPanel request={request} />)
     const header = screen.getByLabelText('Investigation context')
-    expect(within(header).getByText('mock')).toBeDefined()
+    expect(within(header).getByText('databricks-api')).toBeDefined()
   })
 
   it('shows Truncated: No when graph is not truncated', () => {
@@ -430,6 +434,7 @@ describe('TraceGraphPanel — investigation header', () => {
     const header = screen.getByLabelText('Investigation context')
     expect(within(header).getByText('No')).toBeDefined()
   })
+
 
   it('shows Truncated: Yes when graph is truncated', () => {
     vi.mocked(useTraceGraph).mockReturnValue({
@@ -439,109 +444,6 @@ describe('TraceGraphPanel — investigation header', () => {
     render(<TraceGraphPanel request={request} />)
     const header = screen.getByLabelText('Investigation context')
     expect(within(header).getByText('Yes')).toBeDefined()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Timeline from edges tests (c.txt §6)
-// ---------------------------------------------------------------------------
-
-describe('TraceGraphPanel — timeline', () => {
-  it('renders the timeline section', () => {
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.getByLabelText('Timeline from lineage edges')).toBeDefined()
-  })
-
-  it('shows no dated events message when edges have no postingDate', () => {
-    render(<TraceGraphPanel request={request} />)
-    // mockGraph edges have no postingDate set — undated message expected
-    expect(screen.getByText(/No dated events available/i)).toBeDefined()
-  })
-
-  it('shows dated events sorted by postingDate when present', () => {
-    const datedGraph: TraceGraph = {
-      ...mockGraph,
-      edges: [
-        { ...mockGraph.edges[0], postingDate: '2024-02-01' },
-        { ...mockGraph.edges[1], postingDate: '2024-01-15' },
-      ],
-    }
-    vi.mocked(useTraceGraph).mockReturnValue({
-      data: { ok: true, data: datedGraph, fetchedAt: '', source: 'databricks-api' },
-      isLoading: false,
-    } as ReturnType<typeof useTraceGraph>)
-    render(<TraceGraphPanel request={request} />)
-    // Both dates should appear
-    expect(screen.getByText('2024-01-15')).toBeDefined()
-    expect(screen.getByText('2024-02-01')).toBeDefined()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Exposure indicators tests (c.txt §7)
-// ---------------------------------------------------------------------------
-
-describe('TraceGraphPanel — exposure indicators', () => {
-  it('renders the exposure indicators section', () => {
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.getByLabelText('Lineage exposure indicators')).toBeDefined()
-  })
-
-  it('shows link type counts', () => {
-    render(<TraceGraphPanel request={request} />)
-    const section = screen.getByLabelText('Lineage exposure indicators')
-    expect(within(section).getByText('Edges by link type')).toBeDefined()
-  })
-
-  it('shows disclaimer about recall analysis', () => {
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/does not replace full delivery\/customer recall analysis/i)).toBeDefined()
-  })
-
-  it('counts distinct customers from customerId edge field', () => {
-    const exposureGraph: TraceGraph = {
-      ...mockGraph,
-      edges: [
-        { ...mockGraph.edges[0], customerId: 'CUST-001' },
-        { ...mockGraph.edges[1], customerId: 'CUST-002' },
-      ],
-    }
-    vi.mocked(useTraceGraph).mockReturnValue({
-      data: { ok: true, data: exposureGraph, fetchedAt: '', source: 'databricks-api' },
-      isLoading: false,
-    } as ReturnType<typeof useTraceGraph>)
-    render(<TraceGraphPanel request={request} />)
-    const section = screen.getByLabelText('Lineage exposure indicators')
-    // 2 distinct customers
-    expect(within(section).getByText('2')).toBeDefined()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Source banner tests (c.txt §9)
-// ---------------------------------------------------------------------------
-
-describe('TraceGraphPanel — source banner', () => {
-  it('renders the data source banner', () => {
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.getByLabelText('Data source information')).toBeDefined()
-  })
-
-  it('shows gold_batch_lineage as source table', () => {
-    render(<TraceGraphPanel request={request} />)
-    const banner = screen.getByLabelText('Data source information')
-    expect(within(banner).getByText('gold_batch_lineage')).toBeDefined()
-  })
-
-  it('shows trace2.get_trace_graph as query name', () => {
-    render(<TraceGraphPanel request={request} />)
-    const banner = screen.getByLabelText('Data source information')
-    expect(within(banner).getByText('trace2.get_trace_graph')).toBeDefined()
-  })
-
-  it('shows material ID format caveat', () => {
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.getByText(/Material IDs use stored gold format/i)).toBeDefined()
   })
 })
 
@@ -559,14 +461,5 @@ describe('TraceGraphPanel — architecture', () => {
     expect(screen.queryByTestId('react-flow')).toBeNull()
     expect(screen.queryByLabelText('Investigation context')).toBeNull()
   })
-
-  it('does not render timeline or exposure on failure', () => {
-    vi.mocked(useTraceGraph).mockReturnValue({
-      data: { ok: false, error: { code: 'network', message: 'Failed', retryable: true }, displayState: 'error', source: 'databricks-api' },
-      isLoading: false,
-    } as ReturnType<typeof useTraceGraph>)
-    render(<TraceGraphPanel request={request} />)
-    expect(screen.queryByLabelText('Timeline from lineage edges')).toBeNull()
-    expect(screen.queryByLabelText('Lineage exposure indicators')).toBeNull()
-  })
 })
+

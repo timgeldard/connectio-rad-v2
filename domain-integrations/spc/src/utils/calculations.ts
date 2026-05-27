@@ -566,6 +566,224 @@ export function normalCDF(z: number): number {
   return z >= 0 ? base : 1 - base
 }
 
+export function shapiroWilk(values: number[]): NormalityResult {
+  const alpha = 0.05;
+  if (values.length < 3 || values.length > 5000) {
+    return {
+      method: 'shapiro-wilk',
+      p_value: null,
+      alpha,
+      is_normal: null,
+      warning: 'Sample size must be between 3 and 5000.',
+    };
+  }
+
+  const x = [...values].sort((a, b) => a - b);
+  const n = x.length;
+  const nn2 = Math.floor(n / 2);
+  const a = new Array(nn2 + 1);
+
+  const small = 1e-19;
+  const g = [ -2.273, 0.459 ];
+  const c1 = [ 0, 0.221157, -0.147981, -2.07119, 4.434685, -2.706056 ];
+  const c2 = [ 0, 0.042981, -0.293762, -1.752461, 5.682633, -3.582633 ];
+  const c3 = [ 0.544, -0.39978, 0.025054, -6.714e-4 ];
+  const c4 = [ 1.3822, -0.77857, 0.062767, -0.0020322 ];
+  const c5 = [ -1.5861, -0.31082, -0.083751, 0.0038915 ];
+  const c6 = [ -0.4803, -0.082676, 0.0030302 ];
+
+  function poly(cc: number[], nord: number, xVal: number): number {
+    let ret_val = cc[0];
+    if (nord > 1) {
+      let p = xVal * cc[nord - 1];
+      for (let j = nord - 2; j > 0; j--) {
+        p = (p + cc[j]) * xVal;
+      }
+      ret_val += p;
+    }
+    return ret_val;
+  }
+
+  function normalQuantile(p: number, mu = 0, sigma = 1): number {
+    if (sigma < 0) return -1;
+    if (sigma === 0) return mu;
+
+    const q = p - 0.5;
+    let val = 0;
+
+    if (0.075 <= p && p <= 0.925) {
+      const r = 0.180625 - q * q;
+      val = q * (((((((r * 2509.0809287301226727 + 33430.575583588128105) * r + 67265.770927008700853) * r
+          + 45921.953931549871457) * r + 13731.693765509461125) * r + 1971.5909503065514427) * r + 133.14166789178437745) * r
+          + 3.387132872796366608) / (((((((r * 5226.495278852854561 + 28729.085735721942674) * r + 39307.89580009271061) * r
+          + 21213.794301586595867) * r + 5394.1960214247511077) * r + 687.1870074920579083) * r + 42.313330701600911252) * r + 1);
+    } else {
+      let r = q > 0 ? 1 - p : p;
+      r = Math.sqrt(-Math.log(r));
+
+      if (r <= 5.0) {
+        r += -1.6;
+        val = (((((((r * 7.7454501427834140764e-4 + 0.0227238449892691845833) * r + .24178072517745061177) * r
+            + 1.27045825245236838258) * r + 3.64784832476320460504) * r + 5.7694972214606914055) * r
+            + 4.6303378461565452959) * r + 1.42343711074968357734) / (((((((r * 1.05075007164441684324e-9 + 5.475938084995344946e-4) * r
+            + .0151986665636164571966) * r + 0.14810397642748007459) * r + 0.68976733498510000455) * r + 1.6763848301838038494) * r
+            + 2.05319162663775882187) * r + 1);
+      } else {
+        r += -5.0;
+        val = (((((((r * 2.01033439929228813265e-7 + 2.71155556874348757815e-5) * r + 0.0012426609473880784386) * r
+            + 0.026532189526576123093) * r + .29656057182850489123) * r + 1.7848265399172913358) * r + 5.4637849111641143699) * r
+            + 6.6579046435011037772) / (((((((r * 2.04426310338993978564e-15 + 1.4215117583164458887e-7) * r
+            + 1.8463183175100546818e-5) * r + 7.868691311456132591e-4) * r + .0148753612908506148525) * r
+            + .13692988092273580531) * r + .59983220655588793769) * r + 1.0);
+      }
+
+      if (q < 0.0) val = -val;
+    }
+    return mu + sigma * val;
+  }
+
+  const an = n;
+  if (n === 3) {
+    a[1] = 0.70710678;
+  } else {
+    const an25 = an + 0.25;
+    let summ2 = 0.0;
+    for (let i = 1; i <= nn2; i++) {
+      a[i] = normalQuantile((i - 0.375) / an25, 0, 1);
+      summ2 += a[i] * a[i];
+    }
+    summ2 *= 2;
+    const ssumm2 = Math.sqrt(summ2);
+    const rsn = 1 / Math.sqrt(an);
+    const a1 = poly(c1, 6, rsn) - a[1] / ssumm2;
+
+    let i1 = 2;
+    let fac = 1.0;
+    if (n > 5) {
+      i1 = 3;
+      const a2 = -a[2] / ssumm2 + poly(c2, 6, rsn);
+      fac = Math.sqrt((summ2 - 2 * a[1] * a[1] - 2 * a[2] * a[2]) / (1 - 2 * a1 * a1 - 2 * a2 * a2));
+      a[2] = a2;
+    } else {
+      i1 = 2;
+      fac = Math.sqrt((summ2 - 2 * a[1] * a[1]) / (1 - 2 * a1 * a1));
+    }
+    a[1] = a1;
+    for (let i = i1; i <= nn2; i++) {
+      a[i] /= -fac;
+    }
+  }
+
+  const rangeVal = x[n - 1] - x[0];
+  if (rangeVal < small) {
+    return {
+      method: 'shapiro-wilk',
+      p_value: null,
+      alpha,
+      is_normal: null,
+      warning: 'Range of data is too small for normality testing.',
+    };
+  }
+
+  let xx = x[0] / rangeVal;
+  let sx = xx;
+  let sa = -a[1];
+  for (let i = 1, j = n - 1; i < n; j--) {
+    const xi = x[i] / rangeVal;
+    if (xx - xi > small) {
+      return {
+        method: 'shapiro-wilk',
+        p_value: null,
+        alpha,
+        is_normal: null,
+        warning: 'Sort error or data range issues during normality testing.',
+      };
+    }
+    sx += xi;
+    i++;
+    if (i !== j) {
+      const idx = Math.min(i, j);
+      const signVal = i - j > 0 ? 1 : (i - j < 0 ? -1 : 0);
+      sa += signVal * a[idx];
+    }
+    xx = xi;
+  }
+
+  sa /= n;
+  sx /= n;
+  let ssa = 0;
+  let ssx = 0;
+  let sax = 0;
+  for (let i = 0, j = n - 1; i < n; i++, j--) {
+    let asa = 0;
+    if (i !== j) {
+      const idx = 1 + Math.min(i, j);
+      const signVal = i - j > 0 ? 1 : (i - j < 0 ? -1 : 0);
+      asa = signVal * a[idx] - sa;
+    } else {
+      asa = -sa;
+    }
+    const xsx = x[i] / rangeVal - sx;
+    ssa += asa * asa;
+    ssx += xsx * xsx;
+    sax += asa * xsx;
+  }
+
+  const ssassx = Math.sqrt(ssa * ssx);
+  const w1 = (ssassx - sax) * (ssassx + sax) / (ssa * ssx);
+  const w = 1 - w1;
+
+  let pw = 1.0;
+  if (n === 3) {
+    const pi6 = 1.90985931710274;
+    const stqr = 1.04719755119660;
+    pw = pi6 * (Math.asin(Math.sqrt(w)) - stqr);
+    if (pw < 0) pw = 0;
+    if (pw > 1) pw = 1;
+    return {
+      method: 'shapiro-wilk',
+      p_value: pw,
+      alpha,
+      is_normal: pw >= alpha,
+      warning: null,
+    };
+  }
+
+  const y = Math.log(w1);
+  xx = Math.log(an);
+  let m = 0;
+  let s = 1;
+
+  if (n <= 11) {
+    const gamma = poly(g, 2, an);
+    if (y >= gamma) {
+      pw = 1e-99;
+    } else {
+      const y2 = -Math.log(gamma - y);
+      m = poly(c3, 4, an);
+      s = Math.exp(poly(c4, 4, an));
+      const z = (y2 - m) / s;
+      pw = normalCDF(-z);
+    }
+  } else {
+    m = poly(c5, 4, xx);
+    s = Math.exp(poly(c6, 3, xx));
+    const z = (y - m) / s;
+    pw = normalCDF(-z);
+  }
+
+  if (pw < 0) pw = 0;
+  if (pw > 1) pw = 1;
+
+  return {
+    method: 'shapiro-wilk',
+    p_value: pw,
+    alpha,
+    is_normal: pw >= alpha,
+    warning: null,
+  };
+}
+
 function buildNormalityWarning(normality?: NormalityResult | null): string | null {
   return normality?.is_normal === false
     ? 'Warning: Data is non-normal. Cpk and DPMO estimates may be invalid.'
@@ -615,7 +833,7 @@ export function computeCapability(
   sigmaWithin: number | null | undefined,
   options: CapabilityOptions = {},
 ): CapabilityResult {
-  const normality = options.normality ?? null
+  const normality = options.normality || (values.length >= 3 && values.length <= 5000 ? shapiroWilk(values) : null)
   const { spec_type = 'unspecified', nominal, tolerance } = specConfig
 
   let usl = specConfig.usl ?? null
@@ -761,6 +979,7 @@ export function computeCapability(
         empiricalP99865 > empiricalP00135
       ) {
         pp = round6(specWidth / (empiricalP99865 - empiricalP00135))
+        cp = pp
       }
 
       if (
@@ -777,18 +996,21 @@ export function computeCapability(
             (empiricalP50 - lowerSpec) / (empiricalP50 - empiricalP00135),
           ),
         )
+        cpk = ppk
       } else if (
         upperSpec != null &&
         empiricalP99865 != null &&
         empiricalP99865 > empiricalP50
       ) {
         ppk = round6((upperSpec - empiricalP50) / (empiricalP99865 - empiricalP50))
+        cpk = ppk
       } else if (
         lowerSpec != null &&
         empiricalP00135 != null &&
         empiricalP50 > empiricalP00135
       ) {
         ppk = round6((empiricalP50 - lowerSpec) / (empiricalP50 - empiricalP00135))
+        cpk = ppk
       }
     }
   } else if (sigmaOverall != null && sigmaOverall > 0) {

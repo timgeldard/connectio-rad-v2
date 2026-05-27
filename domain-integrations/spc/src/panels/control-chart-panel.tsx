@@ -26,9 +26,11 @@ const registration: EvidencePanelRegistration = {
 
 export interface ControlChartPanelProps {
   readonly request: SPCMonitoringAdapterRequest
+  readonly onPointClick?: (point: any) => void
+  readonly ruleSet?: 'weco' | 'nelson'
 }
 
-export function ControlChartPanel({ request }: ControlChartPanelProps) {
+export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: ControlChartPanelProps) {
   const { data: result, isLoading } = useControlChartSeries(request)
   const lastRefreshedAt = result?.ok ? result.fetchedAt : null
   const { displayState, markReady, markError } = useEvidencePanel({
@@ -76,7 +78,7 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
   const activePoints = indexedPoints.filter(p => !p.excluded)
   const chartTypeMapped: QuantChartType = (series?.chartType === 'xbar-r' ? 'xbar_r' : series?.chartType === 'xbar-s' ? 'xbar_s' : series?.chartType === 'ewma' ? 'ewma' : series?.chartType === 'cusum' ? 'cusum' : 'imr') as QuantChartType
 
-  const computed = computeAll(activePoints, chartTypeMapped, 'weco')
+  const computed = computeAll(activePoints, chartTypeMapped, ruleSet)
 
   // Get limits
   let cl = series?.centerLine
@@ -103,10 +105,21 @@ export function ControlChartPanel({ request }: ControlChartPanelProps) {
   const activeSignals = computed.signals || []
 
   const handlePointClick = (p: IndexedChartPoint) => {
-    setExclusionDialog({
-      action: p.excluded ? 'manual_restore' : 'manual_exclude',
-      point: p,
-    })
+    if (onPointClick) {
+      onPointClick({
+        ...p,
+        pointId: validPoints[p.originalIndex]?.pointId,
+        timestamp: validPoints[p.originalIndex]?.timestamp,
+        sampleId: validPoints[p.originalIndex]?.sampleId,
+        signalIds: validPoints[p.originalIndex]?.signalIds,
+        unit: series?.unitOfMeasure,
+      })
+    } else {
+      setExclusionDialog({
+        action: p.excluded ? 'manual_restore' : 'manual_exclude',
+        point: p,
+      })
+    }
   }
 
   const handleExclusionSubmit = () => {

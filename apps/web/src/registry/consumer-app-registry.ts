@@ -101,6 +101,28 @@ export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
       'domain-integrations/spc/src/components/interactive-control-chart.tsx',
     ],
   },
+  {
+    appId: 'spc-consumer',
+    displayName: 'Statistical Process Control (Consumer)',
+    primaryUser: 'Quality Lead / Quality Engineer',
+    jobToBeDone: 'Check process control states, view interactive chart measurements, exclude outlier subgroups, and get automated context-aware insights on capability metrics.',
+    designSource: 'claude-design',
+    assemblyMode: 'standalone-designed-app',
+    shellPresentation: 'fullscreen',
+    workspaceId: 'spc-consumer',
+    lifecycle: 'pilot',
+    appMaturity: 'A4',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'Client-calculated control limits must not be presented as governed locked limits.',
+      'Manual exclusions are application state until a governed write-back path exists.',
+    ],
+    designArtifacts: [
+      'domain-integrations/spc/src/spc-consumer-workspace.tsx',
+      'domain-integrations/spc/src/spc-consumer/',
+    ],
+  },
 ]
 
 /** Resolve consumer-app metadata by mounted workspace id. */

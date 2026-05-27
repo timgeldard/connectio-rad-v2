@@ -10,6 +10,16 @@ import type {
 } from '@connectio/data-contracts'
 import { useBatchQualityPassport } from './trace-app-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import {
+  Card,
+  CardContent,
+  Badge,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  DrillThroughButton,
+} from '@connectio/design-system'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'quality-passport',
@@ -76,73 +86,168 @@ export function QualityPassportPanel({
       source={result?.source}
     >
       {data && (
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 24, fontFamily: 'var(--font-sans)' }}>
           <HeroBand data={data} />
-          <Section num="01" label="Identity & production order">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
-              <KV label="Material" value={data.identity.materialDescription} />
-              <KV label="Batch" value={data.identity.batchId} mono />
-              <KV
-                label="Plant"
-                value={isExternal ? 'EU-IE-01' : `${data.identity.plantName} · ${data.identity.plantId}`}
-              />
-              <KV
-                label="Process order"
-                value={isExternal ? '[masked]' : data.identity.processOrderId}
-                mono={!isExternal}
-              />
-              <KV
-                label="Manufacture"
-                value={new Date(data.identity.manufactureDate).toLocaleDateString()}
-                mono
-              />
-              <KV
-                label="Expiry"
-                value={`${new Date(data.identity.expiryDate).toLocaleDateString()} · ${data.identity.daysToExpiry}d`}
-                mono
-              />
-              <KV label="UoM" value={data.identity.uom} mono />
-              <KV label="Audience" value={isExternal ? 'Customer-safe' : 'Internal'} />
-            </div>
-          </Section>
+          
+          <Tabs defaultValue="coa" style={{ width: '100%' }}>
+            <TabsList
+              style={{
+                background: 'var(--stone)',
+                padding: 4,
+                borderRadius: 'var(--radius-md)',
+                display: 'inline-flex',
+                gap: 4,
+                marginBottom: 20,
+                width: '100%',
+                justifyContent: 'flex-start',
+              }}
+            >
+              <TabsTrigger
+                value="coa"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 'var(--fw-semibold)',
+                  fontSize: 'var(--fs-13)',
+                }}
+              >
+                CoA & Specifications
+              </TabsTrigger>
+              <TabsTrigger
+                value="stock"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 'var(--fw-semibold)',
+                  fontSize: 'var(--fs-13)',
+                }}
+              >
+                Stock & Inventory
+              </TabsTrigger>
+              <TabsTrigger
+                value="production"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 'var(--fw-semibold)',
+                  fontSize: 'var(--fs-13)',
+                }}
+              >
+                Production & Lots
+              </TabsTrigger>
+              <TabsTrigger
+                value="usage"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 'var(--fw-semibold)',
+                  fontSize: 'var(--fs-13)',
+                }}
+              >
+                Usage Decision
+              </TabsTrigger>
+            </TabsList>
 
-          <Section num="02" label="Certificate of analysis" extra={`${data.quality.coa.length} characteristics`}>
-            <CoATable rows={data.quality.coa} />
-          </Section>
+            <TabsContent value="coa">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <Section num="01" label="Identity & production order">
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: 16,
+                      background: 'var(--stone)',
+                      padding: 20,
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--stroke-soft)',
+                    }}
+                  >
+                    <KV label="Material" value={data.identity.materialDescription} />
+                    <KV label="Batch" value={data.identity.batchId} mono />
+                    <KV
+                      label="Plant"
+                      value={isExternal ? 'EU-IE-01' : `${data.identity.plantName} · ${data.identity.plantId}`}
+                    />
+                    <KV
+                      label="Process order"
+                      value={isExternal ? '[masked]' : data.identity.processOrderId}
+                      mono={!isExternal}
+                    />
+                    <KV
+                      label="Manufacture"
+                      value={new Date(data.identity.manufactureDate).toLocaleDateString()}
+                      mono
+                    />
+                    <KV
+                      label="Expiry"
+                      value={`${new Date(data.identity.expiryDate).toLocaleDateString()} · ${data.identity.daysToExpiry}d`}
+                      mono
+                    />
+                    <KV label="UoM" value={data.identity.uom} mono />
+                    <KV label="Audience" value={isExternal ? 'Customer-safe' : 'Internal'} />
+                  </div>
+                </Section>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginBottom: 22 }}>
-            <div>
-              <SectionTitle num="03" label="Stock by category" />
-              <StockBreakdown stock={data.stock} />
-            </div>
-            <div>
-              <SectionTitle num="04" label="Production context" />
-              <ProductionContext production={data.production} isExternal={isExternal} />
-            </div>
-          </div>
+                <Section num="02" label="Certificate of analysis" extra={`${data.quality.coa.length} characteristics`}>
+                  <div style={{ border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                    <CoATable rows={data.quality.coa} />
+                  </div>
+                </Section>
+              </div>
+            </TabsContent>
 
-          <Section num="05" label="Lot history" extra="Last 4 lots">
-            <LotHistoryTable rows={data.lotHistory} isExternal={isExternal} />
-          </Section>
+            <TabsContent value="stock">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <Section num="03" label="Stock by category">
+                  <StockBreakdown stock={data.stock} />
+                </Section>
 
-          {!isExternal && (
-            <Section num="06" label="Mass balance variance" extra="Internal only">
-              <MassBalanceBanner
-                variance={data.massBalance.variance}
-                uom={data.stock.uom}
-                note={data.massBalance.note}
-                onOpenDetail={onNavigateTab ? () => onNavigateTab('mass-balance') : undefined}
-              />
-            </Section>
-          )}
+                {!isExternal && (
+                  <Section num="04" label="Mass balance variance">
+                    <MassBalanceBanner
+                      variance={data.massBalance.variance}
+                      uom={data.stock.uom}
+                      note={data.massBalance.note}
+                      onOpenDetail={onNavigateTab ? () => onNavigateTab('mass-balance') : undefined}
+                    />
+                  </Section>
+                )}
+              </div>
+            </TabsContent>
 
-          <Section
-            num={isExternal ? '06' : '07'}
-            label="Usage-decision evidence"
-            extra="Not governed sign-off"
-          >
-            <UsageDecisionEvidenceList rows={data.usageDecisionEvidence} isExternal={isExternal} />
-          </Section>
+            <TabsContent value="production">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(285px, 1fr))',
+                    gap: 20,
+                  }}
+                >
+                  <Section num="05" label="Production context">
+                    <ProductionContext production={data.production} isExternal={isExternal} />
+                  </Section>
+                  <Section num="06" label="Lot history" extra="Last 4 lots">
+                    <div style={{ border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                      <LotHistoryTable rows={data.lotHistory} isExternal={isExternal} />
+                    </div>
+                  </Section>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="usage">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <Section
+                  num="07"
+                  label="Usage-decision evidence"
+                  extra="SAP QM Audit Trail"
+                >
+                  <UsageDecisionEvidenceList rows={data.usageDecisionEvidence} isExternal={isExternal} />
+                </Section>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </EvidencePanel>
@@ -156,7 +261,7 @@ export function QualityPassportPanel({
 function HeroBand({ data }: { data: BatchQualityPassport }) {
   const confidence = data.quality.heuristicQualityConfidence
   const confColor =
-    confidence >= 90 ? '#1a8454' : confidence >= 75 ? '#8a6b00' : '#c63b00'
+    confidence >= 90 ? 'var(--status-good)' : confidence >= 75 ? 'var(--status-warn)' : 'var(--status-bad)'
   const failedMics = data.quality.coa.filter((c) => c.status === 'fail').length
   const warnMics = data.quality.coa.filter((c) => c.status === 'warn').length
   const acceptLots = data.lotHistory.filter((l) => l.result === 'accept').length
@@ -167,44 +272,46 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
       style={{
         display: 'grid',
         gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
-        marginBottom: 22,
-        border: '1px solid var(--shell-line, #E5E3D7)',
-        borderRadius: 8,
+        marginBottom: 24,
+        border: '1px solid var(--stroke)',
+        borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
-        background: 'var(--shell-surface-2, #F8F7F0)',
+        background: 'var(--white)',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
-      <div style={{ padding: 16, borderRight: '1px solid var(--shell-line, #E5E3D7)' }}>
-        <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span>Quality confidence</span>
-          <span
-            title="This score is application-derived from MIC pass/fail and warning counts. It is not a governed SAP/QM field."
-            style={{
-              fontSize: 9,
-              padding: '1px 5px',
-              borderRadius: 4,
-              background: 'var(--sunrise, #F9C20A)20',
-              color: '#8a6b00',
-              fontWeight: 700,
-              letterSpacing: 0.4,
-            }}
-          >
-            HEURISTIC
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: confColor, lineHeight: 1 }}>
-            {confidence}
-            <span style={{ fontSize: 14, color: 'var(--shell-fg-2)', fontWeight: 600 }}>/100</span>
+      <div style={{ padding: 20, borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', fontWeight: 'var(--fw-bold)', color: 'var(--fg-muted)', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Quality confidence</span>
+            <Badge
+              style={{
+                background: data.quality.confidenceSource === 'application-heuristic' ? 'color-mix(in srgb, var(--status-warn) 15%, white)' : 'var(--brand)',
+                color: data.quality.confidenceSource === 'application-heuristic' ? 'var(--status-warn)' : 'var(--white)',
+                fontSize: 9,
+                padding: '2px 6px',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-mono)',
+              }}
+              title={data.quality.confidenceSource === 'application-heuristic' ? "This score is application-derived from MIC pass/fail and warning counts. It is not a governed SAP/QM field." : undefined}
+            >
+              {data.quality.confidenceSource === 'application-heuristic' ? 'HEURISTIC' : 'GOVERNED'}
+            </Badge>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--shell-fg-2)' }}>
-            {data.quality.notes.map((n) => (
-              <div key={n}>· {n}</div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 'var(--fs-36)', fontWeight: 'var(--fw-extrabold)', color: confColor, lineHeight: 1 }}>
+              {confidence}
+              <span style={{ fontSize: 'var(--fs-14)', color: 'var(--fg-muted)', fontWeight: 'var(--fw-semibold)' }}>/100</span>
+            </div>
+            <div style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)' }}>
+              {data.quality.notes.map((n) => (
+                <div key={n}>· {n}</div>
+              ))}
+            </div>
           </div>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--shell-fg-2)', marginTop: 6, fontStyle: 'italic' }}>
-          Source: {data.quality.confidenceSource === 'application-heuristic' ? 'application-heuristic — not governed' : 'governed'}
+        <div style={{ fontSize: 10, color: 'var(--fg-muted)', marginTop: 10, fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
+          Source: {data.quality.confidenceSource === 'application-heuristic' ? 'Application Heuristic (SAP QM proxy)' : 'Databricks API (SAP QM)'}
         </div>
       </div>
       <KpiTile label="Lots produced" value={data.lotHistory.length} sub="over 4 days" />
@@ -236,14 +343,14 @@ function KpiTile({
   tone?: 'good' | 'warn' | 'bad'
 }) {
   const color =
-    tone === 'good' ? '#1a8454' : tone === 'warn' ? '#8a6b00' : tone === 'bad' ? '#c63b00' : 'var(--forest, #143700)'
+    tone === 'good' ? 'var(--status-good)' : tone === 'warn' ? 'var(--status-warn)' : tone === 'bad' ? 'var(--status-bad)' : 'var(--forest)'
   return (
-    <div style={{ padding: 16, borderRight: '1px solid var(--shell-line, #E5E3D7)' }}>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--shell-fg-2)' }}>
+    <div style={{ padding: 20, borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ fontSize: 10, letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', fontWeight: 'var(--fw-bold)', color: 'var(--fg-muted)' }}>
         {label}
       </div>
-      <div style={{ marginTop: 4, fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginTop: 4 }}>{sub}</div>}
+      <div style={{ marginTop: 6, fontSize: 'var(--fs-28)', fontWeight: 'var(--fw-extrabold)', color, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', marginTop: 6 }}>{sub}</div>}
     </div>
   )
 }
@@ -260,7 +367,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div style={{ marginBottom: 22 }}>
+    <div style={{ marginBottom: 12 }}>
       <SectionTitle num={num} label={label} extra={extra} />
       {children}
     </div>
@@ -275,20 +382,20 @@ function SectionTitle({ num, label, extra }: { num?: string; label: string; extr
         alignItems: 'baseline',
         gap: 10,
         paddingBottom: 8,
-        marginBottom: 12,
-        borderBottom: '1px solid var(--shell-line, #E5E3D7)',
+        marginBottom: 14,
+        borderBottom: '1px solid var(--stroke)',
       }}
     >
       {num && (
-        <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--valentia-slate, #005776)', fontWeight: 700 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--brand)', fontWeight: 'var(--fw-bold)' }}>
           {num}
         </span>
       )}
-      <span style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: 700, color: 'var(--valentia-slate, #005776)' }}>
+      <span className="t-eyebrow" style={{ margin: 0 }}>
         {label}
       </span>
       {extra && (
-        <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', fontFamily: 'monospace', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)', marginLeft: 'auto' }}>
           {extra}
         </span>
       )}
@@ -299,10 +406,10 @@ function SectionTitle({ num, label, extra }: { num?: string; label: string; extr
 function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <div style={{ fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--shell-fg-2)', fontWeight: 600, marginBottom: 4 }}>
+      <div style={{ fontSize: 10, letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', color: 'var(--fg-muted)', fontWeight: 'var(--fw-semibold)', marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--forest, #143700)', fontFamily: mono ? 'monospace' : 'inherit' }}>
+      <div style={{ fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-semibold)', color: 'var(--forest)', fontFamily: mono ? 'var(--font-mono)' : 'inherit' }}>
         {value}
       </div>
     </div>
@@ -312,9 +419,9 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
 function CoATable({ rows }: { rows: readonly QualityCharacteristic[] }) {
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-13)' }}>
         <thead>
-          <tr style={{ background: 'var(--shell-surface-2, #F8F7F0)' }}>
+          <tr style={{ background: 'var(--stone)', borderBottom: '1px solid var(--stroke)' }}>
             <Th>Characteristic</Th>
             <Th>Spec</Th>
             <Th style={{ minWidth: 240 }}>Result</Th>
@@ -323,29 +430,28 @@ function CoATable({ rows }: { rows: readonly QualityCharacteristic[] }) {
         </thead>
         <tbody>
           {rows.map((c, i) => (
-            <tr key={`${c.mic}-${i}`} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
-              <td style={{ padding: '11px 12px', verticalAlign: 'top' }}>
-                <div style={{ fontWeight: 500 }}>{c.param}</div>
-                <div style={{ fontFamily: 'monospace', fontSize: 10.5, color: 'var(--shell-fg-2)', marginTop: 2 }}>
-                  {c.mic} · target {c.target}
-                  {c.uom}
+            <tr key={`${c.mic}-${i}`} style={{ borderBottom: '1px solid var(--stroke-soft)', background: 'var(--white)' }}>
+              <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                <div style={{ fontWeight: 'var(--fw-semibold)', color: 'var(--forest)' }}>{c.param}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', marginTop: 2 }}>
+                  {c.mic} · target {c.target} {c.uom}
                 </div>
               </td>
-              <td style={{ padding: '11px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)', fontSize: 11.5, verticalAlign: 'top' }}>
+              <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)', fontSize: 'var(--fs-12)', verticalAlign: 'top' }}>
                 {c.binary ? `${c.binary} ${c.uom}` : `${c.low} – ${c.high} ${c.uom}`}
               </td>
-              <td style={{ padding: '11px 12px', verticalAlign: 'middle' }}>
+              <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span
                     style={{
                       minWidth: 70,
-                      fontFamily: 'monospace',
-                      fontWeight: 600,
-                      color: c.status === 'fail' ? '#c63b00' : c.status === 'warn' ? '#8a6b00' : 'var(--forest, #143700)',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 'var(--fw-bold)',
+                      color: c.status === 'fail' ? 'var(--status-bad)' : c.status === 'warn' ? 'var(--status-warn)' : 'var(--status-good)',
                     }}
                   >
                     {c.binary || c.actual}
-                    <span style={{ color: 'var(--shell-fg-2)', fontWeight: 400, fontSize: 11, marginLeft: 2 }}>
+                    <span style={{ color: 'var(--fg-muted)', fontWeight: 'var(--fw-normal)', fontSize: 'var(--fs-11)', marginLeft: 2 }}>
                       {c.uom}
                     </span>
                   </span>
@@ -356,7 +462,7 @@ function CoATable({ rows }: { rows: readonly QualityCharacteristic[] }) {
                   )}
                 </div>
               </td>
-              <td style={{ padding: '11px 12px', verticalAlign: 'top' }}>
+              <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
                 <StatusPill
                   status={c.status}
                   label={c.status === 'ok' ? 'In spec' : c.status === 'warn' ? 'Near limit' : 'Out of spec'}
@@ -395,11 +501,11 @@ function SpecBar({
   const tgtLeft = pct(target)
   const actLeft = pct(actual)
 
-  const actColor = status === 'fail' ? 'var(--sunset, #F24A00)' : status === 'warn' ? 'var(--sunrise, #F9C20A)' : 'var(--forest, #143700)'
+  const actColor = status === 'fail' ? 'var(--status-bad)' : status === 'warn' ? 'var(--status-warn)' : 'var(--status-good)'
 
   return (
     <div style={{ position: 'relative', height: 14, width: '100%' }}>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 5, height: 4, background: 'var(--shell-surface-2, #F8F7F0)', borderRadius: 2, border: '1px solid var(--shell-line, #E5E3D7)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 5, height: 4, background: 'var(--stone)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--stroke-soft)' }} />
       <div
         style={{
           position: 'absolute',
@@ -407,13 +513,13 @@ function SpecBar({
           height: 6,
           left: `${tolLeft}%`,
           width: `${tolWidth}%`,
-          background: 'color-mix(in srgb, var(--sage, #289BA2) 28%, white)',
-          borderLeft: '1px solid var(--sage, #289BA2)',
-          borderRight: '1px solid var(--sage, #289BA2)',
-          borderRadius: 2,
+          background: 'color-mix(in srgb, var(--status-info) 20%, white)',
+          borderLeft: '1px solid var(--status-info)',
+          borderRight: '1px solid var(--status-info)',
+          borderRadius: 'var(--radius-sm)',
         }}
       />
-      <div style={{ position: 'absolute', top: 1, bottom: 1, left: `${tgtLeft}%`, width: 2, background: 'var(--forest, #143700)' }} />
+      <div style={{ position: 'absolute', top: 1, bottom: 1, left: `${tgtLeft}%`, width: 2, background: 'var(--forest)' }} />
       <div
         style={{
           position: 'absolute',
@@ -422,9 +528,9 @@ function SpecBar({
           left: `${actLeft}%`,
           width: 12,
           height: 12,
-          borderRadius: '50%',
+          borderRadius: 'var(--radius-full)',
           background: actColor,
-          boxShadow: `0 0 0 2px white, 0 0 0 3px ${actColor}`,
+          boxShadow: `0 0 0 2px var(--white), 0 0 0 3px ${actColor}`,
         }}
       />
     </div>
@@ -433,54 +539,54 @@ function SpecBar({
 
 function StockBreakdown({ stock }: { stock: PassportStock }) {
   const buckets: { key: keyof PassportStock; label: string; color: string }[] = [
-    { key: 'unrestricted', label: 'Unrestricted', color: 'var(--jade, #44CF93)' },
-    { key: 'qualityInspection', label: 'Quality inspection', color: 'var(--sage, #289BA2)' },
-    { key: 'blocked', label: 'Blocked', color: 'var(--sunset, #F24A00)' },
-    { key: 'restricted', label: 'Restricted', color: 'var(--sunrise, #F9C20A)' },
-    { key: 'transit', label: 'In transit', color: 'var(--valentia-slate, #005776)' },
+    { key: 'unrestricted', label: 'Unrestricted', color: 'var(--status-good)' },
+    { key: 'qualityInspection', label: 'Quality inspection', color: 'var(--status-info)' },
+    { key: 'restricted', label: 'Restricted', color: 'var(--status-warn)' },
+    { key: 'blocked', label: 'Blocked', color: 'var(--status-bad)' },
+    { key: 'transit', label: 'In transit', color: 'var(--brand)' },
   ]
   const total = buckets.reduce((s, b) => s + (Number(stock[b.key]) || 0), 0)
 
   return (
-    <div style={{ padding: 16, background: 'var(--shell-surface-2, #F8F7F0)', borderRadius: 8, border: '1px solid var(--shell-line, #E5E3D7)' }}>
-      <div style={{ display: 'grid', gap: 12 }}>
+    <Card style={{ padding: 18, background: 'var(--white)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-sm)' }}>
+      <CardContent style={{ padding: 0, display: 'grid', gap: 12 }}>
         {buckets.map((b) => {
           const val = Number(stock[b.key]) || 0
           const pct = total > 0 ? (val / total) * 100 : 0
           return (
             <div key={b.key}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--forest, #143700)' }}>{b.label}</span>
-                <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                  {val.toLocaleString()} <span style={{ color: 'var(--shell-fg-2)' }}>· {pct.toFixed(1)}%</span>
+                <span style={{ fontSize: 'var(--fs-12)', fontWeight: 'var(--fw-medium)', color: 'var(--forest)' }}>{b.label}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--forest)' }}>
+                  {val.toLocaleString()} <span style={{ color: 'var(--fg-muted)' }}>· {pct.toFixed(1)}%</span>
                 </span>
               </div>
-              <div style={{ height: 6, background: 'white', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--shell-line, #E5E3D7)' }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: b.color, opacity: val === 0 ? 0.3 : 1 }} />
+              <div style={{ height: 6, background: 'var(--stone)', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '1px solid var(--stroke-soft)' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: b.color, opacity: val === 0 ? 0.3 : 1, borderRadius: 'var(--radius-full)' }} />
               </div>
             </div>
           )
         })}
-      </div>
-      <div
-        style={{
-          marginTop: 14,
-          paddingTop: 12,
-          borderTop: '1px dashed var(--shell-line, #E5E3D7)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-        }}
-      >
-        <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>
-          Total on hand
-        </span>
-        <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--forest, #143700)' }}>
-          {total.toLocaleString()}
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--shell-fg-2)', marginLeft: 4 }}>{stock.uom}</span>
-        </span>
-      </div>
-    </div>
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 12,
+            borderTop: '1px dashed var(--stroke)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+          }}
+        >
+          <span style={{ fontSize: 11, color: 'var(--fg-muted)', textTransform: 'uppercase', letterSpacing: 'var(--ls-upper)', fontWeight: 'var(--fw-bold)' }}>
+            Total on hand
+          </span>
+          <span style={{ fontSize: 'var(--fs-22)', fontWeight: 'var(--fw-extrabold)', color: 'var(--forest)', fontFamily: 'var(--font-mono)' }}>
+            {total.toLocaleString()}
+            <span style={{ fontSize: 12, fontWeight: 'var(--fw-semibold)', color: 'var(--fg-muted)', marginLeft: 4 }}>{stock.uom}</span>
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -509,8 +615,8 @@ function ProductionContext({ production, isExternal }: { production: PassportPro
     { label: 'Originating customer', value: formatOptional(production.originatingCustomer) },
   ]
   return (
-    <div style={{ padding: 16, background: 'var(--shell-surface-2, #F8F7F0)', borderRadius: 8, border: '1px solid var(--shell-line, #E5E3D7)' }}>
-      <div style={{ display: 'grid', gap: 8 }}>
+    <Card style={{ padding: 18, background: 'var(--white)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-sm)' }}>
+      <CardContent style={{ padding: 0, display: 'grid', gap: 8 }}>
         {rows.map((r, i) => (
           <div
             key={r.label}
@@ -519,29 +625,30 @@ function ProductionContext({ production, isExternal }: { production: PassportPro
               justifyContent: 'space-between',
               alignItems: 'baseline',
               paddingBottom: 6,
-              borderBottom: i === rows.length - 1 ? 'none' : '1px dotted var(--shell-line, #E5E3D7)',
+              borderBottom: i === rows.length - 1 ? 'none' : '1px dotted var(--stroke-soft)',
             }}
           >
-            <span style={{ fontSize: 11.5, color: 'var(--shell-fg-2)' }}>{r.label}</span>
+            <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)' }}>{r.label}</span>
             <span
               style={{
-                fontSize: 12.5,
-                fontWeight: 500,
+                fontSize: 'var(--fs-13)',
+                fontWeight: 'var(--fw-medium)',
+                color: 'var(--forest)',
                 textAlign: 'right',
-                fontFamily: r.mono ? 'monospace' : 'inherit',
+                fontFamily: r.mono ? 'var(--font-mono)' : 'inherit',
               }}
             >
               {r.value}
             </span>
           </div>
         ))}
-      </div>
-      {!isExternal && (
-        <div style={{ marginTop: 12, fontSize: 11, color: 'var(--shell-fg-2)', fontStyle: 'italic' }}>
-          {production.notes}
-        </div>
-      )}
-    </div>
+        {!isExternal && (
+          <div style={{ marginTop: 8, fontSize: 'var(--fs-11)', color: 'var(--fg-muted)', fontStyle: 'italic' }}>
+            {production.notes}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -554,9 +661,9 @@ function LotHistoryTable({
 }) {
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-13)' }}>
         <thead>
-          <tr style={{ background: 'var(--shell-surface-2, #F8F7F0)' }}>
+          <tr style={{ background: 'var(--stone)', borderBottom: '1px solid var(--stroke)' }}>
             {['Lot', 'Date', 'Inspection', 'Decision', 'MICs', 'Decided by'].map((h) => (
               <Th key={h} align={h === 'MICs' ? 'right' : 'left'}>
                 {h}
@@ -566,23 +673,23 @@ function LotHistoryTable({
         </thead>
         <tbody>
           {rows.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
-              <td style={{ padding: '9px 12px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--valentia-slate, #005776)' }}>{l.id}</td>
-              <td style={{ padding: '9px 12px', fontFamily: 'monospace', color: 'var(--shell-fg-2)' }}>{l.date}</td>
-              <td style={{ padding: '9px 12px' }}>{l.inspection}</td>
-              <td style={{ padding: '9px 12px' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--stroke-soft)', background: 'var(--white)' }}>
+              <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', fontWeight: 'var(--fw-semibold)', color: 'var(--brand)' }}>{l.id}</td>
+              <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)' }}>{l.date}</td>
+              <td style={{ padding: '10px 14px', color: 'var(--forest)' }}>{l.inspection}</td>
+              <td style={{ padding: '10px 14px' }}>
                 <StatusPill
                   status={l.result === 'reject' ? 'fail' : l.result === 'conditional' ? 'warn' : 'ok'}
                   label={l.result === 'accept' ? 'Released' : l.result === 'conditional' ? 'Conditional' : 'Rejected'}
                 />
               </td>
-              <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
-                <span style={{ color: l.failed > 0 ? '#8a6b00' : 'var(--shell-fg-2)', fontWeight: l.failed > 0 ? 600 : 400 }}>
+              <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: l.failed > 0 ? 'var(--status-warn)' : 'var(--fg-muted)', fontWeight: l.failed > 0 ? 'var(--fw-bold)' : 'var(--fw-normal)' }}>
                   {l.failed}
                 </span>
-                <span style={{ color: 'var(--shell-fg-2)' }}> / {l.mics}</span>
+                <span style={{ color: 'var(--fg-muted)' }}> / {l.mics}</span>
               </td>
-              <td style={{ padding: '9px 12px', color: isExternal ? 'var(--shell-fg-2)' : 'inherit' }}>
+              <td style={{ padding: '10px 14px', color: 'var(--forest)' }}>
                 {isExternal ? '[masked]' : l.decisionBy}
               </td>
             </tr>
@@ -605,59 +712,53 @@ function MassBalanceBanner({
   onOpenDetail?: () => void
 }) {
   const reconciled = variance === 0
-  const tone = reconciled ? 'var(--jade, #44CF93)' : 'var(--sunrise, #F9C20A)'
+  const toneColor = reconciled ? 'var(--status-good)' : 'var(--status-warn)'
+  const displayVariance = variance > 0 ? `+${variance}` : variance
+
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto',
-        gap: 16,
+        display: 'flex',
         alignItems: 'center',
-        padding: '14px 18px',
-        background: `color-mix(in srgb, ${tone} 8%, white)`,
-        border: `1px solid color-mix(in srgb, ${tone} 38%, white)`,
-        borderRadius: 8,
+        justifyContent: 'space-between',
+        gap: 16,
+        padding: '16px 20px',
+        background: `color-mix(in srgb, ${toneColor} 8%, white)`,
+        border: `1px solid color-mix(in srgb, ${toneColor} 20%, white)`,
+        borderLeft: `4px solid ${toneColor}`,
+        borderRadius: 'var(--radius-md)',
+        marginBottom: 20,
       }}
     >
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: '50%',
-          background: 'white',
-          display: 'grid',
-          placeItems: 'center',
-          border: `2px solid ${tone}`,
-        }}
-      >
-        <span style={{ fontSize: 16, fontWeight: 800, color: reconciled ? '#1a8454' : '#8a6b00' }}>
-          {variance > 0 ? '+' : ''}
-          {variance}
-        </span>
-      </div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--forest, #143700)', marginBottom: 2 }}>
-          Variance {reconciled ? 'reconciled' : `${Math.abs(variance)} ${uom} unexplained`}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--shell-fg-2)' }}>{note}</div>
-      </div>
-      {onOpenDetail && (
-        <button
-          type="button"
-          onClick={onOpenDetail}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div
           style={{
-            padding: '8px 14px',
-            fontSize: 12,
-            fontWeight: 600,
-            border: '1px solid var(--shell-line, #E5E3D7)',
-            borderRadius: 6,
-            background: 'white',
-            color: 'var(--valentia-slate, #005776)',
-            cursor: 'pointer',
+            width: 44,
+            height: 44,
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--white)',
+            display: 'grid',
+            placeItems: 'center',
+            border: `2px solid ${toneColor}`,
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
-          Open Mass Balance →
-        </button>
+          <span style={{ fontSize: 'var(--fs-16)', fontWeight: 'var(--fw-bold)', color: toneColor, fontFamily: 'var(--font-mono)' }}>
+            {displayVariance}
+          </span>
+        </div>
+        <div>
+          <div style={{ fontSize: 'var(--fs-14)', fontWeight: 'var(--fw-bold)', color: 'var(--forest)', marginBottom: 2 }}>
+            Variance {reconciled ? 'reconciled' : `${Math.abs(variance)} ${uom} unexplained`}
+          </div>
+          <div style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)' }}>{note}</div>
+        </div>
+      </div>
+      {onOpenDetail && (
+        <DrillThroughButton
+          label="Open Mass Balance"
+          onClick={onOpenDetail}
+        />
       )}
     </div>
   )
@@ -671,68 +772,53 @@ function UsageDecisionEvidenceList({
   isExternal: boolean
 }) {
   return (
-    <>
-      <div
-        style={{
-          fontSize: 11,
-          color: 'var(--shell-fg-2)',
-          fontStyle: 'italic',
-          marginBottom: 8,
-          padding: '6px 10px',
-          background: 'var(--sunrise, #F9C20A)15',
-          borderLeft: '3px solid var(--sunrise, #F9C20A)',
-          borderRadius: 4,
-        }}
-      >
-        These rows show the SAP usage-decision audit trail. They are NOT governed e-signatures,
-        release approvals, or QA sign-offs.
-      </div>
-      <div style={{ display: 'grid', gap: 6 }}>
-        {rows.map((s) => (
-          <div
-            key={`${s.role}-${s.recordedAt}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              padding: '10px 14px',
-              background: 'var(--shell-surface-2, #F8F7F0)',
-              borderRadius: 6,
-            }}
-          >
-            <div style={{ minWidth: 160 }}>
-              <div
-                style={{
-                  fontSize: 10.5,
-                  letterSpacing: 0.8,
-                  textTransform: 'uppercase',
-                  color: 'var(--shell-fg-2)',
-                  marginBottom: 2,
-                }}
-              >
-                {s.role}
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
-                {isExternal && s.decisionBy !== '—' ? '[masked]' : s.decisionBy}
-              </div>
+    <div style={{ display: 'grid', gap: 10 }}>
+      {rows.map((s) => (
+        <div
+          key={`${s.role}-${s.recordedAt}`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            padding: '14px 18px',
+            background: 'var(--stone)',
+            border: '1px solid var(--stroke-soft)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <div style={{ minWidth: 160 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: 'var(--ls-upper)',
+                textTransform: 'uppercase',
+                color: 'var(--fg-muted)',
+                fontWeight: 'var(--fw-bold)',
+                marginBottom: 4,
+              }}
+            >
+              {s.role}
             </div>
-            <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: 'var(--shell-fg-2)' }}>
-              {s.recordedAt || '—'}
+            <div style={{ fontSize: 'var(--fs-13)', fontWeight: 'var(--fw-semibold)', color: 'var(--forest)' }}>
+              {isExternal && s.decisionBy !== '—' ? '[masked]' : s.decisionBy}
             </div>
-            <StatusPill
-              status={s.decisionType === 'usage-decision-recorded' ? 'ok' : s.decisionType === 'inspection-completed' ? 'warn' : 'neutral'}
-              label={
-                s.decisionType === 'usage-decision-recorded'
-                  ? 'Decision recorded'
-                  : s.decisionType === 'inspection-completed'
-                    ? 'Inspection done'
-                    : 'No evidence'
-              }
-            />
           </div>
-        ))}
-      </div>
-    </>
+          <div style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-12)', color: 'var(--fg-muted)' }}>
+            {s.recordedAt || '—'}
+          </div>
+          <StatusPill
+            status={s.decisionType === 'usage-decision-recorded' ? 'ok' : s.decisionType === 'inspection-completed' ? 'warn' : 'neutral'}
+            label={
+              s.decisionType === 'usage-decision-recorded'
+                ? 'Decision recorded'
+                : s.decisionType === 'inspection-completed'
+                  ? 'Inspection done'
+                  : 'No evidence'
+            }
+          />
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -741,11 +827,13 @@ function Th({ children, align = 'left', style }: { children: React.ReactNode; al
     <th
       style={{
         textAlign: align,
-        padding: '8px 12px',
+        padding: '10px 14px',
         fontSize: 10.5,
-        letterSpacing: 0.8,
+        letterSpacing: 'var(--ls-upper)',
         textTransform: 'uppercase',
-        color: 'var(--shell-fg-2)',
+        color: 'var(--fg-muted)',
+        fontWeight: 'var(--fw-semibold)',
+        fontFamily: 'var(--font-mono)',
         ...style,
       }}
     >
@@ -757,22 +845,21 @@ function Th({ children, align = 'left', style }: { children: React.ReactNode; al
 function StatusPill({ status, label }: { status: 'ok' | 'warn' | 'fail' | 'neutral'; label: string }) {
   const tone =
     status === 'fail'
-      ? { bg: 'var(--sunset, #F24A00)20', fg: 'var(--sunset, #F24A00)' }
+      ? { bg: 'color-mix(in srgb, var(--status-bad) 12%, white)', fg: 'var(--status-bad)' }
       : status === 'warn'
-        ? { bg: 'var(--sunrise, #F9C20A)20', fg: '#8a6b00' }
+        ? { bg: 'color-mix(in srgb, var(--status-warn) 12%, white)', fg: 'var(--status-warn)' }
         : status === 'ok'
-          ? { bg: 'var(--jade, #44CF93)20', fg: '#1a8454' }
-          : { bg: 'var(--shell-line, #E5E3D7)', fg: 'var(--shell-fg-2)' }
+          ? { bg: 'color-mix(in srgb, var(--status-good) 12%, white)', fg: 'var(--status-good)' }
+          : { bg: 'var(--stone)', fg: 'var(--fg-muted)' }
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         padding: '2px 8px',
-        borderRadius: 999,
+        borderRadius: 'var(--radius-full)',
         fontSize: 11,
-        fontWeight: 600,
-        textTransform: 'capitalize',
+        fontWeight: 'var(--fw-semibold)',
         background: tone.bg,
         color: tone.fg,
         whiteSpace: 'nowrap',
