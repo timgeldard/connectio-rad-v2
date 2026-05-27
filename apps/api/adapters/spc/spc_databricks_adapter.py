@@ -236,3 +236,137 @@ def _to_float_or_none(value: object) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+# ---------------------------------------------------------------------------
+# Factories for materials / plants / search / characteristics
+# These were previously inline in routes/spc.py; moved here per architecture rule.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class SpcPlantsRequest:
+    material_id: str
+
+
+@dataclass
+class SpcSearchRequest:
+    q: str
+    limit: int  # pre-clamped by route handler to [1, 50]
+
+
+@dataclass
+class SpcCharacteristicsRequest:
+    material_id: str
+    plant_id_filter: str  # empty string = no filter
+
+
+def get_spc_materials_spec() -> QuerySpec:
+    """QuerySpec for GET /api/spc/materials — distinct materials with quantitative SPC data."""
+    r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
+    m_tbl = resolve_domain_object("spc", "gold_material")
+    sql = f"""
+        SELECT DISTINCT
+            r.MATERIAL_ID   AS material_id,
+            COALESCE(m.MATERIAL_NAME, r.MATERIAL_ID) AS material_name
+        FROM {r_tbl} r
+        LEFT JOIN {m_tbl} m
+            ON m.MATERIAL_ID = r.MATERIAL_ID
+           AND m.LANGUAGE_ID = 'E'
+        WHERE r.QUANTITATIVE_RESULT IS NOT NULL
+          AND (r.QUALITATIVE_RESULT IS NULL OR r.QUALITATIVE_RESULT = '')
+        ORDER BY material_name
+    """
+    return QuerySpec(
+        name="spc.get_materials",
+        module="spc",
+        endpoint="/api/spc/materials",
+        sql=sql,
+        params={},
+        source_badge="view:gold_batch_quality_result_v",
+        tags=["spc", "materials"],
+    )
+
+
+def get_spc_plants_spec(request: SpcPlantsRequest) -> QuerySpec:
+    """QuerySpec for GET /api/spc/plants — distinct plants with SPC data for a material."""
+    mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
+    p_tbl = resolve_domain_object("spc", "gold_plant")
+    sql = f"""
+        SELECT DISTINCT
+            s.plant_id,
+            COALESCE(p.PLANT_NAME, s.plant_id) AS plant_name
+        FROM {mv_tbl} s
+        LEFT JOIN {p_tbl} p
+            ON p.PLANT_ID = s.plant_id
+        WHERE s.material_id = :material_id
+        ORDER BY plant_name
+    """
+    return QuerySpec(
+        name="spc.get_plants",
+        module="spc",
+        endpoint="/api/spc/plants",
+        sql=sql,
+        params={"material_id": request.material_id},
+        source_badge="view:spc_quality_metric_subgroup_mv",
+        tags=["spc", "plants"],
+    )
+
+
+def get_spc_search_spec(request: SpcSearchRequest) -> QuerySpec:
+    """QuerySpec for GET /api/spc/search — material search against subgroup MV."""
+    mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
+    m_tbl = resolve_domain_object("spc", "gold_material")
+    safe_limit = max(1, min(50, int(request.limit)))
+    sql = f"""
+        SELECT DISTINCT
+            s.material_id,
+            COALESCE(m.MATERIAL_NAME, s.material_id) AS material_name
+        FROM {mv_tbl} s
+        LEFT JOIN {m_tbl} m
+            ON m.MATERIAL_ID = s.material_id
+           AND m.LANGUAGE_ID = 'E'
+        WHERE s.material_id ILIKE :q_like
+           OR m.MATERIAL_NAME ILIKE :q_like
+        ORDER BY material_name
+        LIMIT {safe_limit}
+    """
+    return QuerySpec(
+        name="spc.search_materials",
+        module="spc",
+        endpoint="/api/spc/search",
+        sql=sql,
+        params={"q_like": f"%{request.q}%"},
+        source_badge="view:spc_quality_metric_subgroup_mv",
+        tags=["spc", "search", "materials"],
+    )
+
+
+def get_spc_characteristics_spec(request: SpcCharacteristicsRequest) -> QuerySpec:
+    """QuerySpec for GET /api/spc/characteristics — MICs grouped from subgroup MV."""
+    mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
+    sql = f"""
+        SELECT
+            mic_id,
+            MAX(mic_name)                        AS mic_name,
+            MAX(operation_id)                    AS operation_id,
+            COUNT(DISTINCT batch_id)             AS batch_count,
+            AVG(CAST(batch_n AS DOUBLE))         AS avg_samples_per_batch
+        FROM {mv_tbl}
+        WHERE material_id = :material_id
+          AND (:plant_id_filter = '' OR plant_id = :plant_id_filter)
+        GROUP BY mic_id
+        HAVING COUNT(DISTINCT batch_id) >= 1
+        ORDER BY MAX(mic_name)
+    """
+    return QuerySpec(
+        name="spc.get_characteristics",
+        module="spc",
+        endpoint="/api/spc/characteristics",
+        sql=sql,
+        params={
+            "material_id": request.material_id,
+            "plant_id_filter": request.plant_id_filter,
+        },
+        source_badge="view:spc_quality_metric_subgroup_mv",
+        tags=["spc", "characteristics"],
+    )

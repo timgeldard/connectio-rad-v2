@@ -36,8 +36,15 @@ from pydantic import BaseModel
 
 from adapters.spc.spc_databricks_adapter import (
     MAX_SUBGROUPS,
+    SpcCharacteristicsRequest,
+    SpcPlantsRequest,
+    SpcSearchRequest,
     SpcSubgroupsRepository,
     SubgroupsRequest,
+    get_spc_characteristics_spec,
+    get_spc_materials_spec,
+    get_spc_plants_spec,
+    get_spc_search_spec,
     map_spc_subgroup_rows,
 )
 from contracts.generated import SPCSubgroupResponse
@@ -58,8 +65,6 @@ from routes._databricks import (
     run_query,
 )
 from shared.proxy_client import get_proxy_client
-from shared.query_service.object_resolver import resolve_domain_object
-from shared.query_service.query_spec import QuerySpec
 
 router = APIRouter()
 
@@ -169,34 +174,7 @@ async def spc_materials(
             x_forwarded_email,
             x_databricks_catalog,
         )
-        
-        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
-        m_tbl = resolve_domain_object("spc", "gold_material")
-        
-        sql = f"""
-            SELECT DISTINCT
-                r.MATERIAL_ID   AS material_id,
-                COALESCE(m.MATERIAL_NAME, r.MATERIAL_ID) AS material_name
-            FROM {r_tbl} r
-            LEFT JOIN {m_tbl} m
-                ON m.MATERIAL_ID = r.MATERIAL_ID
-               AND m.LANGUAGE_ID = 'E'
-            WHERE r.QUANTITATIVE_RESULT IS NOT NULL
-              AND (r.QUALITATIVE_RESULT IS NULL OR r.QUALITATIVE_RESULT = '')
-            ORDER BY material_name
-        """
-        
-        spec = QuerySpec(
-            name="spc.get_materials",
-            module="spc",
-            endpoint="/api/spc/materials",
-            sql=sql,
-            params={},
-            source_badge="view:gold_batch_quality_result_v",
-            tags=["spc", "materials"],
-        )
-        
-        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        rows, spec = await run_query(get_spc_materials_spec, identity, host, warehouse_id)
         set_databricks_response_headers(response, spec)
         return rows
 
@@ -229,32 +207,8 @@ async def spc_plants(
             x_forwarded_email,
             x_databricks_catalog,
         )
-        
-        mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
-        p_tbl = resolve_domain_object("spc", "gold_plant")
-
-        sql = f"""
-            SELECT DISTINCT
-                s.plant_id,
-                COALESCE(p.PLANT_NAME, s.plant_id) AS plant_name
-            FROM {mv_tbl} s
-            LEFT JOIN {p_tbl} p
-                ON p.PLANT_ID = s.plant_id
-            WHERE s.material_id = :material_id
-            ORDER BY plant_name
-        """
-
-        spec = QuerySpec(
-            name="spc.get_plants",
-            module="spc",
-            endpoint="/api/spc/plants",
-            sql=sql,
-            params={"material_id": material_id},
-            source_badge="view:spc_quality_metric_subgroup_mv",
-            tags=["spc", "plants"],
-        )
-        
-        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        req = SpcPlantsRequest(material_id=material_id)
+        rows, spec = await run_query(lambda: get_spc_plants_spec(req), identity, host, warehouse_id)
         set_databricks_response_headers(response, spec)
         return rows
 
@@ -291,36 +245,8 @@ async def spc_search(
         x_forwarded_email,
         x_databricks_catalog,
     )
-
-    mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
-    m_tbl = resolve_domain_object("spc", "gold_material")
-    safe_limit = max(1, min(50, int(limit)))
-
-    sql = f"""
-        SELECT DISTINCT
-            s.material_id,
-            COALESCE(m.MATERIAL_NAME, s.material_id) AS material_name
-        FROM {mv_tbl} s
-        LEFT JOIN {m_tbl} m
-            ON m.MATERIAL_ID = s.material_id
-           AND m.LANGUAGE_ID = 'E'
-        WHERE s.material_id ILIKE :q_like
-           OR m.MATERIAL_NAME ILIKE :q_like
-        ORDER BY material_name
-        LIMIT {safe_limit}
-    """
-
-    spec = QuerySpec(
-        name="spc.search_materials",
-        module="spc",
-        endpoint="/api/spc/search",
-        sql=sql,
-        params={"q_like": f"%{q}%"},
-        source_badge="view:spc_quality_metric_subgroup_mv",
-        tags=["spc", "search", "materials"],
-    )
-
-    rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+    req = SpcSearchRequest(q=q, limit=limit)
+    rows, spec = await run_query(lambda: get_spc_search_spec(req), identity, host, warehouse_id)
     set_databricks_response_headers(response, spec)
     return rows
 
@@ -352,38 +278,11 @@ async def spc_characteristics(
             x_forwarded_email,
             x_databricks_catalog,
         )
-
-        mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
-
-        sql = f"""
-            SELECT
-                mic_id,
-                MAX(mic_name)                        AS mic_name,
-                MAX(operation_id)                    AS operation_id,
-                COUNT(DISTINCT batch_id)             AS batch_count,
-                AVG(CAST(batch_n AS DOUBLE))         AS avg_samples_per_batch
-            FROM {mv_tbl}
-            WHERE material_id = :material_id
-              AND (:plant_id_filter = '' OR plant_id = :plant_id_filter)
-            GROUP BY mic_id
-            HAVING COUNT(DISTINCT batch_id) >= 1
-            ORDER BY MAX(mic_name)
-        """
-
-        spec = QuerySpec(
-            name="spc.get_characteristics",
-            module="spc",
-            endpoint="/api/spc/characteristics",
-            sql=sql,
-            params={
-                "material_id": material_id,
-                "plant_id_filter": plant_id or "",
-            },
-            source_badge="view:spc_quality_metric_subgroup_mv",
-            tags=["spc", "characteristics"],
+        req = SpcCharacteristicsRequest(
+            material_id=material_id,
+            plant_id_filter=plant_id or "",
         )
-
-        rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+        rows, spec = await run_query(lambda: get_spc_characteristics_spec(req), identity, host, warehouse_id)
         set_databricks_response_headers(response, spec)
 
         mapped_rows = []
