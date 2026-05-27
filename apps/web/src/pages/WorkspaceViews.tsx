@@ -1,7 +1,7 @@
 import { TraceInvestigationWorkspace, TraceAppWorkspace, TraceConsumerWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace, ConnectedQualityLabBoardStandaloneApp } from '@connectio/di-quality'
 import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace, ProcessOrderConsumerWorkspace } from '@connectio/di-operations'
-import { EnvMonWorkspace } from '@connectio/di-envmon'
+import { EnvMonWorkspace, EnvMonConsumerWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
 import { SPCMonitoringWorkspace, SPCConsumerWorkspace } from '@connectio/di-spc'
 import { MaintenanceReliabilityWorkspace } from '@connectio/di-maintenance'
@@ -102,6 +102,16 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <EnvMonWorkspace
           scope={activeScope}
           viewId={viewId ?? 'native-monitoring'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'envmon-consumer') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-envmon-consumer">
+        <EnvMonConsumerWorkspace
+          scope={activeScope}
         />
       </div>
     )

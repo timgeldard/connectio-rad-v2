@@ -151,6 +151,9 @@ export type {
   EnvMonCorrectiveAction,
   EnvMonSwabVector,
   EnvMonKpiSummary,
+  EnvMonPoint,
+  EnvMonL4Zone,
+  EnvMonL5Coordinate,
 } from './schemas/environmental-monitoring.js'
 export {
   EnvMonContextSchema,
@@ -164,6 +167,9 @@ export {
   EnvMonCorrectiveActionSchema,
   EnvMonSwabVectorSchema,
   EnvMonKpiSummarySchema,
+  EnvMonPointSchema,
+  EnvMonL4ZoneSchema,
+  EnvMonL5CoordinateSchema,
 } from './schemas/environmental-monitoring.js'
 
 export type {

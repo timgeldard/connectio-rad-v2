@@ -7,9 +7,13 @@
 
 export { envmonRegistration } from './envmon-registration.js'
 export { envmonWorkspaceRegistration } from './registration.js'
+export { envmonConsumerRegistration } from './envmon-consumer-registration.js'
 
 export { EnvMonWorkspace } from './envmon-workspace.js'
 export type { EnvMonWorkspaceProps, EnvMonViewId } from './envmon-workspace.js'
+
+export { EnvMonConsumerWorkspace } from './envmon-consumer-workspace.js'
+export type { EnvMonConsumerWorkspaceProps } from './envmon-consumer-workspace.js'
 
 // Adapter
 export {

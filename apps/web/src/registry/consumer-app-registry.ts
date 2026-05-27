@@ -145,6 +145,28 @@ export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
       'domain-integrations/operations/src/poh-consumer/',
     ],
   },
+  {
+    appId: 'envmon-consumer',
+    displayName: 'Environmental Monitoring (Consumer)',
+    primaryUser: 'Environmental Surveillance Coordinator / Quality Lead',
+    jobToBeDone: 'Interactively map L4 zones and coordinate-constrained L5 swab points on SVGs, and monitor microbiological status.',
+    designSource: 'claude-design',
+    assemblyMode: 'standalone-designed-app',
+    shellPresentation: 'fullscreen',
+    workspaceId: 'envmon-consumer',
+    lifecycle: 'pilot',
+    appMaturity: 'A3',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'L5 points must be physically/geometrically contained inside their parent L4 zones.',
+      'Degrade gracefully to list view when floor plan SVGs are missing.',
+    ],
+    designArtifacts: [
+      'domain-integrations/envmon/src/envmon-consumer-workspace.tsx',
+      'domain-integrations/envmon/src/envmon-consumer/',
+    ],
+  },
 ]
 
 /** Resolve consumer-app metadata by mounted workspace id. */
