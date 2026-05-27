@@ -4002,6 +4002,184 @@ class ProcessOrderReviewContext(BaseModel):
     """
 
 
+class ProcessOrderSearchItem(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    process_order_id: str = Field(..., alias='processOrderId')
+    """
+    [classification: source-field]
+    """
+    material_id: str = Field(..., alias='materialId')
+    """
+    [classification: source-field]
+    """
+    material_description: str = Field(..., alias='materialDescription')
+    """
+    [classification: source-field]
+    """
+    batch_id: Optional[Union[Any, str]] = Field(None, alias='batchId')
+    """
+    [classification: source-field]
+    """
+    plant_id: str = Field(..., alias='plantId')
+    """
+    [classification: source-field]
+    """
+    plant_name: str = Field(..., alias='plantName')
+    """
+    [classification: source-field]
+    """
+    order_status: str = Field(..., alias='orderStatus')
+    """
+    [classification: source-field]
+    """
+    planned_quantity: Optional[Union[Any, float]] = Field(None, alias='plannedQuantity')
+    """
+    [classification: source-field]
+    """
+    confirmed_quantity: Optional[Union[Any, float]] = Field(
+        None, alias='confirmedQuantity'
+    )
+    """
+    [classification: source-field]
+    """
+    uom: Optional[Union[Any, str]] = None
+    """
+    [classification: source-field]
+    """
+    planned_start: Optional[Union[Any, str]] = Field(None, alias='plannedStart')
+    """
+    [classification: source-field]
+    """
+    planned_finish: Optional[Union[Any, str]] = Field(None, alias='plannedFinish')
+    """
+    [classification: source-field]
+    """
+    match_types: list[
+        Literal['process-order-id', 'material-id', 'description', 'batch-id']
+    ] = Field(..., alias='matchTypes')
+    """
+    [classification: application-derived]
+    """
+
+
+class ProcessOrderSearchMatchType(
+    RootModel[Literal['process-order-id', 'material-id', 'description', 'batch-id']]
+):
+    root: Literal['process-order-id', 'material-id', 'description', 'batch-id']
+
+
+class ProcessOrderSearchRequest(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    query: str
+    """
+    [classification: application-derived]
+    """
+    max_rows: Optional[int] = Field(None, alias='maxRows')
+    """
+    [classification: application-derived]
+    """
+    material_id: Optional[str] = Field(None, alias='materialId')
+    """
+    [classification: application-derived]
+    """
+    batch_id: Optional[str] = Field(None, alias='batchId')
+    """
+    [classification: application-derived]
+    """
+
+
+class Item(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    process_order_id: str = Field(..., alias='processOrderId')
+    """
+    [classification: source-field]
+    """
+    material_id: str = Field(..., alias='materialId')
+    """
+    [classification: source-field]
+    """
+    material_description: str = Field(..., alias='materialDescription')
+    """
+    [classification: source-field]
+    """
+    batch_id: Optional[Union[Any, str]] = Field(None, alias='batchId')
+    """
+    [classification: source-field]
+    """
+    plant_id: str = Field(..., alias='plantId')
+    """
+    [classification: source-field]
+    """
+    plant_name: str = Field(..., alias='plantName')
+    """
+    [classification: source-field]
+    """
+    order_status: str = Field(..., alias='orderStatus')
+    """
+    [classification: source-field]
+    """
+    planned_quantity: Optional[Union[Any, float]] = Field(None, alias='plannedQuantity')
+    """
+    [classification: source-field]
+    """
+    confirmed_quantity: Optional[Union[Any, float]] = Field(
+        None, alias='confirmedQuantity'
+    )
+    """
+    [classification: source-field]
+    """
+    uom: Optional[Union[Any, str]] = None
+    """
+    [classification: source-field]
+    """
+    planned_start: Optional[Union[Any, str]] = Field(None, alias='plannedStart')
+    """
+    [classification: source-field]
+    """
+    planned_finish: Optional[Union[Any, str]] = Field(None, alias='plannedFinish')
+    """
+    [classification: source-field]
+    """
+    match_types: list[
+        Literal['process-order-id', 'material-id', 'description', 'batch-id']
+    ] = Field(..., alias='matchTypes')
+    """
+    [classification: application-derived]
+    """
+
+
+class ProcessOrderSearchResponse(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    items: list[Item]
+    """
+    [classification: source-derived]
+    """
+    total: int
+    """
+    [classification: source-derived]
+    """
+    truncated: bool
+    """
+    [classification: source-derived]
+    """
+    wildcard_applied: bool = Field(..., alias='wildcardApplied')
+    """
+    [classification: source-derived]
+    """
+
+
 class ProcessOrderSummary(BaseModel):
     model_config = ConfigDict(
         extra='forbid',

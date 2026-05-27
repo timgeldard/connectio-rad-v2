@@ -1,6 +1,6 @@
 import { TraceInvestigationWorkspace, TraceAppWorkspace, TraceConsumerWorkspace } from '@connectio/di-traceability'
 import { BatchReleaseWorkspace, ConnectedQualityLabBoardStandaloneApp } from '@connectio/di-quality'
-import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace } from '@connectio/di-operations'
+import { OperationsPlanRiskWorkspace, ProcessOrderReviewWorkspace, ProcessOrderConsumerWorkspace } from '@connectio/di-operations'
 import { EnvMonWorkspace } from '@connectio/di-envmon'
 import { ProductionStagingWorkspace, Warehouse360Workspace } from '@connectio/di-warehouse'
 import { SPCMonitoringWorkspace, SPCConsumerWorkspace } from '@connectio/di-spc'
@@ -157,6 +157,16 @@ export default function WorkspaceViews({ workspaceId }: Props) {
         <ProcessOrderReviewWorkspace
           scope={activeScope}
           viewId={viewId ?? 'order-overview'}
+        />
+      </div>
+    )
+  }
+
+  if (workspaceId === 'poh-consumer') {
+    return (
+      <div className="connectio-page" data-testid="workspace-view-poh-consumer">
+        <ProcessOrderConsumerWorkspace
+          scope={activeScope}
         />
       </div>
     )

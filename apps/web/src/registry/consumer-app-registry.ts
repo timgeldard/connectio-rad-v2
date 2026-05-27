@@ -123,6 +123,28 @@ export const consumerAppRegistry: readonly ConsumerApplicationRegistration[] = [
       'domain-integrations/spc/src/spc-consumer/',
     ],
   },
+  {
+    appId: 'poh-consumer',
+    displayName: 'Process Order History (Consumer)',
+    primaryUser: 'Operations Supervisor / Production Manager',
+    jobToBeDone: 'Search process orders, view plant-level yield/pour/quality dashboards, and view detailed order timeline and goods movement details.',
+    designSource: 'claude-design',
+    assemblyMode: 'standalone-designed-app',
+    shellPresentation: 'fullscreen',
+    workspaceId: 'poh-consumer',
+    lifecycle: 'pilot',
+    appMaturity: 'A3',
+    dataMaturity: 'D3',
+    dataBinding: 'api-contracts',
+    requiredCaveats: [
+      'Fallback to mock data where backend routes are not verified.',
+      'Maintain empty fields as null or undefined where source-backed verification is absent.',
+    ],
+    designArtifacts: [
+      'domain-integrations/operations/src/poh-consumer-workspace.tsx',
+      'domain-integrations/operations/src/poh-consumer/',
+    ],
+  },
 ]
 
 /** Resolve consumer-app metadata by mounted workspace id. */

@@ -227,6 +227,10 @@ export type {
   ProcessOrderOperation,
   ProcessOrderConfirmation,
   ProcessOrderGoodsMovement,
+  ProcessOrderSearchRequest,
+  ProcessOrderSearchMatchType,
+  ProcessOrderSearchItem,
+  ProcessOrderSearchResponse,
 } from './schemas/process-order-review.js'
 export {
   ProcessOrderReviewContextSchema,
@@ -239,6 +243,10 @@ export {
   ProcessOrderOperationSchema,
   ProcessOrderConfirmationSchema,
   ProcessOrderGoodsMovementSchema,
+  ProcessOrderSearchRequestSchema,
+  ProcessOrderSearchMatchTypeSchema,
+  ProcessOrderSearchItemSchema,
+  ProcessOrderSearchResponseSchema,
 } from './schemas/process-order-review.js'
 
 export type {

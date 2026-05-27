@@ -323,3 +323,53 @@ export const ProcessOrderGoodsMovementSchema = z.object({
 })
 
 export type ProcessOrderGoodsMovement = z.infer<typeof ProcessOrderGoodsMovementSchema>
+
+// ---------------------------------------------------------------------------
+// ProcessOrderSearch
+// ---------------------------------------------------------------------------
+
+export const ProcessOrderSearchRequestSchema = z.object({
+  query: z.string().describe('[classification: application-derived]'),
+  maxRows: z.number().int().optional().describe('[classification: application-derived]'),
+  materialId: z.string().optional().describe('[classification: application-derived]'),
+  batchId: z.string().optional().describe('[classification: application-derived]'),
+})
+
+export type ProcessOrderSearchRequest = z.infer<typeof ProcessOrderSearchRequestSchema>
+
+export const ProcessOrderSearchMatchTypeSchema = z.enum([
+  'process-order-id',
+  'material-id',
+  'description',
+  'batch-id',
+])
+
+export type ProcessOrderSearchMatchType = z.infer<typeof ProcessOrderSearchMatchTypeSchema>
+
+export const ProcessOrderSearchItemSchema = z.object({
+  processOrderId: z.string().describe('[classification: source-field]'),
+  materialId: z.string().describe('[classification: source-field]'),
+  materialDescription: z.string().describe('[classification: source-field]'),
+  batchId: z.string().optional().nullable().describe('[classification: source-field]'),
+  plantId: z.string().describe('[classification: source-field]'),
+  plantName: z.string().describe('[classification: source-field]'),
+  orderStatus: z.string().describe('[classification: source-field]'),
+  plannedQuantity: z.number().optional().nullable().describe('[classification: source-field]'),
+  confirmedQuantity: z.number().optional().nullable().describe('[classification: source-field]'),
+  uom: z.string().optional().nullable().describe('[classification: source-field]'),
+  plannedStart: z.string().optional().nullable().describe('[classification: source-field]'),
+  plannedFinish: z.string().optional().nullable().describe('[classification: source-field]'),
+  matchTypes: z.array(ProcessOrderSearchMatchTypeSchema).describe('[classification: application-derived]'),
+})
+
+export type ProcessOrderSearchItem = z.infer<typeof ProcessOrderSearchItemSchema>
+
+export const ProcessOrderSearchResponseSchema = z.object({
+  items: z.array(ProcessOrderSearchItemSchema).describe('[classification: source-derived]'),
+  total: z.number().int().describe('[classification: source-derived]'),
+  truncated: z.boolean().describe('[classification: source-derived]'),
+  wildcardApplied: z.boolean().describe('[classification: source-derived]'),
+})
+
+export type ProcessOrderSearchResponse = z.infer<typeof ProcessOrderSearchResponseSchema>
+

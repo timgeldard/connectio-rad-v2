@@ -551,3 +551,122 @@ class PohRepository:
             mapper=lambda rows: rows,
         )
 
+    async def fetch_order_search(
+        self,
+        request: ProcessOrderSearchRequest,
+        *,
+        display_query: str,
+        max_rows: int,
+    ) -> tuple[dict, QuerySpec]:
+        return await self._repository.fetch(
+            spec_factory=lambda: get_order_search_spec(request),
+            mapper=lambda rows: map_order_search_rows(rows, display_query, max_rows),
+        )
+
+
+@dataclass
+class ProcessOrderSearchRequest:
+    query: str
+    max_rows: int = 50
+    material_id: Optional[str] = None
+    batch_id: Optional[str] = None
+
+
+def get_order_search_spec(request: ProcessOrderSearchRequest) -> QuerySpec:
+    """Return a QuerySpec for Process Order unified search.
+
+    Source view: vw_gold_process_order under POH_CATALOG / POH_SCHEMA.
+    """
+    order_view = resolve_domain_object("poh", "vw_gold_process_order")
+    pattern = f"%{request.query.replace('*', '%')}%"
+    material_clause = "AND MATERIAL_ID = :material_id" if request.material_id else ""
+
+    sql = f"""
+    SELECT
+        PROCESS_ORDER_ID    AS process_order_id,
+        STATUS              AS order_status_raw,
+        MATERIAL_ID         AS material_id,
+        MATERIAL_DESCRIPTION AS material_description,
+        PLANT_ID            AS plant_id,
+        INSPECTION_LOT_ID   AS inspection_lot_id,
+        CASE WHEN PROCESS_ORDER_ID LIKE :search_pattern THEN 1 ELSE 0 END AS order_id_match,
+        CASE WHEN MATERIAL_ID LIKE :search_pattern THEN 1 ELSE 0 END AS material_id_match,
+        CASE WHEN MATERIAL_DESCRIPTION LIKE :search_pattern THEN 1 ELSE 0 END AS description_match
+    FROM {order_view}
+    WHERE (
+        PROCESS_ORDER_ID LIKE :search_pattern
+        OR MATERIAL_ID LIKE :search_pattern
+        OR MATERIAL_DESCRIPTION LIKE :search_pattern
+    )
+    {material_clause}
+    LIMIT :db_limit
+    """
+
+    params: dict[str, object] = {
+        "search_pattern": pattern,
+        "db_limit": (request.max_rows or 50) + 1,
+    }
+    if request.material_id:
+        params["material_id"] = request.material_id
+
+    return QuerySpec(
+        name="poh.search_process_orders",
+        module="poh",
+        endpoint="/api/por/order-search",
+        sql=sql,
+        params=params,
+        cache_policy=CacheTier.PER_USER_60S,
+        tags=["poh", "process-order", "search"],
+    )
+
+
+def map_order_search_rows(rows: list[dict], query: str, max_rows: int) -> dict:
+    """Map raw Databricks rows to ProcessOrderSearchResponse contract."""
+    items = []
+    for row in rows:
+        process_order_id = str(row.get("process_order_id") or "")
+        material_id = str(row.get("material_id") or "")
+        material_description = str(row.get("material_description") or "")
+        plant_id = str(row.get("plant_id") or "")
+
+        match_types = []
+        if row.get("order_id_match") == 1:
+            match_types.append("process-order-id")
+        if row.get("material_id_match") == 1:
+            match_types.append("material-id")
+        if row.get("description_match") == 1:
+            match_types.append("description")
+
+        if not match_types:
+            q = query.lower()
+            if q in process_order_id.lower():
+                match_types.append("process-order-id")
+            if q in material_id.lower():
+                match_types.append("material-id")
+            if q in material_description.lower():
+                match_types.append("description")
+
+        items.append({
+            "processOrderId": process_order_id,
+            "materialId": material_id,
+            "materialDescription": material_description,
+            "batchId": None,
+            "plantId": plant_id,
+            "plantName": f"Plant {plant_id}",
+            "orderStatus": _map_order_status(row.get("order_status_raw")),
+            "plannedQuantity": None,
+            "confirmedQuantity": None,
+            "uom": None,
+            "plannedStart": None,
+            "plannedFinish": None,
+            "matchTypes": match_types,
+        })
+
+    return {
+        "items": items[:max_rows],
+        "total": len(items),
+        "truncated": len(rows) > max_rows,
+        "wildcardApplied": "*" in query or "%" in query,
+    }
+
+
