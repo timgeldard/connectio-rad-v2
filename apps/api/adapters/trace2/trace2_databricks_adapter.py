@@ -194,6 +194,7 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
     tbl_summary = resolve_domain_object("trace2", "gold_batch_summary_v")
     tbl_material = resolve_domain_object("trace2", "gold_material")
     tbl_plant = resolve_domain_object("trace2", "gold_plant")
+    tbl_batch_material = resolve_domain_object("trace2", "gold_batch_material")
 
     sql = f"""
     SELECT
@@ -210,7 +211,8 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         m.BASE_UNIT_OF_MEASURE       AS uom,                    -- verified: 2026-05-19 connected_plant_uat (not in gold_batch_summary_v)
         p.PLANT_NAME                 AS plant_name,             -- confirmed: gold_plant (V1 inspection)
         b.MANUFACTURE_DATE           AS manufacture_date,       -- verified: 2026-05-19 connected_plant_uat
-        b.SHELF_LIFE_EXPIRATION_DATE AS expiry_date             -- verified: 2026-05-19 connected_plant_uat
+        b.SHELF_LIFE_EXPIRATION_DATE AS expiry_date,            -- verified: 2026-05-19 connected_plant_uat
+        bm.SUPPLIER_BATCH_ID         AS vendor_batch_id         -- verified: 2026-05-27 connected_plant_uat (gold_batch_material)
     FROM {tbl_stock} s
     JOIN {tbl_summary} b                                        -- verified join key: MATERIAL_ID + BATCH_ID
         ON s.MATERIAL_ID = b.MATERIAL_ID AND s.BATCH_ID = b.BATCH_ID
@@ -218,6 +220,8 @@ def get_batch_header_summary_spec(request: Trace2BatchHeaderRequest) -> QuerySpe
         ON s.MATERIAL_ID = m.MATERIAL_ID AND m.LANGUAGE_ID = 'E'  -- verified: 2026-05-19 connected_plant_uat
     JOIN {tbl_plant} p                                          -- confirmed join key
         ON s.PLANT_ID = p.PLANT_ID                              -- verified: 2026-05-19 connected_plant_uat
+    LEFT JOIN {tbl_batch_material} bm                           -- LEFT JOIN: not all batches have a supplier batch
+        ON s.MATERIAL_ID = bm.MATERIAL_ID AND s.BATCH_ID = bm.BATCH_ID
     WHERE s.MATERIAL_ID = :material_id
       AND s.BATCH_ID = :batch_id
       AND (:plant_id = '' OR s.PLANT_ID = :plant_id)
@@ -276,6 +280,8 @@ def map_batch_header_rows(rows: list[dict]) -> Optional[dict]:
         result["manufactureDate"] = _date_to_utc(row["manufacture_date"])
     if row.get("expiry_date"):
         result["expiryDate"] = _date_to_utc(row["expiry_date"])
+    if row.get("vendor_batch_id"):
+        result["vendorBatchId"] = str(row["vendor_batch_id"])
     if row.get("process_order_id"):
         result["processOrderId"] = row["process_order_id"]
 
@@ -1557,17 +1563,26 @@ def _delivery_child_key(row: dict) -> str:
 
 
 def _make_delivery_node(row: dict, depth: int) -> dict:
-    return {
+    customer_id = row.get("customer_id")
+    description = f"Customer {customer_id}" if customer_id else "Customer Delivery"
+    qty = row.get("quantity")
+    uom = row.get("base_unit_of_measure")
+    node: dict = {
         "id": _delivery_child_key(row),
         "type": "customer-delivery",
-        "materialId": "",
-        "materialDescription": "Customer Delivery",
+        "materialId": customer_id or "",
+        "materialDescription": description,
         "batchId": row.get("delivery_id"),
         "plantId": None,
         "depth": depth,
         "directions": ["downstream"],
         "isAnchor": False,
     }
+    if qty is not None:
+        node["quantity"] = float(qty)
+    if uom:
+        node["uom"] = str(uom)
+    return node
 
 
 def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
@@ -2171,7 +2186,8 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
         ph.PROCESS_ORDER_ID          AS process_order_id,
         ph.POSTING_DATE              AS production_started_at,
         ph.BATCH_QTY                 AS production_actual_qty,
-        ph.UOM                       AS production_uom
+        ph.UOM                       AS production_uom,
+        COALESCE(ph_cnt.production_lot_count, 0) AS production_lot_count
     FROM {tbl_stock} s
     JOIN {tbl_summary} b
         ON s.MATERIAL_ID = b.MATERIAL_ID AND s.BATCH_ID = b.BATCH_ID
@@ -2181,6 +2197,13 @@ def get_batch_quality_passport_partial_spec(request: Trace2BatchQualityPassportR
         ON s.PLANT_ID = p.PLANT_ID
     LEFT JOIN {tbl_prod} ph
         ON s.MATERIAL_ID = ph.MATERIAL_ID AND s.BATCH_ID = ph.BATCH_ID
+    LEFT JOIN (
+        SELECT MATERIAL_ID, BATCH_ID, COUNT(DISTINCT PROCESS_ORDER_ID) AS production_lot_count
+        FROM {tbl_prod}
+        WHERE MATERIAL_ID = :material_id AND BATCH_ID = :batch_id
+        GROUP BY MATERIAL_ID, BATCH_ID
+    ) ph_cnt
+        ON s.MATERIAL_ID = ph_cnt.MATERIAL_ID AND s.BATCH_ID = ph_cnt.BATCH_ID
     WHERE s.MATERIAL_ID = :material_id
       AND s.BATCH_ID   = :batch_id
       AND (:plant_id = '' OR s.PLANT_ID = :plant_id)
@@ -2290,6 +2313,7 @@ def map_batch_quality_passport_partial(rows: list[dict]) -> Optional[dict]:
             # No free-text notes column on the live view.
             "notes": None,
         },
+        "productionLotCount": int(row.get("production_lot_count") or 0),
         # "production" was added 2026-05-25 because the post-audit SQL only
         # surfaces orderId / startedAt / actualQty from the live view.
         # The four-section legacy marker referenced "signoff"; that field
@@ -2369,6 +2393,7 @@ def get_mass_balance_ledger_spec(request: Trace2MassBalanceLedgerRequest) -> Que
     WHERE MATERIAL_ID = :material_id
       AND BATCH_ID   = :batch_id
       AND (:plant_id = '' OR PLANT_ID = :plant_id)
+      AND MOVEMENT_TYPE IN ('101','102','131','261','262','601','602','701','702','711','712')
     ORDER BY POSTING_DATE, MOVEMENT_TYPE
     LIMIT :max_rows
     """
@@ -3075,4 +3100,6 @@ def build_batch_quality_passport(
             "note": variance_note,
         },
         "usageDecisionEvidence": usage_decision_evidence,
+        "inspectionLotCount": lot_count,
+        "productionLotCount": partial.get("productionLotCount", 0),
     }

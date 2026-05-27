@@ -29,9 +29,7 @@ import { SPCAlarmHistoryPanel } from './panels/spc-alarm-history-panel.js'
 import { SPCRelatedBatchesPanel } from './panels/spc-related-batches-panel.js'
 import { ActiveSPCSignalsPanel } from './panels/active-spc-signals-panel.js'
 import { SPCProcessContextPanel } from './panels/spc-process-context-panel.js'
-import { spcConsumerSearchRegistry } from './spc-consumer/fixtures.js'
 import {
-  resolveSPCConsumerSearch,
   type ResolvedSPCConsumerRequest,
   type SPCConsumerSearchStep,
   type SPCConsumerMaterialOption,
@@ -66,12 +64,13 @@ type SPCTab = 'charts' | 'capability' | 'alarms' | 'context' | 'insights' | 'cor
 export function SPCConsumerWorkspace() {
   const [request, setRequest] = useState<ResolvedSPCConsumerRequest | null>(null)
   const [activeTab, setActiveTab] = useState<SPCTab>('charts')
-  const [selectedCharId, setSelectedCharId] = useState<string>('CHAR-PH-001')
+  const [selectedCharId, setSelectedCharId] = useState<string>('')
   const [ruleSet, setRuleSet] = useState<'weco' | 'nelson'>('weco')
 
   // Search Flow States
   const [searchQuery, setSearchQuery] = useState('')
   const [searchStep, setSearchStep] = useState<SPCConsumerSearchStep>('idle')
+  const [isSearching, setIsSearching] = useState(false)
   const [matchedMaterials, setMatchedMaterials] = useState<readonly SPCConsumerMaterialOption[]>([])
   const [matchedPlants, setMatchedPlants] = useState<readonly SPCConsumerPlantOption[]>([])
   const [matchedChars, setMatchedChars] = useState<readonly SPCConsumerCharOption[]>([])
@@ -88,12 +87,31 @@ export function SPCConsumerWorkspace() {
   const [selectedPoint, setSelectedPoint] = useState<any | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
 
+  const today = new Date().toISOString().slice(0, 10)
+  const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  // Fetch characteristics first so we can derive operationId for the full request.
+  // The characteristics hook only needs materialId/plantId — operationId is not in its query key.
+  const charsHookRequest = request
+    ? { materialId: request.materialId, plantId: request.plantId ?? '' }
+    : { materialId: '', plantId: '' }
+
+  const { data: charsResult } = useMonitoredCharacteristics(charsHookRequest)
+  const characteristics = charsResult?.ok ? charsResult.data : []
+
+  // Derive operationId from the loaded characteristics list so chart queries get the correct value.
+  const selectedChar = characteristics.find(c => c.characteristicId === selectedCharId)
+  const activeOperationId = selectedChar?.operationId ?? request?.operationId
+
   const activeRequest = request
     ? {
         materialId: request.materialId,
         plantId: request.plantId ?? '',
         characteristicId: selectedCharId,
+        operationId: activeOperationId,
         batchId: request.batchId,
+        dateFrom: twoYearsAgo,
+        dateTo: today,
       }
     : { materialId: '', plantId: '', characteristicId: '' }
 
@@ -102,15 +120,13 @@ export function SPCConsumerWorkspace() {
   const capabilityQuery = useCharacteristicCapability(activeRequest)
   const signalsQuery = useActiveSPCSignals(activeRequest)
 
-  const { data: charsResult } = useMonitoredCharacteristics(activeRequest)
-  const characteristics = charsResult?.ok ? charsResult.data : []
-
   const characteristicsQueries = useQueries({
     queries: characteristics.map(c => ({
       queryKey: ['spc-control-chart', activeRequest.plantId ?? null, c.characteristicId, activeRequest.batchId ?? null],
       queryFn: () => spcMonitoringAdapter.getControlChartSeries({
         ...activeRequest,
-        characteristicId: c.characteristicId
+        characteristicId: c.characteristicId,
+        operationId: c.operationId,
       }),
       staleTime: 5 * 60 * 1000,
       enabled: !!activeRequest.materialId && characteristics.length > 0
@@ -123,6 +139,16 @@ export function SPCConsumerWorkspace() {
 
   const alignedPoints = alignSeriesByBatch(allSeries)
   const multivariatePoints = computeMultivariateT2(allSeries, alignedPoints)
+
+  // Auto-select first characteristic once loaded, and reset when switching materials/plants
+  useEffect(() => {
+    if (characteristics.length > 0) {
+      const stillValid = characteristics.some(c => c.characteristicId === selectedCharId)
+      if (!stillValid) {
+        setSelectedCharId(characteristics[0].characteristicId)
+      }
+    }
+  }, [characteristics, selectedCharId])
 
   // Initialize Genie summary
   useEffect(() => {
@@ -162,34 +188,73 @@ export function SPCConsumerWorkspace() {
     setChatMessages(prev => [...prev, { sender: 'genie', text: cleanGenieText(reply.text) }])
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const loadCharsForPlant = async (materialId: string, plantId: string) => {
+    setIsSearching(true)
+    try {
+      const res = await fetch(`/api/spc/characteristics?material_id=${encodeURIComponent(materialId)}&plant_id=${encodeURIComponent(plantId)}`)
+      if (!res.ok) { setSearchStep('no-results'); return }
+      const chars = await res.json() as Array<{ mic_id: string; mic_name: string; operation_id?: string }>
+      if (chars.length === 0) { setSearchStep('no-results'); return }
+      if (chars.length === 1) {
+        setRequest({ materialId, plantId, characteristicId: chars[0].mic_id, operationId: chars[0].operation_id })
+        setSelectedCharId(chars[0].mic_id)
+      } else {
+        setMatchedChars(chars.map(c => ({ characteristicId: c.mic_id, characteristicName: c.mic_name ?? c.mic_id, operationId: c.operation_id })))
+        setSelectedMaterialId(materialId)
+        setSelectedPlantId(plantId)
+        setSearchStep('characteristics-for-plant')
+      }
+    } catch {
+      setSearchStep('no-results')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const loadPlantsForMaterial = async (materialId: string) => {
+    setIsSearching(true)
+    try {
+      const res = await fetch(`/api/spc/plants?material_id=${encodeURIComponent(materialId)}`)
+      if (!res.ok) { setSearchStep('no-results'); return }
+      const plants = await res.json() as Array<{ plant_id: string; plant_name: string }>
+      if (plants.length === 0) { setSearchStep('no-results'); return }
+      if (plants.length === 1) {
+        await loadCharsForPlant(materialId, plants[0].plant_id)
+      } else {
+        setMatchedPlants(plants.map(p => ({ plantId: p.plant_id, plantName: p.plant_name ?? p.plant_id })))
+        setSelectedMaterialId(materialId)
+        setSearchStep('plants-for-material')
+      }
+    } catch {
+      setSearchStep('no-results')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     const query = searchQuery.trim()
     if (!query) return
 
     setSearchStep('idle')
+    setIsSearching(true)
 
-    const result = resolveSPCConsumerSearch(query, spcConsumerSearchRegistry)
-
-    if (result.step === 'materials-for-query') {
-      setMatchedMaterials(result.materials)
-      setSearchStep('materials-for-query')
-    } else if (result.step === 'plants-for-material') {
-      setMatchedPlants(result.plants)
-      setSelectedMaterialId(result.materialId)
-      setSearchStep('plants-for-material')
-    } else if (result.step === 'characteristics-for-plant') {
-      setMatchedChars(result.characteristics)
-      setSelectedMaterialId(result.materialId)
-      setSelectedPlantId(result.plantId)
-      setSearchStep('characteristics-for-plant')
-    } else if (result.step === 'resolved') {
-      setRequest(result.request)
-      if (result.request.characteristicId) {
-        setSelectedCharId(result.request.characteristicId)
+    try {
+      const res = await fetch(`/api/spc/search?q=${encodeURIComponent(query)}&limit=20`)
+      if (!res.ok) { setSearchStep('no-results'); return }
+      const materials = await res.json() as Array<{ material_id: string; material_name: string }>
+      if (materials.length === 0) { setSearchStep('no-results'); return }
+      if (materials.length === 1) {
+        await loadPlantsForMaterial(materials[0].material_id)
+      } else {
+        setMatchedMaterials(materials.map(m => ({ materialId: m.material_id, description: m.material_name ?? m.material_id })))
+        setSearchStep('materials-for-query')
       }
-    } else if (result.step === 'no-results') {
+    } catch {
       setSearchStep('no-results')
+    } finally {
+      setIsSearching(false)
     }
   }
 
@@ -278,16 +343,18 @@ export function SPCConsumerWorkspace() {
                   </Button>
                 </div>
 
-                {searchStep === 'idle' && (
+                {isSearching && (
+                  <div style={{ textAlign: 'center', color: 'var(--fg-muted)', fontSize: 'var(--fs-13)' }}>
+                    Searching…
+                  </div>
+                )}
+
+                {searchStep === 'idle' && !isSearching && (
                   <div style={{ fontSize: 'var(--fs-13)', color: 'var(--fg-muted)', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                     <span>Suggestions:</span>
-                    <button type="button" onClick={() => loadDemo('emmental')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>emmental</button>
+                    <button type="button" onClick={() => loadDemo('20642328')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>20642328</button>
                     <span>·</span>
-                    <button type="button" onClick={() => loadDemo('pH')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>pH</button>
-                    <span>·</span>
-                    <button type="button" onClick={() => loadDemo('moisture')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>moisture</button>
-                    <span>·</span>
-                    <button type="button" onClick={() => loadDemo('CH-240305-0018')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>CH-240305-0018</button>
+                    <button type="button" onClick={() => loadDemo('20047111')} style={{ background: 'none', border: 'none', color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'var(--fw-medium)' }}>20047111</button>
                   </div>
                 )}
 
@@ -299,14 +366,7 @@ export function SPCConsumerWorkspace() {
                         <button
                           key={m.materialId}
                           type="button"
-                          onClick={() => {
-                            const stepResult = resolveSPCConsumerSearch(m.materialId, spcConsumerSearchRegistry)
-                            if (stepResult.step === 'plants-for-material') {
-                              setMatchedPlants(stepResult.plants)
-                              setSelectedMaterialId(m.materialId)
-                              setSearchStep('plants-for-material')
-                            }
-                          }}
+                          onClick={() => loadPlantsForMaterial(m.materialId)}
                           style={{ width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer' }}
                         >
                           <span style={{ fontWeight: 'bold', display: 'block' }}>{m.description}</span>
@@ -325,14 +385,7 @@ export function SPCConsumerWorkspace() {
                         <button
                           key={p.plantId}
                           type="button"
-                          onClick={() => {
-                            const stepResult = resolveSPCConsumerSearch(`${selectedMaterialId} ${p.plantId}`, spcConsumerSearchRegistry)
-                            if (stepResult.step === 'characteristics-for-plant') {
-                              setMatchedChars(stepResult.characteristics)
-                              setSelectedPlantId(p.plantId)
-                              setSearchStep('characteristics-for-plant')
-                            }
-                          }}
+                          onClick={() => loadCharsForPlant(selectedMaterialId, p.plantId)}
                           style={{ width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer' }}
                         >
                           <span style={{ fontWeight: 'bold' }}>{p.plantName} ({p.plantId})</span>
@@ -355,6 +408,7 @@ export function SPCConsumerWorkspace() {
                               materialId: selectedMaterialId,
                               plantId: selectedPlantId,
                               characteristicId: c.characteristicId,
+                              operationId: c.operationId,
                             })
                             setSelectedCharId(c.characteristicId)
                           }}

@@ -4,8 +4,12 @@ Default mode (``BACKEND_ADAPTER_MODE=legacy-api``): forwards requests to the
 V1 SPC FastAPI backend at ``V1_SPC_API_BASE_URL``.
 
 Databricks mode (``BACKEND_ADAPTER_MODE=databricks-api``):
-  GET /spc/subgroups  — implemented (slice 1, 2026-05-22). Queries
+  GET /spc/subgroups       — implemented (slice 1, 2026-05-22). Queries
     spc_quality_metric_subgroup_mv directly. See spc_databricks_adapter.py.
+  GET /spc/search          — implemented (2026-05-27). Searches material IDs/names
+    in spc_quality_metric_subgroup_mv joined with gold_material.
+  GET /spc/characteristics — implemented (2026-05-27). Queries
+    spc_quality_metric_subgroup_mv grouped by mic_id; returns real operation_id.
   All other routes — return 503 in databricks-api mode.
 
 Proxy routes wired here (NOT yet browser-verified against live V1 UAT):
@@ -225,33 +229,27 @@ async def spc_plants(
             x_databricks_catalog,
         )
         
-        mb_tbl = resolve_domain_object("spc", "gold_batch_mass_balance_v")
+        mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
         p_tbl = resolve_domain_object("spc", "gold_plant")
-        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
-        
+
         sql = f"""
             SELECT DISTINCT
-                mb.PLANT_ID AS plant_id,
-                COALESCE(p.PLANT_NAME, mb.PLANT_ID) AS plant_name
-            FROM {mb_tbl} mb
+                s.plant_id,
+                COALESCE(p.PLANT_NAME, s.plant_id) AS plant_name
+            FROM {mv_tbl} s
             LEFT JOIN {p_tbl} p
-                ON p.PLANT_ID = mb.PLANT_ID
-            INNER JOIN {r_tbl} r
-                ON r.MATERIAL_ID = mb.MATERIAL_ID
-               AND r.BATCH_ID    = mb.BATCH_ID
-               AND r.QUANTITATIVE_RESULT IS NOT NULL
-            WHERE mb.MATERIAL_ID = :material_id
-              AND mb.MOVEMENT_CATEGORY = 'Production'
+                ON p.PLANT_ID = s.plant_id
+            WHERE s.material_id = :material_id
             ORDER BY plant_name
         """
-        
+
         spec = QuerySpec(
             name="spc.get_plants",
             module="spc",
             endpoint="/api/spc/plants",
             sql=sql,
             params={"material_id": material_id},
-            source_badge="view:gold_batch_mass_balance_v",
+            source_badge="view:spc_quality_metric_subgroup_mv",
             tags=["spc", "plants"],
         )
         
@@ -261,6 +259,69 @@ async def spc_plants(
 
     _ensure_legacy_mode()
     return await _forward_get("/api/spc/plants", {"material_id": material_id}, x_forwarded_access_token)
+
+
+@router.get("/spc/search")
+async def spc_search(
+    q: str = Query(..., min_length=1, description="Search query matched against material ID and name"),
+    limit: int = Query(default=20, ge=1, le=50),
+    response: Response = None,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+    x_databricks_catalog: str | None = Header(default=None),
+) -> list:
+    """Search for materials that have SPC subgroup data. Databricks-api mode only.
+
+    Returns a list of {material_id, material_name} dicts where either the
+    material_id or material_name matches the query string (case-insensitive LIKE).
+    """
+    mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="GET /spc/search is only available in databricks-api mode.",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(
+        x_forwarded_access_token,
+        x_forwarded_user,
+        x_forwarded_email,
+        x_databricks_catalog,
+    )
+
+    mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
+    m_tbl = resolve_domain_object("spc", "gold_material")
+    safe_limit = max(1, min(50, int(limit)))
+
+    sql = f"""
+        SELECT DISTINCT
+            s.material_id,
+            COALESCE(m.MATERIAL_NAME, s.material_id) AS material_name
+        FROM {mv_tbl} s
+        LEFT JOIN {m_tbl} m
+            ON m.MATERIAL_ID = s.material_id
+           AND m.LANGUAGE_ID = 'E'
+        WHERE s.material_id ILIKE :q_like
+           OR m.MATERIAL_NAME ILIKE :q_like
+        ORDER BY material_name
+        LIMIT {safe_limit}
+    """
+
+    spec = QuerySpec(
+        name="spc.search_materials",
+        module="spc",
+        endpoint="/api/spc/search",
+        sql=sql,
+        params={"q_like": f"%{q}%"},
+        source_badge="view:spc_quality_metric_subgroup_mv",
+        tags=["spc", "search", "materials"],
+    )
+
+    rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
+    set_databricks_response_headers(response, spec)
+    return rows
 
 
 @router.get("/spc/characteristics")
@@ -290,59 +351,56 @@ async def spc_characteristics(
             x_forwarded_email,
             x_databricks_catalog,
         )
-        
-        r_tbl = resolve_domain_object("spc", "gold_batch_quality_result_v")
-        
+
+        mv_tbl = resolve_domain_object("spc", "spc_quality_metric_subgroup_mv")
+
         sql = f"""
             SELECT
-                MIC_ID                                                       AS mic_id,
-                MIC_NAME                                                     AS mic_name,
-                INSPECTION_METHOD                                            AS inspection_method,
-                MAX(CASE WHEN QUALITATIVE_RESULT IS NOT NULL
-                              AND QUALITATIVE_RESULT != ''
-                         THEN 1 ELSE 0 END)                                 AS is_attribute,
-                COUNT(DISTINCT BATCH_ID)                                     AS batch_count,
-                COUNT(*)                                                     AS total_samples
-            FROM {r_tbl}
-            WHERE MATERIAL_ID = :material_id
-              AND (QUANTITATIVE_RESULT IS NOT NULL
-                   OR (QUALITATIVE_RESULT IS NOT NULL AND QUALITATIVE_RESULT != ''))
-            GROUP BY MIC_ID, MIC_NAME, INSPECTION_METHOD
-            HAVING COUNT(DISTINCT BATCH_ID) >= 3
-            ORDER BY mic_name
+                mic_id,
+                MAX(mic_name)                        AS mic_name,
+                MAX(operation_id)                    AS operation_id,
+                COUNT(DISTINCT batch_id)             AS batch_count,
+                AVG(CAST(batch_n AS DOUBLE))         AS avg_samples_per_batch
+            FROM {mv_tbl}
+            WHERE material_id = :material_id
+              AND (:plant_id_filter = '' OR plant_id = :plant_id_filter)
+            GROUP BY mic_id
+            HAVING COUNT(DISTINCT batch_id) >= 1
+            ORDER BY MAX(mic_name)
         """
-        
+
         spec = QuerySpec(
             name="spc.get_characteristics",
             module="spc",
             endpoint="/api/spc/characteristics",
             sql=sql,
-            params={"material_id": material_id},
-            source_badge="view:gold_batch_quality_result_v",
+            params={
+                "material_id": material_id,
+                "plant_id_filter": plant_id or "",
+            },
+            source_badge="view:spc_quality_metric_subgroup_mv",
             tags=["spc", "characteristics"],
         )
-        
+
         rows, spec = await run_query(lambda: spec, identity, host, warehouse_id)
         set_databricks_response_headers(response, spec)
-        
+
         mapped_rows = []
         for row in rows:
-            is_attr = int(float(row.get("is_attribute") or 0)) == 1
-            total_samples = float(row.get("total_samples") or 0)
+            avg_spb = float(row.get("avg_samples_per_batch") or 1.0)
             batch_count = int(float(row.get("batch_count") or 0))
-            avg_spb = total_samples / batch_count if batch_count > 0 else 0
-            chart_type = "p_chart" if is_attr else ("xbar_r" if avg_spb > 1.5 else "imr")
-            
+            chart_type = "xbar_r" if avg_spb > 1.5 else "imr"
+
             mapped_rows.append({
                 "mic_id": row.get("mic_id"),
                 "mic_name": row.get("mic_name"),
                 "plant_id": plant_id,
                 "material_id": material_id,
-                "operation_id": "00000001",
+                "operation_id": row.get("operation_id"),
                 "chart_type": chart_type,
                 "batch_count": batch_count,
-                "sample_count": int(total_samples),
-                "has_active_signal": False
+                "sample_count": int(avg_spb * batch_count),
+                "has_active_signal": False,
             })
         return mapped_rows
 

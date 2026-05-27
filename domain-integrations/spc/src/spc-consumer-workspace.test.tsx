@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, cleanup, fireEvent, screen } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SPCConsumerWorkspace } from './spc-consumer-workspace.js'
 
@@ -21,6 +21,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe('SPCConsumerWorkspace', () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
   })
 
   it('renders landing search screen by default', () => {
@@ -34,7 +35,15 @@ describe('SPCConsumerWorkspace', () => {
     expect(screen.getByText('Statistical Process Control')).not.toBeNull()
   })
 
-  it('allows entering search term and finding suggestions', async () => {
+  it('allows entering search term and finding multiple material suggestions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { material_id: 'MAT-001', material_name: 'Material Alpha' },
+        { material_id: 'MAT-002', material_name: 'Material Beta' },
+      ],
+    } as Response)
+
     render(
       <Wrapper>
         <SPCConsumerWorkspace />
@@ -47,7 +56,8 @@ describe('SPCConsumerWorkspace', () => {
     const form = input.closest('form')
     if (form) fireEvent.submit(form)
 
-    // Should progress to the wizard selections
-    expect(screen.getByText(/Select Material:/i)).not.toBeNull()
+    await waitFor(() => {
+      expect(screen.getByText(/Select Material:/i)).not.toBeNull()
+    })
   })
 })

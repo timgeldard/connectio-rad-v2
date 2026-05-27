@@ -173,5 +173,7 @@ export const BatchQualityPassportSchema = z.object({
   lotHistory: z.array(LotHistoryEntrySchema),
   massBalance: PassportMassBalanceSchema,
   usageDecisionEvidence: z.array(PassportUsageDecisionEvidenceSchema),
+  inspectionLotCount: z.number().int().min(0).optional().describe('[classification: source-field]'),
+  productionLotCount: z.number().int().min(0).optional().describe('[classification: source-derived]'),
 })
 export type BatchQualityPassport = z.infer<typeof BatchQualityPassportSchema>

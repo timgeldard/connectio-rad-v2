@@ -104,11 +104,18 @@ function mapInterpretation(val: string | undefined): CharacteristicCapability['i
 // ---------------------------------------------------------------------------
 
 async function proxyGet(baseUrl: string, path: string, params: Record<string, string>): Promise<unknown> {
-  const url = new URL(`${baseUrl}${path}`)
-  for (const [key, val] of Object.entries(params)) {
-    if (val) url.searchParams.set(key, val)
+  let href: string
+  if (baseUrl) {
+    const url = new URL(`${baseUrl}${path}`)
+    for (const [key, val] of Object.entries(params)) {
+      if (val) url.searchParams.set(key, val)
+    }
+    href = url.toString()
+  } else {
+    const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)))
+    href = qs.toString() ? `${path}?${qs}` : path
   }
-  const response = await fetch(url.toString(), { method: 'GET', credentials: 'include' })
+  const response = await fetch(href, { method: 'GET', credentials: 'include' })
   if (!response.ok) throw { status: response.status }
   return response.json()
 }
@@ -221,17 +228,22 @@ export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
   override async getControlChartSeries(
     request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<ControlChartSeries>> {
-    if (!request.materialId || !request.characteristicId) {
+    if (!request.materialId || !request.characteristicId || !request.operationId || !request.plantId) {
       return super.getControlChartSeries(request)
     }
 
     try {
+      const today = new Date().toISOString().slice(0, 10)
+      const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
       const body: Record<string, string> = {
-        material_id: request.materialId,
-        mic_id: request.characteristicId,
+        materialId: request.materialId,
+        micId: request.characteristicId,
+        plantId: request.plantId,
+        operationId: request.operationId,
+        dateFrom: request.dateFrom ?? twoYearsAgo,
+        dateTo: request.dateTo ?? today,
       }
-      if (request.plantId) body['plant_id'] = request.plantId
-      if (request.workCentreId) body['operation_id'] = request.workCentreId
 
       const raw = await proxyPost(this.baseUrl, '/api/spc/chart-data', body) as V1ChartDataResponse
       const chartType = mapChartType(raw.chart_type)

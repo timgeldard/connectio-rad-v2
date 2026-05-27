@@ -261,7 +261,7 @@ export function QualityPassportPanel({
 function HeroBand({ data }: { data: BatchQualityPassport }) {
   const confidence = data.quality.heuristicQualityConfidence
   const confColor =
-    confidence >= 90 ? 'var(--status-good)' : confidence >= 75 ? 'var(--status-warn)' : 'var(--status-bad)'
+    confidence >= 90 ? 'var(--confidence-high)' : confidence >= 75 ? 'var(--confidence-medium)' : 'var(--confidence-low)'
   const failedMics = data.quality.coa.filter((c) => c.status === 'fail').length
   const warnMics = data.quality.coa.filter((c) => c.status === 'warn').length
   const acceptLots = data.lotHistory.filter((l) => l.result === 'accept').length
@@ -271,7 +271,7 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
+        gridTemplateColumns: '1.6fr 1fr 1fr 1fr 1fr',
         marginBottom: 24,
         border: '1px solid var(--stroke)',
         borderRadius: 'var(--radius-md)',
@@ -314,7 +314,8 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
           Source: {data.quality.confidenceSource === 'application-heuristic' ? 'Application Heuristic (SAP QM proxy)' : 'Databricks API (SAP QM)'}
         </div>
       </div>
-      <KpiTile label="Lots produced" value={data.lotHistory.length} sub="over 4 days" />
+      <KpiTile label="Lots produced" value={data.productionLotCount ?? data.lotHistory.length} sub="process orders" />
+      <KpiTile label="Inspection lots" value={data.inspectionLotCount ?? data.lotHistory.length} sub="quality records" />
       <KpiTile
         label="Results · accepted"
         value={acceptLots}
@@ -343,7 +344,7 @@ function KpiTile({
   tone?: 'good' | 'warn' | 'bad'
 }) {
   const color =
-    tone === 'good' ? 'var(--status-good)' : tone === 'warn' ? 'var(--status-warn)' : tone === 'bad' ? 'var(--status-bad)' : 'var(--forest)'
+    tone === 'good' ? 'var(--status-good)' : tone === 'warn' ? 'var(--status-warn)' : tone === 'bad' ? 'var(--status-bad)' : 'var(--brand)'
   return (
     <div style={{ padding: 20, borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <div style={{ fontSize: 10, letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', fontWeight: 'var(--fw-bold)', color: 'var(--fg-muted)' }}>

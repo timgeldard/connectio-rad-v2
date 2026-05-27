@@ -58,6 +58,8 @@ const buildEnv = {
   VITE_WH360_API_BASE_URL: '',
   VITE_POH_API_BASE_URL: '',
   VITE_CQ_API_BASE_URL: '',
+  VITE_LEGACY_API_BASE_URL: '',
+  VITE_FEATURE_SPC_LIVE_SOURCES: 'true',
 }
 
 console.log('=== prepare-databricks-app ===')
@@ -66,6 +68,8 @@ console.log(`Trace base URL     : "${buildEnv.VITE_TRACE_API_BASE_URL}" (empty =
 console.log(`WH360 base URL     : "${buildEnv.VITE_WH360_API_BASE_URL}" (empty = same-origin)`)
 console.log(`POH base URL       : "${buildEnv.VITE_POH_API_BASE_URL}" (empty = same-origin)`)
 console.log(`CQ base URL        : "${buildEnv.VITE_CQ_API_BASE_URL}" (empty = same-origin)`)
+console.log(`Legacy API base URL: "${buildEnv.VITE_LEGACY_API_BASE_URL}" (empty = same-origin)`)
+console.log(`SPC live sources   : ${buildEnv.VITE_FEATURE_SPC_LIVE_SOURCES}`)
 console.log()
 
 // ── 2. Build frontend ──────────────────────────────────────────────────────
