@@ -628,7 +628,11 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
         " AND CHILD_MATERIAL_ID IS NOT NULL AND CHILD_BATCH_ID IS NOT NULL"
     )
 
-    # Downstream CTE: anchor is PARENT, recurse following CHILD edges forward
+    # Downstream CTE: anchor is PARENT, recurse following CHILD edges forward.
+    # Anchor null guard requires only PARENT fields — CHILD may be NULL for
+    # customer delivery edges (LINK_TYPE='DELIVERY') which are terminal leaf
+    # nodes (no downstream batch to recurse from). The JOIN condition in the
+    # recursive arm filters these out naturally (NULL = anything is never true).
     ds_cte = f"""\
   ds AS (
     SELECT
@@ -639,10 +643,10 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
       SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
       CONCAT('|', :material_id, ':', :batch_id, '|',
-             CHILD_MATERIAL_ID, ':', CHILD_BATCH_ID, '|') AS path
+             CHILD_MATERIAL_ID, ':', CHILD_BATCH_ID, ':', COALESCE(CHILD_PLANT_ID, ''), '|') AS path
     FROM {tbl}
     WHERE PARENT_MATERIAL_ID = :material_id AND PARENT_BATCH_ID = :batch_id
-      AND {_null_guard}
+      AND PARENT_MATERIAL_ID IS NOT NULL AND PARENT_BATCH_ID IS NOT NULL
     UNION ALL
     SELECT
       t.hop_depth + 1, 'downstream',
@@ -651,15 +655,16 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.LINK_TYPE, e.PROCESS_ORDER_ID, e.MATERIAL_DOCUMENT_NUMBER,
       e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
-      CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')
+      CONCAT(t.path, e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, ':', COALESCE(e.CHILD_PLANT_ID, ''), '|')
     FROM {tbl} e
     JOIN `ds` t
       ON e.PARENT_MATERIAL_ID = t.CHILD_MATERIAL_ID
       AND e.PARENT_BATCH_ID = t.CHILD_BATCH_ID
       AND e.PARENT_PLANT_ID <=> t.CHILD_PLANT_ID
     WHERE t.hop_depth < :max_depth
-      AND e.CHILD_MATERIAL_ID IS NOT NULL AND e.CHILD_BATCH_ID IS NOT NULL
-      AND INSTR(t.path, CONCAT('|', e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, '|')) = 0
+      AND t.CHILD_MATERIAL_ID IS NOT NULL AND t.CHILD_BATCH_ID IS NOT NULL
+      AND (e.CHILD_MATERIAL_ID IS NULL
+           OR INSTR(t.path, CONCAT('|', e.CHILD_MATERIAL_ID, ':', e.CHILD_BATCH_ID, ':', COALESCE(e.CHILD_PLANT_ID, ''), '|')) = 0)
   )"""
 
     # Upstream CTE: anchor is CHILD, recurse following PARENT edges backward
@@ -673,7 +678,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       PURCHASE_ORDER_ID, SUPPLIER_ID, CUSTOMER_ID, DELIVERY_ID,
       SALES_ORDER_ID, QUANTITY, BASE_UNIT_OF_MEASURE, POSTING_DATE, MOVEMENT_TYPE,
       CONCAT('|', :material_id, ':', :batch_id, '|',
-             PARENT_MATERIAL_ID, ':', PARENT_BATCH_ID, '|') AS path
+             PARENT_MATERIAL_ID, ':', PARENT_BATCH_ID, ':', COALESCE(PARENT_PLANT_ID, ''), '|') AS path
     FROM {tbl}
     WHERE CHILD_MATERIAL_ID = :material_id AND CHILD_BATCH_ID = :batch_id
       AND {_null_guard}
@@ -685,7 +690,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       e.LINK_TYPE, e.PROCESS_ORDER_ID, e.MATERIAL_DOCUMENT_NUMBER,
       e.PURCHASE_ORDER_ID, e.SUPPLIER_ID, e.CUSTOMER_ID, e.DELIVERY_ID,
       e.SALES_ORDER_ID, e.QUANTITY, e.BASE_UNIT_OF_MEASURE, e.POSTING_DATE, e.MOVEMENT_TYPE,
-      CONCAT(t.path, e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')
+      CONCAT(t.path, e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, ':', COALESCE(e.PARENT_PLANT_ID, ''), '|')
     FROM {tbl} e
     JOIN `us` t
       ON e.CHILD_MATERIAL_ID = t.PARENT_MATERIAL_ID
@@ -693,7 +698,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
       AND e.CHILD_PLANT_ID <=> t.PARENT_PLANT_ID
     WHERE t.hop_depth < :max_depth
       AND e.PARENT_MATERIAL_ID IS NOT NULL AND e.PARENT_BATCH_ID IS NOT NULL
-      AND INSTR(t.path, CONCAT('|', e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, '|')) = 0
+      AND INSTR(t.path, CONCAT('|', e.PARENT_MATERIAL_ID, ':', e.PARENT_BATCH_ID, ':', COALESCE(e.PARENT_PLANT_ID, ''), '|')) = 0
   )"""
 
     # gold_material also has BASE_UNIT_OF_MEASURE, so selecting m_parent/m_child columns
@@ -788,7 +793,7 @@ def map_trace_graph(
     Anchor node is always included even when tagged_rows is empty.
     Nodes and edges are deduped by key; leading zeros preserved (no numeric casting).
     """
-    anchor_key = _node_key(request.material_id, request.batch_id)
+    anchor_key = _node_key(request.material_id, request.batch_id, request.plant_id)
 
     nodes: dict[str, dict] = {
         anchor_key: {
@@ -806,8 +811,9 @@ def map_trace_graph(
     warnings: list[str] = []
 
     for row, hop, direction in tagged_rows:
-        parent_key = _node_key(row["parent_material_id"], row["parent_batch_id"])
-        child_key = _node_key(row["child_material_id"], row["child_batch_id"])
+        parent_key = _node_key(row["parent_material_id"], row["parent_batch_id"], row.get("parent_plant_id"))
+        is_delivery = not row.get("child_material_id") or not row.get("child_batch_id")
+        child_key = _delivery_child_key(row) if is_delivery else _node_key(row["child_material_id"], row["child_batch_id"], row.get("child_plant_id"))
 
         # Assign depth: for downstream the parent was found at hop, child is one step further.
         # For upstream the child was found at hop, parent is one step further.
@@ -825,17 +831,20 @@ def map_trace_graph(
                 nodes[parent_key]["materialDescription"] = row.get("parent_material_name") or ""
 
         if child_key not in nodes:
-            nodes[child_key] = _make_graph_node(row, "child", child_depth, direction)
+            if is_delivery:
+                nodes[child_key] = _make_delivery_node(row, child_depth)
+            else:
+                nodes[child_key] = _make_graph_node(row, "child", child_depth, direction)
         else:
             if direction not in nodes[child_key]["directions"]:
                 nodes[child_key]["directions"].append(direction)
-            if not nodes[child_key].get("materialDescription"):
+            if not is_delivery and not nodes[child_key].get("materialDescription"):
                 nodes[child_key]["materialDescription"] = row.get("child_material_name") or ""
 
         link_type = row.get("link_type") or ""
         doc_num = row.get("material_document_number") or ""
         edge_key = f"{parent_key}|{child_key}|{link_type}|{doc_num}|{hop}"
-        if edge_key not in edges:
+        if parent_key != child_key and edge_key not in edges:
             edges[edge_key] = _make_graph_edge(
                 row, parent_key, child_key, edge_key, hop, direction
             )
@@ -1527,14 +1536,38 @@ def _string_or_empty(value: object) -> str:
     return str(value) if value is not None else ""
 
 
-def _node_key(material_id: str, batch_id: str) -> str:
-    """Unique key for a batch node — 2-tuple (material_id:batch_id).
+def _node_key(material_id: str, batch_id: str, plant_id: str | None = None) -> str:
+    """Unique key for a batch node — 3-tuple (material_id:batch_id:plant_id).
 
-    plant_id intentionally excluded: a batch is identified by material+batch
-    regardless of plant. plantId is stored on each node for display but does
-    not participate in dedup or cycle detection.
+    plant_id is included so that STO transfers (same material+batch, different
+    plant) render as two distinct nodes connected by a transferred-to edge.
     """
-    return f"{material_id}:{batch_id}"
+    return f"{material_id}:{batch_id}:{plant_id or ''}"
+
+
+def _delivery_child_key(row: dict) -> str:
+    """Key for a customer-delivery terminal node (CHILD fields are NULL in gold_batch_lineage)."""
+    delivery_id = row.get("delivery_id")
+    customer_id = row.get("customer_id")
+    if delivery_id:
+        return f"delivery:{delivery_id}"
+    if customer_id:
+        return f"customer:{customer_id}"
+    return "delivery:unknown"
+
+
+def _make_delivery_node(row: dict, depth: int) -> dict:
+    return {
+        "id": _delivery_child_key(row),
+        "type": "customer-delivery",
+        "materialId": "",
+        "materialDescription": "Customer Delivery",
+        "batchId": row.get("delivery_id"),
+        "plantId": None,
+        "depth": depth,
+        "directions": ["downstream"],
+        "isAnchor": False,
+    }
 
 
 def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
@@ -1543,7 +1576,7 @@ def _make_graph_node(row: dict, side: str, depth: int, direction: str) -> dict:
     bat = row[f"{prefix}_batch_id"]
     pla = row[f"{prefix}_plant_id"]
     return {
-        "id": _node_key(mat, bat),
+        "id": _node_key(mat, bat, pla),
         "materialId": mat,
         "materialDescription": row.get(f"{prefix}_material_name") or row.get("material_name") or "",
         "batchId": bat,

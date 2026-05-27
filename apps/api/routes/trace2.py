@@ -322,8 +322,8 @@ async def trace_graph(
         traversal_dir = str(row.get("traversal_dir") or "downstream")
         link_type = row.get("link_type") or ""
         doc_num = row.get("material_document_number") or ""
-        parent_key = f"{row['parent_material_id']}:{row['parent_batch_id']}"
-        child_key = f"{row['child_material_id']}:{row['child_batch_id']}"
+        parent_key = f"{row['parent_material_id']}:{row['parent_batch_id']}:{row.get('parent_plant_id') or ''}"
+        child_key = f"{row.get('child_material_id') or ''}:{row.get('child_batch_id') or ''}:{row.get('child_plant_id') or ''}"
         edge_key = f"{parent_key}|{child_key}|{link_type}|{doc_num}|{hop}"
         if edge_key not in seen_edge_keys:
             seen_edge_keys.add(edge_key)
