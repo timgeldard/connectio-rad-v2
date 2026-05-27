@@ -1,3 +1,4 @@
+import { ProcessOrderSearchResponseSchema } from '@connectio/data-contracts'
 import type { ProcessOrderHeader, ProcessOrderSearchRequest, ProcessOrderSearchResponse } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
@@ -142,7 +143,8 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
         }
       }
 
-      const data = await response.json()
+      const raw = await response.json()
+      const data = ProcessOrderSearchResponseSchema.parse(raw)
       return { ok: true, data, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)

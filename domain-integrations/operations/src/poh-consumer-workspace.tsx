@@ -43,6 +43,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
 
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'consumption' | 'output' | 'genie'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
+  const [submittedQuery, setSubmittedQuery] = useState('')
   const [searchStep, setSearchStep] = useState<PohConsumerSearchStep>('idle')
   const [searchStatus, setSearchStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [searchError, setSearchError] = useState('')
@@ -55,8 +56,8 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
 
   // Search query Hook
   const { data: searchResult, isLoading: searchLoading } = useProcessOrderSearch(
-    { query: searchQuery },
-    { enabled: searchStatus === 'loading' }
+    { query: submittedQuery },
+    { enabled: searchStatus === 'loading' && submittedQuery !== '' }
   )
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
 
       setSearchStatus('idle')
       const items = searchResult.data.items
-      const parsed = resolvePohConsumerSearch(searchQuery, items)
+      const parsed = resolvePohConsumerSearch(submittedQuery, items)
 
       if (parsed.step === 'materials-for-query') {
         setMatchedMaterialOptions([...parsed.materials])
@@ -90,12 +91,13 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
         setSearchStep('no-results')
       }
     }
-  }, [searchLoading, searchResult, searchStatus])
+  }, [searchLoading, searchResult, searchStatus, submittedQuery])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!searchQuery.trim()) return
 
+    setSubmittedQuery(searchQuery.trim())
     setSearchStatus('loading')
     setSearchError('')
     setSearchStep('idle')
@@ -229,7 +231,8 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
     goodsMovements.forEach(gm => {
       if (gm.movementType === '261' || gm.movementType === '262') {
         const sign = gm.movementType === '262' ? -1 : 1
-        const key = `${gm.materialId}:${gm.uom}`
+        const uom = (gm.uom || 'KG').trim().toUpperCase()
+        const key = `${gm.materialId}:${uom}`
         const existing = map.get(key)
         const qty = (gm.quantity ?? 0) * sign
         if (existing) {
@@ -239,7 +242,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
             materialId: gm.materialId,
             description: gm.materialDescription,
             quantity: qty,
-            uom: gm.uom || 'KG',
+            uom,
           })
         }
       }
@@ -255,6 +258,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
         const key = `${gm.materialId}:${gm.batchId || ''}`
         const existing = map.get(key)
         const qty = (gm.quantity ?? 0) * sign
+        const uom = (gm.uom || 'KG').trim().toUpperCase()
         if (existing) {
           existing.quantity += qty
         } else {
@@ -262,7 +266,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
             materialId: gm.materialId,
             description: gm.materialDescription,
             quantity: qty,
-            uom: gm.uom || 'KG',
+            uom,
             batchId: gm.batchId,
           })
         }

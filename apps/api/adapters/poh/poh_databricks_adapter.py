@@ -656,7 +656,7 @@ def map_order_search_rows(rows: list[dict], query: str, max_rows: int) -> dict:
             "orderStatus": _map_order_status(row.get("order_status_raw")),
             "plannedQuantity": None,
             "confirmedQuantity": None,
-            "uom": "KG",
+            "uom": None,
             "plannedStart": None,
             "plannedFinish": None,
             "matchTypes": match_types,
