@@ -3,6 +3,7 @@ import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle,
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { AccessException } from '@connectio/product-model'
 
 const ACCESS_EXCEPTIONS: readonly AccessException[] = [
@@ -71,6 +72,7 @@ export function AccessExceptionsPage() {
 
   return (
     <div data-testid="access-exceptions" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Access Exceptions</h1>

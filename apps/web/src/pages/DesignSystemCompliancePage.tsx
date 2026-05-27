@@ -1,6 +1,7 @@
 // Phase 6 snapshot — compliance findings accurate as of 2026-05-15.
 // This report is generated from static code analysis. Update as violations are resolved.
 import { useState } from 'react'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import {
   Card,
   CardContent,
@@ -363,6 +364,7 @@ export function DesignSystemCompliancePage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--shell-fg)', margin: 0, marginBottom: 4 }}>
           Design-System Compliance Report

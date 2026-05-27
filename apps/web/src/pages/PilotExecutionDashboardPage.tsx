@@ -1,6 +1,7 @@
 import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { PilotExecutionStatus } from '@connectio/product-model'
 
 interface PilotSummary {
@@ -159,6 +160,7 @@ function ReadinessMeter({ label, met, total }: { label: string; met: number; tot
 export function PilotExecutionDashboardPage() {
   return (
     <div data-testid="pilot-execution-dashboard" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Pilot Execution Dashboard</h1>
