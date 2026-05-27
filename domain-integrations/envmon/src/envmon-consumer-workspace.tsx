@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ScopeContext } from '@connectio/data-contracts'
+import type { ScopeContext, EnvMonL4Zone, EnvMonL5Coordinate } from '@connectio/data-contracts'
 import {
   MOCK_FLOORS,
   INITIAL_L4_ZONES,
@@ -35,14 +35,14 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
   const currentFloorZones = zones[activeFloorId] || []
   const currentFloorCoordinates = coordinates[activeFloorId] || []
 
-  const updateZonesForFloor = (newZones: any) => {
+  const updateZonesForFloor = (newZones: EnvMonL4Zone[]) => {
     setZones((prev) => ({
       ...prev,
       [activeFloorId]: newZones,
     }))
   }
 
-  const updateCoordinatesForFloor = (newCoords: any) => {
+  const updateCoordinatesForFloor = (newCoords: EnvMonL5Coordinate[]) => {
     setCoordinates((prev) => ({
       ...prev,
       [activeFloorId]: newCoords,

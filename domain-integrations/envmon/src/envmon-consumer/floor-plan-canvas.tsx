@@ -1,4 +1,4 @@
-import { useState, useRef, MouseEvent } from 'react'
+import { useState, useRef, useEffect, MouseEvent } from 'react'
 import type { EnvMonL4Zone, EnvMonL5Coordinate } from '@connectio/data-contracts'
 import type { EnvMonFloor } from './mock-data.js'
 
@@ -49,10 +49,23 @@ export function FloorPlanCanvas({
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null)
   const [selectedMarker, setSelectedMarker] = useState<EnvMonL5Coordinate | null>(null)
 
+  // Reset editor state when switching floors
+  useEffect(() => {
+    setEditorMode('view')
+    setCurrentL4Points([])
+    setNewZoneLabel('')
+    setNewLocationLabel('')
+    setSelectedL4ForL5('')
+    setValidationError(null)
+    setHoveredZoneId(null)
+    setSelectedMarker(null)
+  }, [floor.floorId])
+
   // Translate click to SVG coordinate system
   const getSvgCoordinates = (e: MouseEvent<SVGSVGElement>): { x: number; y: number } => {
     if (!svgRef.current) return { x: 0, y: 0 }
     const rect = svgRef.current.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return { x: 0, y: 0 }
     // Relative coordinates scaled to viewbox
     const x = Math.round(((e.clientX - rect.left) / rect.width) * floor.width)
     const y = Math.round(((e.clientY - rect.top) / rect.height) * floor.height)
