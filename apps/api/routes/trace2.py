@@ -61,6 +61,7 @@ from routes._databricks import (
     run_query,
     set_databricks_response_headers,
 )
+from shared.proxy_client import get_proxy_client
 
 router = APIRouter()
 
@@ -127,8 +128,8 @@ async def _forward_post(v1_path: str, body: dict, token: str | None) -> dict:
         headers["x-forwarded-access-token"] = token
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(f"{_V1_BASE_URL}{v1_path}", json=body, headers=headers)
+        client = get_proxy_client()
+        response = await client.post(f"{_V1_BASE_URL}{v1_path}", json=body, headers=headers)
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream unreachable: {exc}") from exc
 

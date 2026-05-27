@@ -57,6 +57,7 @@ from routes._databricks import (
     set_databricks_response_headers,
     run_query,
 )
+from shared.proxy_client import get_proxy_client
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
@@ -93,12 +94,12 @@ async def _forward_get(path: str, params: dict, token: str | None) -> dict | lis
     # Strip None values — httpx omits them automatically but be explicit
     clean_params = {k: v for k, v in params.items() if v is not None}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{base}{path}",
-                params=clean_params,
-                headers=_auth_headers(token),
-            )
+        client = get_proxy_client()
+        response = await client.get(
+            f"{base}{path}",
+            params=clean_params,
+            headers=_auth_headers(token),
+        )
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         raise HTTPException(status_code=502, detail=f"V1 SPC upstream unreachable: {exc}") from exc
 
@@ -116,8 +117,8 @@ async def _forward_post(path: str, body: dict, token: str | None) -> dict | list
     base = _require_v1_base_url()
     headers = {**_auth_headers(token), "Content-Type": "application/json"}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(f"{base}{path}", json=body, headers=headers)
+        client = get_proxy_client()
+        response = await client.post(f"{base}{path}", json=body, headers=headers)
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         raise HTTPException(status_code=502, detail=f"V1 SPC upstream unreachable: {exc}") from exc
 

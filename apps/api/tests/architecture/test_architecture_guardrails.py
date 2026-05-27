@@ -31,6 +31,7 @@ _API_ROOT = _REPO_ROOT / "apps" / "api"
 _ROUTES_DIR = _API_ROOT / "routes"
 _ADAPTERS_DIR = _API_ROOT / "adapters"
 _QUERY_SERVICE_DIR = _API_ROOT / "shared" / "query_service"
+_PYTHON_DB_DIR = _REPO_ROOT / "packages" / "python-db" / "src"
 _WEB_SRC = _REPO_ROOT / "apps" / "web" / "src"
 
 
@@ -63,6 +64,7 @@ _QUERY_PATH_FILES = (
     _py_files(_QUERY_SERVICE_DIR)
     + _py_files(_ADAPTERS_DIR)
     + _py_files(_ROUTES_DIR)
+    + _py_files(_PYTHON_DB_DIR)
 )
 
 

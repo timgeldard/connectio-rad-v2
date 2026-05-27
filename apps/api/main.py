@@ -17,6 +17,7 @@ from routes.trace2 import router as trace2_router
 from routes.warehouse360 import router as warehouse360_router
 from routes.workspaces import router as workspaces_router
 from routes.quality import router as quality_router
+from shared.proxy_client import close_proxy_client
 from shared.query_service.databricks_client import databricks_http_client_pool
 
 
@@ -33,6 +34,7 @@ async def lifespan(_: FastAPI):
         )
     yield
     await databricks_http_client_pool.aclose()
+    await close_proxy_client()
 
 
 app = FastAPI(title="ConnectIO API", version="0.1.0", lifespan=lifespan)
