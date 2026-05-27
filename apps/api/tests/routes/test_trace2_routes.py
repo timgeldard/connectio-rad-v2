@@ -182,6 +182,24 @@ class TestBatchHeaderDatabricksMode:
                 )
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("batch-header should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _BATCH_HEADER_URL,
+                        json=_BATCH_HEADER_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
     async def test_401_without_oauth_token(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         with _patch_executor([_FAKE_BATCH_HEADER_ROW]):
@@ -328,6 +346,24 @@ class TestBatchSearchDatabricksMode:
         assert response.headers.get("x-adapter-mode") == "databricks-api"
         assert "gold_batch_stock_v" in response.headers.get("x-data-source", "")
         assert "production_history_v" in response.headers.get("x-data-source", "")
+
+    async def test_search_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("batch-search should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor(_FAKE_BATCH_SEARCH_ROWS):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _BATCH_SEARCH_URL,
+                        json={"query": "cheese"},
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
 
     async def test_search_reports_truncation(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
@@ -783,6 +819,24 @@ class TestCustomerExposureSuccess:
                 response = await client.post(_CE_URL, json=_CE_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("customer-exposure should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_DELIVERY_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _CE_URL,
+                        json=_CE_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
     async def test_zero_rows_returns_404_with_no_exposure_message(self, monkeypatch) -> None:
         """Zero rows must return 404 with a message that says not to interpret as zero exposure."""
         _databricks_env(monkeypatch)
@@ -1125,6 +1179,24 @@ class TestCustomerDeliveriesSuccess:
                 response = await client.post(_CD_URL, json=_CD_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("customer-deliveries should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _CD_URL,
+                        json=_CD_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
     async def test_sets_x_data_source_header(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         with _patch_executor([_FAKE_DELIVERY_VIEW_ROW]):
@@ -1222,6 +1294,24 @@ class TestSupplierExposureSuccess:
         badge = response.headers.get("x-data-source", "")
         assert "gold_batch_lineage" in badge
         assert "gold_supplier" in badge
+
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("supplier-exposure should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_SUPPLIER_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _SE_URL,
+                        json=_SE_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
 
     async def test_open_supplier_actions_is_zero_no_qm_source(self, monkeypatch) -> None:
         """TRACE-P1-012: no verified QM source in this slice."""
@@ -1322,6 +1412,24 @@ class TestProductionHistorySuccess:
             async with _make_client() as client:
                 response = await client.post(_PH_URL, json=_PH_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         assert "gold_batch_production_history_v" in response.headers.get("x-data-source", "")
+
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("production-history should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_PH_ROW_PASS]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _PH_URL,
+                        json=_PH_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
 
     async def test_max_rows_clamped_to_200(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
@@ -1436,6 +1544,24 @@ class TestMassBalanceSuccess:
                 response = await client.post(_MB_URL, json=_MB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         assert "gold_batch_mass_balance_v" in response.headers.get("x-data-source", "")
 
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("mass-balance should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_MB_PRODUCTION_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _MB_URL,
+                        json=_MB_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
     async def test_max_rows_clamped_to_10000(self, monkeypatch) -> None:
         _databricks_env(monkeypatch)
         body = {**_MB_VALID_BODY, "max_rows": 99999}
@@ -1443,6 +1569,114 @@ class TestMassBalanceSuccess:
             async with _make_client() as client:
                 response = await client.post(_MB_URL, json=body, headers=_HEADERS_WITH_TOKEN)
         assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Recall readiness route tests (POST /api/trace2/recall-readiness)
+# ---------------------------------------------------------------------------
+
+_RR_URL = "/api/trace2/recall-readiness"
+
+_RR_VALID_BODY = {
+    "material_id": "20035129",
+    "batch_id": "8000049668",
+}
+
+_FAKE_RECALL_ROW = {
+    "delivery": "DEL-001",
+    "customer_id": "CUST-001",
+    "customer_name": "Kerry Ingredients",
+    "country_id": "IE",
+    "country_name": "Ireland",
+    "abs_quantity": 500.0,
+    "uom": "KG",
+    "posting_date": "2026-01-15",
+    "sales_order_id": "SO-001",
+}
+
+
+class TestRecallReadinessRoute:
+    async def test_200_returns_recall_readiness_summary(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([_FAKE_RECALL_ROW]):
+            async with _make_client() as client:
+                response = await client.post(_RR_URL, json=_RR_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["totals"]["customers"] == 1
+        assert data["totals"]["deliveries"] == 1
+        assert data["totals"]["shipped"] == pytest.approx(500.0)
+        assert data["recommendationStatus"] == "not-evaluated"
+
+    async def test_zero_rows_returns_404_with_no_exposure_message(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_RR_URL, json=_RR_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert response.status_code == 404
+        assert "do not interpret as zero exposure" in response.json().get("detail", "").lower()
+
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("recall-readiness should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_RECALL_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _RR_URL,
+                        json=_RR_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Batch quality passport route tests (POST /api/trace2/batch-quality-passport)
+# ---------------------------------------------------------------------------
+
+_BQP_URL = "/api/trace2/batch-quality-passport"
+
+_BQP_VALID_BODY = {
+    "material_id": "20035129",
+    "batch_id": "8000049668",
+    "plant_id": "C061",
+}
+
+
+class TestBatchQualityPassportRoute:
+    async def test_zero_identity_rows_returns_404(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with _patch_executor([]):
+            async with _make_client() as client:
+                response = await client.post(_BQP_URL, json=_BQP_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Batch not found"
+
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("batch-quality-passport should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _BQP_URL,
+                        json=_BQP_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 404
+        run_query_mock.assert_not_called()
 
 
 class TestTraceGraphArchitectureGuardrails:
@@ -2100,6 +2334,24 @@ class TestSupplierBatchesSuccess:
                 response = await client.post(_SB_URL, json=_SB_VALID_BODY, headers=_HEADERS_WITH_TOKEN)
         assert response.headers.get("x-adapter-mode") == "databricks-api"
 
+    async def test_uses_repository_facade_not_route_run_query(self, monkeypatch) -> None:
+        _databricks_env(monkeypatch)
+        with patch(
+            "routes.trace2.run_query",
+            new_callable=AsyncMock,
+            side_effect=AssertionError("supplier-batches should use Trace2Repository"),
+        ) as run_query_mock:
+            with _patch_executor([_FAKE_CONSUMED_ROW]):
+                async with _make_client() as client:
+                    response = await client.post(
+                        _SB_URL,
+                        json=_SB_VALID_BODY,
+                        headers=_HEADERS_WITH_TOKEN,
+                    )
+
+        assert response.status_code == 200
+        run_query_mock.assert_not_called()
+
     async def test_does_not_fall_back_on_databricks_error(self, monkeypatch) -> None:
         """If the Databricks executor raises, the route MUST NOT silently
         return mock data — it must propagate the upstream failure."""
@@ -2204,4 +2456,3 @@ class TestSupplierBatchesResponseModel:
             assert forbidden not in data
             for lot in data["consumedLots"]:
                 assert forbidden not in lot
-

@@ -14,6 +14,7 @@ from pydantic import BaseModel, field_validator
 from adapters.trace2.trace2_databricks_adapter import (
     Trace2BatchHeaderRequest,
     Trace2BatchSearchRequest,
+    Trace2Repository,
     Trace2BatchQualityPassportRequest,
     Trace2CustomerDeliveryRequest,
     Trace2CustomerExposureRequest,
@@ -26,38 +27,13 @@ from adapters.trace2.trace2_databricks_adapter import (
     Trace2SupplierExposureRequest,
     Trace2MassBalanceRequest,
     TraceGraphRequest,
-    build_batch_quality_passport,
-    get_batch_header_summary_spec,
-    get_batch_search_spec,
-    get_batch_quality_passport_balance_spec,
-    get_batch_quality_passport_coa_spec,
-    get_batch_quality_passport_lots_spec,
-    get_batch_quality_passport_partial_spec,
-    get_batch_quality_passport_summary_spec,
-    get_customer_delivery_spec,
-    get_customer_exposure_spec,
     get_holds_ledger_spec,
     get_investigation_timeline_spec,
     get_mass_balance_ledger_spec,
-    get_production_history_spec,
-    get_recall_readiness_spec,
-    get_supplier_consumed_lots_spec,
-    get_supplier_exposure_spec,
-    get_supplier_sibling_batches_spec,
-    get_mass_balance_spec,
     get_trace_graph_recursive_spec,
-    map_batch_header_rows,
-    map_batch_search_rows,
-    map_customer_delivery_rows,
-    map_customer_exposure_rows,
     map_holds_ledger_rows,
     map_investigation_timeline_rows,
     map_mass_balance_ledger_rows,
-    map_production_history_rows,
-    map_recall_readiness_rows,
-    map_supplier_batch_view,
-    map_supplier_exposure_rows,
-    map_mass_balance_rows,
     map_trace_graph,
 )
 from contracts.generated import (
@@ -78,8 +54,10 @@ from contracts.generated import (
     TraceGraph,
 )
 from routes._databricks import (
+    build_databricks_repository,
     build_user_identity,
     require_databricks_config,
+    run_repository_fetch,
     run_query,
     set_databricks_response_headers,
 )
@@ -182,11 +160,11 @@ async def batch_header(
             batch_id=body.batch_id,
             plant_id=body.plant_id,
         )
-        rows, spec = await run_query(
-            lambda: get_batch_header_summary_spec(request),
-            identity, host, warehouse_id,
+        repository = build_databricks_repository(identity, host, warehouse_id)
+        trace_repo = Trace2Repository(repository)
+        result, spec = await run_repository_fetch(
+            lambda: trace_repo.fetch_batch_header(request)
         )
-        result = map_batch_header_rows(rows)
         if result is None:
             raise HTTPException(status_code=404, detail="Batch not found")
         set_databricks_response_headers(response, spec)
@@ -237,11 +215,15 @@ async def batch_search(
         material_id=material_id,
         batch_id=batch_id,
     )
-    rows, spec = await run_query(
-        lambda: get_batch_search_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_batch_search(
+            request,
+            display_query=body.query,
+            max_rows=max_rows,
+        )
     )
-    result = map_batch_search_rows(rows, body.query, max_rows)
     set_databricks_response_headers(response, spec)
     return result
 
@@ -404,11 +386,11 @@ async def customer_exposure(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_customer_exposure_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_customer_exposure(request)
     )
-    result = map_customer_exposure_rows(rows)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -473,11 +455,11 @@ async def customer_deliveries(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_customer_delivery_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_customer_delivery(request)
     )
-    result = map_customer_delivery_rows(rows)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -543,11 +525,11 @@ async def supplier_exposure(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_supplier_exposure_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_supplier_exposure(request)
     )
-    result = map_supplier_exposure_rows(rows)
     set_databricks_response_headers(response, spec)
     return result
 
@@ -598,11 +580,14 @@ async def production_history(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_production_history_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_production_history(
+            request,
+            material_id=body.material_id,
+        )
     )
-    result = map_production_history_rows(rows, body.material_id)
     set_databricks_response_headers(response, spec)
     return result
 
@@ -659,11 +644,12 @@ async def mass_balance(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_mass_balance_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_mass_balance(request)
     )
-    if not rows:
+    if not result["movements"]:
         raise HTTPException(
             status_code=404,
             detail=(
@@ -671,7 +657,6 @@ async def mass_balance(
                 "do not interpret as a balanced mass balance until source coverage is validated."
             ),
         )
-    result = map_mass_balance_rows(rows)
     set_databricks_response_headers(response, spec)
     return result
 
@@ -736,11 +721,11 @@ async def recall_readiness(
         max_rows=max_rows,
     )
 
-    rows, spec = await run_query(
-        lambda: get_recall_readiness_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_recall_readiness(request)
     )
-    result = map_recall_readiness_rows(rows)
     if result is None:
         raise HTTPException(
             status_code=404,
@@ -804,23 +789,11 @@ async def supplier_batches(
         max_rows=max_rows,
     )
 
-    consumed_rows, consumed_spec = await run_query(
-        lambda: get_supplier_consumed_lots_spec(request),
-        identity, host, warehouse_id,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, consumed_spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_supplier_batches(request)
     )
-
-    vendor_batches = sorted({
-        str(r.get("vendor_batch") or "")
-        for r in consumed_rows
-        if r.get("vendor_batch")
-    })
-
-    sibling_rows, _ = await run_query(
-        lambda: get_supplier_sibling_batches_spec(request, vendor_batches),
-        identity, host, warehouse_id,
-    )
-
-    result = map_supplier_batch_view(consumed_rows, sibling_rows)
     # Use the consumed-lots spec for response headers (it carries the primary
     # source-badge `view:gold_batch_lineage`).
     set_databricks_response_headers(response, consumed_spec)
@@ -881,30 +854,10 @@ async def batch_quality_passport(
         plant_id=body.plant_id,
     )
 
-    identity_rows, spec = await run_query(
-        lambda: get_batch_quality_passport_partial_spec(request),
-        identity, host, warehouse_id,
-    )
-
-    coa_rows, _ = await run_query(
-        lambda: get_batch_quality_passport_coa_spec(request),
-        identity, host, warehouse_id,
-    )
-    lot_rows, _ = await run_query(
-        lambda: get_batch_quality_passport_lots_spec(request),
-        identity, host, warehouse_id,
-    )
-    summary_rows, _ = await run_query(
-        lambda: get_batch_quality_passport_summary_spec(request),
-        identity, host, warehouse_id,
-    )
-    balance_rows, _ = await run_query(
-        lambda: get_batch_quality_passport_balance_spec(request),
-        identity, host, warehouse_id,
-    )
-
-    result = build_batch_quality_passport(
-        identity_rows, coa_rows, lot_rows, summary_rows, balance_rows,
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    trace_repo = Trace2Repository(repository)
+    result, spec = await run_repository_fetch(
+        lambda: trace_repo.fetch_batch_quality_passport(request)
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Batch not found")
