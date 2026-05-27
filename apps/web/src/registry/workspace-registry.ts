@@ -2,7 +2,7 @@ import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration, traceAppRegistration, traceConsumerRegistration } from '@connectio/di-traceability'
 import { batchReleaseRegistration, connectedQualityLabBoardStandaloneRegistration } from '@connectio/di-quality'
 import { operationsPlanRiskRegistration, processOrderReviewRegistration, pohConsumerRegistration } from '@connectio/di-operations'
-import { envmonRegistration } from '@connectio/di-envmon'
+import { envmonRegistration, envmonConsumerRegistration } from '@connectio/di-envmon'
 import { productionStagingRegistration } from '@connectio/di-warehouse'
 import { spcMonitoringRegistration, spcConsumerRegistration } from '@connectio/di-spc'
 import { warehouse360Registration } from '@connectio/di-warehouse'
@@ -39,6 +39,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 4 — Environmental Monitoring (fully implemented)
   envmonRegistration,
+
+  // Environmental Monitoring Consumer (pilot)
+  envmonConsumerRegistration,
 
   // Phase 4 — Production Staging (fully implemented)
   productionStagingRegistration,

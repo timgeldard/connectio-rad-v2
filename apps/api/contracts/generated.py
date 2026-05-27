@@ -1327,6 +1327,67 @@ class EnvMonKpiSummary(BaseModel):
     """
 
 
+class Point1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    x: float
+    """
+    [classification: application-heuristic]
+    """
+    y: float
+    """
+    [classification: application-heuristic]
+    """
+
+
+class EnvMonL4Zone(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    zone_id: str = Field(..., alias='zoneId')
+    """
+    [classification: source-field]
+    """
+    label: str
+    """
+    [classification: source-field]
+    """
+    points: list[Point1]
+    """
+    [classification: application-heuristic]
+    """
+
+
+class EnvMonL5Coordinate(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    location_id: str = Field(..., alias='locationId')
+    """
+    [classification: source-field]
+    """
+    label: str
+    """
+    [classification: source-field]
+    """
+    parent_zone_id: str = Field(..., alias='parentZoneId')
+    """
+    [classification: source-field]
+    """
+    x: float
+    """
+    [classification: application-heuristic]
+    """
+    y: float
+    """
+    [classification: application-heuristic]
+    """
+
+
 class EnvMonNativeSwabResult(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -1445,6 +1506,21 @@ class EnvMonNativeSwabResult(BaseModel):
     process_order_id: Optional[str] = Field(..., alias='processOrderId')
     """
     [classification: source-field]
+    """
+
+
+class EnvMonPoint(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+        populate_by_name=True,
+    )
+    x: float
+    """
+    [classification: application-heuristic]
+    """
+    y: float
+    """
+    [classification: application-heuristic]
     """
 
 
@@ -6094,7 +6170,7 @@ class SPCSubgroupPoint(BaseModel):
     """
 
 
-class Point1(BaseModel):
+class Point2(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
         populate_by_name=True,
@@ -6154,7 +6230,7 @@ class SPCSubgroupResponse(BaseModel):
     """
     [classification: source-field]
     """
-    points: list[Point1]
+    points: list[Point2]
     locked_limits: None = Field(..., alias='lockedLimits')
     """
     [classification: unavailable]

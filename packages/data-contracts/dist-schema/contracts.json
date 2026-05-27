@@ -2237,6 +2237,80 @@
       ],
       "additionalProperties": false
     },
+    "EnvMonL4Zone": {
+      "type": "object",
+      "properties": {
+        "zoneId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "label": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "[classification: application-heuristic]"
+              },
+              "y": {
+                "type": "number",
+                "description": "[classification: application-heuristic]"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "description": "[classification: application-heuristic]"
+        }
+      },
+      "required": [
+        "zoneId",
+        "label",
+        "points"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonL5Coordinate": {
+      "type": "object",
+      "properties": {
+        "locationId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "label": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "parentZoneId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "x": {
+          "type": "number",
+          "description": "[classification: application-heuristic]"
+        },
+        "y": {
+          "type": "number",
+          "description": "[classification: application-heuristic]"
+        }
+      },
+      "required": [
+        "locationId",
+        "label",
+        "parentZoneId",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
     "EnvMonNativeSwabResult": {
       "type": "object",
       "properties": {
@@ -2511,6 +2585,24 @@
         "materialId",
         "batchId",
         "processOrderId"
+      ],
+      "additionalProperties": false
+    },
+    "EnvMonPoint": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "[classification: application-heuristic]"
+        },
+        "y": {
+          "type": "number",
+          "description": "[classification: application-heuristic]"
+        }
+      },
+      "required": [
+        "x",
+        "y"
       ],
       "additionalProperties": false
     },

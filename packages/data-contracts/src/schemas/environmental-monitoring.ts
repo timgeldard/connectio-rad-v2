@@ -248,3 +248,32 @@ export const EnvMonKpiSummarySchema = z.object({
 })
 
 export type EnvMonKpiSummary = z.infer<typeof EnvMonKpiSummarySchema>
+
+// ---------------------------------------------------------------------------
+// EnvMonL4Zone & EnvMonL5Coordinate
+// ---------------------------------------------------------------------------
+
+export const EnvMonPointSchema = z.object({
+  x: z.number().describe('[classification: application-heuristic]'),
+  y: z.number().describe('[classification: application-heuristic]'),
+})
+
+export type EnvMonPoint = z.infer<typeof EnvMonPointSchema>
+
+export const EnvMonL4ZoneSchema = z.object({
+  zoneId: z.string().describe('[classification: source-field]'),
+  label: z.string().describe('[classification: source-field]'),
+  points: z.array(EnvMonPointSchema).describe('[classification: application-heuristic]'),
+})
+
+export type EnvMonL4Zone = z.infer<typeof EnvMonL4ZoneSchema>
+
+export const EnvMonL5CoordinateSchema = z.object({
+  locationId: z.string().describe('[classification: source-field]'),
+  label: z.string().describe('[classification: source-field]'),
+  parentZoneId: z.string().describe('[classification: source-field]'),
+  x: z.number().describe('[classification: application-heuristic]'),
+  y: z.number().describe('[classification: application-heuristic]'),
+})
+
+export type EnvMonL5Coordinate = z.infer<typeof EnvMonL5CoordinateSchema>
