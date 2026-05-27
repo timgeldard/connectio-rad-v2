@@ -310,6 +310,12 @@ export function resolveTraceConsumerSearch(
     })
     const materials = Object.values(materialsMap).sort(compareMatchedMaterials)
     const batchIds = new Set(materials.map(material => material.batchId))
+
+    if (materials.length === 1) {
+      const only = materials[0]
+      return resolveTraceConsumerSelection(only.materialId, only.batchId, only.plants)
+    }
+
     return {
       step: 'materials-for-batch',
       materials,

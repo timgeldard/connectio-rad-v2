@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runtime'
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { MassBalanceLedger, MassBalanceEvent } from '@connectio/data-contracts'
@@ -231,7 +231,7 @@ function RunningChart({ events }: { events: readonly MassBalanceEvent[] }) {
           Running on hand
         </span>
         <span style={{ fontSize: 11, color: 'var(--shell-fg-2)', fontFamily: 'monospace' }}>
-          {events.length} postings
+          {events.length} movements
         </span>
       </div>
       <svg
@@ -263,6 +263,13 @@ function RunningChart({ events }: { events: readonly MassBalanceEvent[] }) {
   )
 }
 
+type GroupedEvent = {
+  key: string
+  date: string
+  code: MassBalanceEvent['code']
+  delta: number
+}
+
 function EventLedger({
   events,
   ledger,
@@ -270,6 +277,25 @@ function EventLedger({
   events: readonly MassBalanceEvent[]
   ledger: MassBalanceLedger
 }) {
+  const groups = useMemo<GroupedEvent[]>(() => {
+    const map = new Map<string, GroupedEvent>()
+    for (const e of events) {
+      const date = e.date ?? ''
+      const key = `${date}::${e.code}`
+      const existing = map.get(key)
+      if (existing) {
+        existing.delta += e.delta
+      } else {
+        map.set(key, { key, date, code: e.code, delta: e.delta })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.date < b.date) return -1
+      if (a.date > b.date) return 1
+      return a.code.localeCompare(b.code)
+    })
+  }, [events])
+
   return (
     <div>
       <div
@@ -291,7 +317,7 @@ function EventLedger({
             color: 'var(--valentia-slate, #005776)',
           }}
         >
-          Movement ledger
+          Movement summary
         </span>
         <span
           style={{
@@ -308,16 +334,14 @@ function EventLedger({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead>
             <tr style={{ background: 'var(--shell-surface-2, #F8F7F0)' }}>
-              <Th>Day</Th>
-              <Th>Code</Th>
-              <Th>Event</Th>
-              <Th align="right">Delta</Th>
-              <Th align="right">Running</Th>
+              <Th>Date</Th>
+              <Th>Movement</Th>
+              <Th align="right">Net qty</Th>
             </tr>
           </thead>
           <tbody>
-            {events.map((e) => (
-              <tr key={e.d} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
+            {groups.map((g) => (
+              <tr key={g.key} style={{ borderBottom: '1px solid var(--shell-line, #E5E3D7)' }}>
                 <td
                   style={{
                     padding: '7px 12px',
@@ -325,7 +349,7 @@ function EventLedger({
                     color: 'var(--shell-fg-2)',
                   }}
                 >
-                  +{e.d}d
+                  {g.date || '—'}
                 </td>
                 <td style={{ padding: '7px 12px' }}>
                   <span
@@ -335,7 +359,7 @@ function EventLedger({
                       gap: 6,
                       fontSize: 11,
                       fontWeight: 600,
-                      color: CODE_COLORS[e.code],
+                      color: CODE_COLORS[g.code],
                     }}
                   >
                     <span
@@ -343,28 +367,24 @@ function EventLedger({
                         width: 8,
                         height: 8,
                         borderRadius: 999,
-                        background: CODE_COLORS[e.code],
+                        background: CODE_COLORS[g.code],
                         display: 'inline-block',
                       }}
                     />
-                    {e.code} · {CODE_LABELS[e.code]}
+                    {CODE_LABELS[g.code]}
                   </span>
                 </td>
-                <td style={{ padding: '7px 12px' }}>{e.label}</td>
                 <td
                   style={{
                     padding: '7px 12px',
                     textAlign: 'right',
                     fontFamily: 'monospace',
-                    color: e.delta < 0 ? '#c63b00' : '#1a8454',
+                    color: g.delta < 0 ? '#c63b00' : '#1a8454',
                     fontWeight: 600,
                   }}
                 >
-                  {e.delta > 0 ? '+' : ''}
-                  {e.delta.toLocaleString()}
-                </td>
-                <td style={{ padding: '7px 12px', textAlign: 'right', fontFamily: 'monospace' }}>
-                  {e.cum.toLocaleString()}
+                  {g.delta > 0 ? '+' : ''}
+                  {g.delta.toLocaleString()}
                 </td>
               </tr>
             ))}

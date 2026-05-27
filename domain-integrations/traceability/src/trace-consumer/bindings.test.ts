@@ -60,14 +60,15 @@ describe('resolveTraceConsumerSearch', () => {
     expect(emmental?.plants.map(plant => plant.id)).toEqual(['IE10', 'IE11'])
   })
 
-  it('matches process order ids', () => {
+  it('matches process order ids and skips material confirmation when uniquely matched', () => {
     const result = resolveTraceConsumerSearch('PO-240308-1189', TRACE_CONSUMER_SEARCH_FIXTURES)
 
-    expect(result.step).toBe('materials-for-batch')
-    if (result.step !== 'materials-for-batch') return
-    expect(result.materials).toHaveLength(1)
-    expect(result.materials[0].processOrderId).toBe('PO-240308-1189')
-    expect(result.materials[0].batchId).toBe('CH-240308-0047')
+    // Single material match → auto-skip material step and go to plant selection
+    expect(result.step).toBe('select-plant')
+    if (result.step !== 'select-plant') return
+    expect(result.materialId).toBe('100023847')
+    expect(result.batchId).toBe('CH-240308-0047')
+    expect(result.plants.map(p => p.id)).toEqual(['IE10', 'IE11'])
   })
 
   it('does not resolve unknown batch-like input without complete context', () => {

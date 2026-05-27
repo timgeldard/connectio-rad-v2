@@ -402,7 +402,7 @@ export function TraceConsumerWorkspace() {
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'var(--forest)',
+    background: 'var(--brand)',
     color: 'var(--white)',
     padding: '24px 32px',
     display: 'flex',
@@ -712,12 +712,12 @@ export function TraceConsumerWorkspace() {
                   ← Back to Search
                 </Button>
                 <h1 className="t-impact" style={{ fontSize: 'var(--fs-24)', color: 'var(--white)', margin: 0 }}>
-                  Genealogy Overview
+                  Traceability Overview
                 </h1>
               </div>
               {batchHeader && (
                 <div style={{ fontSize: 'var(--fs-13)', color: 'var(--stone)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
-                  Material: {batchHeader.materialDescription} ({batchHeader.materialId}) | Batch: {batchHeader.batchId} | Plant: {batchHeader.plantId}
+                  Material: {batchHeader.materialDescription} ({batchHeader.materialId}) | Batch: {batchHeader.batchId} | Plant: {batchHeader.plantName} ({batchHeader.plantId})
                 </div>
               )}
             </div>

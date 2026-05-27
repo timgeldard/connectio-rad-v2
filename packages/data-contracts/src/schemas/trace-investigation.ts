@@ -53,6 +53,7 @@ export const BatchHeaderSummarySchema = z.object({
   uom: z.string().optional().describe('[classification: source-field]'),
   manufactureDate: z.string().datetime().optional().describe('[classification: source-field]'),
   expiryDate: z.string().datetime().optional().describe('[classification: source-field]'),
+  vendorBatchId: z.string().optional().describe('[classification: source-field]'),
   processOrderId: z.string().nullable().optional().describe('[classification: source-field]'),
   // Individual stock bucket quantities — sourced from gold_batch_stock_v (all columns verified live 2026-05-19).
   // All optional: absent means the source row did not return a value, not that the stock is zero.

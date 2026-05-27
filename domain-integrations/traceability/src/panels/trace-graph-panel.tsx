@@ -102,6 +102,11 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
           {node.plantId}
         </div>
       )}
+      {node.quantity != null && (
+        <div style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+          {node.quantity.toLocaleString()} {node.uom ?? ''}
+        </div>
+      )}
       {node.status === 'unresolved' && (
         <div style={{ display: 'flex', marginTop: 4 }}>
           <span style={{ fontSize: 9, color: 'var(--status-bad)', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
@@ -117,7 +122,7 @@ const nodeTypes = { traceNode: TraceNodeCard }
 // Selected node detail panel
 // ---------------------------------------------------------------------------
 
-function SelectedNodeDetail({ node, graphEdges, nodes, baseRequest, onClose }: { node: TraceNode; graphEdges: TraceEdge[]; nodes: TraceNode[]; baseRequest: Trace2AdapterRequest; onClose: () => void }) {
+function SelectedNodeDetail({ node, graphEdges, baseRequest, onClose }: { node: TraceNode; graphEdges: TraceEdge[]; baseRequest: Trace2AdapterRequest; onClose: () => void }) {
   const inboundEdges = graphEdges.filter(e => e.target === node.id)
   const outboundEdges = graphEdges.filter(e => e.source === node.id)
 
@@ -130,9 +135,7 @@ function SelectedNodeDetail({ node, graphEdges, nodes, baseRequest, onClose }: {
   const { data: batchHeader } = useBatchHeaderSummary(nodeRequest, { enabled: !!node.batchId })
   const manufactureDate = batchHeader?.ok ? batchHeader.data.manufactureDate : undefined
   const expiryDate = batchHeader?.ok ? batchHeader.data.expiryDate : undefined
-
-  const vendorReceiptEdge = inboundEdges.find(e => e.relationshipType === 'vendor-receipt')
-  const vendorBatch = vendorReceiptEdge ? nodes.find(n => n.id === vendorReceiptEdge.source)?.batchId : undefined
+  const vendorBatch = batchHeader?.ok ? batchHeader.data.vendorBatchId : undefined
 
   return (
     <div aria-label="Selected node details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -483,7 +486,6 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
                     <SelectedNodeDetail
                       node={selectedNode}
                       graphEdges={directedGraph?.edges ?? []}
-                      nodes={directedGraph?.nodes ?? []}
                       baseRequest={request}
                       onClose={() => setSelectedId(null)}
                     />
