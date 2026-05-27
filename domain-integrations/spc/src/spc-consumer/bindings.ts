@@ -4,6 +4,7 @@ export interface ResolvedSPCConsumerRequest {
   readonly materialId: string
   readonly plantId?: string
   readonly characteristicId?: string
+  readonly operationId?: string
   readonly batchId?: string
 }
 
@@ -28,6 +29,7 @@ export interface SPCConsumerPlantOption {
 export interface SPCConsumerCharOption {
   readonly characteristicId: string
   readonly characteristicName: string
+  readonly operationId?: string
 }
 
 export type SPCConsumerSearchResult =

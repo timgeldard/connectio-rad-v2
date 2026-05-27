@@ -32,11 +32,18 @@ async function proxyGet(
   path: string,
   params: Record<string, string>,
 ): Promise<unknown> {
-  const url = new URL(`${baseUrl}${path}`)
-  for (const [key, val] of Object.entries(params)) {
-    if (val) url.searchParams.set(key, val)
+  let href: string
+  if (baseUrl) {
+    const url = new URL(`${baseUrl}${path}`)
+    for (const [key, val] of Object.entries(params)) {
+      if (val) url.searchParams.set(key, val)
+    }
+    href = url.toString()
+  } else {
+    const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)))
+    href = qs.toString() ? `${path}?${qs}` : path
   }
-  const response = await fetch(url.toString(), { method: 'GET', credentials: 'include' })
+  const response = await fetch(href, { method: 'GET', credentials: 'include' })
   if (!response.ok) throw { status: response.status }
   return response.json()
 }
