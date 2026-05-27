@@ -178,6 +178,12 @@ at least 1 or construction raises `ValueError`.
 
 Tests live in `apps/api/tests/shared/test_query_executor.py`.
 
+## Completion Audit
+
+See [`databricks-repository-completion-audit.md`](./databricks-repository-completion-audit.md)
+for the current inventory of remaining route-owned native Databricks paths and
+the recommended follow-up PR slicing.
+
 ## Third adapter migration
 
 Migrated adapter:
