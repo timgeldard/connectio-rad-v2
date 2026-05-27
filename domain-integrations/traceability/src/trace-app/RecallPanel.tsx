@@ -44,8 +44,8 @@ const STATUS_LABELS: Record<keyof typeof STATUS_TONES, string> = {
   'delivery-evidence': 'Dispatched',
   delivered: 'Delivered',
   'in-transit': 'In transit',
-  recalled: 'recalled',
-  blocked: 'blocked',
+  recalled: 'Recalled',
+  blocked: 'Blocked',
   unknown: 'Unknown',
 }
 
@@ -82,7 +82,7 @@ export function RecallPanel({ request }: RecallPanelProps) {
               padding: 14,
               background: data.recommendationStatus === 'recommended' ? 'color-mix(in srgb, var(--status-bad) 10%, white)' : 'color-mix(in srgb, var(--status-good) 10%, white)',
               borderLeft: `4px solid ${data.recommendationStatus === 'recommended' ? 'var(--status-bad)' : 'var(--status-good)'}`,
-              borderRadius: 'var(--r-sm)',
+              borderRadius: 'var(--radius-sm)',
               color: 'var(--forest)',
               fontSize: 'var(--fs-13)',
               fontWeight: 'var(--fw-medium)',

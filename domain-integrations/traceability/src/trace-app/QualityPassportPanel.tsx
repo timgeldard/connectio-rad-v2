@@ -198,25 +198,12 @@ export function QualityPassportPanel({
 
             <TabsContent value="stock">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(285px, 1fr))',
-                    gap: 20,
-                  }}
-                >
-                  <div>
-                    <SectionTitle num="03" label="Stock by category" />
-                    <StockBreakdown stock={data.stock} />
-                  </div>
-                  <div>
-                    <SectionTitle num="04" label="Production context" />
-                    <ProductionContext production={data.production} isExternal={isExternal} />
-                  </div>
-                </div>
+                <Section num="03" label="Stock by category">
+                  <StockBreakdown stock={data.stock} />
+                </Section>
 
                 {!isExternal && (
-                  <Section num="05" label="Mass balance variance">
+                  <Section num="04" label="Mass balance variance">
                     <MassBalanceBanner
                       variance={data.massBalance.variance}
                       uom={data.stock.uom}
@@ -230,11 +217,22 @@ export function QualityPassportPanel({
 
             <TabsContent value="production">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <Section num="06" label="Lot history" extra="Last 4 lots">
-                  <div style={{ border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                    <LotHistoryTable rows={data.lotHistory} isExternal={isExternal} />
-                  </div>
-                </Section>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(285px, 1fr))',
+                    gap: 20,
+                  }}
+                >
+                  <Section num="05" label="Production context">
+                    <ProductionContext production={data.production} isExternal={isExternal} />
+                  </Section>
+                  <Section num="06" label="Lot history" extra="Last 4 lots">
+                    <div style={{ border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                      <LotHistoryTable rows={data.lotHistory} isExternal={isExternal} />
+                    </div>
+                  </Section>
+                </div>
               </div>
             </TabsContent>
 
@@ -288,15 +286,16 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
             <span>Quality confidence</span>
             <Badge
               style={{
-                background: 'var(--brand)',
-                color: 'var(--white)',
+                background: data.quality.confidenceSource === 'application-heuristic' ? 'color-mix(in srgb, var(--status-warn) 15%, white)' : 'var(--brand)',
+                color: data.quality.confidenceSource === 'application-heuristic' ? 'var(--status-warn)' : 'var(--white)',
                 fontSize: 9,
                 padding: '2px 6px',
                 borderRadius: 'var(--radius-sm)',
                 fontFamily: 'var(--font-mono)',
               }}
+              title={data.quality.confidenceSource === 'application-heuristic' ? "This score is application-derived from MIC pass/fail and warning counts. It is not a governed SAP/QM field." : undefined}
             >
-              DATABRICKS API
+              {data.quality.confidenceSource === 'application-heuristic' ? 'HEURISTIC' : 'GOVERNED'}
             </Badge>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
@@ -312,7 +311,7 @@ function HeroBand({ data }: { data: BatchQualityPassport }) {
           </div>
         </div>
         <div style={{ fontSize: 10, color: 'var(--fg-muted)', marginTop: 10, fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
-          Source: Databricks API (SAP QM)
+          Source: {data.quality.confidenceSource === 'application-heuristic' ? 'Application Heuristic (SAP QM proxy)' : 'Databricks API (SAP QM)'}
         </div>
       </div>
       <KpiTile label="Lots produced" value={data.lotHistory.length} sub="over 4 days" />

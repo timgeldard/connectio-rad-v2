@@ -186,7 +186,7 @@ export function TraceConsumerWorkspace() {
     } else {
       setChatMessages([])
     }
-  }, [request, graphQuery.data?.ok, batchHeaderQuery.data?.ok])
+  }, [request, graphQuery.data, batchHeaderQuery.data])
 
   const handleSendChat = (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault()
