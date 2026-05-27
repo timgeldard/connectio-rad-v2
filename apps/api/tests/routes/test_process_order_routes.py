@@ -1030,3 +1030,73 @@ class TestOrderGoodsMovementsDatabricksMode:
                     headers=_HEADERS_WITH_TOKEN,
                 )
         assert "user-bearer-token" not in response.text
+
+
+# ---------------------------------------------------------------------------
+# POST /api/por/order-search — databricks-api only
+# ---------------------------------------------------------------------------
+
+class TestProcessOrderSearch:
+    def _databricks_env(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "databricks-api")
+        monkeypatch.setenv("DATABRICKS_HOST", "https://mock.cloud.databricks.com")
+        monkeypatch.setenv("SQL_WAREHOUSE_ID", "mock-warehouse-id")
+        monkeypatch.setenv("POH_CATALOG", "connected_plant_uat")
+
+    async def test_returns_503_in_legacy_api_mode(self, monkeypatch) -> None:
+        monkeypatch.setenv("BACKEND_ADAPTER_MODE", "legacy-api")
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/por/order-search",
+                json={"query": "block"},
+                headers=_HEADERS_WITH_TOKEN,
+            )
+        assert response.status_code == 503
+        assert "Process order search requires BACKEND_ADAPTER_MODE=databricks-api" in response.json()["detail"]
+
+    async def test_returns_401_on_missing_auth(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        async with _make_client() as client:
+            response = await client.post(
+                "/api/por/order-search",
+                json={"query": "block"},
+            )
+        assert response.status_code == 401
+
+    async def test_returns_mapped_search_items_on_success(self, monkeypatch) -> None:
+        self._databricks_env(monkeypatch)
+        fake_rows = [
+            {
+                "process_order_id": "PO-1000",
+                "order_status_raw": "RELEASED",
+                "material_id": "MAT-01",
+                "material_description": "Mock Material 1",
+                "plant_id": "C113",
+                "inspection_lot_id": "LOT-01",
+                "order_id_match": 0,
+                "material_id_match": 0,
+                "description_match": 1,
+            }
+        ]
+        with patch(
+            "shared.query_service.databricks_client.StatementApiDatabricksClient.execute",
+            new_callable=AsyncMock,
+            return_value=fake_rows,
+        ):
+            async with _make_client() as client:
+                response = await client.post(
+                    "/api/por/order-search",
+                    json={"query": "Mock"},
+                    headers=_HEADERS_WITH_TOKEN,
+                )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert len(data["items"]) == 1
+        item = data["items"][0]
+        assert item["processOrderId"] == "PO-1000"
+        assert item["materialId"] == "MAT-01"
+        assert item["plantId"] == "C113"
+        assert item["orderStatus"] == "released"
+        assert "description" in item["matchTypes"]
+

@@ -10,8 +10,10 @@ import type {
   ProcessOrderConfirmation,
   ProcessOrderGoodsMovement,
   ProcessOrderReviewAdapterRequest,
+  ProcessOrderSearchRequest,
+  ProcessOrderSearchResponse,
 } from '@connectio/data-contracts'
-export type { ProcessOrderReviewAdapterRequest }
+export type { ProcessOrderReviewAdapterRequest, ProcessOrderSearchRequest, ProcessOrderSearchResponse }
 import type { AdapterResult, AdapterError } from '@connectio/source-adapters'
 import {
   mockProcessOrderReviewContext,
@@ -111,6 +113,59 @@ export class ProcessOrderReviewAdapter {
     _request: ProcessOrderReviewAdapterRequest
   ): Promise<AdapterResult<ProcessOrderGoodsMovement[]>> {
     return ok(mockOrderGoodsMovements, this.now)
+  }
+
+  async searchOrders(
+    request: ProcessOrderSearchRequest
+  ): Promise<AdapterResult<ProcessOrderSearchResponse>> {
+    const items = [
+      {
+        processOrderId: 'PO-240308-3847',
+        materialId: 'MAT-CH-EMMENTAL-BLOCK',
+        materialDescription: 'Emmental Cheese Block 4kg',
+        batchId: 'CH-240308-0047',
+        plantId: 'IE10',
+        plantName: 'Kerry Listowel (IE10)',
+        orderStatus: 'released',
+        plannedQuantity: 10000,
+        confirmedQuantity: 9800,
+        uom: 'KG',
+        plannedStart: '2026-05-27T06:00:00Z',
+        plannedFinish: '2026-05-27T14:00:00Z',
+        matchTypes: ['process-order-id', 'material-id', 'description'] as any[],
+      },
+      {
+        processOrderId: '7006965038',
+        materialId: 'MAT-RM-MILK-STD',
+        materialDescription: 'Standardised Whole Milk',
+        batchId: 'B-MILK-9842',
+        plantId: 'C113',
+        plantName: 'Kerry Cork (C113)',
+        orderStatus: 'confirmed',
+        plannedQuantity: 50000,
+        confirmedQuantity: 50120,
+        uom: 'L',
+        plannedStart: '2026-05-26T22:00:00Z',
+        plannedFinish: '2026-05-27T04:00:00Z',
+        matchTypes: ['process-order-id'] as any[],
+      }
+    ]
+
+    const query = request.query.toLowerCase()
+    const filtered = items.filter(
+      item =>
+        item.processOrderId.toLowerCase().includes(query) ||
+        item.materialId.toLowerCase().includes(query) ||
+        item.materialDescription.toLowerCase().includes(query) ||
+        (item.batchId && item.batchId.toLowerCase().includes(query))
+    )
+
+    return ok({
+      items: filtered,
+      total: filtered.length,
+      truncated: false,
+      wildcardApplied: query.includes('*'),
+    }, this.now)
   }
 }
 

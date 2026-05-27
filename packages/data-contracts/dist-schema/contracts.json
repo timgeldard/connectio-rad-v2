@@ -6419,6 +6419,388 @@
       ],
       "additionalProperties": false
     },
+    "ProcessOrderSearchItem": {
+      "type": "object",
+      "properties": {
+        "processOrderId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "materialId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "materialDescription": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "batchId": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "plantId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "plantName": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "orderStatus": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "plannedQuantity": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "confirmedQuantity": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "uom": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "plannedStart": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "plannedFinish": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "not": {}
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "[classification: source-field]"
+        },
+        "matchTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "process-order-id",
+              "material-id",
+              "description",
+              "batch-id"
+            ]
+          },
+          "description": "[classification: application-derived]"
+        }
+      },
+      "required": [
+        "processOrderId",
+        "materialId",
+        "materialDescription",
+        "plantId",
+        "plantName",
+        "orderStatus",
+        "matchTypes"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderSearchMatchType": {
+      "type": "string",
+      "enum": [
+        "process-order-id",
+        "material-id",
+        "description",
+        "batch-id"
+      ]
+    },
+    "ProcessOrderSearchRequest": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "[classification: application-derived]"
+        },
+        "maxRows": {
+          "type": "integer",
+          "description": "[classification: application-derived]"
+        },
+        "materialId": {
+          "type": "string",
+          "description": "[classification: application-derived]"
+        },
+        "batchId": {
+          "type": "string",
+          "description": "[classification: application-derived]"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessOrderSearchResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "processOrderId": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "materialId": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "materialDescription": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "batchId": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "plantId": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "plantName": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "orderStatus": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "plannedQuantity": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "confirmedQuantity": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "uom": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "plannedStart": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "plannedFinish": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "[classification: source-field]"
+              },
+              "matchTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "process-order-id",
+                    "material-id",
+                    "description",
+                    "batch-id"
+                  ]
+                },
+                "description": "[classification: application-derived]"
+              }
+            },
+            "required": [
+              "processOrderId",
+              "materialId",
+              "materialDescription",
+              "plantId",
+              "plantName",
+              "orderStatus",
+              "matchTypes"
+            ],
+            "additionalProperties": false
+          },
+          "description": "[classification: source-derived]"
+        },
+        "total": {
+          "type": "integer",
+          "description": "[classification: source-derived]"
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "[classification: source-derived]"
+        },
+        "wildcardApplied": {
+          "type": "boolean",
+          "description": "[classification: source-derived]"
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "truncated",
+        "wildcardApplied"
+      ],
+      "additionalProperties": false
+    },
     "ProcessOrderSummary": {
       "type": "object",
       "properties": {

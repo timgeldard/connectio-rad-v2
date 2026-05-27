@@ -183,3 +183,8 @@ export type { ProcessOrderReviewActionsPanelProps } from './actions/process-orde
 
 export { OrderHistoryView } from './views/order-history-view.js'
 export type { OrderHistoryViewProps } from './views/order-history-view.js'
+
+// Consumer POH Workspace
+export { pohConsumerRegistration } from './poh-consumer-registration.js'
+export { ProcessOrderConsumerWorkspace, ProcessOrderConsumerApp } from './poh-consumer/app.js'
+

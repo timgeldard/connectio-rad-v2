@@ -26,12 +26,15 @@ from adapters.poh.poh_databricks_adapter import (
     map_order_goods_movements_rows,
     map_order_operations_rows,
     map_process_order_header_rows,
+    ProcessOrderSearchRequest as AdapterSearchRequest,
 )
 from contracts.generated import (
     ProcessOrderConfirmation,
     ProcessOrderGoodsMovement,
     ProcessOrderHeader,
     ProcessOrderOperation,
+    ProcessOrderSearchRequest,
+    ProcessOrderSearchResponse,
 )
 from routes._databricks import (
     build_databricks_repository,
@@ -224,3 +227,42 @@ async def order_goods_movements(
     rows, spec = await run_repository_fetch(lambda: poh_repo.fetch_order_goods_movements(req))
     set_databricks_response_headers(response, spec)
     return map_order_goods_movements_rows(rows)
+
+
+@router.post("/por/order-search", response_model=ProcessOrderSearchResponse)
+async def order_search(
+    body: ProcessOrderSearchRequest,
+    response: Response,
+    x_forwarded_access_token: str | None = Header(default=None),
+    x_forwarded_user: str | None = Header(default=None),
+    x_forwarded_email: str | None = Header(default=None),
+) -> dict:
+    """POST /api/por/order-search — Databricks-backed consumer process order search."""
+    backend_mode = os.getenv("BACKEND_ADAPTER_MODE", "legacy-api")
+    if backend_mode != "databricks-api":
+        raise HTTPException(
+            status_code=503,
+            detail="Process order search requires BACKEND_ADAPTER_MODE=databricks-api",
+        )
+
+    host, warehouse_id = require_databricks_config()
+    identity = build_user_identity(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    repository = build_databricks_repository(identity, host, warehouse_id)
+    poh_repo = PohRepository(repository)
+
+    req = AdapterSearchRequest(
+        query=body.query,
+        max_rows=body.max_rows or 50,
+        material_id=body.material_id,
+        batch_id=body.batch_id,
+    )
+    result, spec = await run_repository_fetch(
+        lambda: poh_repo.fetch_order_search(
+            req,
+            display_query=body.query,
+            max_rows=body.max_rows or 50,
+        )
+    )
+    set_databricks_response_headers(response, spec)
+    return result
+

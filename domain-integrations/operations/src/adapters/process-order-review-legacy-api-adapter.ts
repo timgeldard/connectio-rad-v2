@@ -1,4 +1,4 @@
-import type { ProcessOrderHeader } from '@connectio/data-contracts'
+import type { ProcessOrderHeader, ProcessOrderSearchRequest, ProcessOrderSearchResponse } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewAdapter } from './process-order-review-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
@@ -85,6 +85,65 @@ export class ProcessOrderReviewLegacyApiAdapter extends ProcessOrderReviewAdapte
       }
 
       return { ok: true, data: mapped, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        error: { code: 'unknown', message, retryable: true },
+        displayState: 'error',
+        source: 'legacy-api',
+      }
+    }
+  }
+
+  override async searchOrders(
+    request: ProcessOrderSearchRequest,
+  ): Promise<AdapterResult<ProcessOrderSearchResponse>> {
+    if (!request.query || !request.query.trim()) {
+      return {
+        ok: true,
+        data: { items: [], total: 0, truncated: false, wildcardApplied: false },
+        fetchedAt: new Date().toISOString(),
+        source: 'legacy-api',
+      }
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/por/order-search`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: request.query,
+          maxRows: request.maxRows ?? 50,
+          materialId: request.materialId,
+          batchId: request.batchId,
+        }),
+      })
+
+      if (!response.ok) {
+        const code =
+          response.status === 401
+            ? ('unauthorized' as const)
+            : response.status === 404
+              ? ('not-found' as const)
+              : response.status === 503
+                ? ('unknown' as const)
+                : ('network' as const)
+        return {
+          ok: false,
+          error: {
+            code,
+            message: `Proxy returned ${response.status}`,
+            retryable: response.status >= 500,
+          },
+          displayState: code === 'unauthorized' ? 'unauthorized' : 'error',
+          source: 'legacy-api',
+        }
+      }
+
+      const data = await response.json()
+      return { ok: true, data, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       return {

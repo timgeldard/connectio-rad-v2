@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { processOrderReviewAdapterInstance as processOrderReviewAdapter } from './process-order-review-adapter-factory.js'
-import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
+import type { ProcessOrderReviewAdapterRequest, ProcessOrderSearchRequest } from './process-order-review-adapter.js'
 
 const STALE = 5 * 60 * 1000
 
@@ -97,3 +97,13 @@ export function useOrderGoodsMovements(request: ProcessOrderReviewAdapterRequest
     staleTime: STALE,
   })
 }
+
+export function useProcessOrderSearch(request: ProcessOrderSearchRequest, options: QueryHookOptions = {}) {
+  return useQuery({
+    queryKey: ['por-search', request.query, request.materialId ?? null, request.batchId ?? null],
+    queryFn: () => processOrderReviewAdapter.searchOrders(request),
+    enabled: Boolean(request.query.trim()) && (options.enabled ?? true),
+    staleTime: STALE,
+  })
+}
+

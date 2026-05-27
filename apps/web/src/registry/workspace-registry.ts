@@ -1,11 +1,10 @@
 import type { WorkspaceRegistration } from '@connectio/product-model'
 import { traceInvestigationRegistration, traceAppRegistration, traceConsumerRegistration } from '@connectio/di-traceability'
 import { batchReleaseRegistration, connectedQualityLabBoardStandaloneRegistration } from '@connectio/di-quality'
-import { operationsPlanRiskRegistration } from '@connectio/di-operations'
+import { operationsPlanRiskRegistration, processOrderReviewRegistration, pohConsumerRegistration } from '@connectio/di-operations'
 import { envmonRegistration } from '@connectio/di-envmon'
 import { productionStagingRegistration } from '@connectio/di-warehouse'
 import { spcMonitoringRegistration, spcConsumerRegistration } from '@connectio/di-spc'
-import { processOrderReviewRegistration } from '@connectio/di-operations'
 import { warehouse360Registration } from '@connectio/di-warehouse'
 import { maintenanceReliabilityRegistration } from '@connectio/di-maintenance'
 
@@ -52,6 +51,9 @@ export const workspaceRegistry: readonly WorkspaceRegistration[] = [
 
   // Phase 5 — Process Order Review (pilot)
   processOrderReviewRegistration,
+
+  // Consumer Process Order History (pilot)
+  pohConsumerRegistration,
 
   // Phase 5 — Warehouse 360 Overview (pilot)
   warehouse360Registration,
