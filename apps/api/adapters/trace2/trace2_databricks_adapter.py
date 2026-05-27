@@ -729,14 +729,14 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
         sql = (
             f"WITH RECURSIVE\n{ds_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
-            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM ds\nLIMIT :max_rows) AS _lin\n"
+            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM ds\nORDER BY hop_depth ASC\nLIMIT :max_rows) AS _lin\n"
             f"{mat_joins}"
         )
     elif request.direction == "upstream":
         sql = (
             f"WITH RECURSIVE\n{us_cte}\n"
             f"SELECT _lin.*,\n{mat_select}\n"
-            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM us\nLIMIT :max_rows) AS _lin\n"
+            f"FROM (SELECT DISTINCT\n{select_cols}\nFROM us\nORDER BY hop_depth ASC\nLIMIT :max_rows) AS _lin\n"
             f"{mat_joins}"
         )
     else:  # both — two independent recursive CTEs in one WITH RECURSIVE block
