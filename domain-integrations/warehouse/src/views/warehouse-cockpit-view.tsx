@@ -3,6 +3,7 @@ import {
   VerificationStatusBanner,
   GovernancePendingBadge,
   UnavailableValue,
+  StatusBadge,
 } from '@connectio/design-system'
 import { EvidenceCaveatList } from '@connectio/evidence-panel-runtime'
 import type { CSSProperties } from 'react'
@@ -307,8 +308,8 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
     }
   }
 
-  const getStatusBadgeColor = (status?: string | null) => {
-    if (!status) return { bg: COLORS.slate100, text: COLORS.slate600 }
+  const getStatusBadgeVariant = (status?: string | null): 'good' | 'warn' | 'bad' | 'info' | 'neutral' => {
+    if (!status) return 'neutral'
     const low = status.toLowerCase()
     if (
       low.includes('completed') ||
@@ -316,7 +317,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       low.includes('staged') ||
       low.includes('delivered')
     ) {
-      return { bg: '#d1fae5', text: COLORS.success }
+      return 'good'
     }
     if (
       low.includes('pending') ||
@@ -324,7 +325,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       low.includes('inbound') ||
       low.includes('staging')
     ) {
-      return { bg: '#eff6ff', text: COLORS.info }
+      return 'info'
     }
     if (
       low.includes('overdue') ||
@@ -332,9 +333,9 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       low.includes('hold') ||
       low.includes('shortage')
     ) {
-      return { bg: COLORS.dangerBg, text: COLORS.danger }
+      return 'bad'
     }
-    return { bg: COLORS.slate100, text: COLORS.slate600 }
+    return 'neutral'
   }
 
   return (
@@ -384,61 +385,89 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         </div>
       </div>
 
-      <VerificationStatusBanner
-        title="Warehouse360 Integration Specifications"
-        status="executable-pending-bv"
-        sourceLabel="Databricks Unity Catalog wh360 Schema"
-        routes={[
-          'GET /api/warehouse360/overview',
-          'GET /api/warehouse360/inbound',
-          'GET /api/warehouse360/outbound',
-          'GET /api/warehouse360/staging',
-          'GET /api/warehouse360/exceptions',
-        ]}
-        sourceObjects={[
-          'wh360_cockpit_summary_v',
-          'wh360_inbound_v',
-          'wh360_deliveries_v',
-          'wh360_process_orders_v',
-          'imwm_exceptions_v',
-        ]}
-        limitations={[
-          'UAT verification pending',
-          'No write-back or transactional executions allowed',
-          'Read-only direct query mode against Unity Catalog views',
-        ]}
-        lastVerified="Pending"
-      />
-
-      {/* Safety Notice Warning */}
-      <div
-        style={{
-          backgroundColor: '#eff6ff',
-          borderLeft: `4px solid ${COLORS.info}`,
-          borderRadius: 8,
-          padding: 16,
-          color: '#1e3a8a',
-          fontSize: 13,
-          fontWeight: 500,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-        }}
-      >
-        <div
+      {/* Technical Specifications Accordion */}
+      <div style={{ ...CARD_STYLE, padding: 12 }}>
+        <button
+          onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
           style={{
-            fontWeight: 700,
-            marginBottom: 4,
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.primary,
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
+            width: '100%',
+            justifyContent: 'space-between',
+            padding: 4,
           }}
         >
-          ℹ️ Read-Only Operational Integrity Assurance
-        </div>
-        This panel operates entirely in <strong>read-only query mode</strong>. No transactions,
-        postings, or inventory write-backs are possible. Dynamic filter variables are executed
-        securely against configured source views: <code>wh360_cockpit_summary_v</code>,{' '}
-        <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>,{' '}
-        <code>wh360_process_orders_v</code>, and <code>imwm_exceptions_v</code>.
+          <span>🛠️ Technical Specifications & Diagnostics</span>
+          <span>{techDetailsExpanded ? '▲ Hide' : '▼ Show Details'}</span>
+        </button>
+
+        {techDetailsExpanded && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <VerificationStatusBanner
+              title="Warehouse360 Integration Specifications"
+              status="executable-pending-bv"
+              sourceLabel="Databricks Unity Catalog wh360 Schema"
+              routes={[
+                'GET /api/warehouse360/overview',
+                'GET /api/warehouse360/inbound',
+                'GET /api/warehouse360/outbound',
+                'GET /api/warehouse360/staging',
+                'GET /api/warehouse360/exceptions',
+              ]}
+              sourceObjects={[
+                'wh360_cockpit_summary_v',
+                'wh360_inbound_v',
+                'wh360_deliveries_v',
+                'wh360_process_orders_v',
+                'imwm_exceptions_v',
+              ]}
+              limitations={[
+                'UAT verification pending',
+                'No write-back or transactional executions allowed',
+                'Read-only direct query mode against Unity Catalog views',
+              ]}
+              lastVerified="Pending"
+            />
+
+            {/* Safety Notice Warning */}
+            <div
+              style={{
+                backgroundColor: '#eff6ff',
+                borderLeft: `4px solid ${COLORS.info}`,
+                borderRadius: 8,
+                padding: 16,
+                color: '#1e3a8a',
+                fontSize: 13,
+                fontWeight: 500,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                ℹ️ Read-Only Operational Integrity Assurance
+              </div>
+              This panel operates entirely in <strong>read-only query mode</strong>. No transactions,
+              postings, or inventory write-backs are possible. Dynamic filter variables are executed
+              securely against configured source views: <code>wh360_cockpit_summary_v</code>,{' '}
+              <code>wh360_inbound_v</code>, <code>wh360_deliveries_v</code>,{' '}
+              <code>wh360_process_orders_v</code>, and <code>imwm_exceptions_v</code>.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters Form Card */}
@@ -992,7 +1021,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       </thead>
                       <tbody>
                         {inboundData.map((row, idx) => {
-                          const statusColors = getStatusBadgeColor(row.status)
+                          const statusVariant = getStatusBadgeVariant(row.status)
                           const docId =
                             row.documentType === 'STO'
                               ? row.stockTransportOrderId
@@ -1057,18 +1086,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 {row.quantity} {row.unitOfMeasure}
                               </td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span
-                                  style={{
-                                    backgroundColor: statusColors.bg,
-                                    color: statusColors.text,
-                                    padding: '4px 8px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {row.status || '—'}
-                                </span>
+                                <StatusBadge label={row.status || '—'} variant={statusVariant} />
                               </td>
                             </tr>
                           )
@@ -1141,7 +1159,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       </thead>
                       <tbody>
                         {outboundData.map((row, idx) => {
-                          const statusColors = getStatusBadgeColor(row.status)
+                          const statusVariant = getStatusBadgeVariant(row.status)
                           return (
                             <tr
                               key={idx}
@@ -1202,18 +1220,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 {row.quantity} {row.unitOfMeasure}
                               </td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span
-                                  style={{
-                                    backgroundColor: statusColors.bg,
-                                    color: statusColors.text,
-                                    padding: '4px 8px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {row.status || '—'}
-                                </span>
+                                <StatusBadge label={row.status || '—'} variant={statusVariant} />
                               </td>
                             </tr>
                           )
@@ -1286,7 +1293,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       </thead>
                       <tbody>
                         {stagingData.map((row, idx) => {
-                          const statusColors = getStatusBadgeColor(row.stagingStatus)
+                          const statusVariant = getStatusBadgeVariant(row.stagingStatus)
                           return (
                             <tr
                               key={idx}
@@ -1364,18 +1371,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 {row.openQuantity} {row.unitOfMeasure}
                               </td>
                               <td style={{ padding: '12px 8px' }}>
-                                <span
-                                  style={{
-                                    backgroundColor: statusColors.bg,
-                                    color: statusColors.text,
-                                    padding: '4px 8px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {row.stagingStatus || '—'}
-                                </span>
+                                <StatusBadge label={row.stagingStatus || '—'} variant={statusVariant} />
                               </td>
                             </tr>
                           )
@@ -1448,7 +1444,12 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                       </thead>
                       <tbody>
                         {exceptionsData.map((row, idx) => {
-                          const severityBadge = getSeverityBadgeColor(row.severity)
+                          const statusVariant: 'good' | 'warn' | 'bad' | 'info' | 'neutral' =
+                            row.severity === 'critical' || row.severity === 'high'
+                              ? 'bad'
+                              : row.severity === 'medium'
+                                ? 'warn'
+                                : 'info'
                           return (
                             <tr
                               key={idx}
@@ -1485,19 +1486,10 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                               }}
                             >
                               <td style={{ padding: '12px 8px' }}>
-                                <span
-                                  style={{
-                                    backgroundColor: severityBadge.bg,
-                                    color: severityBadge.text,
-                                    padding: '4px 8px',
-                                    borderRadius: 4,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                  }}
-                                >
-                                  {row.severity ? row.severity : <UnavailableValue />}
-                                </span>
+                                <StatusBadge
+                                  label={row.severity ? row.severity.toUpperCase() : '—'}
+                                  variant={statusVariant}
+                                />
                               </td>
                               <td style={{ padding: '12px 8px', fontWeight: 600 }}>
                                 {row.exceptionType || '—'}
