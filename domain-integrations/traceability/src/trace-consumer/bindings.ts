@@ -156,8 +156,8 @@ export function createTraceConsumerAdapterRequest(
     plantId: request.plantId,
     investigationId: 'consumer-trace',
     direction: 'both',
-    maxDepth: 2,
-    maxEdges: 100,
+    maxDepth: 6,
+    maxEdges: 1000,
   }
 }
 
