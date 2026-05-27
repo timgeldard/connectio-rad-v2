@@ -21,6 +21,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe('SPCConsumerWorkspace', () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
   })
 
   it('renders landing search screen by default', () => {
@@ -35,13 +36,13 @@ describe('SPCConsumerWorkspace', () => {
   })
 
   it('allows entering search term and finding multiple material suggestions', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => [
         { material_id: 'MAT-001', material_name: 'Material Alpha' },
         { material_id: 'MAT-002', material_name: 'Material Beta' },
       ],
-    }) as unknown as typeof fetch
+    } as Response)
 
     render(
       <Wrapper>

@@ -303,8 +303,8 @@ async def spc_search(
         LEFT JOIN {m_tbl} m
             ON m.MATERIAL_ID = s.material_id
            AND m.LANGUAGE_ID = 'E'
-        WHERE s.material_id LIKE :q_like
-           OR m.MATERIAL_NAME LIKE :q_like
+        WHERE s.material_id ILIKE :q_like
+           OR m.MATERIAL_NAME ILIKE :q_like
         ORDER BY material_name
         LIMIT {safe_limit}
     """

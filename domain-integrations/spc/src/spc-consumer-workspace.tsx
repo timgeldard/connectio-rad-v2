@@ -93,8 +93,8 @@ export function SPCConsumerWorkspace() {
   // Fetch characteristics first so we can derive operationId for the full request.
   // The characteristics hook only needs materialId/plantId — operationId is not in its query key.
   const charsHookRequest = request
-    ? { materialId: request.materialId, plantId: request.plantId ?? '', characteristicId: selectedCharId }
-    : { materialId: '', plantId: '', characteristicId: '' }
+    ? { materialId: request.materialId, plantId: request.plantId ?? '' }
+    : { materialId: '', plantId: '' }
 
   const { data: charsResult } = useMonitoredCharacteristics(charsHookRequest)
   const characteristics = charsResult?.ok ? charsResult.data : []
@@ -125,7 +125,8 @@ export function SPCConsumerWorkspace() {
       queryKey: ['spc-control-chart', activeRequest.plantId ?? null, c.characteristicId, activeRequest.batchId ?? null],
       queryFn: () => spcMonitoringAdapter.getControlChartSeries({
         ...activeRequest,
-        characteristicId: c.characteristicId
+        characteristicId: c.characteristicId,
+        operationId: c.operationId,
       }),
       staleTime: 5 * 60 * 1000,
       enabled: !!activeRequest.materialId && characteristics.length > 0
@@ -139,10 +140,13 @@ export function SPCConsumerWorkspace() {
   const alignedPoints = alignSeriesByBatch(allSeries)
   const multivariatePoints = computeMultivariateT2(allSeries, alignedPoints)
 
-  // Auto-select first characteristic once loaded
+  // Auto-select first characteristic once loaded, and reset when switching materials/plants
   useEffect(() => {
-    if (!selectedCharId && characteristics.length > 0) {
-      setSelectedCharId(characteristics[0].characteristicId)
+    if (characteristics.length > 0) {
+      const stillValid = characteristics.some(c => c.characteristicId === selectedCharId)
+      if (!stillValid) {
+        setSelectedCharId(characteristics[0].characteristicId)
+      }
     }
   }, [characteristics, selectedCharId])
 
