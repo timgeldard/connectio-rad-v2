@@ -50,6 +50,60 @@ describe('resolveTraceConsumerSearch', () => {
     )
   })
 
+  it('exact batch id with single material skips material picker and resolves directly', () => {
+    // '8000049669' belongs to exactly one material (20035129) with one plant — resolves directly
+    const result = resolveTraceConsumerSearch('8000049669', TRACE_CONSUMER_SEARCH_FIXTURES)
+
+    expect(result.step).toBe('resolved')
+    if (result.step !== 'resolved') return
+    expect(result.request.materialId).toBe('20035129')
+    expect(result.request.batchId).toBe('8000049669')
+  })
+
+  it('exact batch id shared across multiple materials shows material picker', () => {
+    // '8000049668' belongs to both 20035129 and 20035130 in fixtures
+    const result = resolveTraceConsumerSearch('8000049668', TRACE_CONSUMER_SEARCH_FIXTURES)
+
+    expect(result.step).toBe('materials-for-batch')
+    if (result.step !== 'materials-for-batch') return
+    expect(result.selectedBatch).toBe('8000049668')
+    expect(result.materials.map(m => m.materialId)).toEqual(
+      expect.arrayContaining(['20035129', '20035130'])
+    )
+  })
+
+  it('substring-only batch match falls through without exact-batch shortcut', () => {
+    // '800004' is a prefix of batch IDs but not an exact match — should not trigger shortcut
+    const result = resolveTraceConsumerSearch('800004', TRACE_CONSUMER_SEARCH_FIXTURES)
+
+    expect(result.step).not.toBe('select-plant')
+    expect(result.step).not.toBe('launch-trace')
+  })
+
+  it('exact batch id takes priority over material-id substring match', () => {
+    const items: TraceConsumerSearchItem[] = [
+      {
+        materialId: 'BATCH001-MAT',
+        materialDescription: 'Test material',
+        batchId: 'BATCH001',
+        plantId: 'IE10',
+        plantName: 'Ireland',
+        processOrderId: null,
+        latestPostingDate: '2024-01-01',
+        quantity: 100,
+        uom: 'KG',
+        matchTypes: [],
+      },
+    ]
+    // 'BATCH001' exactly matches batchId AND is a substring of materialId 'BATCH001-MAT'
+    const result = resolveTraceConsumerSearch('BATCH001', items)
+
+    // Exact batch match should win — resolves directly (single plant, skips material picker)
+    expect(result.step).toBe('resolved')
+    if (result.step !== 'resolved') return
+    expect(result.request.batchId).toBe('BATCH001')
+  })
+
   it('matches batch ids and preserves multi-plant options', () => {
     const result = resolveTraceConsumerSearch('CH-240308-0047', TRACE_CONSUMER_SEARCH_FIXTURES)
 
