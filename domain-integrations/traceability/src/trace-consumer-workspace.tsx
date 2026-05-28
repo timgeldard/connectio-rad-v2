@@ -435,6 +435,7 @@ export function TraceConsumerWorkspace() {
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
                     type="text"
+                    aria-label="Search materials or batches"
                     placeholder="Search material, description, batch, or process order..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
@@ -819,6 +820,7 @@ export function TraceConsumerWorkspace() {
                 <form onSubmit={handleSendChat} style={{ display: 'flex', gap: 10 }}>
                   <input
                     type="text"
+                    aria-label="Chat message"
                     placeholder="Ask Genie a question about this batch..."
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}

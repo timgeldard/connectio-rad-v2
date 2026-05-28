@@ -490,6 +490,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         >
           <div>
             <label
+              htmlFor="wh-warehouse-id"
               style={{
                 display: 'block',
                 fontSize: 12,
@@ -501,6 +502,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               Warehouse ID <span style={{ color: COLORS.danger }}>*</span>
             </label>
             <input
+              id="wh-warehouse-id"
               type="text"
               placeholder="e.g. WH001"
               value={warehouseId}
@@ -514,6 +516,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
           <div>
             <label
+              htmlFor="wh-plant-id"
               style={{
                 display: 'block',
                 fontSize: 12,
@@ -525,6 +528,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               Plant ID (Optional)
             </label>
             <input
+              id="wh-plant-id"
               type="text"
               placeholder="e.g. C061"
               value={plantId}
@@ -538,6 +542,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
           <div>
             <label
+              htmlFor="wh-date-from"
               style={{
                 display: 'block',
                 fontSize: 12,
@@ -549,6 +554,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               Date From (Optional)
             </label>
             <input
+              id="wh-date-from"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
@@ -561,6 +567,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
           <div>
             <label
+              htmlFor="wh-date-to"
               style={{
                 display: 'block',
                 fontSize: 12,
@@ -572,6 +579,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               Date To (Optional)
             </label>
             <input
+              id="wh-date-to"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
@@ -584,6 +592,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
           <div>
             <label
+              htmlFor="wh-limit-range"
               style={{
                 display: 'block',
                 fontSize: 12,
@@ -596,6 +605,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input
+                id="wh-limit-range"
                 type="range"
                 min="1"
                 max="500"
@@ -604,6 +614,8 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 style={{ flex: 1, accentColor: COLORS.primary }}
               />
               <input
+                id="wh-limit-number"
+                aria-label="Max limit value"
                 type="number"
                 min="1"
                 max="500"
@@ -641,6 +653,8 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = COLORS.primaryHover)}
               onMouseOut={(e) => (e.currentTarget.style.backgroundColor = COLORS.primary)}
+              onFocus={(e) => (e.currentTarget.style.backgroundColor = COLORS.primaryHover)}
+              onBlur={(e) => (e.currentTarget.style.backgroundColor = COLORS.primary)}
             >
               🔄 Run Cockpit Queries
             </button>
@@ -1053,6 +1067,18 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                   ? '#f5f3ff'
                                   : 'transparent'
                               }}
+                              onFocus={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onBlur={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'inbound' &&
+                                  selectedRow.data.purchaseOrderId === row.purchaseOrderId &&
+                                  selectedRow.data.itemId === row.itemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
+                              }}
                             >
                               <td style={{ padding: '12px 8px', fontWeight: 600 }}>
                                 {row.documentType}
@@ -1187,6 +1213,18 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                   ? '#f5f3ff'
                                   : 'transparent'
                               }}
+                              onFocus={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onBlur={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'outbound' &&
+                                  selectedRow.data.deliveryId === row.deliveryId &&
+                                  selectedRow.data.deliveryItemId === row.deliveryItemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
+                              }}
                             >
                               <td
                                 style={{
@@ -1313,6 +1351,18 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 (e.currentTarget.style.backgroundColor = '#f8fafc')
                               }
                               onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'staging' &&
+                                  selectedRow.data.processOrderId === row.processOrderId &&
+                                  selectedRow.data.reservationItemId === row.reservationItemId
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
+                              }}
+                              onFocus={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onBlur={(e) => {
                                 const isSelected =
                                   selectedRow?.type === 'staging' &&
                                   selectedRow.data.processOrderId === row.processOrderId &&
@@ -1470,6 +1520,19 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 (e.currentTarget.style.backgroundColor = '#f8fafc')
                               }
                               onMouseOut={(e) => {
+                                const isSelected =
+                                  selectedRow?.type === 'exceptions' &&
+                                  selectedRow.data.materialId === row.materialId &&
+                                  selectedRow.data.batchId === row.batchId &&
+                                  selectedRow.data.exceptionType === row.exceptionType
+                                e.currentTarget.style.backgroundColor = isSelected
+                                  ? '#f5f3ff'
+                                  : 'transparent'
+                              }}
+                              onFocus={(e) =>
+                                (e.currentTarget.style.backgroundColor = '#f8fafc')
+                              }
+                              onBlur={(e) => {
                                 const isSelected =
                                   selectedRow?.type === 'exceptions' &&
                                   selectedRow.data.materialId === row.materialId &&
@@ -1644,7 +1707,8 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
 
           {/* Technical Diagnostics Collapsible Section */}
           <div style={CARD_STYLE}>
-            <div
+            <button
+              type="button"
               onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
               style={{
                 display: 'flex',
@@ -1652,6 +1716,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 alignItems: 'center',
                 cursor: 'pointer',
                 userSelect: 'none',
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                textAlign: 'left',
               }}
             >
               <h4 style={{ margin: 0, color: COLORS.slate800, fontSize: 14, fontWeight: 700 }}>
@@ -1666,7 +1735,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               >
                 ▶
               </span>
-            </div>
+            </button>
 
             {techDetailsExpanded && (
               <div

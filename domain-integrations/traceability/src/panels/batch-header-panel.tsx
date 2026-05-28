@@ -5,6 +5,7 @@ import type { BatchHeaderSummary } from '@connectio/data-contracts'
 import { useBatchHeaderSummary } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 import { QueriedAtLabel } from '../components/QueriedAtLabel.js'
+import { formatDate } from '../utils/format-date.js'
 
 /** Static registration record for the Batch Header panel. */
 const registration: EvidencePanelRegistration = {
@@ -86,10 +87,10 @@ export function BatchHeaderPanel({ request }: BatchHeaderPanelProps) {
               <BatchHeaderField label="Total Stock" value={`${data.quantity.toLocaleString()} ${data.uom ?? ''}`} />
             )}
             {data.manufactureDate && (
-              <BatchHeaderField label="Manufactured" value={new Date(data.manufactureDate).toLocaleDateString()} />
+              <BatchHeaderField label="Manufactured" value={formatDate(data.manufactureDate)} />
             )}
             {data.expiryDate && (
-              <BatchHeaderField label="Expiry" value={new Date(data.expiryDate).toLocaleDateString()} />
+              <BatchHeaderField label="Expiry" value={formatDate(data.expiryDate)} />
             )}
           </div>
           {(data.unrestricted != null || data.blocked != null || data.qualityInspection != null || data.restricted != null || data.transit != null) && (

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, MouseEvent } from 'react'
+import { useState, useRef, MouseEvent } from 'react'
 import type { EnvMonL4Zone, EnvMonL5Coordinate } from '@connectio/data-contracts'
 import type { EnvMonFloor } from './mock-data.js'
 import { isPointInPolygon } from './floor-plan-utils.js'
@@ -35,18 +35,6 @@ export function FloorPlanCanvas({
   // Selection
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null)
   const [selectedMarker, setSelectedMarker] = useState<EnvMonL5Coordinate | null>(null)
-
-  // Reset editor state when switching floors
-  useEffect(() => {
-    setEditorMode('view')
-    setCurrentL4Points([])
-    setNewZoneLabel('')
-    setNewLocationLabel('')
-    setSelectedL4ForL5('')
-    setValidationError(null)
-    setHoveredZoneId(null)
-    setSelectedMarker(null)
-  }, [floor.floorId])
 
   // Translate click to SVG coordinate system
   const getSvgCoordinates = (e: MouseEvent<SVGSVGElement>): { x: number; y: number } => {
@@ -159,6 +147,9 @@ export function FloorPlanCanvas({
           ref={svgRef}
           viewBox={`0 0 ${floor.width} ${floor.height}`}
           onClick={handleCanvasClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCanvasClick(e as unknown as MouseEvent<SVGSVGElement>) }}
+          role="application"
+          aria-label="Floor plan canvas"
           style={{
             width: '100%',
             height: 'auto',
@@ -333,6 +324,7 @@ export function FloorPlanCanvas({
             <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Click on the blueprint canvas to define the vertices of the zone.</p>
             <input
               type="text"
+              aria-label="Zone name"
               placeholder="Zone Name (e.g. Mixing Room)"
               value={newZoneLabel}
               onChange={(e) => setNewZoneLabel(e.target.value)}
@@ -373,6 +365,7 @@ export function FloorPlanCanvas({
             <h4 style={{ margin: 0, fontSize: 13, color: '#f8fafc' }}>Place Swab Point</h4>
             <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>Choose the parent L4 Zone and drop a marker on the canvas inside that zone.</p>
             <select
+              aria-label="L4 zone"
               value={selectedL4ForL5}
               onChange={(e) => setSelectedL4ForL5(e.target.value)}
               style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #334155', background: '#020617', color: '#f8fafc', fontSize: 12 }}
@@ -384,6 +377,7 @@ export function FloorPlanCanvas({
             </select>
             <input
               type="text"
+              aria-label="Swab location description"
               placeholder="Swab Location Description"
               value={newLocationLabel}
               onChange={(e) => setNewLocationLabel(e.target.value)}

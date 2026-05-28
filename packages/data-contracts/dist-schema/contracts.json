@@ -3620,6 +3620,18 @@
                     "type": "null"
                   }
                 ]
+              },
+              "plant": {
+                "type": "string"
+              },
+              "storageArea": {
+                "type": "string"
+              },
+              "storageType": {
+                "type": "string"
+              },
+              "documentNumber": {
+                "type": "string"
               }
             },
             "required": [
@@ -12564,6 +12576,18 @@
               "type": "null"
             }
           ]
+        },
+        "plant": {
+          "type": "string"
+        },
+        "storageArea": {
+          "type": "string"
+        },
+        "storageType": {
+          "type": "string"
+        },
+        "documentNumber": {
+          "type": "string"
         }
       },
       "required": [
@@ -12680,7 +12704,15 @@
           "type": "string",
           "description": "[classification: source-field]"
         },
+        "supplierName": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
         "customerId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
+        "customerName": {
           "type": "string",
           "description": "[classification: source-field]"
         },
@@ -13087,7 +13119,15 @@
                 "type": "string",
                 "description": "[classification: source-field]"
               },
+              "supplierName": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
               "customerId": {
+                "type": "string",
+                "description": "[classification: source-field]"
+              },
+              "customerName": {
                 "type": "string",
                 "description": "[classification: source-field]"
               },

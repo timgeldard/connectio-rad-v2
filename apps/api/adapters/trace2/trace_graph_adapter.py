@@ -45,6 +45,8 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     """
     tbl = resolve_domain_object("trace2", "gold_batch_lineage")
     tbl_material = resolve_domain_object("trace2", "gold_material")
+    tbl_customer = resolve_domain_object("trace2", "gold_customer")
+    tbl_supplier = resolve_domain_object("trace2", "gold_supplier")
 
     # gold_batch_lineage is clustered on (CHILD_MATERIAL_ID, CHILD_BATCH_ID).
     # Referencing the table directly in each recursive arm lets Databricks use
@@ -142,14 +144,19 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
     DELIVERY_ID AS delivery_id, SALES_ORDER_ID AS sales_order_id, QUANTITY AS quantity,
     BASE_UNIT_OF_MEASURE AS base_unit_of_measure, POSTING_DATE AS posting_date, MOVEMENT_TYPE AS movement_type"""
 
-    mat_select = "    m_parent.MATERIAL_NAME AS parent_material_name, m_child.MATERIAL_NAME AS child_material_name"
+    mat_select = (
+        "    m_parent.MATERIAL_NAME AS parent_material_name, m_child.MATERIAL_NAME AS child_material_name,\n"
+        "    m_cust.CUSTOMER_NAME AS customer_name, m_sup.SUPPLIER_NAME AS supplier_name"
+    )
     # :language_id is a QuerySpec param (default 'E') so callers can override for non-English
     # environments without touching SQL. Verified live: connected_plant_uat uses 'E', not 'EN'.
     mat_joins = (
         f"LEFT JOIN {tbl_material} m_parent"
         f" ON _lin.parent_material_id = m_parent.MATERIAL_ID AND m_parent.LANGUAGE_ID = :language_id\n"
         f"LEFT JOIN {tbl_material} m_child"
-        f" ON _lin.child_material_id = m_child.MATERIAL_ID AND m_child.LANGUAGE_ID = :language_id"
+        f" ON _lin.child_material_id = m_child.MATERIAL_ID AND m_child.LANGUAGE_ID = :language_id\n"
+        f"LEFT JOIN {tbl_customer} m_cust ON _lin.customer_id = m_cust.CUSTOMER_ID\n"
+        f"LEFT JOIN {tbl_supplier} m_sup ON _lin.supplier_id = m_sup.SUPPLIER_ID"
     )
 
     # P0-4: LIMIT is applied inside the _lin subquery so rows are capped before
@@ -204,7 +211,7 @@ def get_trace_graph_recursive_spec(request: TraceGraphRequest) -> QuerySpec:
             "language_id": "E",
         },
         cache_policy=CacheTier.PER_USER_60S,
-        source_badge="view:gold_batch_lineage",
+        source_badge="view:gold_batch_lineage+gold_customer+gold_supplier",
         tags=["trace2", "trace-graph", "lineage"],
     )
 

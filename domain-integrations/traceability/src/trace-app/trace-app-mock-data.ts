@@ -271,6 +271,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: 'PO-2024-03-0847 · 17,050 KG planned',
       tone: 'brand',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Production Floor',
+      storageType: 'A001',
+      documentNumber: 'PO-2024-03-0847',
     },
     {
       ts: '2024-03-08T07:14',
@@ -280,6 +284,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: 'Milk Powder A · Cultures B12 (2 lots)',
       tone: 'neutral',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Raw Material Store',
+      storageType: 'A002',
+      documentNumber: 'MAT-4500123456',
     },
     {
       ts: '2024-03-08T16:30',
@@ -289,6 +297,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: '17,050 KG · CH-240308-0047',
       tone: 'good',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Finished Goods Store',
+      storageType: 'C001',
+      documentNumber: 'PO-2024-03-0847',
     },
     {
       ts: '2024-03-09T09:00',
@@ -298,6 +310,9 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: 'Lab sample LS-9201',
       tone: 'brand',
       sourceSystem: 'LIMS',
+      plant: 'IE10 · Listowel',
+      storageArea: 'QC Lab',
+      documentNumber: 'LS-9201',
     },
     {
       ts: '2024-03-11T14:22',
@@ -307,6 +322,9 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: 'Listeria absent · TPC 4,200 CFU/g',
       tone: 'good',
       sourceSystem: 'LIMS',
+      plant: 'IE10 · Listowel',
+      storageArea: 'QC Lab',
+      documentNumber: 'LS-9201',
     },
     {
       ts: '2024-03-12T11:42',
@@ -316,6 +334,7 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: 'Passport v2',
       tone: 'good',
       sourceSystem: 'TRACE',
+      plant: 'IE10 · Listowel',
     },
     {
       ts: '2024-03-12T14:08',
@@ -325,6 +344,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: '12,450 KG to free stock',
       tone: 'good',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Finished Goods Store',
+      storageType: 'C001',
+      documentNumber: 'UD-2024-0312-001',
     },
     {
       ts: '2024-03-14T08:30',
@@ -334,6 +357,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: '2,200 KG to Müller Foods GmbH',
       tone: 'brand',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Dispatch Dock',
+      storageType: 'D001',
+      documentNumber: 'DO-4900089124',
     },
     {
       ts: '2024-03-15T11:10',
@@ -343,6 +370,10 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: '1,200 KG to Lactalis France',
       tone: 'brand',
       sourceSystem: 'SAP',
+      plant: 'IE10 · Listowel',
+      storageArea: 'Dispatch Dock',
+      storageType: 'D001',
+      documentNumber: 'DO-4900089123',
     },
     {
       ts: '2024-03-22T16:00',
@@ -352,6 +383,9 @@ export const MOCK_INVESTIGATION_TIMELINE: InvestigationTimeline = {
       detail: '850 KG — pending re-test on retain',
       tone: 'warn',
       sourceSystem: 'TRACE',
+      plant: 'IE10 · Listowel',
+      storageArea: 'QI Hold Store',
+      storageType: 'Q001',
     },
   ],
 }

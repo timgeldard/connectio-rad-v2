@@ -1,5 +1,6 @@
 import '@xyflow/react/dist/style.css'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { formatDate } from '../utils/format-date.js'
 import {
   ReactFlow,
   Background,
@@ -52,7 +53,7 @@ const registration: EvidencePanelRegistration = {
 // ---------------------------------------------------------------------------
 
 function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
-  const { node, isRoot, isSelected } = data
+  const { node, isRoot, isSelected, supplierName, customerName } = data
   const border = isSelected ? 'var(--brand)' : 'var(--stroke)'
   const bg = isSelected ? 'color-mix(in srgb, var(--brand) 6%, white)' : 'var(--white)'
 
@@ -107,6 +108,16 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
           {node.quantity.toLocaleString()} {node.uom ?? ''}
         </div>
       )}
+      {node.type === 'supplier-lot' && supplierName && (
+        <div style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 2, fontStyle: 'italic' }}>
+          {supplierName as string}
+        </div>
+      )}
+      {node.type === 'customer-delivery' && customerName && (
+        <div style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 2, fontStyle: 'italic' }}>
+          {customerName as string}
+        </div>
+      )}
       {node.status === 'unresolved' && (
         <div style={{ display: 'flex', marginTop: 4 }}>
           <span style={{ fontSize: 9, color: 'var(--status-bad)', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
@@ -149,8 +160,8 @@ function SelectedNodeDetail({ node, graphEdges, baseRequest, onClose }: { node: 
         <Detail label="Description" value={node.materialDescription} />
         {node.batchId && <Detail label="Batch ID" value={node.batchId} mono />}
         {node.plantId && <Detail label="Plant" value={node.plantId} mono />}
-        {manufactureDate && <Detail label="Date of Manufacture" value={manufactureDate.slice(0, 10)} mono />}
-        {expiryDate && <Detail label="Expiry Date" value={expiryDate.slice(0, 10)} mono />}
+        {manufactureDate && <Detail label="Date of Manufacture" value={formatDate(manufactureDate)} mono />}
+        {expiryDate && <Detail label="Expiry Date" value={formatDate(expiryDate)} mono />}
         {vendorBatch && <Detail label="Vendor Batch Number" value={vendorBatch} mono />}
         {node.depth != null && <Detail label="Lineage Depth" value={String(node.depth)} />}
         <Detail label="Focal Anchor" value={node.isAnchor ? 'Yes' : 'No'} />
@@ -181,7 +192,7 @@ function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: 
         <Detail label="Link type (mapped)" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
         {edge.linkType && <Detail label="Link type (raw)" value={edge.linkType} />}
         {edge.movementType && <Detail label="Movement Type" value={edge.movementType} mono />}
-        {edge.postingDate && <Detail label="Posting Date" value={edge.postingDate} mono />}
+        {edge.postingDate && <Detail label="Posting Date" value={formatDate(edge.postingDate)} mono />}
         {edge.quantity != null && (
           <Detail label="Quantity" value={`${edge.quantity.toLocaleString()} ${edge.uom ?? ''}`} mono />
         )}
@@ -191,7 +202,9 @@ function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: 
         {edge.materialDocumentNumber && <Detail label="Material Document" value={edge.materialDocumentNumber} mono />}
         {edge.deliveryId && <Detail label="Delivery ID" value={edge.deliveryId} mono />}
         {edge.supplierId && <Detail label="Supplier ID" value={edge.supplierId} mono />}
+        {edge.supplierName && <Detail label="Supplier Name" value={edge.supplierName} />}
         {edge.customerId && <Detail label="Customer ID" value={edge.customerId} mono />}
+        {edge.customerName && <Detail label="Customer Name" value={edge.customerName} />}
       </div>
     </div>
   )
@@ -238,7 +251,7 @@ function DirectionToggle({
   onChange: (d: DirectionOption) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 10 }} role="group" aria-label="Trace direction">
+    <fieldset style={{ display: 'flex', gap: 4, marginBottom: 10, border: 'none', padding: 0, margin: '0 0 10px' }} aria-label="Trace direction">
       {(['reverse', 'both', 'forward'] as DirectionOption[]).map(dir => (
         <button
           type="button"
@@ -259,7 +272,7 @@ function DirectionToggle({
           {DIRECTION_LABELS[dir]}
         </button>
       ))}
-    </div>
+    </fieldset>
   )
 }
 
@@ -329,14 +342,16 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [activeDirection, setActiveDirection] = useState<DirectionOption>('both')
 
+  const selectedIdRef = useRef(selectedId)
+  selectedIdRef.current = selectedId
+
   const directedGraph = useMemo(
     () => (graph ? filterGraphByDirection(graph, activeDirection) : null),
     [graph, activeDirection],
   )
 
   const initialNodes = useMemo(
-    () => (directedGraph ? mapToFlowNodes(directedGraph, selectedId) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (directedGraph ? mapToFlowNodes(directedGraph, selectedIdRef.current) : []),
     [directedGraph],
   )
   const initialEdges = useMemo(() => (directedGraph ? mapToFlowEdges(directedGraph) : []), [directedGraph])
@@ -347,37 +362,29 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
   // Sync when graph data or direction changes
   useEffect(() => {
     if (!directedGraph) return
-    setNodes(mapToFlowNodes(directedGraph, selectedId))
+    setNodes(mapToFlowNodes(directedGraph, selectedIdRef.current))
     setEdges(mapToFlowEdges(directedGraph))
-  // Deliberately omit selectedId to avoid clearing selection on data refresh
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directedGraph, setNodes, setEdges])
 
-  // Update node selected state without triggering a full graph re-layout
-  useEffect(() => {
-    setNodes(prev =>
-      prev.map(n => ({
-        ...n,
-        data: { ...n.data, isSelected: n.id === selectedId },
-      })),
-    )
-  }, [selectedId, setNodes])
-
-  // Clear selections when direction changes
-  useEffect(() => {
-    setSelectedId(null)
-    setSelectedEdgeId(null)
-  }, [activeDirection])
-
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedId(prev => (prev === node.id ? null : node.id))
+    const newId = selectedId === node.id ? null : node.id
+    setSelectedId(newId)
     setSelectedEdgeId(null)
-  }, [])
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: n.id === newId } })))
+  }, [selectedId, setNodes])
 
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id))
     setSelectedId(null)
-  }, [])
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: false } })))
+  }, [setNodes])
+
+  const handleDirectionChange = useCallback((dir: DirectionOption) => {
+    setActiveDirection(dir)
+    setSelectedId(null)
+    setSelectedEdgeId(null)
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: false } })))
+  }, [setNodes])
 
   const selectedNode = selectedId
     ? directedGraph?.nodes.find(n => n.id === selectedId) ?? null
@@ -425,7 +432,7 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
 
           {/* Direction toggle + root metadata */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <DirectionToggle active={activeDirection} onChange={setActiveDirection} />
+            <DirectionToggle active={activeDirection} onChange={handleDirectionChange} />
             <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)' }}>
               Root: {graph.rootBatch}
             </span>

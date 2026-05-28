@@ -364,7 +364,7 @@ export function LegacyRetirementPage() {
                     width: `${pct}%`,
                     background: pct === 100 ? '#16A34A' : pct >= 50 ? '#2563EB' : '#D97706',
                     borderRadius: 2,
-                    transition: 'width 0.3s ease',
+                    transition: 'transform 0.3s ease',
                   }}
                 />
               </div>

@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { CoAReleaseStatus } from '@connectio/data-contracts'
 import { useCoAReleaseStatus } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { formatDateTime } from '../utils/format-date.js'
 
 /** Static registration record for the CoA / Release Status panel. */
 const registration: EvidencePanelRegistration = {
@@ -85,7 +86,7 @@ export function CoAReleaseStatusPanel({ request }: CoAReleaseStatusPanelProps) {
           </div>
           {data.lastDecisionAt && (
             <div style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>
-              Last decision: {new Date(data.lastDecisionAt).toLocaleString()}
+              Last decision: {formatDateTime(data.lastDecisionAt)}
             </div>
           )}
         </div>

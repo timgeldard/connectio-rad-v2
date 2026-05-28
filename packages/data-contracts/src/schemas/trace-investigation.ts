@@ -152,7 +152,9 @@ export const TraceEdgeSchema = z.object({
   materialDocumentNumber: z.string().optional().describe('[classification: source-field]'),
   purchaseOrderId: z.string().optional().describe('[classification: source-field]'),
   supplierId: z.string().optional().describe('[classification: source-field]'),
+  supplierName: z.string().optional().describe('[classification: source-field]'),
   customerId: z.string().optional().describe('[classification: source-field]'),
+  customerName: z.string().optional().describe('[classification: source-field]'),
   deliveryId: z.string().optional().describe('[classification: source-field]'),
   salesOrderId: z.string().optional().describe('[classification: source-field]'),
 })

@@ -2128,6 +2128,10 @@ class Event(BaseModel):
     source_system: Optional[Literal['SAP', 'LIMS', 'TRACE', 'MANUAL']] = Field(
         None, alias='sourceSystem'
     )
+    plant: Optional[str] = None
+    storage_area: Optional[str] = Field(None, alias='storageArea')
+    storage_type: Optional[str] = Field(None, alias='storageType')
+    document_number: Optional[str] = Field(None, alias='documentNumber')
 
 
 class InvestigationTimeline(BaseModel):
@@ -7202,6 +7206,10 @@ class TimelineEvent(BaseModel):
     source_system: Optional[Literal['SAP', 'LIMS', 'TRACE', 'MANUAL']] = Field(
         None, alias='sourceSystem'
     )
+    plant: Optional[str] = None
+    storage_area: Optional[str] = Field(None, alias='storageArea')
+    storage_type: Optional[str] = Field(None, alias='storageType')
+    document_number: Optional[str] = Field(None, alias='documentNumber')
 
 
 class TimelineEventSourceSystem(RootModel[Literal['SAP', 'LIMS', 'TRACE', 'MANUAL']]):
@@ -7312,7 +7320,15 @@ class TraceEdge(BaseModel):
     """
     [classification: source-field]
     """
+    supplier_name: Optional[str] = Field(None, alias='supplierName')
+    """
+    [classification: source-field]
+    """
     customer_id: Optional[str] = Field(None, alias='customerId')
+    """
+    [classification: source-field]
+    """
+    customer_name: Optional[str] = Field(None, alias='customerName')
     """
     [classification: source-field]
     """
@@ -7578,7 +7594,15 @@ class Edge(BaseModel):
     """
     [classification: source-field]
     """
+    supplier_name: Optional[str] = Field(None, alias='supplierName')
+    """
+    [classification: source-field]
+    """
     customer_id: Optional[str] = Field(None, alias='customerId')
+    """
+    [classification: source-field]
+    """
+    customer_name: Optional[str] = Field(None, alias='customerName')
     """
     [classification: source-field]
     """
