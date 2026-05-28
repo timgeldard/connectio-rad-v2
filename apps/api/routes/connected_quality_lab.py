@@ -20,6 +20,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Response
 
 from adapters.cq.cq_databricks_adapter import CqLabRepository
+from shared.proxy_client import get_proxy_client
 from routes._databricks import (
     build_databricks_repository,
     build_user_identity,
@@ -43,10 +44,10 @@ async def _forward_get(v1_path: str, params: dict, token: str | None) -> dict:
         headers["x-forwarded-access-token"] = token
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{_V1_CQ_BASE_URL}{v1_path}", params=params, headers=headers
-            )
+        client = get_proxy_client()
+        response = await client.get(
+            f"{_V1_CQ_BASE_URL}{v1_path}", params=params, headers=headers
+        )
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream unreachable: {exc}") from exc
 

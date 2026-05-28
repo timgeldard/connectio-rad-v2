@@ -1,6 +1,7 @@
 import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { DataIntegrationReadiness, DataIntegrationStatus } from '@connectio/product-model'
 
 const DATA_SOURCES: readonly DataIntegrationReadiness[] = [
@@ -180,6 +181,7 @@ function KpiBar() {
 export function DataIntegrationReadinessPage() {
   return (
     <div data-testid="data-integration-readiness" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Data Integration Readiness Matrix</h1>

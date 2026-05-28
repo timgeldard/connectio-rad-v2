@@ -1,5 +1,6 @@
 // Phase 6 snapshot — parity data accurate as of 2026-05-15.
 import { useState } from 'react'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import {
   Card,
   CardContent,
@@ -485,6 +486,7 @@ export function WorkspaceParityPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--shell-fg)', margin: 0, marginBottom: 4 }}>
           Workspace Parity Assessment

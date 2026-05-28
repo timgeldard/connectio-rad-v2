@@ -1,5 +1,6 @@
 // Phase 6 snapshot — simulation data accurate as of 2026-05-15. Results are read-only.
 import { useState } from 'react'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import {
   Card,
   CardContent,
@@ -336,6 +337,7 @@ export function CutoverSimulationPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--shell-fg)', margin: 0, marginBottom: 4 }}>
           Cutover Simulation

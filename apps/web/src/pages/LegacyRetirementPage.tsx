@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 
 type RetirementStatus = 'not-started' | 'in-progress' | 'ready' | 'retired'
 type MigrationRisk = 'low' | 'medium' | 'high'
@@ -216,6 +217,7 @@ export function LegacyRetirementPage() {
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: 960 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 600, color: 'var(--shell-fg)' }}>
           Legacy Retirement Readiness

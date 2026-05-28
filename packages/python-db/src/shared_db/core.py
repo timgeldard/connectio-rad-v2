@@ -136,7 +136,10 @@ def resolve_token(
     """Resolve the Databricks access token from request headers.
 
     Priority order: ``x-forwarded-access-token`` (Databricks Apps proxy),
-    then ``Authorization: Bearer <token>``, then ``DATABRICKS_TOKEN`` env var.
+    then ``Authorization: Bearer <token>``.
+
+    Service-principal PAT fallback via environment variable is intentionally
+    absent. User-facing reads must always use the end-user OAuth identity.
 
     Args:
         x_forwarded_access_token: Value of the ``x-forwarded-access-token``
@@ -156,13 +159,9 @@ def resolve_token(
         if authorization.startswith("Bearer "):
             return authorization[len("Bearer "):]
         return authorization
-    env_token = os.environ.get("DATABRICKS_TOKEN", "")
-    if env_token:
-        return env_token
     raise ValueError(
         "No Databricks access token found. "
-        "Expected x-forwarded-access-token header, Authorization header, "
-        "or DATABRICKS_TOKEN environment variable."
+        "Expected x-forwarded-access-token header or Authorization: Bearer <token> header."
     )
 
 

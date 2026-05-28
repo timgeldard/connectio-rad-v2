@@ -2,6 +2,7 @@ import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@connectio/design-system'
 import type { TrainingReadiness } from '@connectio/product-model'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 
 const TRAINING_READINESS: readonly TrainingReadiness[] = [
   {
@@ -92,6 +93,7 @@ export function TrainingReadinessPage() {
 
   return (
     <div data-testid="training-readiness" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Training Readiness</h1>

@@ -3,6 +3,7 @@ import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator,
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { PilotIssue, PilotIssueCategory, PilotIssueStatus } from '@connectio/product-model'
 import { isIssueOpen, countOpenIssues, pilotExitBlockingIssues, productionBlockingIssues } from '@connectio/product-model'
 
@@ -79,6 +80,7 @@ export function PilotIssueRegisterPage() {
 
   return (
     <div data-testid="pilot-issue-register" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Pilot Issue Register</h1>

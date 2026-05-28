@@ -3,6 +3,7 @@ import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle,
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { DataQualityGap } from '@connectio/product-model'
 
 const DATA_QUALITY_GAPS: readonly DataQualityGap[] = [
@@ -69,6 +70,7 @@ export function DataQualityGapsPage() {
 
   return (
     <div data-testid="data-quality-gaps" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Data Quality Gaps</h1>

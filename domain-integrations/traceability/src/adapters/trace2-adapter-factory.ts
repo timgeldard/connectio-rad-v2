@@ -25,7 +25,11 @@ export function createTrace2Adapter(): Trace2Adapter {
         'Traceability Databricks API adapter is disabled by feature flags.'
       )
     }
-    return new Trace2LegacyApiAdapter(traceBaseUrl)
+    return createDisabledAdapter<Trace2Adapter>(
+      'databricks-api',
+      'Traceability native Databricks API adapter is not yet implemented. ' +
+      'Set VITE_ADAPTER_MODE=legacy-api for the V1 proxy, or VITE_ADAPTER_MODE=mock for fixtures.'
+    )
   }
   return new Trace2Adapter()
 }

@@ -1,6 +1,7 @@
 import {
   Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator,
 } from '@connectio/design-system'
+import { StaticSnapshotBanner } from '../components/StaticSnapshotBanner.js'
 import type { RolloutWave, RolloutWaveStatus } from '@connectio/product-model'
 
 const ROLLOUT_WAVES: readonly RolloutWave[] = [
@@ -93,6 +94,7 @@ function waveStatusLabel(status: RolloutWaveStatus): string {
 export function RolloutWavePlanPage() {
   return (
     <div data-testid="rollout-wave-plan" style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <StaticSnapshotBanner snapshotDate="2026-05-15" />
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: 'var(--shell-fg)' }}>Rollout Wave Plan</h1>
