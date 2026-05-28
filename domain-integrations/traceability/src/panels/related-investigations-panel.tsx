@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { RelatedInvestigation } from '@connectio/data-contracts'
 import { useRelatedInvestigations } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { formatDate } from '../utils/format-date.js'
 
 /** Static registration record for the Related Investigations panel. */
 const registration: EvidencePanelRegistration = {
@@ -105,7 +106,7 @@ export function RelatedInvestigationsPanel({ request }: RelatedInvestigationsPan
                 {inv.owner && <span style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>{inv.owner}</span>}
               </div>
               <div style={{ fontSize: 10, color: 'var(--shell-fg-3)' }}>
-                Opened {new Date(inv.openedAt).toLocaleDateString()}
+                Opened {formatDate(inv.openedAt)}
               </div>
             </div>
           ))}

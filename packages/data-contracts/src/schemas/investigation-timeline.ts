@@ -26,6 +26,10 @@ export const TimelineEventSchema = z.object({
   detail: z.string(),
   tone: TimelineEventToneSchema,
   sourceSystem: TimelineEventSourceSystemSchema.nullable().optional(),
+  plant: z.string().optional(),
+  storageArea: z.string().optional(),
+  storageType: z.string().optional(),
+  documentNumber: z.string().optional(),
 })
 export type TimelineEvent = z.infer<typeof TimelineEventSchema>
 

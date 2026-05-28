@@ -171,6 +171,8 @@ export interface TraceNodeData {
   node: TraceNode
   isRoot: boolean
   isSelected: boolean
+  supplierName?: string
+  customerName?: string
   [key: string]: unknown
 }
 
@@ -182,6 +184,19 @@ export function mapToFlowNodes(
 
   return graph.nodes.map(node => {
     const pos = positions.get(node.id) ?? { x: 0, y: 0 }
+
+    let supplierName: string | undefined
+    let customerName: string | undefined
+
+    if (node.type === 'supplier-lot') {
+      const edge = graph.edges.find(e => e.source === node.id)
+      supplierName = edge?.supplierName
+    }
+    if (node.type === 'customer-delivery') {
+      const edge = graph.edges.find(e => e.target === node.id)
+      customerName = edge?.customerName
+    }
+
     return {
       id: node.id,
       type: 'traceNode',
@@ -190,6 +205,8 @@ export function mapToFlowNodes(
         node,
         isRoot: node.batchId === graph.rootBatch,
         isSelected: node.id === selectedId,
+        ...(supplierName != null && { supplierName }),
+        ...(customerName != null && { customerName }),
       },
     }
   })

@@ -3,6 +3,7 @@ import { EvidencePanel, useEvidencePanel } from '@connectio/evidence-panel-runti
 import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { BatchHeaderSummary } from '@connectio/data-contracts'
 import type { AdapterResult } from '@connectio/source-adapters'
+import { formatDate } from '../utils/format-date.js'
 
 const registration: EvidencePanelRegistration = {
   panelId: 'batch-header-network',
@@ -225,11 +226,11 @@ export function BatchHeaderNetworkPanel({
             <MetaField label="Plant" value={data.plantName ?? data.plantId} />
             <MetaField
               label="Manufacture Date"
-              value={data.manufactureDate ? new Date(data.manufactureDate).toLocaleDateString() : 'N/A'}
+              value={data.manufactureDate ? formatDate(data.manufactureDate) : 'N/A'}
             />
             <MetaField
               label="Expiry Date"
-              value={data.expiryDate ? new Date(data.expiryDate).toLocaleDateString() : 'N/A'}
+              value={data.expiryDate ? formatDate(data.expiryDate) : 'N/A'}
             />
           </div>
 

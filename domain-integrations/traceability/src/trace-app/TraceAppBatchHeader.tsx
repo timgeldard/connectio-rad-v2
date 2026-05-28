@@ -1,5 +1,6 @@
 import type { BatchHeaderSummary } from '@connectio/data-contracts'
 import { TRACE_APP_TABS, type TraceAppTabId } from './plants.js'
+import { formatDate } from '../utils/format-date.js'
 
 export interface TraceAppBatchHeaderProps {
   readonly batch: BatchHeaderSummary | null
@@ -113,7 +114,7 @@ export function TraceAppBatchHeader({
                 {batch.manufactureDate && (
                   <>
                     <span>
-                      Mfg <b style={{ color: 'var(--forest, #143700)' }}>{new Date(batch.manufactureDate).toLocaleDateString()}</b>
+                      Mfg <b style={{ color: 'var(--forest, #143700)' }}>{formatDate(batch.manufactureDate)}</b>
                     </span>
                     <Sep />
                   </>
@@ -121,7 +122,7 @@ export function TraceAppBatchHeader({
                 {batch.expiryDate && (
                   <>
                     <span>
-                      Expiry <b style={{ color: 'var(--forest, #143700)' }}>{new Date(batch.expiryDate).toLocaleDateString()}</b>
+                      Expiry <b style={{ color: 'var(--forest, #143700)' }}>{formatDate(batch.expiryDate)}</b>
                     </span>
                     <Sep />
                   </>

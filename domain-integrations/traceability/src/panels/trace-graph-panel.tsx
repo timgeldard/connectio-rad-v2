@@ -1,5 +1,6 @@
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { formatDate } from '../utils/format-date.js'
 import {
   ReactFlow,
   Background,
@@ -52,7 +53,7 @@ const registration: EvidencePanelRegistration = {
 // ---------------------------------------------------------------------------
 
 function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
-  const { node, isRoot, isSelected } = data
+  const { node, isRoot, isSelected, supplierName, customerName } = data
   const border = isSelected ? 'var(--brand)' : 'var(--stroke)'
   const bg = isSelected ? 'color-mix(in srgb, var(--brand) 6%, white)' : 'var(--white)'
 
@@ -107,6 +108,16 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
           {node.quantity.toLocaleString()} {node.uom ?? ''}
         </div>
       )}
+      {node.type === 'supplier-lot' && supplierName && (
+        <div style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 2, fontStyle: 'italic' }}>
+          {supplierName as string}
+        </div>
+      )}
+      {node.type === 'customer-delivery' && customerName && (
+        <div style={{ fontSize: 9, color: 'var(--fg-muted)', marginTop: 2, fontStyle: 'italic' }}>
+          {customerName as string}
+        </div>
+      )}
       {node.status === 'unresolved' && (
         <div style={{ display: 'flex', marginTop: 4 }}>
           <span style={{ fontSize: 9, color: 'var(--status-bad)', fontWeight: 'var(--fw-semibold)' }}>Unresolved</span>
@@ -149,8 +160,8 @@ function SelectedNodeDetail({ node, graphEdges, baseRequest, onClose }: { node: 
         <Detail label="Description" value={node.materialDescription} />
         {node.batchId && <Detail label="Batch ID" value={node.batchId} mono />}
         {node.plantId && <Detail label="Plant" value={node.plantId} mono />}
-        {manufactureDate && <Detail label="Date of Manufacture" value={manufactureDate.slice(0, 10)} mono />}
-        {expiryDate && <Detail label="Expiry Date" value={expiryDate.slice(0, 10)} mono />}
+        {manufactureDate && <Detail label="Date of Manufacture" value={formatDate(manufactureDate)} mono />}
+        {expiryDate && <Detail label="Expiry Date" value={formatDate(expiryDate)} mono />}
         {vendorBatch && <Detail label="Vendor Batch Number" value={vendorBatch} mono />}
         {node.depth != null && <Detail label="Lineage Depth" value={String(node.depth)} />}
         <Detail label="Focal Anchor" value={node.isAnchor ? 'Yes' : 'No'} />
@@ -181,7 +192,7 @@ function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: 
         <Detail label="Link type (mapped)" value={edge.relationshipType?.replace(/-/g, ' ') ?? '—'} />
         {edge.linkType && <Detail label="Link type (raw)" value={edge.linkType} />}
         {edge.movementType && <Detail label="Movement Type" value={edge.movementType} mono />}
-        {edge.postingDate && <Detail label="Posting Date" value={edge.postingDate} mono />}
+        {edge.postingDate && <Detail label="Posting Date" value={formatDate(edge.postingDate)} mono />}
         {edge.quantity != null && (
           <Detail label="Quantity" value={`${edge.quantity.toLocaleString()} ${edge.uom ?? ''}`} mono />
         )}
@@ -191,7 +202,9 @@ function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: 
         {edge.materialDocumentNumber && <Detail label="Material Document" value={edge.materialDocumentNumber} mono />}
         {edge.deliveryId && <Detail label="Delivery ID" value={edge.deliveryId} mono />}
         {edge.supplierId && <Detail label="Supplier ID" value={edge.supplierId} mono />}
+        {edge.supplierName && <Detail label="Supplier Name" value={edge.supplierName} />}
         {edge.customerId && <Detail label="Customer ID" value={edge.customerId} mono />}
+        {edge.customerName && <Detail label="Customer Name" value={edge.customerName} />}
       </div>
     </div>
   )

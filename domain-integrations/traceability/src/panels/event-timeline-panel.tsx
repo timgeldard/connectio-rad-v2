@@ -4,6 +4,7 @@ import type { EvidencePanelRegistration } from '@connectio/product-model'
 import type { TraceEvent } from '@connectio/data-contracts'
 import { useTraceEvents } from '../adapters/trace2-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
+import { formatDateTime } from '../utils/format-date.js'
 
 /** Static registration record for the Event Timeline panel. */
 const registration: EvidencePanelRegistration = {
@@ -101,7 +102,7 @@ export function EventTimelinePanel({ request }: EventTimelinePanelProps) {
                       </div>
                     )}
                     <div style={{ fontSize: 10, color: 'var(--shell-fg-3)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <span>{new Date(event.timestamp).toLocaleString()}</span>
+                      <span>{formatDateTime(event.timestamp)}</span>
                       <span>· {event.sourceSystem}</span>
                       {event.actor && <span>· {event.actor}</span>}
                     </div>

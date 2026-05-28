@@ -186,6 +186,8 @@ export const mockTraceGraph: TraceGraph = {
       quantity: 24000,
       uom: 'L',
       documentReference: 'PO-MILK-240308',
+      supplierId: 'SUP-GOLDEN-001',
+      supplierName: 'Golden Vale Dairy Co-op',
     },
     {
       id: 'e4',
@@ -196,6 +198,8 @@ export const mockTraceGraph: TraceGraph = {
       uom: 'KG',
       movementType: 'GD-601',
       documentReference: 'DO-4900089123',
+      customerId: 'CUST-MULLER-DE',
+      customerName: 'Müller Foods GmbH',
     },
     {
       id: 'e5',
@@ -206,6 +210,8 @@ export const mockTraceGraph: TraceGraph = {
       uom: 'KG',
       movementType: 'GD-601',
       documentReference: 'DO-4900089124',
+      customerId: 'CUST-LACTALIS-FR',
+      customerName: 'Lactalis France',
     },
     {
       id: 'e6',

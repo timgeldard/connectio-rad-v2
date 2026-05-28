@@ -8,6 +8,7 @@ import type {
   PassportStock,
   QualityCharacteristic,
 } from '@connectio/data-contracts'
+import { formatDate, formatDateTime } from '../utils/format-date.js'
 import { useBatchQualityPassport } from './trace-app-queries.js'
 import type { Trace2AdapterRequest } from '../adapters/trace2-adapter.js'
 import {
@@ -175,12 +176,12 @@ export function QualityPassportPanel({
                     />
                     <KeyValue
                       label="Manufacture"
-                      value={new Date(data.identity.manufactureDate).toLocaleDateString()}
+                      value={formatDate(data.identity.manufactureDate)}
                       mono
                     />
                     <KeyValue
                       label="Expiry"
-                      value={`${new Date(data.identity.expiryDate).toLocaleDateString()} · ${data.identity.daysToExpiry}d`}
+                      value={`${formatDate(data.identity.expiryDate)} · ${data.identity.daysToExpiry}d`}
                       mono
                     />
                     <KeyValue label="UoM" value={data.identity.uom} mono />
@@ -594,7 +595,7 @@ function StockBreakdown({ stock }: { stock: PassportStock }) {
 function ProductionContext({ production, isExternal }: { production: PassportProduction; isExternal: boolean }) {
   const formatOptional = (value: string | null | undefined) => value ?? 'Unavailable'
   const formatOptionalDate = (value: string | null | undefined) =>
-    value ? new Date(value).toLocaleString() : 'Unavailable'
+    value ? formatDateTime(value) : 'Unavailable'
   const plannedQty = production.plannedQty != null
     ? production.plannedQty.toLocaleString()
     : 'Unavailable'
