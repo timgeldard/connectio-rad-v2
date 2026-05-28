@@ -75,26 +75,6 @@ export function RecallPanel({ request }: RecallPanelProps) {
     >
       {data && (
         <div style={{ padding: 24, fontFamily: 'var(--font-sans)' }}>
-          {/* Recommendation Banner */}
-          <div
-            style={{
-              marginBottom: 20,
-              padding: 14,
-              background: data.recommendationStatus === 'recommended' ? 'color-mix(in srgb, var(--status-bad) 10%, white)' : 'color-mix(in srgb, var(--status-good) 10%, white)',
-              borderLeft: `4px solid ${data.recommendationStatus === 'recommended' ? 'var(--status-bad)' : 'var(--status-good)'}`,
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--forest)',
-              fontSize: 'var(--fs-13)',
-              fontWeight: 'var(--fw-medium)',
-            }}
-          >
-            {data.recommendationStatus === 'recommended' ? (
-              <span>⚠️ Action Required: Recall recommended for this batch. Escalate to the Quality Operations team immediately.</span>
-            ) : (
-              <span>✅ Status Verified: Batch released and within specification bounds. No recall recommended.</span>
-            )}
-          </div>
-
           {/* Metric KPIs */}
           <div
             style={{
@@ -111,7 +91,7 @@ export function RecallPanel({ request }: RecallPanelProps) {
           </div>
 
           {/* Geographic Spread */}
-          <SectionTitle label="Geographic Spread" extra={`${data.countries.length} countries`} />
+          <SectionTitle label="Geographic Spread" />
           <div
             style={{
               padding: 20,

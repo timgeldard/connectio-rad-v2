@@ -260,9 +260,9 @@ def map_customer_delivery_rows(rows: list[dict]) -> Optional[dict]:
         cid = row.get("customer_id")
         if cid is not None:
             customers.add(str(cid))
-        ctry = row.get("country_id")
-        if ctry is not None:
-            countries.add(str(ctry))
+        ctry_name = row.get("country_name") or row.get("country_id")
+        if ctry_name is not None:
+            countries.add(str(ctry_name))
         qty = row.get("abs_quantity")
         if qty is not None:
             total_qty += float(qty)
