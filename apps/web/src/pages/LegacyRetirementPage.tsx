@@ -369,8 +369,8 @@ export function LegacyRetirementPage() {
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 4 }}>
-                {system.readinessChecks.map((check, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                {system.readinessChecks.map((check) => (
+                  <div key={check.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                     <span style={{ color: check.passed ? '#16A34A' : '#D97706', flexShrink: 0, fontSize: 13 }}>
                       {check.passed ? '✓' : '○'}
                     </span>

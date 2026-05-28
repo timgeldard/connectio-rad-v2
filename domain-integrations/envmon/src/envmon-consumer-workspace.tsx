@@ -284,7 +284,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
             <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#f8fafc', textAlign: 'left' }}>Biological Compliance Trends</h3>
             <p style={{ fontSize: 13, textAlign: 'left', marginBottom: 20 }}>Historical microbial test pass rates and pathogen isolation frequency.</p>
             <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #1e293b', borderRadius: 6 }}>
-              📈 Interactive SVG compliance charts loading...
+              📈 Interactive SVG compliance charts loading…
             </div>
           </div>
         )}

@@ -244,16 +244,16 @@ function ScenarioCard({ scenario }: { readonly scenario: ValidationScenario }) {
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Evidence Panels</div>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {scenario.expectedEvidencePanels.map((p, i) => (
-                <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{p}</li>
+              {scenario.expectedEvidencePanels.map((p) => (
+                <li key={p} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{p}</li>
               ))}
             </ul>
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Actions</div>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {scenario.expectedActions.map((a, i) => (
-                <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{a}</li>
+              {scenario.expectedActions.map((a) => (
+                <li key={a} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{a}</li>
               ))}
             </ul>
           </div>
@@ -261,8 +261,8 @@ function ScenarioCard({ scenario }: { readonly scenario: ValidationScenario }) {
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Acceptance Criteria</div>
           <ul style={{ margin: 0, paddingLeft: 14 }}>
-            {scenario.acceptanceCriteria.map((c, i) => (
-              <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>
+            {scenario.acceptanceCriteria.map((c) => (
+              <li key={c} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>
             ))}
           </ul>
         </div>
@@ -270,8 +270,8 @@ function ScenarioCard({ scenario }: { readonly scenario: ValidationScenario }) {
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Findings</div>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {scenario.findings.map((f, i) => (
-                <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{f}</li>
+              {scenario.findings.map((f) => (
+                <li key={f} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{f}</li>
               ))}
             </ul>
           </div>

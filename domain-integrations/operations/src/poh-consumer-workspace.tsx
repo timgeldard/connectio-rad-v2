@@ -315,7 +315,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
                 placeholder="Search process order, material description, or batch ID..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid #cbd5e1', outline: 'none', fontSize: 14 }}
+                style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14 }}
               />
               <Button type="submit" disabled={searchStatus === 'loading'} style={{ background: '#047857', color: '#fff', borderRadius: 8, padding: '0 24px' }}>
                 {searchStatus === 'loading' ? 'Searching...' : 'Search'}
@@ -422,15 +422,15 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Recent Pour Events:</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                    <span>Pour #102 — Raw Milk Tank 1</span>
+                    <span>Pour #102: Raw Milk Tank 1</span>
                     <strong style={{ color: '#047857' }}>6,200 KG</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                    <span>Pour #101 — Rennet Addition</span>
+                    <span>Pour #101: Rennet Addition</span>
                     <strong style={{ color: '#047857' }}>150 KG</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                    <span>Pour #100 — Starter Culture</span>
+                    <span>Pour #100: Starter Culture</span>
                     <strong style={{ color: '#047857' }}>800 KG</strong>
                   </div>
                 </div>
@@ -462,7 +462,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
                     <div style={{ width: '98.5%', height: '100%', background: '#3b82f6' }} />
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#64748b', background: '#f8fafc', padding: 8, borderRadius: 6, borderLeft: '3px solid #047857' }}>
+                <div style={{ fontSize: 12, color: '#64748b', background: '#f8fafc', padding: 8, borderRadius: 6, boxShadow: 'inset 3px 0 0 #047857' }}>
                   💡 Plant output is currently performing <strong>On Target</strong>. Scrap levels are within UAT control limits.
                 </div>
               </CardContent>
@@ -568,7 +568,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
                     {operations.map(op => (
                       <div key={op.operationId} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', border: '1px solid #f1f5f9', borderRadius: 6, background: '#fff' }}>
                         <div>
-                          <strong style={{ fontSize: 14 }}>{op.operationNumber} — {op.operationText}</strong>
+                          <strong style={{ fontSize: 14 }}>{op.operationNumber}: {op.operationText}</strong>
                           <div style={{ fontSize: 12, color: '#64748b' }}>Work Centre: {op.workCentre || '-'}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>

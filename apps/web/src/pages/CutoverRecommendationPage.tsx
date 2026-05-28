@@ -110,8 +110,8 @@ export function CutoverRecommendationPage() {
           </CardHeader>
           <CardContent>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {CUTOVER_RECOMMENDATION.blockers.map((b, i) => (
-                <li key={i} style={{ fontSize: 12, color: '#DC2626', marginBottom: 6 }}>{b}</li>
+              {CUTOVER_RECOMMENDATION.blockers.map((b) => (
+                <li key={b} style={{ fontSize: 12, color: '#DC2626', marginBottom: 6 }}>{b}</li>
               ))}
             </ul>
           </CardContent>
@@ -123,8 +123,8 @@ export function CutoverRecommendationPage() {
           </CardHeader>
           <CardContent>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {CUTOVER_RECOMMENDATION.conditions.map((c, i) => (
-                <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 6 }}>{c}</li>
+              {CUTOVER_RECOMMENDATION.conditions.map((c) => (
+                <li key={c} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 6 }}>{c}</li>
               ))}
             </ul>
           </CardContent>
@@ -136,8 +136,8 @@ export function CutoverRecommendationPage() {
           </CardHeader>
           <CardContent>
             <ul style={{ margin: 0, paddingLeft: 14 }}>
-              {CUTOVER_RECOMMENDATION.acceptedRisks.map((r, i) => (
-                <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-3)', marginBottom: 6, fontStyle: 'italic' }}>{r}</li>
+              {CUTOVER_RECOMMENDATION.acceptedRisks.map((r) => (
+                <li key={r} style={{ fontSize: 12, color: 'var(--shell-fg-3)', marginBottom: 6, fontStyle: 'italic' }}>{r}</li>
               ))}
             </ul>
           </CardContent>
@@ -150,8 +150,8 @@ export function CutoverRecommendationPage() {
         </CardHeader>
         <CardContent>
           <ol style={{ margin: 0, paddingLeft: 18 }}>
-            {CUTOVER_RECOMMENDATION.requiredActions.map((a, i) => (
-              <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 8 }}>{a}</li>
+            {CUTOVER_RECOMMENDATION.requiredActions.map((a) => (
+              <li key={a} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 8 }}>{a}</li>
             ))}
           </ol>
         </CardContent>

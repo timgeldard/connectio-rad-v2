@@ -74,14 +74,18 @@ function getEventTypeCounts(): Array<{ name: string; count: number }> {
 }
 
 function getActionOutcomes(): Array<{ workspaceId: string; actionId: string; outcome: string; timestamp: string }> {
-  return MOCK_EVENTS
-    .filter(e => e.name === 'action.completed')
-    .map(e => ({
-      workspaceId: e.workspaceId ?? '',
-      actionId: String(e.properties?.actionId ?? ''),
-      outcome: String(e.properties?.outcome ?? ''),
-      timestamp: e.timestamp,
-    }))
+  const result: Array<{ workspaceId: string; actionId: string; outcome: string; timestamp: string }> = []
+  for (const e of MOCK_EVENTS) {
+    if (e.name === 'action.completed') {
+      result.push({
+        workspaceId: e.workspaceId ?? '',
+        actionId: String(e.properties?.actionId ?? ''),
+        outcome: String(e.properties?.outcome ?? ''),
+        timestamp: e.timestamp,
+      })
+    }
+  }
+  return result
 }
 
 function getDrillThroughs(): Array<{ from: string; to: string; count: number }> {
@@ -227,8 +231,8 @@ function ActionsView() {
           No action events recorded.
         </div>
       )}
-      {actions.map((a, i) => (
-        <Card key={i}>
+      {actions.map((a) => (
+        <Card key={`${a.actionId}-${a.timestamp}`}>
           <CardContent style={{ padding: '10px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -270,7 +274,7 @@ function EventLogView() {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {[...filtered].reverse().map((e, i) => (
-          <div key={i} style={{
+          <div key={`${e.name}-${e.timestamp}`} style={{
             display: 'flex',
             alignItems: 'flex-start',
             gap: 10,

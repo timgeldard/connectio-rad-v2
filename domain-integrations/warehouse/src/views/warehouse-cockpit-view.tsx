@@ -760,7 +760,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 INBOUND OPERATIONS
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -785,7 +785,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 OUTBOUND SHIPMENTS
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -810,7 +810,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 PRODUCTION STAGING
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -959,7 +959,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {inboundQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Inbound Receipts from Databricks...
+                      🌀 Loading Inbound Receipts from Databricks…
                     </div>
                   ) : inboundQuery.data?.ok === false ? (
                     <div
@@ -1097,7 +1097,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {outboundQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Outbound Shipments from Databricks...
+                      🌀 Loading Outbound Shipments from Databricks…
                     </div>
                   ) : outboundQuery.data?.ok === false ? (
                     <div
@@ -1231,7 +1231,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {stagingQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Production Staging from Databricks...
+                      🌀 Loading Production Staging from Databricks…
                     </div>
                   ) : stagingQuery.data?.ok === false ? (
                     <div
@@ -1382,7 +1382,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {exceptionsQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Exception Items from Databricks...
+                      🌀 Loading Exception Items from Databricks…
                     </div>
                   ) : exceptionsQuery.data?.ok === false ? (
                     <div

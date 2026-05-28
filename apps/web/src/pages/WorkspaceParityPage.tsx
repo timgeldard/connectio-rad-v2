@@ -428,7 +428,7 @@ function AssessmentCards() {
                 <>
                   <Separator style={{ margin: '10px 0' }} />
                   <div style={{ fontSize: 11, color: 'var(--shell-fg-3)', marginBottom: 6 }}>
-                    {a.findings.length} parity gap{a.findings.length !== 1 ? 's' : ''} — overall: {overallStatus}
+                    {a.findings.length} parity gap{a.findings.length !== 1 ? 's' : ''}, overall: {overallStatus}
                   </div>
                   <FindingRows findings={a.findings} />
                 </>

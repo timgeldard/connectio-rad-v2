@@ -141,7 +141,7 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
         <div style={{ padding: '12px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--shell-fg-3)' }}>
-              {series.characteristicName} — {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {validPoints.length} points
+              {series.characteristicName}: {series.chartType.toUpperCase()} ({series.unitOfMeasure}) · {validPoints.length} points
             </div>
             {exclusions.size > 0 && (
               <button
@@ -194,7 +194,7 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
                   style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                   role="status"
                 >
-                  Control limits not calculated (minimum samples/configuration required) — cannot evaluate process control state.
+                  Control limits not calculated (minimum samples/configuration required); cannot evaluate process control state.
                 </div>
               ) : series.approvalState !== 'approved' ? (
                 <div
@@ -218,7 +218,7 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
                   style={{ padding: '4px 8px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn, #C7821C)', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)' }}
                   role="status"
                 >
-                  Fewer than 3 samples — control limits are indicative only.
+                  Fewer than 3 samples; control limits are indicative only.
                 </div>
               )}
 

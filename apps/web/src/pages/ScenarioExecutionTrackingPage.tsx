@@ -153,7 +153,7 @@ export function ScenarioExecutionTrackingPage() {
           <Badge variant="outline">Phase 8</Badge>
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--shell-fg-2)' }}>
-          Execution results for the 6 pilot validation scenarios. Pass rate: <strong>{passRate}%</strong> ({passed}/{SCENARIO_EXECUTIONS.length}) — target ≥80%.
+          Execution results for the 6 pilot validation scenarios. Pass rate: <strong>{passRate}%</strong> ({passed}/{SCENARIO_EXECUTIONS.length}); target ≥80%.
         </p>
       </div>
 
@@ -201,7 +201,7 @@ export function ScenarioExecutionTrackingPage() {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Observations</div>
                     <ul style={{ margin: 0, paddingLeft: 14 }}>
-                      {exe.observations.map((o, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{o}</li>)}
+                      {exe.observations.map((o) => <li key={o} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{o}</li>)}
                     </ul>
                   </div>
                 )}
@@ -209,7 +209,7 @@ export function ScenarioExecutionTrackingPage() {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Evidence Captured</div>
                     <ul style={{ margin: 0, paddingLeft: 14 }}>
-                      {exe.evidenceCaptured.map((e, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{e}</li>)}
+                      {exe.evidenceCaptured.map((e) => <li key={e} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{e}</li>)}
                     </ul>
                   </div>
                 )}

@@ -387,7 +387,7 @@ function SectionTitle({ num, label, extra }: { num?: string; label: string; extr
         borderBottom: '1px solid var(--stroke)',
       }}
     >
-      {num && (
+      {Boolean(num) && (
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-11)', color: 'var(--brand)', fontWeight: 'var(--fw-bold)' }}>
           {num}
         </span>

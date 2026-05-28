@@ -336,7 +336,6 @@ export function SPCConsumerWorkspace() {
                       border: '2px solid var(--stroke)',
                       fontSize: 'var(--fs-16)',
                       fontFamily: 'var(--font-sans)',
-                      outline: 'none',
                     }}
                     required
                   />
@@ -492,7 +491,7 @@ export function SPCConsumerWorkspace() {
                 <select
                   value={selectedCharId}
                   onChange={e => setSelectedCharId(e.target.value)}
-                  style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 12, outline: 'none' }}
+                  style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 12 }}
                 >
                   {characteristics.map(c => (
                     <option key={c.characteristicId} value={c.characteristicId}>
@@ -653,7 +652,7 @@ export function SPCConsumerWorkspace() {
                       placeholder="Ask Genie a question about capability, control charts, or alarms..."
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', outline: 'none', fontSize: 'var(--fs-14)' }}
+                      style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 'var(--fs-14)' }}
                     />
                     <Button type="submit" style={{ background: 'var(--brand)', color: 'var(--white)', fontWeight: 'var(--fw-semibold)', padding: '0 20px', borderRadius: 'var(--radius-md)' }}>
                       Send

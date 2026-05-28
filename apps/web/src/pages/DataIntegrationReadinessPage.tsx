@@ -217,7 +217,7 @@ export function DataIntegrationReadinessPage() {
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Known Gaps</div>
                 <ul style={{ margin: 0, paddingLeft: 14 }}>
-                  {source.knownGaps.map((g, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{g}</li>)}
+                  {source.knownGaps.map((g) => <li key={g} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 1 }}>{g}</li>)}
                 </ul>
               </div>
             )}

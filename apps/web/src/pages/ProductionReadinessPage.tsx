@@ -477,7 +477,7 @@ export function ProductionReadinessPage() {
           Production Readiness Dashboard
         </h1>
         <p style={{ fontSize: 13, color: 'var(--shell-fg-2)', margin: 0 }}>
-          Static readiness assessment across all 9 ConnectIO workspaces — Phase 6 snapshot (2026-05-15).
+          Static readiness assessment across all 9 ConnectIO workspaces, Phase 6 snapshot (2026-05-15).
           Findings are generated from static audit, ESLint analysis, and manual review.
         </p>
       </div>

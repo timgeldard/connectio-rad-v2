@@ -827,7 +827,6 @@ export function TraceConsumerWorkspace() {
                       padding: '12px 16px',
                       borderRadius: 'var(--radius-md)',
                       border: '1px solid var(--stroke)',
-                      outline: 'none',
                       fontSize: 'var(--fs-14)',
                       fontFamily: 'var(--font-sans)',
                     }}

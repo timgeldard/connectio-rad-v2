@@ -21,7 +21,7 @@ export function StaticSnapshotBanner({ snapshotDate }: Props) {
       }}
     >
       <span style={{ fontWeight: 600 }}>⚠ Static Snapshot</span>
-      <span>— data accurate as of {snapshotDate}. This page does not reflect live system state.</span>
+      <span>Data accurate as of {snapshotDate}. This page does not reflect live system state.</span>
     </div>
   )
 }

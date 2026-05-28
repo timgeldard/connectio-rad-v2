@@ -135,7 +135,7 @@ export function GoNoGoAssessmentPage() {
       <Card style={{ marginTop: 8 }}>
         <CardContent style={{ padding: '16px' }}>
           <div style={{ fontSize: 12, color: 'var(--shell-fg-3)', fontStyle: 'italic' }}>
-            The Go / No-Go recommendation is derived automatically from current dimension statuses. This assessment is informational only — do not treat it as a formal production sign-off. Final cutover authority rests with the programme manager and steering committee.
+            The Go / No-Go recommendation is derived automatically from current dimension statuses. This assessment is informational only; do not treat it as a formal production sign-off. Final cutover authority rests with the programme manager and steering committee.
           </div>
         </CardContent>
       </Card>
