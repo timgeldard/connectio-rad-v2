@@ -132,7 +132,7 @@ def _delivery_child_key(row: dict) -> str:
 
 def _make_delivery_node(row: dict, depth: int) -> dict:
     customer_id = row.get("customer_id")
-    description = f"Customer {customer_id}" if customer_id else "Customer Delivery"
+    description = row.get("customer_name") or (f"Customer {customer_id}" if customer_id else "Customer Delivery")
     qty = row.get("quantity")
     uom = row.get("base_unit_of_measure")
     node: dict = {
@@ -188,7 +188,9 @@ def _make_graph_edge(
         "materialDocumentNumber": row.get("material_document_number"),
         "purchaseOrderId": row.get("purchase_order_id"),
         "supplierId": row.get("supplier_id"),
+        "supplierName": row.get("supplier_name"),
         "customerId": row.get("customer_id"),
+        "customerName": row.get("customer_name"),
         "deliveryId": row.get("delivery_id"),
         "salesOrderId": row.get("sales_order_id"),
         "quantity": float(qty_raw) if qty_raw is not None else None,
