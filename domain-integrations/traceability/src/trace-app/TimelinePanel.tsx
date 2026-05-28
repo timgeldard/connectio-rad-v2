@@ -241,7 +241,7 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
 
 function MovementChip({ label, value }: { label: string; value: string }) {
   return (
-    <span style={{ fontSize: 10, color: 'var(--fg-muted)' }}>
+    <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)' }}>
       <span style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 'var(--fw-semibold)', marginRight: 3 }}>{label}:</span>
       <span style={{ fontFamily: 'var(--font-mono)' }}>{value}</span>
     </span>
