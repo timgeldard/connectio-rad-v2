@@ -73,6 +73,10 @@ class BatchHeaderSummary(BaseModel):
     """
     [classification: source-field]
     """
+    vendor_batch_id: Optional[str] = Field(None, alias='vendorBatchId')
+    """
+    [classification: source-field]
+    """
     process_order_id: Optional[str] = Field(None, alias='processOrderId')
     """
     [classification: source-field]
@@ -413,6 +417,14 @@ class BatchQualityPassport(BaseModel):
     usage_decision_evidence: list[UsageDecisionEvidenceItem] = Field(
         ..., alias='usageDecisionEvidence'
     )
+    inspection_lot_count: Optional[int] = Field(None, alias='inspectionLotCount', ge=0)
+    """
+    [classification: source-field]
+    """
+    production_lot_count: Optional[int] = Field(None, alias='productionLotCount', ge=0)
+    """
+    [classification: source-derived]
+    """
 
 
 class BatchReleaseContext(BaseModel):

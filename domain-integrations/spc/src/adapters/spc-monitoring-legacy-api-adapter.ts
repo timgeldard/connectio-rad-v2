@@ -103,7 +103,7 @@ function mapInterpretation(val: string | undefined): CharacteristicCapability['i
 // HTTP helper
 // ---------------------------------------------------------------------------
 
-async function proxyGet(baseUrl: string, path: string, params: Record<string, string>): Promise<unknown> {
+async function proxyGet<T>(baseUrl: string, path: string, params: Record<string, string>): Promise<AdapterResult<T>> {
   let href: string
   if (baseUrl) {
     const url = new URL(`${baseUrl}${path}`)
@@ -115,9 +115,34 @@ async function proxyGet(baseUrl: string, path: string, params: Record<string, st
     const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)))
     href = qs.toString() ? `${path}?${qs}` : path
   }
-  const response = await fetch(href, { method: 'GET', credentials: 'include' })
-  if (!response.ok) throw { status: response.status }
-  return response.json()
+  try {
+    const response = await fetch(href, { method: 'GET', credentials: 'include' })
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: {
+          code: response.status === 401 ? 'unauthorized' : 'network',
+          message: `HTTP ${response.status}`,
+          retryable: response.status >= 500,
+        },
+        displayState: response.status === 401 ? 'unauthorized' : 'error',
+        source: 'legacy-api',
+      }
+    }
+    const data = await response.json()
+    return { ok: true, data: data as T, fetchedAt: new Date().toISOString(), source: 'legacy-api' }
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        code: 'network',
+        message: err instanceof Error ? err.message : String(err),
+        retryable: true,
+      },
+      displayState: 'error',
+      source: 'legacy-api',
+    }
+  }
 }
 
 async function proxyPost(baseUrl: string, path: string, body: object): Promise<unknown> {
@@ -186,12 +211,15 @@ export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
     request: SPCMonitoringAdapterRequest,
   ): Promise<AdapterResult<MonitoredSPCCharacteristic[]>> {
     if (!request.materialId) return super.getMonitoredCharacteristics(request)
-
     try {
       const params: Record<string, string> = { material_id: request.materialId }
       if (request.plantId) params['plant_id'] = request.plantId
 
-      const raw = await proxyGet(this.baseUrl, '/api/spc/characteristics', params) as V1Characteristic[]
+      const result = await proxyGet<V1Characteristic[]>(this.baseUrl, '/api/spc/characteristics', params)
+      if (!result.ok) {
+        return result
+      }
+      const raw = result.data
       const items: MonitoredSPCCharacteristic[] = (Array.isArray(raw) ? raw : []).map((c) => ({
         characteristicId: c.mic_id,
         characteristicName: c.mic_name,
@@ -209,7 +237,7 @@ export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
       return {
         ok: true,
         data: items,
-        fetchedAt: new Date().toISOString(),
+        fetchedAt: result.fetchedAt,
         source: 'legacy-api',
       }
     } catch (err) {
@@ -313,7 +341,11 @@ export class SPCMonitoringLegacyApiAdapter extends SPCMonitoringAdapter {
       }
       if (request.plantId) params['plant_id'] = request.plantId
 
-      const raw = await proxyGet(this.baseUrl, '/api/spc/capability', params) as V1CapabilityResponse
+      const result = await proxyGet<V1CapabilityResponse>(this.baseUrl, '/api/spc/capability', params)
+      if (!result.ok) {
+        return result
+      }
+      const raw = result.data
 
       const data: CharacteristicCapability = {
         characteristicId: raw.mic_id ?? request.characteristicId,

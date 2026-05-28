@@ -141,7 +141,9 @@ export function resolveSPCConsumerSearch(
   if (uniqueCharsMap.size > 1) {
     const characteristics: SPCConsumerCharOption[] = []
     uniqueCharsMap.forEach((characteristicName, characteristicId) => {
-      characteristics.push({ characteristicId, characteristicName })
+      const match = plantMatches.find(m => m.characteristicId === characteristicId)
+      const opId = match ? (match as any).operationId : undefined
+      characteristics.push({ characteristicId, characteristicName, operationId: opId })
     })
     return {
       step: 'characteristics-for-plant',
@@ -153,6 +155,8 @@ export function resolveSPCConsumerSearch(
 
   // Only one characteristic matched
   const characteristicId = Array.from(uniqueCharsMap.keys())[0]
+  const matchedItem = plantMatches.find(m => m.characteristicId === characteristicId)
+  const operationId = matchedItem ? (matchedItem as any).operationId : undefined
 
   // Look for matched batch if query resembles one
   const batchMatch = matches.find(m => m.batchId && m.batchId.toLowerCase().includes(query))
@@ -163,6 +167,7 @@ export function resolveSPCConsumerSearch(
       materialId,
       plantId,
       characteristicId,
+      operationId,
       batchId: batchMatch?.batchId,
     },
   }
