@@ -188,39 +188,10 @@ class DatabricksRepository:
         from .cache_policy import CacheTier
         from .cache import get_cache_store
 
-        spec = spec_factory()
-        # Catalog override allow-list is enforced BEFORE any cache lookup
-        # so a previously-cached entry cannot satisfy a request that the
-        # current configuration policy would now reject. ADR-027 §7
-        # ("No Silent Masking") requires that auth / permission /
-        # configuration failures propagate immediately and cannot be
-        # answered from cache.
+        # Enforce identity/catalog constraints BEFORE cache lookup so cache HIT
+        # cannot bypass auth-required or catalog allow-list policy.
+        self.identity.require_user_oauth()
         assert_allowed_catalog_target(self.identity.catalog_target)
-
-        cache_store = get_cache_store()
-        ttl = self._get_ttl_for_policy(spec.cache_policy)
-        cache_enabled = os.getenv("ENABLE_QUERY_CACHE", "false").lower() == "true"
-
-        entry = None
-        if not cache_enabled:
-            spec.cache_status = "DISABLED"
-        elif spec.cache_policy == CacheTier.NONE or ttl <= 0:
-            spec.cache_status = "BYPASS"
-        else:
-            cache_key = self._build_cache_key(spec)
-            try:
-                entry = await cache_store.get(cache_key)
-            except Exception:
-                _log.exception("Cache store get error (graceful degradation applied)")
-                spec.cache_status = "BYPASS"
-
-            if entry is not None:
-                spec.cache_status = "HIT"
-                spec.cache_age_seconds = int(time.time() - entry.cached_at)
-                spec.cache_ttl_seconds = entry.ttl
-                return mapper(entry.data), spec
-            elif spec.cache_status != "BYPASS":
-                spec.cache_status = "MISS"
 
         last_retryable_error: Exception | None = None
 
@@ -228,6 +199,34 @@ class DatabricksRepository:
 
         token = catalog_context.set(self.identity.catalog_target)
         try:
+            # Build the baseline spec only after catalog_context is set so
+            # overrides are applied consistently for both cache and execution.
+            spec = spec_factory()
+            cache_store = get_cache_store()
+            ttl = self._get_ttl_for_policy(spec.cache_policy)
+            cache_enabled = os.getenv("ENABLE_QUERY_CACHE", "false").lower() == "true"
+
+            entry = None
+            if not cache_enabled:
+                spec.cache_status = "DISABLED"
+            elif spec.cache_policy == CacheTier.NONE or ttl <= 0:
+                spec.cache_status = "BYPASS"
+            else:
+                cache_key = self._build_cache_key(spec)
+                try:
+                    entry = await cache_store.get(cache_key)
+                except Exception:
+                    _log.exception("Cache store get error (graceful degradation applied)")
+                    spec.cache_status = "BYPASS"
+
+                if entry is not None:
+                    spec.cache_status = "HIT"
+                    spec.cache_age_seconds = int(time.time() - entry.cached_at)
+                    spec.cache_ttl_seconds = entry.ttl
+                    return mapper(entry.data), spec
+                elif spec.cache_status != "BYPASS":
+                    spec.cache_status = "MISS"
+
             for attempt_number in range(1, self.max_attempts + 1):
                 try:
                     # Evaluate spec per attempt in case dynamic values are needed
