@@ -1,5 +1,5 @@
 import '@xyflow/react/dist/style.css'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -238,7 +238,7 @@ function DirectionToggle({
   onChange: (d: DirectionOption) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 10 }} role="group" aria-label="Trace direction">
+    <fieldset style={{ display: 'flex', gap: 4, marginBottom: 10, border: 'none', padding: 0, margin: '0 0 10px' }} aria-label="Trace direction">
       {(['reverse', 'both', 'forward'] as DirectionOption[]).map(dir => (
         <button
           type="button"
@@ -259,7 +259,7 @@ function DirectionToggle({
           {DIRECTION_LABELS[dir]}
         </button>
       ))}
-    </div>
+    </fieldset>
   )
 }
 
@@ -329,14 +329,16 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [activeDirection, setActiveDirection] = useState<DirectionOption>('both')
 
+  const selectedIdRef = useRef(selectedId)
+  selectedIdRef.current = selectedId
+
   const directedGraph = useMemo(
     () => (graph ? filterGraphByDirection(graph, activeDirection) : null),
     [graph, activeDirection],
   )
 
   const initialNodes = useMemo(
-    () => (directedGraph ? mapToFlowNodes(directedGraph, selectedId) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (directedGraph ? mapToFlowNodes(directedGraph, selectedIdRef.current) : []),
     [directedGraph],
   )
   const initialEdges = useMemo(() => (directedGraph ? mapToFlowEdges(directedGraph) : []), [directedGraph])
@@ -347,37 +349,29 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
   // Sync when graph data or direction changes
   useEffect(() => {
     if (!directedGraph) return
-    setNodes(mapToFlowNodes(directedGraph, selectedId))
+    setNodes(mapToFlowNodes(directedGraph, selectedIdRef.current))
     setEdges(mapToFlowEdges(directedGraph))
-  // Deliberately omit selectedId to avoid clearing selection on data refresh
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directedGraph, setNodes, setEdges])
 
-  // Update node selected state without triggering a full graph re-layout
-  useEffect(() => {
-    setNodes(prev =>
-      prev.map(n => ({
-        ...n,
-        data: { ...n.data, isSelected: n.id === selectedId },
-      })),
-    )
-  }, [selectedId, setNodes])
-
-  // Clear selections when direction changes
-  useEffect(() => {
-    setSelectedId(null)
-    setSelectedEdgeId(null)
-  }, [activeDirection])
-
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedId(prev => (prev === node.id ? null : node.id))
+    const newId = selectedId === node.id ? null : node.id
+    setSelectedId(newId)
     setSelectedEdgeId(null)
-  }, [])
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: n.id === newId } })))
+  }, [selectedId, setNodes])
 
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id))
     setSelectedId(null)
-  }, [])
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: false } })))
+  }, [setNodes])
+
+  const handleDirectionChange = useCallback((dir: DirectionOption) => {
+    setActiveDirection(dir)
+    setSelectedId(null)
+    setSelectedEdgeId(null)
+    setNodes(prev => prev.map(n => ({ ...n, data: { ...n.data, isSelected: false } })))
+  }, [setNodes])
 
   const selectedNode = selectedId
     ? directedGraph?.nodes.find(n => n.id === selectedId) ?? null
@@ -425,7 +419,7 @@ export function TraceGraphPanel({ request }: TraceGraphPanelProps) {
 
           {/* Direction toggle + root metadata */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <DirectionToggle active={activeDirection} onChange={setActiveDirection} />
+            <DirectionToggle active={activeDirection} onChange={handleDirectionChange} />
             <span style={{ fontSize: 'var(--fs-12)', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)' }}>
               Root: {graph.rootBatch}
             </span>

@@ -151,7 +151,7 @@ function ReadinessMeter({ label, met, total }: { label: string; met: number; tot
         <span style={{ color, fontWeight: 600 }}>{met}/{total}</span>
       </div>
       <div style={{ height: 6, background: 'var(--shell-line)', borderRadius: 3 }}>
-        <div style={{ height: 6, borderRadius: 3, background: color, width: `${pct}%`, transition: 'width 0.3s' }} />
+        <div style={{ height: 6, borderRadius: 3, background: color, width: `${pct}%`, transition: 'transform 0.3s' }} />
       </div>
     </div>
   )

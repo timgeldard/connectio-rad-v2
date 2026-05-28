@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { z } from 'zod'
 import { spcMonitoringAdapter } from './adapters/spc-monitoring-adapter-factory.js'
@@ -98,7 +98,7 @@ export function SPCConsumerWorkspace() {
     : { materialId: '', plantId: '' }
 
   const { data: charsResult } = useMonitoredCharacteristics(charsHookRequest)
-  const characteristics = charsResult?.ok ? charsResult.data : []
+  const characteristics = useMemo(() => charsResult?.ok ? charsResult.data : [], [charsResult])
 
   // Derive operationId from the loaded characteristics list so chart queries get the correct value.
   const selectedChar = characteristics.find(c => c.characteristicId === selectedCharId)
@@ -156,7 +156,7 @@ export function SPCConsumerWorkspace() {
         setSelectedCharId(characteristics[0].characteristicId)
       }
     }
-  }, [characteristics, selectedCharId])
+  }, [characteristics, selectedCharId, setSelectedCharId])
 
   // Initialize Genie summary
   useEffect(() => {
@@ -174,7 +174,7 @@ export function SPCConsumerWorkspace() {
     } else {
       setChatMessages([])
     }
-  }, [request, summaryQuery.data?.ok, chartQuery.data?.ok, capabilityQuery.data?.ok, signalsQuery.data?.ok])
+  }, [request, summaryQuery.data, chartQuery.data, capabilityQuery.data, signalsQuery.data, setChatMessages])
 
   const handleSendChat = (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault()
@@ -325,6 +325,7 @@ export function SPCConsumerWorkspace() {
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
                     type="text"
+                    aria-label="Search monitored characteristics"
                     placeholder="Search material description, pH, moisture, batch..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
@@ -649,6 +650,7 @@ export function SPCConsumerWorkspace() {
                   <form onSubmit={handleSendChat} style={{ display: 'flex', gap: 10 }}>
                     <input
                       type="text"
+                      aria-label="Chat message"
                       placeholder="Ask Genie a question about capability, control charts, or alarms..."
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}

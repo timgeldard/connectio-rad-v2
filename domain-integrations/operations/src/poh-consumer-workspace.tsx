@@ -312,6 +312,7 @@ export function ProcessOrderConsumerWorkspace({ scope }: { readonly scope: Scope
             <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 12 }}>
               <input
                 type="text"
+                aria-label="Search process orders"
                 placeholder="Search process order, material description, or batch ID..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}

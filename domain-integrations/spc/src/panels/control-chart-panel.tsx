@@ -163,12 +163,11 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
           </div>
 
           {validPoints.length === 0 ? (
-            <div
-              style={{ padding: '24px 0', textAlign: 'center', color: 'var(--shell-fg-3)', fontSize: 12 }}
-              role="status"
+            <output
+              style={{ display: 'block', padding: '24px 0', textAlign: 'center', color: 'var(--shell-fg-3)', fontSize: 12 }}
             >
               No measurement data found for this characteristic.
-            </div>
+            </output>
           ) : (
             <>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -190,16 +189,14 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
               </div>
 
               {cl == null && lcl == null && ucl == null ? (
-                <div
-                  style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
-                  role="status"
+                <output
+                  style={{ display: 'block', padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.2))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                 >
                   Control limits not calculated (minimum samples/configuration required); cannot evaluate process control state.
-                </div>
+                </output>
               ) : series.approvalState !== 'approved' ? (
-                <div
-                  style={{ padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.3))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
-                  role="status"
+                <output
+                  style={{ display: 'block', padding: '6px 10px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn-border, rgba(199, 130, 28, 0.3))', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)', lineHeight: 1.4 }}
                 >
                   <span style={{ fontWeight: 600, display: 'block', marginBottom: 2 }}>
                     ⚠️ Control-limit approval source not verified ({series.approvalState?.replace(/-/g, ' ') || 'unknown'})
@@ -210,16 +207,15 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
                       Source: {series.limitProvenance.replace(/-/g, ' ')}
                     </span>
                   )}
-                </div>
+                </output>
               ) : null}
 
               {validPoints.length > 0 && validPoints.length < 3 && (ucl != null || lcl != null || cl != null) && (
-                <div
-                  style={{ padding: '4px 8px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn, #C7821C)', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)' }}
-                  role="status"
+                <output
+                  style={{ display: 'block', padding: '4px 8px', marginBottom: 8, background: 'var(--shell-warn-bg, rgba(199, 130, 28, 0.05))', border: '1px solid var(--shell-warn, #C7821C)', borderRadius: 4, fontSize: 11, color: 'var(--shell-warn, #C7821C)' }}
                 >
                   Fewer than 3 samples; control limits are indicative only.
-                </div>
+                </output>
               )}
 
               <InteractiveControlChart

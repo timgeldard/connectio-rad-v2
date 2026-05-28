@@ -118,7 +118,7 @@ export function WorkspaceAdoptionPage() {
             </CardHeader>
             <CardContent>
               <div style={{ height: 6, background: 'var(--shell-line)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: adoptionColor(pct), borderRadius: 3, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', width: `${pct}%`, background: adoptionColor(pct), borderRadius: 3, transition: 'transform 0.3s' }} />
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--shell-fg-3)', marginBottom: 6 }}>
                 <span>Feedback: {record.feedbackSubmitted}</span>

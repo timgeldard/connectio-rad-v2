@@ -136,7 +136,7 @@ export function TrainingReadinessPage() {
           <CardContent>
             <div style={{ marginBottom: 10 }}>
               <div style={{ height: 6, background: 'var(--shell-line)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${role.completionPercent}%`, background: completionColor(role.completionPercent), borderRadius: 3, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', width: `${role.completionPercent}%`, background: completionColor(role.completionPercent), borderRadius: 3, transition: 'transform 0.3s' }} />
               </div>
             </div>
             {role.blockers.length > 0 && (

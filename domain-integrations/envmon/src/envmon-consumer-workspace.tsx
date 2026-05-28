@@ -77,8 +77,9 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>Plant Scope:</label>
+          <label htmlFor="envmon-plant-scope" style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>Plant Scope:</label>
           <select
+            id="envmon-plant-scope"
             value={selectedPlant}
             onChange={(e) => setSelectedPlant(e.target.value)}
             style={{
@@ -239,6 +240,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
       <main style={{ background: '#0a0f1d', borderRadius: 8, border: '1px solid #1e293b', overflow: 'hidden' }}>
         {activeTab === 'map' && (
           <FloorPlanCanvas
+            key={activeFloor.floorId}
             floor={activeFloor}
             zones={currentFloorZones}
             coordinates={currentFloorCoordinates}
