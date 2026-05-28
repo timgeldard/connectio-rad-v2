@@ -2,15 +2,18 @@
 
 Covers:
   - get_mass_balance_spec / map_mass_balance_rows (Slice 3)
+  - get_mass_balance_ledger_spec / map_mass_balance_ledger_rows (Trace App ledger tab)
 """
 from __future__ import annotations
+
+from typing import Optional
 
 from shared.query_service.cache_policy import CacheTier
 from shared.query_service.object_resolver import resolve_domain_object
 from shared.query_service.query_spec import QuerySpec
 
-from ._types import Trace2MassBalanceRequest
-from ._utils import _is_unmapped_movement_category, _map_movement_category
+from ._types import Trace2MassBalanceRequest, Trace2MassBalanceLedgerRequest
+from ._utils import _is_unmapped_movement_category, _map_movement_category, _bucket_movement_type, _movement_label
 
 
 # ---------------------------------------------------------------------------
@@ -156,4 +159,132 @@ def map_mass_balance_rows(rows: list[dict]) -> dict:
         "confidence": max(0.0, 1.0 - unresolved / max(1, len(rows))),
         "unresolvedMovements": unresolved,
         "movements": movements,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Trace App ledger tab — get_mass_balance_ledger_spec / map_mass_balance_ledger_rows
+# ---------------------------------------------------------------------------
+
+
+def get_mass_balance_ledger_spec(request: Trace2MassBalanceLedgerRequest) -> QuerySpec:
+    """Return a QuerySpec for the Trace App Mass Balance tab.
+
+    Source: gold_batch_mass_balance_v ordered by POSTING_DATE so the panel
+    receives events in chronological order. The mapper computes KPIs by
+    bucketing MOVEMENT_TYPE into the panel's {101, 261, 601, 701, Z01} codes
+    and aggregates signed QUANTITY values per bucket.
+    """
+    tbl = resolve_domain_object("trace2", "gold_batch_mass_balance_v")
+
+    sql = f"""
+    SELECT
+      POSTING_DATE        AS posting_date,
+      MOVEMENT_TYPE       AS movement_type,
+      MOVEMENT_CATEGORY   AS movement_category,
+      QUANTITY            AS quantity,
+      ABS_QUANTITY        AS abs_quantity,
+      BALANCE_QTY         AS balance_qty,
+      UOM                 AS uom,
+      PROCESS_ORDER_ID    AS process_order_id
+    FROM {tbl}
+    WHERE MATERIAL_ID = :material_id
+      AND BATCH_ID   = :batch_id
+      AND (:plant_id = '' OR PLANT_ID = :plant_id)
+      AND MOVEMENT_TYPE IN ('101','102','131','261','262','601','602','701','702','711','712')
+    ORDER BY POSTING_DATE, MOVEMENT_TYPE
+    LIMIT :max_rows
+    """
+
+    return QuerySpec(
+        name="trace2.get_mass_balance_ledger",
+        module="trace2",
+        endpoint="/api/trace2/mass-balance-ledger",
+        sql=sql,
+        params={
+            "material_id": request.material_id,
+            "batch_id": request.batch_id,
+            "plant_id": request.plant_id,
+            "max_rows": request.max_rows,
+        },
+        cache_policy=CacheTier.PER_USER_60S,
+        source_badge="view:gold_batch_mass_balance_v",
+        tags=["trace2", "trace-app", "mass-balance-ledger"],
+    )
+
+
+def map_mass_balance_ledger_rows(rows: list[dict]) -> Optional[dict]:
+    """Map gold_batch_mass_balance_v rows to MassBalanceLedgerSchema shape.
+
+    Zero rows → returns None. Variance is computed from the bucket aggregates:
+      variance = produced + adjusted + consumed + shipped - current
+    Negative consumption/shipping values keep their natural signs.
+    """
+    if not rows:
+        return None
+
+    events: list[dict] = []
+    # uom is source-truthful: stays `None` when no row provides one.
+    # Contract was relaxed to z.string().nullable() so we no longer emit
+    # the empty-string sentinel (which read as "unit is empty" rather
+    # than "unit is unavailable"). See PR brief Part B.
+    uom: Optional[str] = None
+    cum_running = 0.0
+    for i, row in enumerate(rows):
+        bucket = _bucket_movement_type(row.get("movement_type"))
+        qty = float(row.get("quantity") or 0)
+        balance = row.get("balance_qty")
+        cum_running = float(balance) if balance is not None else cum_running + qty
+        if uom is None and row.get("uom") is not None:
+            raw_uom = str(row["uom"]).strip()
+            if raw_uom:
+                uom = raw_uom
+        events.append({
+            "d": i,
+            "date": str(row.get("posting_date") or ""),
+            "delta": round(qty * 10) / 10,
+            "cum": round(cum_running * 10) / 10,
+            "code": bucket,
+            "label": _movement_label(row.get("movement_type"), row.get("movement_category")),
+        })
+
+    def _sum_where(code: str) -> float:
+        return sum(e["delta"] for e in events if e["code"] == code)
+
+    def _count_where(code: str) -> int:
+        return sum(1 for e in events if e["code"] == code)
+
+    produced = _sum_where("101")
+    consumed = _sum_where("261")
+    shipped = _sum_where("601")
+    adjusted = _sum_where("701")
+    current = events[-1]["cum"] if events else 0.0
+    variance = round((produced + adjusted + consumed + shipped - current) * 10) / 10
+
+    date_start = events[0]["date"] if events else ""
+    date_end = events[-1]["date"] if events else ""
+
+    return {
+        "kpi": {
+            "produced": round(produced),
+            "consumed": round(consumed),
+            "shipped": round(shipped),
+            "adjusted": round(adjusted),
+            "current": round(current),
+            "variance": variance,
+            "uom": uom,
+            "postings": {
+                "production": _count_where("101"),
+                "consumption": _count_where("261"),
+                "dispatch": _count_where("601"),
+                "adjustment": _count_where("701"),
+            },
+        },
+        "events": events,
+        "dateStart": date_start,
+        "dateEnd": date_end,
+        # Reconciliation is application-derived (variance formula above).
+        # MOVEMENT_CATEGORY direction and BALANCE_QTY semantics are not yet
+        # governed — UI must surface this caveat.
+        "reconciliationSource": "application-heuristic",
     }
