@@ -52,6 +52,22 @@ function appendOptionalParams(url: URL, request: Warehouse360AdapterRequest): vo
   }
 }
 
+function buildEndpointUrl(
+  baseUrl: string,
+  path: string,
+  warehouseId: string,
+  request: Warehouse360AdapterRequest,
+): string {
+  const params = new URLSearchParams()
+  params.set('warehouse_id', warehouseId)
+  if (request.plantId) params.set('plant_id', request.plantId)
+  if (request.dateFrom) params.set('date_from', request.dateFrom)
+  if (request.dateTo) params.set('date_to', request.dateTo)
+  if (request.limit !== undefined) params.set('limit', String(request.limit))
+  const pathWithQuery = `${path}?${params.toString()}`
+  return baseUrl ? `${baseUrl}${pathWithQuery}` : pathWithQuery
+}
+
 /**
  * Tier: legacy-api / databricks-api
  * Verified methods: none yet — awaiting browser-verification in UAT
@@ -143,11 +159,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/warehouse360/overview`)
-      url.searchParams.set('warehouse_id', request.warehouseId)
-      appendOptionalParams(url, request)
-
-      const response = await fetch(url.toString(), {
+      const href = buildEndpointUrl(this.baseUrl, '/api/warehouse360/overview', request.warehouseId, request)
+      const response = await fetch(href, {
         method: 'GET',
         credentials: 'include',
       })
@@ -209,11 +222,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/warehouse360/inbound`)
-      url.searchParams.set('warehouse_id', request.warehouseId)
-      appendOptionalParams(url, request)
-
-      const response = await fetch(url.toString(), {
+      const href = buildEndpointUrl(this.baseUrl, '/api/warehouse360/inbound', request.warehouseId, request)
+      const response = await fetch(href, {
         method: 'GET',
         credentials: 'include',
       })
@@ -291,11 +301,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/warehouse360/outbound`)
-      url.searchParams.set('warehouse_id', request.warehouseId)
-      appendOptionalParams(url, request)
-
-      const response = await fetch(url.toString(), {
+      const href = buildEndpointUrl(this.baseUrl, '/api/warehouse360/outbound', request.warehouseId, request)
+      const response = await fetch(href, {
         method: 'GET',
         credentials: 'include',
       })
@@ -370,11 +377,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/warehouse360/staging`)
-      url.searchParams.set('warehouse_id', request.warehouseId)
-      appendOptionalParams(url, request)
-
-      const response = await fetch(url.toString(), {
+      const href = buildEndpointUrl(this.baseUrl, '/api/warehouse360/staging', request.warehouseId, request)
+      const response = await fetch(href, {
         method: 'GET',
         credentials: 'include',
       })
@@ -449,11 +453,8 @@ export class Warehouse360LegacyApiAdapter extends Warehouse360Adapter {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/warehouse360/exceptions`)
-      url.searchParams.set('warehouse_id', request.warehouseId)
-      appendOptionalParams(url, request)
-
-      const response = await fetch(url.toString(), {
+      const href = buildEndpointUrl(this.baseUrl, '/api/warehouse360/exceptions', request.warehouseId, request)
+      const response = await fetch(href, {
         method: 'GET',
         credentials: 'include',
       })

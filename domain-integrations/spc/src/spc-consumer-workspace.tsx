@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQueries } from '@tanstack/react-query'
+import { z } from 'zod'
 import { spcMonitoringAdapter } from './adapters/spc-monitoring-adapter-factory.js'
 import {
   useSPCSummary,
@@ -121,16 +122,23 @@ export function SPCConsumerWorkspace() {
   const signalsQuery = useActiveSPCSignals(activeRequest)
 
   const characteristicsQueries = useQueries({
-    queries: characteristics.map(c => ({
-      queryKey: ['spc-control-chart', activeRequest.plantId ?? null, c.characteristicId, activeRequest.batchId ?? null],
-      queryFn: () => spcMonitoringAdapter.getControlChartSeries({
-        ...activeRequest,
-        characteristicId: c.characteristicId,
-        operationId: c.operationId,
-      }),
-      staleTime: 5 * 60 * 1000,
-      enabled: !!activeRequest.materialId && characteristics.length > 0
-    }))
+    queries: characteristics.map(c => {
+      const opId = c.operationId ?? request?.operationId
+      return {
+        queryKey: ['spc-control-chart', request?.plantId ?? null, c.characteristicId, request?.batchId ?? null, opId ?? null],
+        queryFn: () => spcMonitoringAdapter.getControlChartSeries({
+          materialId: request?.materialId ?? '',
+          plantId: request?.plantId ?? '',
+          characteristicId: c.characteristicId,
+          operationId: opId,
+          batchId: request?.batchId,
+          dateFrom: twoYearsAgo,
+          dateTo: today,
+        }),
+        staleTime: 5 * 60 * 1000,
+        enabled: !!request?.materialId && characteristics.length > 0
+      }
+    })
   })
 
   const allSeries = characteristicsQueries
@@ -193,13 +201,18 @@ export function SPCConsumerWorkspace() {
     try {
       const res = await fetch(`/api/spc/characteristics?material_id=${encodeURIComponent(materialId)}&plant_id=${encodeURIComponent(plantId)}`)
       if (!res.ok) { setSearchStep('no-results'); return }
-      const chars = await res.json() as Array<{ mic_id: string; mic_name: string; operation_id?: string }>
+      const json = await res.json()
+      const chars = z.array(z.object({
+        mic_id: z.string(),
+        mic_name: z.string().nullable().optional(),
+        operation_id: z.string().nullable().optional(),
+      })).parse(json)
       if (chars.length === 0) { setSearchStep('no-results'); return }
       if (chars.length === 1) {
-        setRequest({ materialId, plantId, characteristicId: chars[0].mic_id, operationId: chars[0].operation_id })
+        setRequest({ materialId, plantId, characteristicId: chars[0].mic_id, operationId: chars[0].operation_id ?? undefined })
         setSelectedCharId(chars[0].mic_id)
       } else {
-        setMatchedChars(chars.map(c => ({ characteristicId: c.mic_id, characteristicName: c.mic_name ?? c.mic_id, operationId: c.operation_id })))
+        setMatchedChars(chars.map(c => ({ characteristicId: c.mic_id, characteristicName: c.mic_name ?? c.mic_id, operationId: c.operation_id ?? undefined })))
         setSelectedMaterialId(materialId)
         setSelectedPlantId(plantId)
         setSearchStep('characteristics-for-plant')
@@ -216,7 +229,11 @@ export function SPCConsumerWorkspace() {
     try {
       const res = await fetch(`/api/spc/plants?material_id=${encodeURIComponent(materialId)}`)
       if (!res.ok) { setSearchStep('no-results'); return }
-      const plants = await res.json() as Array<{ plant_id: string; plant_name: string }>
+      const json = await res.json()
+      const plants = z.array(z.object({
+        plant_id: z.string(),
+        plant_name: z.string().nullable().optional(),
+      })).parse(json)
       if (plants.length === 0) { setSearchStep('no-results'); return }
       if (plants.length === 1) {
         await loadCharsForPlant(materialId, plants[0].plant_id)
@@ -243,7 +260,11 @@ export function SPCConsumerWorkspace() {
     try {
       const res = await fetch(`/api/spc/search?q=${encodeURIComponent(query)}&limit=20`)
       if (!res.ok) { setSearchStep('no-results'); return }
-      const materials = await res.json() as Array<{ material_id: string; material_name: string }>
+      const json = await res.json()
+      const materials = z.array(z.object({
+        material_id: z.string(),
+        material_name: z.string().nullable().optional(),
+      })).parse(json)
       if (materials.length === 0) { setSearchStep('no-results'); return }
       if (materials.length === 1) {
         await loadPlantsForMaterial(materials[0].material_id)

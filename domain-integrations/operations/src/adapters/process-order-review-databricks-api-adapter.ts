@@ -8,6 +8,11 @@ import type { AdapterResult } from '@connectio/source-adapters'
 import { ProcessOrderReviewLegacyApiAdapter } from './process-order-review-legacy-api-adapter.js'
 import type { ProcessOrderReviewAdapterRequest } from './process-order-review-adapter.js'
 
+function buildPorUrl(baseUrl: string, path: string, processOrderId: string): string {
+  const qs = `process_order_id=${encodeURIComponent(processOrderId)}`
+  return baseUrl ? `${baseUrl}${path}?${qs}` : `${path}?${qs}`
+}
+
 function missingProcessOrderId<T>(): AdapterResult<T> {
   return {
     ok: false,
@@ -55,10 +60,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/por/order-operations`)
-      url.searchParams.set('process_order_id', request.processOrderId)
-
-      const response = await fetch(url.toString(), {
+      const response = await fetch(buildPorUrl(this.baseUrl, '/api/por/order-operations', request.processOrderId), {
         method: 'GET',
         credentials: 'include',
       })
@@ -127,10 +129,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/por/order-confirmations`)
-      url.searchParams.set('process_order_id', request.processOrderId)
-
-      const response = await fetch(url.toString(), {
+      const response = await fetch(buildPorUrl(this.baseUrl, '/api/por/order-confirmations', request.processOrderId), {
         method: 'GET',
         credentials: 'include',
       })
@@ -197,10 +196,7 @@ export class ProcessOrderReviewDatabricksApiAdapter extends ProcessOrderReviewLe
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/api/por/order-goods-movements`)
-      url.searchParams.set('process_order_id', request.processOrderId)
-
-      const response = await fetch(url.toString(), {
+      const response = await fetch(buildPorUrl(this.baseUrl, '/api/por/order-goods-movements', request.processOrderId), {
         method: 'GET',
         credentials: 'include',
       })

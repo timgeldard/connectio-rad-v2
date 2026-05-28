@@ -27,11 +27,11 @@ function mapChartType(
   }
 }
 
-async function proxyGet(
+async function proxyGet<T>(
   baseUrl: string,
   path: string,
   params: Record<string, string>,
-): Promise<unknown> {
+): Promise<AdapterResult<T>> {
   let href: string
   if (baseUrl) {
     const url = new URL(`${baseUrl}${path}`)
@@ -43,9 +43,34 @@ async function proxyGet(
     const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)))
     href = qs.toString() ? `${path}?${qs}` : path
   }
-  const response = await fetch(href, { method: 'GET', credentials: 'include' })
-  if (!response.ok) throw { status: response.status }
-  return response.json()
+  try {
+    const response = await fetch(href, { method: 'GET', credentials: 'include' })
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: {
+          code: response.status === 401 ? 'unauthorized' : 'network',
+          message: `HTTP ${response.status}`,
+          retryable: response.status >= 500,
+        },
+        displayState: response.status === 401 ? 'unauthorized' : 'error',
+        source: 'databricks-api',
+      }
+    }
+    const data = await response.json()
+    return { ok: true, data: data as T, fetchedAt: new Date().toISOString(), source: 'databricks-api' }
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        code: 'network',
+        message: err instanceof Error ? err.message : String(err),
+        retryable: true,
+      },
+      displayState: 'error',
+      source: 'databricks-api',
+    }
+  }
 }
 
 function toErrorResult<T>(
@@ -135,7 +160,11 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
         params['limit'] = request.limit.toString()
       }
 
-      const raw = await proxyGet(this.baseUrl, '/api/spc/subgroups', params)
+      const result = await proxyGet<unknown>(this.baseUrl, '/api/spc/subgroups', params)
+      if (!result.ok) {
+        return result
+      }
+      const raw = result.data
 
       const parsed = SPCSubgroupResponseSchema.safeParse(raw)
       if (!parsed.success) {
@@ -258,7 +287,11 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
       const params: Record<string, string> = { material_id: request.materialId }
       if (request.plantId) params['plant_id'] = request.plantId
 
-      const raw = await proxyGet(this.baseUrl, '/api/spc/characteristics', params) as Array<Record<string, unknown>>
+      const result = await proxyGet<Array<Record<string, unknown>>>(this.baseUrl, '/api/spc/characteristics', params)
+      if (!result.ok) {
+        return result
+      }
+      const raw = result.data
       const items: MonitoredSPCCharacteristic[] = (Array.isArray(raw) ? raw : []).map((c) => {
         const batchCount = typeof c['batch_count'] === 'number' ? c['batch_count'] : 0
         const sampleCount = typeof c['sample_count'] === 'number' ? c['sample_count'] : 0
@@ -278,7 +311,7 @@ export class SPCMonitoringDatabricksApiAdapter extends SPCMonitoringAdapter {
       return {
         ok: true,
         data: items,
-        fetchedAt: new Date().toISOString(),
+        fetchedAt: result.fetchedAt ?? new Date().toISOString(),
         source: 'databricks-api',
       }
     } catch (err) {

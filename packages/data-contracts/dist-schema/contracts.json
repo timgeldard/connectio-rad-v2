@@ -85,6 +85,10 @@
           "format": "date-time",
           "description": "[classification: source-field]"
         },
+        "vendorBatchId": {
+          "type": "string",
+          "description": "[classification: source-field]"
+        },
         "processOrderId": {
           "type": [
             "string",
@@ -549,6 +553,16 @@
             ],
             "additionalProperties": false
           }
+        },
+        "inspectionLotCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "[classification: source-field]"
+        },
+        "productionLotCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "[classification: source-derived]"
         }
       },
       "required": [

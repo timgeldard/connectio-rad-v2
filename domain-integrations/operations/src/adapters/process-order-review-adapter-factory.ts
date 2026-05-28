@@ -19,10 +19,10 @@ export function createProcessOrderReviewAdapter(): ProcessOrderReviewAdapter {
     return new ProcessOrderReviewDatabricksApiAdapter(porBaseUrl)
   }
   if (adapterMode === 'legacy-api') {
-    // There is no explicit POH legacy API flag listed, but we can allow it by default, or just run it.
-    // The user's prompt says: "Do not silently fall back to mock. If an environment is explicitly configured for databricks-api but the flag is false, return a disabled instance."
-    // Let's keep legacy-api as is or check if we want a flag for it. (Wait, let's keep it simple and just do it for databricks-api).
-    return new ProcessOrderReviewLegacyApiAdapter(porBaseUrl)
+    // Use the Databricks adapter in legacy-api mode too: operations, confirmations, and goods
+    // movements have no V1 equivalents and are Databricks-native. The Databricks adapter extends
+    // the legacy adapter so search and header still proxy through the FastAPI backend as before.
+    return new ProcessOrderReviewDatabricksApiAdapter(porBaseUrl)
   }
   return new ProcessOrderReviewAdapter()
 }

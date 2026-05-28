@@ -59,7 +59,7 @@ const buildEnv = {
   VITE_POH_API_BASE_URL: '',
   VITE_CQ_API_BASE_URL: '',
   VITE_LEGACY_API_BASE_URL: '',
-  VITE_FEATURE_SPC_LIVE_SOURCES: 'true',
+  VITE_FEATURE_SPC_LIVE_SOURCES: process.env.VITE_FEATURE_SPC_LIVE_SOURCES ?? 'true',
 }
 
 console.log('=== prepare-databricks-app ===')
