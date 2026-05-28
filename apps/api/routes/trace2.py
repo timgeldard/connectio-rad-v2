@@ -48,9 +48,6 @@ from contracts.generated import (
     SupplierBatchView,
     SupplierExposureSummary,
     MassBalanceSummary,
-    MassBalanceSummary,
-    ProductionHistorySummary,
-    SupplierExposureSummary,
     TraceGraph,
 )
 from routes._databricks import (

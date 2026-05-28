@@ -54,7 +54,7 @@ from adapters.spc.spc_databricks_chart_adapter import (
     map_spc_chart_response,
 )
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from routes._databricks import (
     build_databricks_repository,
@@ -402,7 +402,7 @@ async def spc_chart_data(
 
         set_databricks_response_headers(response, subgroups_spec)
         
-        queried_at = datetime.utcnow().isoformat() + "Z"
+        queried_at = datetime.now(timezone.utc).isoformat()
         result = map_spc_chart_response(subgroups_rows, limits_rows, body, queried_at)
         return SpcChartDataResponse.model_validate(result).model_dump(by_alias=True)
 

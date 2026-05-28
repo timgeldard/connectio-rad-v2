@@ -138,7 +138,7 @@ def resolve_token(
     Priority order: ``x-forwarded-access-token`` (Databricks Apps proxy),
     then ``Authorization: Bearer <token>``.
 
-    Service-principal PAT fallback (DATABRICKS_TOKEN env var) is intentionally
+    Service-principal PAT fallback via environment variable is intentionally
     absent. User-facing reads must always use the end-user OAuth identity.
 
     Args:
