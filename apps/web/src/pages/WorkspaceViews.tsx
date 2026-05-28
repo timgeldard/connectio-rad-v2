@@ -210,7 +210,7 @@ export default function WorkspaceViews({ workspaceId }: Props) {
     <div className="connectio-page" data-testid={`workspace-view-${workspaceId}`}>
       <div style={{ padding: 32, color: 'var(--shell-fg-2)', fontSize: 13 }}>
         Workspace{' '}
-        <strong style={{ color: 'var(--shell-fg)' }}>{workspaceId}</strong> —
+        <strong style={{ color: 'var(--shell-fg)' }}>{workspaceId}</strong>:
         implementation pending (Phase 3+).
       </div>
     </div>

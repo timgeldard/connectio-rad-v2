@@ -246,7 +246,7 @@ function PairCard({ pair }: { readonly pair: SimulationPair }) {
                 padding: '6px 10px',
                 background: 'var(--shell-bg)',
                 borderRadius: 4,
-                borderLeft: '3px solid #D97706',
+                boxShadow: 'inset 3px 0 0 #D97706',
                 marginTop: 6,
                 fontSize: 11,
                 color: 'var(--shell-fg-2)',
@@ -345,7 +345,7 @@ export function CutoverSimulationPage() {
         <p style={{ fontSize: 13, color: 'var(--shell-fg-2)', margin: 0 }}>
           Per-legacy-system cutover simulation mode and live results.
           Modes progress from <em>off → observe → simulate-redirect → simulate-retirement</em>.
-          Phase 6 snapshot (2026-05-15) — mode changes are applied by the platform team as pilot milestones are met.
+          Phase 6 snapshot (2026-05-15); mode changes are applied by the platform team as pilot milestones are met.
         </p>
       </div>
 

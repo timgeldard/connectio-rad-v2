@@ -1,20 +1,7 @@
 import { useState, useRef, useEffect, MouseEvent } from 'react'
 import type { EnvMonL4Zone, EnvMonL5Coordinate } from '@connectio/data-contracts'
 import type { EnvMonFloor } from './mock-data.js'
-
-export function isPointInPolygon(point: { x: number; y: number }, vs: { x: number; y: number }[]) {
-  const x = point.x, y = point.y
-  let inside = false
-  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-    const xi = vs[i].x, yi = vs[i].y
-    const xj = vs[j].x, yj = vs[j].y
-    
-    const intersect = ((yi > y) !== (yj > y))
-        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
-    if (intersect) inside = !inside
-  }
-  return inside
-}
+import { isPointInPolygon } from './floor-plan-utils.js'
 
 interface FloorPlanCanvasProps {
   readonly floor: EnvMonFloor
@@ -159,6 +146,7 @@ export function FloorPlanCanvas({
           >
             <span>{validationError}</span>
             <button
+              type="button"
               onClick={() => setValidationError(null)}
               style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontWeight: 'bold', marginLeft: 'auto' }}
             >
@@ -217,7 +205,7 @@ export function FloorPlanCanvas({
                   stroke={isHovered ? '#059669' : '#047857'}
                   strokeWidth="2"
                   strokeDasharray={isHovered ? 'none' : '4,4'}
-                  style={{ transition: 'all 0.2s' }}
+                  style={{ transition: 'fill 0.2s, stroke 0.2s' }}
                 />
                 {/* Text label at the centroid */}
                 {zone.points.length > 0 && (
@@ -288,6 +276,7 @@ export function FloorPlanCanvas({
           <h3 style={{ margin: '0 0 12px', fontSize: 14, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mode</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             <button
+              type="button"
               onClick={() => { setEditorMode('view'); clearDrawing(); }}
               style={{
                 padding: '8px 12px',
@@ -303,6 +292,7 @@ export function FloorPlanCanvas({
               🔍 Live Floor View
             </button>
             <button
+              type="button"
               onClick={() => { setEditorMode('draw-l4'); clearDrawing(); }}
               style={{
                 padding: '8px 12px',
@@ -318,6 +308,7 @@ export function FloorPlanCanvas({
               📐 Draw L4 Zone
             </button>
             <button
+              type="button"
               onClick={() => { setEditorMode('place-l5'); clearDrawing(); }}
               style={{
                 padding: '8px 12px',
@@ -349,6 +340,7 @@ export function FloorPlanCanvas({
             />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button
+                type="button"
                 onClick={finalizeL4Zone}
                 disabled={currentL4Points.length < 3}
                 style={{
@@ -365,6 +357,7 @@ export function FloorPlanCanvas({
                 Save Zone
               </button>
               <button
+                type="button"
                 onClick={clearDrawing}
                 style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', fontSize: 12, cursor: 'pointer' }}
               >
@@ -415,6 +408,7 @@ export function FloorPlanCanvas({
               </div>
             </div>
             <button
+              type="button"
               onClick={() => setSelectedMarker(null)}
               style={{ marginTop: 8, padding: '4px 8px', borderRadius: 4, border: '1px solid #334155', background: 'transparent', color: '#f8fafc', fontSize: 11, cursor: 'pointer' }}
             >

@@ -62,8 +62,8 @@ export function CorrelationHeatmap({ allSeries, alignedPoints }: CorrelationHeat
         <div></div>
 
         {/* Top Headers */}
-        {charNames.map((name, i) => (
-          <div key={`header-top-${i}`} style={{ padding: '8px', fontSize: '11px', fontWeight: '600', color: 'var(--shell-fg-2, #d1d1d6)', textAlign: 'center', wordBreak: 'break-word', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
+        {charNames.map((name) => (
+          <div key={`header-top-${name}`} style={{ padding: '8px', fontSize: '11px', fontWeight: '600', color: 'var(--shell-fg-2, #d1d1d6)', textAlign: 'center', wordBreak: 'break-word', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
             {name}
           </div>
         ))}

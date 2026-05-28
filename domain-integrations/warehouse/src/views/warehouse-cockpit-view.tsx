@@ -2,7 +2,6 @@ import { useState, useTransition } from 'react'
 import {
   VerificationStatusBanner,
   GovernancePendingBadge,
-  UnavailableValue,
   StatusBadge,
 } from '@connectio/design-system'
 import { EvidenceCaveatList } from '@connectio/evidence-panel-runtime'
@@ -295,19 +294,6 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
     })
   }
 
-  const getSeverityBadgeColor = (severity?: string | null) => {
-    switch (severity) {
-      case 'critical':
-        return { bg: COLORS.dangerBg, text: COLORS.danger }
-      case 'high':
-        return { bg: '#ffedd5', text: COLORS.warning }
-      case 'medium':
-        return { bg: '#eff6ff', text: COLORS.info }
-      default:
-        return { bg: COLORS.slate100, text: COLORS.slate600 }
-    }
-  }
-
   const getStatusBadgeVariant = (status?: string | null): 'good' | 'warn' | 'bad' | 'info' | 'neutral' => {
     if (!status) return 'neutral'
     const low = status.toLowerCase()
@@ -388,6 +374,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
       {/* Technical Specifications Accordion */}
       <div style={{ ...CARD_STYLE, padding: 12 }}>
         <button
+          type="button"
           onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
           style={{
             background: 'transparent',
@@ -644,6 +631,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
         >
           <div style={{ display: 'flex', gap: 10 }}>
             <button
+              type="button"
               onClick={handleRun}
               style={{
                 ...BUTTON_STYLE,
@@ -657,6 +645,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
               🔄 Run Cockpit Queries
             </button>
             <button
+              type="button"
               onClick={handleReset}
               style={{
                 ...BUTTON_STYLE,
@@ -671,6 +660,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
           <div>
             {!warehouseId && (
               <button
+                type="button"
                 onClick={handleSetDemoValues}
                 style={{
                   ...BUTTON_STYLE,
@@ -727,6 +717,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
             execute concurrently against your authenticated end-user OAuth token context.
           </p>
           <button
+            type="button"
             onClick={handleSetDemoValues}
             style={{
               ...BUTTON_STYLE,
@@ -769,7 +760,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 INBOUND OPERATIONS
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -794,7 +785,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 OUTBOUND SHIPMENTS
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -819,7 +810,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 PRODUCTION STAGING
               </div>
               {overviewQuery.isLoading ? (
-                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview...</div>
+                <div style={{ fontSize: 16, color: COLORS.slate400 }}>Loading overview…</div>
               ) : overviewQuery.data?.ok ? (
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>
@@ -934,24 +925,28 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 }}
               >
                 <button
+                  type="button"
                   onClick={() => setActiveTab('inbound')}
                   style={TAB_STYLE(activeTab === 'inbound')}
                 >
                   📥 Inbound Receipts ({inboundQuery.isLoading ? '...' : totalInboundCount})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('outbound')}
                   style={TAB_STYLE(activeTab === 'outbound')}
                 >
                   📤 Outbound Deliveries ({outboundQuery.isLoading ? '...' : totalOutboundCount})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('staging')}
                   style={TAB_STYLE(activeTab === 'staging')}
                 >
                   🚀 Production Staging ({stagingQuery.isLoading ? '...' : totalStagingCount})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('exceptions')}
                   style={TAB_STYLE(activeTab === 'exceptions')}
                 >
@@ -964,7 +959,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {inboundQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Inbound Receipts from Databricks...
+                      🌀 Loading Inbound Receipts from Databricks…
                     </div>
                   ) : inboundQuery.data?.ok === false ? (
                     <div
@@ -1020,7 +1015,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {inboundData.map((row, idx) => {
+                        {inboundData.map((row) => {
                           const statusVariant = getStatusBadgeVariant(row.status)
                           const docId =
                             row.documentType === 'STO'
@@ -1028,7 +1023,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                               : row.purchaseOrderId
                           return (
                             <tr
-                              key={idx}
+                              key={`${docId}-${row.materialId}`}
                               onClick={() =>
                                 setSelectedRow({
                                   type: 'inbound',
@@ -1102,7 +1097,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {outboundQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Outbound Shipments from Databricks...
+                      🌀 Loading Outbound Shipments from Databricks…
                     </div>
                   ) : outboundQuery.data?.ok === false ? (
                     <div
@@ -1158,11 +1153,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {outboundData.map((row, idx) => {
+                        {outboundData.map((row) => {
                           const statusVariant = getStatusBadgeVariant(row.status)
                           return (
                             <tr
-                              key={idx}
+                              key={`${row.deliveryId}-${row.deliveryItemId}`}
                               onClick={() =>
                                 setSelectedRow({
                                   type: 'outbound',
@@ -1236,7 +1231,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {stagingQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Production Staging from Databricks...
+                      🌀 Loading Production Staging from Databricks…
                     </div>
                   ) : stagingQuery.data?.ok === false ? (
                     <div
@@ -1292,11 +1287,11 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {stagingData.map((row, idx) => {
+                        {stagingData.map((row) => {
                           const statusVariant = getStatusBadgeVariant(row.stagingStatus)
                           return (
                             <tr
-                              key={idx}
+                              key={`${row.reservationId}-${row.reservationItemId}`}
                               onClick={() =>
                                 setSelectedRow({
                                   type: 'staging',
@@ -1387,7 +1382,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                 <div style={{ padding: 16, overflowX: 'auto' }}>
                   {exceptionsQuery.isLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.slate600 }}>
-                      🌀 Loading Exception Items from Databricks...
+                      🌀 Loading Exception Items from Databricks…
                     </div>
                   ) : exceptionsQuery.data?.ok === false ? (
                     <div
@@ -1443,7 +1438,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {exceptionsData.map((row, idx) => {
+                        {exceptionsData.map((row) => {
                           const statusVariant: 'good' | 'warn' | 'bad' | 'info' | 'neutral' =
                             row.severity === 'critical' || row.severity === 'high'
                               ? 'bad'
@@ -1452,7 +1447,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                                 : 'info'
                           return (
                             <tr
-                              key={idx}
+                              key={`${row.materialId}-${row.exceptionType ?? ''}-${row.documentId ?? ''}`}
                               onClick={() =>
                                 setSelectedRow({
                                   type: 'exceptions',
@@ -1554,6 +1549,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                     🔍 Selected Item Inspector Details
                   </h4>
                   <button
+                    type="button"
                     onClick={() => setSelectedRow(null)}
                     style={{
                       border: 'none',
@@ -1725,13 +1721,13 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                         path: '/api/warehouse360/exceptions',
                         query: exceptionsQuery,
                       },
-                    ].map((endpoint, idx) => {
+                    ].map((endpoint) => {
                       const isSuccess = endpoint.query.data?.ok === true
                       const source = endpoint.query.data?.source
 
                       return (
                         <div
-                          key={idx}
+                          key={endpoint.type}
                           style={{
                             backgroundColor: '#ffffff',
                             border: `1px solid ${COLORS.slate100}`,
@@ -1763,6 +1759,7 @@ export function WarehouseCockpitView({ request }: WarehouseCockpitViewProps) {
                           </div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <button
+                              type="button"
                               onClick={() => handleCopyUrl(endpoint.type, endpoint.path)}
                               style={{
                                 padding: '4px 8px',

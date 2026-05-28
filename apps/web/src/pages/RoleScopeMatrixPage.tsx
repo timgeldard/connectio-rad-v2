@@ -86,7 +86,7 @@ const WORKSPACE_LABELS: Record<string, string> = Object.fromEntries(
 // ─── Sub-views ────────────────────────────────────────────────────────────────
 
 function CellBadge({ entry }: { readonly entry: RoleScopeMatrixEntry }) {
-  if (!entry.isNavigable) return <span style={{ color: 'var(--shell-fg-3)', fontSize: 11 }}>—</span>
+  if (!entry.isNavigable) return <span style={{ color: 'var(--shell-fg-3)', fontSize: 11 }}>-</span>
   if (!entry.isVisible) return <Badge variant="outline" style={{ fontSize: 10 }}>Hidden</Badge>
   return <Badge variant="default" style={{ fontSize: 10 }}>✓</Badge>
 }
@@ -267,7 +267,7 @@ export function RoleScopeMatrixPage() {
         </h1>
         <p style={{ fontSize: 13, color: 'var(--shell-fg-2)', margin: 0 }}>
           Which workspaces are visible (✓) for each role and scope level combination.
-          Derived from workspace registrations — no separate configuration required.
+          Derived from workspace registrations; no separate configuration required.
           Admins (site-admin, platform-admin) have access to all navigable workspaces.
         </p>
       </div>

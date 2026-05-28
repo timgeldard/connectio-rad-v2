@@ -79,7 +79,7 @@ export function AccessExceptionsPage() {
           <Badge variant="outline">Phase 8</Badge>
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--shell-fg-2)' }}>
-          Access discrepancies identified during pilot — where actual workspace access differs from expected access by role and scope. {openCount} open, {prodBlockers} blocking production.
+          Access discrepancies identified during pilot: where actual workspace access differs from expected access by role and scope. {openCount} open, {prodBlockers} blocking production.
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export function AccessExceptionsPage() {
             <Card key={ex.exceptionId} data-testid={`access-exception-${ex.exceptionId}`} style={{ marginBottom: 12, border: ex.status === 'open' && ex.blocksProduction ? '1px solid #DC2626' : undefined }}>
               <CardHeader style={{ paddingBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <CardTitle style={{ fontSize: 14 }}>{ex.exceptionId} — {ex.roleId} → {ex.workspaceId}</CardTitle>
+                  <CardTitle style={{ fontSize: 14 }}>{ex.exceptionId}: {ex.roleId} → {ex.workspaceId}</CardTitle>
                   <Badge variant={statusVariant(ex.status)}>{ex.status.replace(/-/g, ' ')}</Badge>
                   <span style={{ fontSize: 11, fontWeight: 600, color: severityColor(ex.severity) }}>{ex.severity}</span>
                   {ex.blocksProduction && ex.status === 'open' && <Badge variant="destructive">blocks production</Badge>}

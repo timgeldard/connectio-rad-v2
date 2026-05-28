@@ -189,7 +189,7 @@ export function PilotExecutionDashboardPage() {
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Active Blockers ({PILOT_SUMMARY.activeBlockers.length})</div>
                 <ul style={{ margin: 0, paddingLeft: 14 }}>
-                  {PILOT_SUMMARY.activeBlockers.slice(0, 3).map((b, i) => <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
+                  {PILOT_SUMMARY.activeBlockers.slice(0, 3).map((b) => <li key={b} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
                   {PILOT_SUMMARY.activeBlockers.length > 3 && <li style={{ fontSize: 11, color: 'var(--shell-fg-3)' }}>+{PILOT_SUMMARY.activeBlockers.length - 3} more</li>}
                 </ul>
               </div>
@@ -208,13 +208,13 @@ export function PilotExecutionDashboardPage() {
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Blockers ({CUTOVER_PREVIEW.blockers.length})</div>
               <ul style={{ margin: 0, paddingLeft: 14 }}>
-                {CUTOVER_PREVIEW.blockers.slice(0, 3).map((b, i) => <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
+                {CUTOVER_PREVIEW.blockers.slice(0, 3).map((b) => <li key={b} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
               </ul>
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Next Actions</div>
               <ul style={{ margin: 0, paddingLeft: 14 }}>
-                {CUTOVER_PREVIEW.nextActions.slice(0, 2).map((a, i) => <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{a}</li>)}
+                {CUTOVER_PREVIEW.nextActions.slice(0, 2).map((a) => <li key={a} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{a}</li>)}
               </ul>
             </div>
           </CardContent>

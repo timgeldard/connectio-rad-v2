@@ -163,7 +163,7 @@ export function StakeholderSignoffPage() {
           <Badge variant="outline">Phase 7</Badge>
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--shell-fg-2)' }}>
-          Track stakeholder review and sign-off status by domain. No sign-off is marked as approved — pilot sign-offs are pending stakeholder engagement.
+          Track stakeholder review and sign-off status by domain. No sign-off is marked as approved; pilot sign-offs are pending stakeholder engagement.
         </p>
       </div>
 
@@ -201,7 +201,7 @@ export function StakeholderSignoffPage() {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Conditions</div>
                     <ul style={{ margin: 0, paddingLeft: 14 }}>
-                      {signoff.conditions.map((c, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>)}
+                      {signoff.conditions.map((c) => <li key={c} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>)}
                     </ul>
                   </div>
                 )}
@@ -209,7 +209,7 @@ export function StakeholderSignoffPage() {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Blockers</div>
                     <ul style={{ margin: 0, paddingLeft: 14 }}>
-                      {signoff.blockers.map((b, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
+                      {signoff.blockers.map((b) => <li key={b} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
                     </ul>
                   </div>
                 )}

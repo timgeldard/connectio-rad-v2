@@ -261,6 +261,15 @@ export function resolveTraceConsumerSearch(
       entry.matchTypes.includes('process-order-id'),
   )
 
+  // Exact batch-ID match takes priority over material/description matches — avoids showing
+  // a material picker when the user typed a full batch identifier.
+  const exactBatchItems = matchedItems.filter(
+    entry => entry.matchTypes.includes('batch-id') && identifiersMatch(entry.item.batchId, query)
+  )
+  if (exactBatchItems.length > 0) {
+    return resolveBatchContextItems(exactBatchItems)
+  }
+
   if (itemsByMaterial.length > 0) {
     const batches = buildMatchedBatches(itemsByMaterial)
 
@@ -287,43 +296,47 @@ export function resolveTraceConsumerSearch(
   }
 
   if (itemsByBatchContext.length > 0) {
-    const materialsMap: Record<string, TraceConsumerMatchedMaterial> = {}
-    itemsByBatchContext.forEach(({ item, matchTypes }) => {
-      const key = `${item.materialId}:${item.batchId}`
-      if (!materialsMap[key]) {
-        materialsMap[key] = {
-          materialId: item.materialId,
-          description: item.materialDescription,
-          batchId: item.batchId,
-          processOrderId: item.processOrderId,
-          latestPostingDate: item.latestPostingDate,
-          quantity: item.quantity,
-          uom: item.uom,
-          matchTypes,
-          plants: [],
-        }
-      }
-      const plantId = item.plantId.trim()
-      if (plantId && !materialsMap[key].plants.some(plant => plant.id === plantId)) {
-        materialsMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
-      }
-    })
-    const materials = Object.values(materialsMap).sort(compareMatchedMaterials)
-    const batchIds = new Set(materials.map(material => material.batchId))
-
-    if (materials.length === 1) {
-      const only = materials[0]
-      return resolveTraceConsumerSelection(only.materialId, only.batchId, only.plants)
-    }
-
-    return {
-      step: 'materials-for-batch',
-      materials,
-      selectedBatch: batchIds.size === 1 ? materials[0].batchId : null,
-    }
+    return resolveBatchContextItems(itemsByBatchContext)
   }
 
   return { step: 'no-results' }
+}
+
+function resolveBatchContextItems(items: readonly MatchedSearchEntry[]): TraceConsumerSearchResult {
+  const materialsMap: Record<string, TraceConsumerMatchedMaterial> = {}
+  items.forEach(({ item, matchTypes }) => {
+    const key = `${item.materialId}:${item.batchId}`
+    if (!materialsMap[key]) {
+      materialsMap[key] = {
+        materialId: item.materialId,
+        description: item.materialDescription,
+        batchId: item.batchId,
+        processOrderId: item.processOrderId,
+        latestPostingDate: item.latestPostingDate,
+        quantity: item.quantity,
+        uom: item.uom,
+        matchTypes,
+        plants: [],
+      }
+    }
+    const plantId = item.plantId.trim()
+    if (plantId && !materialsMap[key].plants.some(plant => plant.id === plantId)) {
+      materialsMap[key].plants.push({ id: plantId, name: item.plantName || plantId })
+    }
+  })
+  const materials = Object.values(materialsMap).sort(compareMatchedMaterials)
+  const batchIds = new Set(materials.map(m => m.batchId))
+
+  if (materials.length === 1) {
+    const only = materials[0]
+    return resolveTraceConsumerSelection(only.materialId, only.batchId, only.plants)
+  }
+
+  return {
+    step: 'materials-for-batch',
+    materials,
+    selectedBatch: batchIds.size === 1 ? materials[0].batchId : null,
+  }
 }
 
 function resolveCombinedMaterialBatchSearch(

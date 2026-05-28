@@ -220,7 +220,7 @@ export function ReleaseGatePage() {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Blockers</div>
                     <ul style={{ margin: 0, paddingLeft: 14 }}>
-                      {gate.blockers.map((b, i) => <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
+                      {gate.blockers.map((b) => <li key={b} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{b}</li>)}
                     </ul>
                   </div>
                 )}

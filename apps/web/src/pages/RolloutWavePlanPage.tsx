@@ -101,7 +101,7 @@ export function RolloutWavePlanPage() {
           <Badge variant="outline">Phase 8</Badge>
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--shell-fg-2)' }}>
-          Illustrative production rollout plan for ConnectIO-RAD V2. Wave 0 (controlled pilot) is currently active at IE10. Waves 1–3 are planning targets only — scope, plant selection, and timing are subject to steering committee approval at each wave exit review.
+          Illustrative production rollout plan for ConnectIO-RAD V2. Wave 0 (controlled pilot) is currently active at IE10. Waves 1–3 are planning targets only; scope, plant selection, and timing are subject to steering committee approval at each wave exit review.
         </p>
       </div>
 
@@ -128,14 +128,14 @@ export function RolloutWavePlanPage() {
                 <div style={{ flex: '1 1 200px' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Prerequisites</div>
                   <ul style={{ margin: 0, paddingLeft: 14 }}>
-                    {wave.prerequisites.map((p, i) => <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{p}</li>)}
+                    {wave.prerequisites.map((p) => <li key={p} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{p}</li>)}
                   </ul>
                 </div>
               )}
               <div style={{ flex: '1 1 200px' }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--shell-fg-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Exit Criteria</div>
                 <ul style={{ margin: 0, paddingLeft: 14 }}>
-                  {wave.exitCriteria.map((c, i) => <li key={i} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>)}
+                  {wave.exitCriteria.map((c) => <li key={c} style={{ fontSize: 11, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{c}</li>)}
                 </ul>
               </div>
             </div>

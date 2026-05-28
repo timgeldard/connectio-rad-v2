@@ -253,8 +253,8 @@ function WorkspaceCard({ entry }: { readonly entry: PilotWorkspaceEntry }) {
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Known Gaps</div>
             <ul style={{ margin: 0, paddingLeft: 16 }}>
-              {entry.knownGaps.map((gap, i) => (
-                <li key={i} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{gap}</li>
+              {entry.knownGaps.map((gap) => (
+                <li key={gap} style={{ fontSize: 12, color: 'var(--shell-fg-2)', marginBottom: 2 }}>{gap}</li>
               ))}
             </ul>
           </div>

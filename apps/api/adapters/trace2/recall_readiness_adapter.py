@@ -83,7 +83,10 @@ def map_recall_readiness_rows(rows: list[dict]) -> Optional[dict]:
     if not rows:
         return None
 
-    deliveries: list[dict] = []
+    # Keyed by delivery ID — multiple lines in the same delivery document are
+    # collapsed into one row so the table shows one entry per delivery, not one
+    # per goods-movement line.
+    deliveries_map: dict[str, dict] = {}
     customers: set[str] = set()
     country_totals: dict[str, dict] = {}
     total_qty = 0.0
@@ -109,20 +112,25 @@ def map_recall_readiness_rows(rows: list[dict]) -> Optional[dict]:
             agg = country_totals.setdefault(country_id, {"code": country_id, "name": country_name, "qty": 0.0})
             agg["qty"] = float(agg["qty"]) + qty
 
-        deliveries.append({
-            "id": did,
-            "customer": cname or cid,
-            "country": country_id,
-            "date": str(posting_date) if posting_date is not None else "",
-            "qty": qty,
-            # gold_batch_delivery_v has no delivery-status column. We emit
-            # 'delivery-evidence' (source-truthful default) and tag the
-            # provenance so the UI cannot misread it as governed delivery
-            # status. When a status column lands, derive the real value.
-            "status": "delivery-evidence",
-            "statusSource": "delivery-record-present",
-            "doc": str(sales_order) if sales_order is not None else "",
-        })
+        if did in deliveries_map:
+            deliveries_map[did]["qty"] += qty
+        else:
+            deliveries_map[did] = {
+                "id": did,
+                "customer": cname or cid,
+                "country": country_name,
+                "date": str(posting_date) if posting_date is not None else "",
+                "qty": qty,
+                # gold_batch_delivery_v has no delivery-status column. We emit
+                # 'delivery-evidence' (source-truthful default) and tag the
+                # provenance so the UI cannot misread it as governed delivery
+                # status. When a status column lands, derive the real value.
+                "status": "delivery-evidence",
+                "statusSource": "delivery-record-present",
+                "doc": str(sales_order) if sales_order is not None else "",
+            }
+
+    deliveries = list(deliveries_map.values())
 
     countries = [
         {
@@ -138,7 +146,7 @@ def map_recall_readiness_rows(rows: list[dict]) -> Optional[dict]:
         "totals": {
             "customers": len(customers),
             "countries": len(country_totals),
-            "deliveries": len(deliveries),
+            "deliveries": len(deliveries_map),
             "shipped": total_qty,
             "uom": uom or "",
         },

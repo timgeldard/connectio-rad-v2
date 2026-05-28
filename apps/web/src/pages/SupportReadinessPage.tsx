@@ -181,7 +181,7 @@ export function SupportReadinessPage() {
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Blockers</div>
                 <ul style={{ margin: 0, paddingLeft: 14 }}>
-                  {area.blockers.map((b, i) => <li key={i} style={{ fontSize: 12, color: '#DC2626', marginBottom: 2 }}>{b}</li>)}
+                  {area.blockers.map((b) => <li key={b} style={{ fontSize: 12, color: '#DC2626', marginBottom: 2 }}>{b}</li>)}
                 </ul>
               </div>
             )}

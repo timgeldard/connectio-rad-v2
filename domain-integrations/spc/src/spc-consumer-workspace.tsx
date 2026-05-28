@@ -81,7 +81,7 @@ export function SPCConsumerWorkspace() {
   const [selectedPlantId, setSelectedPlantId] = useState('')
 
   // Genie AI Chat states
-  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'genie'; text: string }[]>([])
+  const [chatMessages, setChatMessages] = useState<{ id: number; sender: 'user' | 'genie'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
 
   // Selected Point State for control chart details sidebar
@@ -170,7 +170,7 @@ export function SPCConsumerWorkspace() {
           signals: { data: signalsQuery.data.data, source: 'databricks-api' },
         }
       )
-      setChatMessages([{ sender: 'genie', text: cleanGenieText(reply.text) }])
+      setChatMessages([{ id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }])
     } else {
       setChatMessages([])
     }
@@ -181,7 +181,7 @@ export function SPCConsumerWorkspace() {
     const query = (customQuery || chatInput).trim()
     if (!query || !request || !summaryQuery.data?.ok || !chartQuery.data?.ok || !capabilityQuery.data?.ok || !signalsQuery.data?.ok) return
 
-    setChatMessages(prev => [...prev, { sender: 'user', text: query }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: query }])
     if (!customQuery) setChatInput('')
 
     const reply = buildSPCGenieReply(
@@ -193,7 +193,7 @@ export function SPCConsumerWorkspace() {
         signals: { data: signalsQuery.data.data, source: 'databricks-api' },
       }
     )
-    setChatMessages(prev => [...prev, { sender: 'genie', text: cleanGenieText(reply.text) }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }])
   }
 
   const loadCharsForPlant = async (materialId: string, plantId: string) => {
@@ -336,7 +336,6 @@ export function SPCConsumerWorkspace() {
                       border: '2px solid var(--stroke)',
                       fontSize: 'var(--fs-16)',
                       fontFamily: 'var(--font-sans)',
-                      outline: 'none',
                     }}
                     required
                   />
@@ -492,7 +491,7 @@ export function SPCConsumerWorkspace() {
                 <select
                   value={selectedCharId}
                   onChange={e => setSelectedCharId(e.target.value)}
-                  style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 12, outline: 'none' }}
+                  style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 12 }}
                 >
                   {characteristics.map(c => (
                     <option key={c.characteristicId} value={c.characteristicId}>
@@ -614,9 +613,9 @@ export function SPCConsumerWorkspace() {
                   </div>
 
                   <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingRight: 10, marginBottom: 20 }}>
-                    {chatMessages.map((msg, index) => (
+                    {chatMessages.map((msg) => (
                       <div
-                        key={index}
+                        key={msg.id}
                         style={{
                           alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                           maxWidth: '80%',
@@ -653,7 +652,7 @@ export function SPCConsumerWorkspace() {
                       placeholder="Ask Genie a question about capability, control charts, or alarms..."
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', outline: 'none', fontSize: 'var(--fs-14)' }}
+                      style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', fontSize: 'var(--fs-14)' }}
                     />
                     <Button type="submit" style={{ background: 'var(--brand)', color: 'var(--white)', fontWeight: 'var(--fw-semibold)', padding: '0 20px', borderRadius: 'var(--radius-md)' }}>
                       Send
@@ -668,7 +667,7 @@ export function SPCConsumerWorkspace() {
               <div style={{ width: 350, background: 'var(--white)', borderLeft: '1px solid var(--stroke)', boxShadow: 'var(--shadow-lg)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 12 }}>
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Point Details</h3>
-                  <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--fg-muted)' }}>×</button>
+                  <button type="button" onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--fg-muted)' }}>×</button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

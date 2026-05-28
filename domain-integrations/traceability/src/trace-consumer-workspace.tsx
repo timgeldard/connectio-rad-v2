@@ -150,7 +150,7 @@ export function TraceConsumerWorkspace() {
   const [plantsToSelect, setPlantsToSelect] = useState<TraceConsumerPlantOption[]>([])
 
   // Genie AI Chat states
-  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'genie'; text: string }[]>([])
+  const [chatMessages, setChatMessages] = useState<{ id: number; sender: 'user' | 'genie'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
 
   const adapterRequest = request ? createTraceConsumerAdapterRequest(request) : null
@@ -181,7 +181,7 @@ export function TraceConsumerWorkspace() {
         }
       )
       setChatMessages([
-        { sender: 'genie', text: cleanGenieText(reply.text) }
+        { id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }
       ])
     } else {
       setChatMessages([])
@@ -193,7 +193,7 @@ export function TraceConsumerWorkspace() {
     const query = (customQuery || chatInput).trim()
     if (!query || !request || !graphQuery.data?.ok || !batchHeaderQuery.data?.ok) return
 
-    setChatMessages(prev => [...prev, { sender: 'user', text: query }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: query }])
     if (!customQuery) setChatInput('')
 
     // Generate reply using the Genie engine
@@ -211,7 +211,7 @@ export function TraceConsumerWorkspace() {
       }
     )
 
-    setChatMessages(prev => [...prev, { sender: 'genie', text: cleanGenieText(reply.text) }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }])
   }
 
 
@@ -539,7 +539,7 @@ export function TraceConsumerWorkspace() {
                           key={material.materialId}
                           type="button"
                           onClick={() => selectMaterialFromQuery(material)}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, transform 0.2s', boxShadow: 'var(--shadow-sm)' }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
                         >
@@ -585,7 +585,7 @@ export function TraceConsumerWorkspace() {
                           key={`${b.materialId}:${b.batchId}`}
                           type="button"
                           onClick={() => selectBatch(b.batchId, b.materialId, b.plants)}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, transform 0.2s', boxShadow: 'var(--shadow-sm)' }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
                         >
@@ -634,7 +634,7 @@ export function TraceConsumerWorkspace() {
                           key={`${m.materialId}:${m.batchId}`}
                           type="button"
                           onClick={() => selectMaterial(m.materialId, m.batchId, m.plants)}
-                          style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, transform 0.2s', boxShadow: 'var(--shadow-sm)' }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
                         >
@@ -671,7 +671,7 @@ export function TraceConsumerWorkspace() {
                           key={p.id}
                           type="button"
                           onClick={() => selectPlant(p.id)}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'var(--white)', border: '1px solid var(--stroke-soft)', borderRadius: 'var(--radius-md)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.2s, transform 0.2s', boxShadow: 'var(--shadow-sm)' }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke-soft)'; e.currentTarget.style.transform = 'none'; }}
                         >
@@ -781,9 +781,9 @@ export function TraceConsumerWorkspace() {
                 
                 {/* Chat Message Log */}
                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingRight: 10, marginBottom: 20 }}>
-                  {chatMessages.map((msg, index) => (
+                  {chatMessages.map((msg) => (
                     <div
-                      key={index}
+                      key={msg.id}
                       style={{
                         alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                         maxWidth: '80%',
@@ -827,7 +827,6 @@ export function TraceConsumerWorkspace() {
                       padding: '12px 16px',
                       borderRadius: 'var(--radius-md)',
                       border: '1px solid var(--stroke)',
-                      outline: 'none',
                       fontSize: 'var(--fs-14)',
                       fontFamily: 'var(--font-sans)',
                     }}
