@@ -162,29 +162,29 @@ export function QualityPassportPanel({
                       border: '1px solid var(--stroke-soft)',
                     }}
                   >
-                    <KV label="Material" value={data.identity.materialDescription} />
-                    <KV label="Batch" value={data.identity.batchId} mono />
-                    <KV
+                    <KeyValue label="Material" value={data.identity.materialDescription} />
+                    <KeyValue label="Batch" value={data.identity.batchId} mono />
+                    <KeyValue
                       label="Plant"
                       value={isExternal ? 'EU-IE-01' : `${data.identity.plantName} · ${data.identity.plantId}`}
                     />
-                    <KV
+                    <KeyValue
                       label="Process order"
                       value={isExternal ? '[masked]' : data.identity.processOrderId}
                       mono={!isExternal}
                     />
-                    <KV
+                    <KeyValue
                       label="Manufacture"
                       value={new Date(data.identity.manufactureDate).toLocaleDateString()}
                       mono
                     />
-                    <KV
+                    <KeyValue
                       label="Expiry"
                       value={`${new Date(data.identity.expiryDate).toLocaleDateString()} · ${data.identity.daysToExpiry}d`}
                       mono
                     />
-                    <KV label="UoM" value={data.identity.uom} mono />
-                    <KV label="Audience" value={isExternal ? 'Customer-safe' : 'Internal'} />
+                    <KeyValue label="UoM" value={data.identity.uom} mono />
+                    <KeyValue label="Audience" value={isExternal ? 'Customer-safe' : 'Internal'} />
                   </div>
                 </Section>
 
@@ -404,7 +404,7 @@ function SectionTitle({ num, label, extra }: { num?: string; label: string; extr
   )
 }
 
-function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function KeyValue({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
       <div style={{ fontSize: 10, letterSpacing: 'var(--ls-upper)', textTransform: 'uppercase', color: 'var(--fg-muted)', fontWeight: 'var(--fw-semibold)', marginBottom: 4 }}>

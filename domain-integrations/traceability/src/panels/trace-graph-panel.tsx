@@ -70,7 +70,7 @@ function TraceNodeCard({ data }: NodeProps<Node<TraceNodeData>>) {
         cursor: 'pointer',
         position: 'relative',
         fontFamily: 'var(--font-sans)',
-        transition: 'all 0.2s',
+        transition: 'background-color 0.2s, border-color 0.2s, box-shadow 0.2s',
       }}
       aria-label={`${node.materialDescription}${node.type ? ` — ${node.type}` : ''}`}
     >
@@ -141,7 +141,7 @@ function SelectedNodeDetail({ node, graphEdges, baseRequest, onClose }: { node: 
     <div aria-label="Selected node details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 10 }}>
         <h4 className="t-eyebrow" style={{ margin: 0 }}>Selected node</h4>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
+        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -174,7 +174,7 @@ function SelectedEdgeDetail({ edge, nodes, onClose }: { edge: TraceEdge; nodes: 
     <div aria-label="Selected relationship details" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 10 }}>
         <h4 className="t-eyebrow" style={{ margin: 0 }}>Selected relationship</h4>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
+        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', cursor: 'pointer', fontSize: 18, fontWeight: 'bold', padding: 0 }} aria-label="Close details">×</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -241,6 +241,7 @@ function DirectionToggle({
     <div style={{ display: 'flex', gap: 4, marginBottom: 10 }} role="group" aria-label="Trace direction">
       {(['reverse', 'both', 'forward'] as DirectionOption[]).map(dir => (
         <button
+          type="button"
           key={dir}
           onClick={() => onChange(dir)}
           style={{

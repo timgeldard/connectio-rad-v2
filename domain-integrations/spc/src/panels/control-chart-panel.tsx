@@ -145,6 +145,7 @@ export function ControlChartPanel({ request, onPointClick, ruleSet = 'weco' }: C
             </div>
             {exclusions.size > 0 && (
               <button
+                type="button"
                 onClick={clearExclusions}
                 style={{
                   background: 'transparent',

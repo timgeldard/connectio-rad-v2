@@ -6,17 +6,6 @@ import {
   INITIAL_L5_COORDINATES,
 } from './envmon-consumer/mock-data.js'
 import { FloorPlanCanvas } from './envmon-consumer/floor-plan-canvas.js'
-import {
-  Card,
-  CardHeader,
-  CardDescription,
-  CardContent,
-  Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  StatusBadge,
-} from '@connectio/design-system'
 
 export interface EnvMonConsumerWorkspaceProps {
   readonly scope: ScopeContext
@@ -157,6 +146,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
       >
         <div style={{ display: 'flex', gap: 16 }}>
           <button
+            type="button"
             onClick={() => setActiveTab('map')}
             style={{
               background: 'none',
@@ -172,6 +162,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
             🗺 Interactive Layout Editor
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('alerts')}
             style={{
               background: 'none',
@@ -187,6 +178,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
             🚨 Swab Alert Log
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('trends')}
             style={{
               background: 'none',
@@ -202,6 +194,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
             📈 Microbiological Trends
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('actions')}
             style={{
               background: 'none',
@@ -222,6 +215,7 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
         <div style={{ display: 'flex', gap: 8 }}>
           {MOCK_FLOORS.map((floor) => (
             <button
+              type="button"
               key={floor.floorId}
               onClick={() => setActiveFloorId(floor.floorId)}
               style={{

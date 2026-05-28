@@ -12,7 +12,8 @@
     "graph": "nx graph",
     "storybook": "nx run design-system:storybook",
     "prepare:databricks": "node scripts/prepare-databricks-app.mjs",
-    "deploy:databricks": "node scripts/prepare-databricks-app.mjs --deploy"
+    "deploy:databricks": "node scripts/prepare-databricks-app.mjs --deploy",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.81.1",
@@ -50,6 +51,7 @@
     "jsdom": "^26.1.0",
     "nx": "22.7.0",
     "prettier": "~3.6.2",
+    "react-doctor": "^0.2.10",
     "storybook": "^8.5.8",
     "tailwindcss": "^3.4.17",
     "tslib": "^2.3.0",

@@ -81,7 +81,7 @@ export function SPCConsumerWorkspace() {
   const [selectedPlantId, setSelectedPlantId] = useState('')
 
   // Genie AI Chat states
-  const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'genie'; text: string }[]>([])
+  const [chatMessages, setChatMessages] = useState<{ id: number; sender: 'user' | 'genie'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
 
   // Selected Point State for control chart details sidebar
@@ -170,7 +170,7 @@ export function SPCConsumerWorkspace() {
           signals: { data: signalsQuery.data.data, source: 'databricks-api' },
         }
       )
-      setChatMessages([{ sender: 'genie', text: cleanGenieText(reply.text) }])
+      setChatMessages([{ id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }])
     } else {
       setChatMessages([])
     }
@@ -181,7 +181,7 @@ export function SPCConsumerWorkspace() {
     const query = (customQuery || chatInput).trim()
     if (!query || !request || !summaryQuery.data?.ok || !chartQuery.data?.ok || !capabilityQuery.data?.ok || !signalsQuery.data?.ok) return
 
-    setChatMessages(prev => [...prev, { sender: 'user', text: query }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: query }])
     if (!customQuery) setChatInput('')
 
     const reply = buildSPCGenieReply(
@@ -193,7 +193,7 @@ export function SPCConsumerWorkspace() {
         signals: { data: signalsQuery.data.data, source: 'databricks-api' },
       }
     )
-    setChatMessages(prev => [...prev, { sender: 'genie', text: cleanGenieText(reply.text) }])
+    setChatMessages(prev => [...prev, { id: Date.now(), sender: 'genie', text: cleanGenieText(reply.text) }])
   }
 
   const loadCharsForPlant = async (materialId: string, plantId: string) => {
@@ -614,9 +614,9 @@ export function SPCConsumerWorkspace() {
                   </div>
 
                   <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingRight: 10, marginBottom: 20 }}>
-                    {chatMessages.map((msg, index) => (
+                    {chatMessages.map((msg) => (
                       <div
-                        key={index}
+                        key={msg.id}
                         style={{
                           alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                           maxWidth: '80%',
@@ -668,7 +668,7 @@ export function SPCConsumerWorkspace() {
               <div style={{ width: 350, background: 'var(--white)', borderLeft: '1px solid var(--stroke)', boxShadow: 'var(--shadow-lg)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stroke)', paddingBottom: 12 }}>
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Point Details</h3>
-                  <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--fg-muted)' }}>×</button>
+                  <button type="button" onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--fg-muted)' }}>×</button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

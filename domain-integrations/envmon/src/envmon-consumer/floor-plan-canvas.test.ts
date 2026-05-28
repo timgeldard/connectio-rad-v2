@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isPointInPolygon } from './floor-plan-canvas.js'
+import { isPointInPolygon } from './floor-plan-utils.js'
 
 describe('isPointInPolygon', () => {
   const square = [

@@ -37,20 +37,6 @@ function isBrowserVerified(endpoint: string): boolean {
   return verifiedEndpoints.includes(endpoint)
 }
 
-function appendOptionalParams(url: URL, request: Warehouse360AdapterRequest): void {
-  if (request.plantId) {
-    url.searchParams.set('plant_id', request.plantId)
-  }
-  if (request.dateFrom) {
-    url.searchParams.set('date_from', request.dateFrom)
-  }
-  if (request.dateTo) {
-    url.searchParams.set('date_to', request.dateTo)
-  }
-  if (request.limit !== undefined) {
-    url.searchParams.set('limit', String(request.limit))
-  }
-}
 
 function buildEndpointUrl(
   baseUrl: string,
