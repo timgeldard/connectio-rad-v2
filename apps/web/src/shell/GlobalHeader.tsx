@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthScope } from '@connectio/auth-scope'
 import { CommandPalette } from './CommandPalette.js'
+import { PlantPicker } from './PlantPicker.js'
 import { useWorkspaceShellState } from './useWorkspaceShellState.js'
 import { workspaceRegistry } from '../registry/workspace-registry.js'
 
@@ -145,8 +146,9 @@ export function GlobalHeader() {
           )}
         </div>
 
-        {/* Right side: search, notifications, user menu */}
+        {/* Right side: plant picker, search, notifications, user menu */}
         <div className="connectio-topbar-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PlantPicker />
           {/* Command palette trigger */}
           <button
             type="button"

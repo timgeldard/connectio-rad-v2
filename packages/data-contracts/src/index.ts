@@ -439,3 +439,6 @@ export {
   SiblingBatchSchema,
   SupplierLotRiskSchema,
 } from './schemas/supplier-batch-view.js'
+
+export type { PlatformPlant, PlatformPlantsResponse } from './schemas/platform-plants.js'
+export { PlatformPlantSchema, PlatformPlantsResponseSchema } from './schemas/platform-plants.js'
