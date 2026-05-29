@@ -6,7 +6,7 @@ export const envmonConsumerRegistration: WorkspaceRegistration = {
   description: 'A modern, interactive spatial environment monitoring tool with zone drawing and point placement constraints.',
   domainId: 'envmon',
   ownerDomain: 'envmon',
-  lifecycle: 'pilot',
+  lifecycle: 'live',
   supportedRoles: [
     'envmon-coordinator',
     'quality-lead',
@@ -36,7 +36,7 @@ export const envmonConsumerRegistration: WorkspaceRegistration = {
     {
       viewId: 'envmon-consumer-view',
       displayName: 'Consumer EnvMon',
-      lifecycle: 'pilot',
+      lifecycle: 'live',
       sortOrder: 0,
       defaultPanels: [],
     },
