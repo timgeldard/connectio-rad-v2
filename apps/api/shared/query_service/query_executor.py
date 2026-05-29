@@ -23,6 +23,7 @@ from .errors import (
 )
 from .identity import UserIdentity
 from .query_spec import QuerySpec
+from .write_spec import WriteSpec, assert_write_spec_has_audit
 
 _log = logging.getLogger(__name__)
 
@@ -276,4 +277,68 @@ class DatabricksRepository:
             )
         finally:
             catalog_context.reset(token)
+
+    async def execute_write(
+        self,
+        spec_factory: Callable[[], WriteSpec],
+    ) -> tuple[int, WriteSpec]:
+        """Execute a DML WriteSpec and return ``(affected_rows, spec)``.
+
+        Writes are never cached and never retried — DML retries can produce
+        duplicate writes when an idempotency layer is absent. Callers that
+        need idempotency must use ``MERGE`` patterns in their SQL.
+
+        Audit invariant: ``WriteSpec.sql`` must reference ``CURRENT_USER()``
+        and ``CURRENT_TIMESTAMP()`` — asserted before execution.
+
+        Returns ``affected_rows`` derived from the Statement API response when
+        present, otherwise ``0``.
+        """
+        from shared.query_service.object_resolver import catalog_context
+
+        spec = spec_factory()
+        assert_write_spec_has_audit(spec)
+        assert_allowed_catalog_target(self.identity.catalog_target)
+
+        token_oauth = self.identity.require_user_oauth()
+        params: dict[str, object] = dict(spec.params)
+        tags: dict[str, str] = {
+            "query_name": spec.name,
+            "module": spec.module,
+            "endpoint": spec.endpoint,
+            "user_id": self.identity.user_id,
+            "write": "true",
+            "source_badge": spec.source_badge,
+        }
+        for t in spec.tags:
+            tags[t] = "true"
+
+        ctx_token = catalog_context.set(self.identity.catalog_target)
+        try:
+            _log.info(
+                "DatabricksRepository.execute_write",
+                extra={"query_name": spec.name, "user_id": self.identity.user_id},
+            )
+            rows = await self.executor._client.execute(
+                sql=spec.sql,
+                params=params,
+                oauth_token=token_oauth,
+                warehouse_id=self.executor._warehouse_id,
+                timeout_seconds=spec.timeout_seconds,
+                tags=tags,
+            )
+        finally:
+            catalog_context.reset(ctx_token)
+
+        # Statement API row payload for DML is typically a single row with
+        # affected/inserted/updated/deleted counts. We sum any numeric values
+        # in the first row as a best-effort affected-rows total. UI consumers
+        # treat 0 as "applied, but server did not report a count".
+        affected = 0
+        if rows:
+            first = rows[0]
+            for value in first.values():
+                if isinstance(value, int):
+                    affected += value
+        return affected, spec
 

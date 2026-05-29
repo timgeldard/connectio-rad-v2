@@ -30,6 +30,7 @@ from shared.query_service.errors import (
 from shared.query_service.identity import UserIdentity
 from shared.query_service.query_executor import DatabricksRepository, QueryExecutor
 from shared.query_service.query_spec import QuerySpec
+from shared.query_service.write_spec import WriteSpec
 
 T = TypeVar("T")
 
@@ -93,6 +94,39 @@ def build_databricks_repository(
     client = StatementApiDatabricksClient(host=databricks_host)
     executor = QueryExecutor(client=client, warehouse_id=warehouse_id)
     return DatabricksRepository(executor=executor, identity=identity)
+
+
+async def run_repository_write(
+    writer: Callable[[], Awaitable[tuple[int, WriteSpec]]],
+) -> tuple[int, WriteSpec]:
+    """Run a repository write and translate standard Databricks errors.
+
+    Mirrors :func:`run_repository_fetch` but for DML. Writes never retry
+    automatically and never serve from cache.
+    """
+    try:
+        return await writer()
+    except DatabricksCatalogTargetError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DatabricksConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksAuthRequiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DatabricksPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except DatabricksWarehouseConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except DatabricksRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except DatabricksQueryTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except DatabricksQueryError as exc:
+        _logger.error(
+            "Databricks write %r failed: %s",
+            getattr(exc, "query_name", "?"),
+            getattr(exc, "detail", str(exc)),
+        )
+        raise HTTPException(status_code=502, detail="Databricks write execution failed") from exc
 
 
 async def run_repository_fetch(

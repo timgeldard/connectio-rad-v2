@@ -15,6 +15,27 @@ export type AdapterResult<T> =
   | { readonly ok: true; readonly data: T; readonly fetchedAt: string; readonly source?: AdapterSource }
   | { readonly ok: false; readonly error: AdapterError; readonly displayState: EvidencePanelDisplayState; readonly source?: AdapterSource }
 
+/**
+ * Result of an adapter write (insert/upsert/delete).
+ *
+ * Distinct from {@link AdapterResult} because writes don't carry a payload
+ * shape — only success/failure, the number of rows affected when the source
+ * returns it, and the user identity that performed the change for audit UI.
+ */
+export type AdapterWriteResult =
+  | {
+      readonly ok: true
+      readonly affectedRows?: number
+      readonly updatedBy?: string
+      readonly updatedAt: string
+      readonly source: AdapterSource
+    }
+  | {
+      readonly ok: false
+      readonly error: AdapterError
+      readonly source: AdapterSource
+    }
+
 /** Data freshness metadata attached to an adapter response. */
 export interface SourceFreshness {
   readonly fetchedAt: string
