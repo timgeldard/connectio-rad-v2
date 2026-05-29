@@ -30,10 +30,17 @@ interface AdminViewProps {
   readonly plantId: string
 }
 
-type Tool = 'select' | 'draw' | 'delete'
+type Tool = 'select' | 'draw' | 'rect' | 'delete'
 
 interface DraftPolygon {
   readonly points: readonly [number, number][]
+}
+
+interface DraftRect {
+  readonly x0: number
+  readonly y0: number
+  readonly x1: number
+  readonly y1: number
 }
 
 const L4_CODES = ['MIX', 'FIL', 'PCK', 'RTE', 'CIP', 'DRN', 'WSH', 'LAB', 'UTL', 'COR', 'DRY', 'PRE', 'CLD', 'WHS']
@@ -59,6 +66,7 @@ export function AdminView({ plantId }: AdminViewProps) {
 
   const [tool, setTool] = useState<Tool>('select')
   const [draft, setDraft] = useState<DraftPolygon | null>(null)
+  const [draftRect, setDraftRect] = useState<DraftRect | null>(null)
   const [draftL4Code, setDraftL4Code] = useState<string>(L4_CODES[0])
   const [draftName, setDraftName] = useState<string>('')
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
@@ -134,6 +142,63 @@ export function AdminView({ plantId }: AdminViewProps) {
 
   function cancelDraft() {
     setDraft(null)
+    setDraftRect(null)
+  }
+
+  // ─── Rectangle drawing (alt. authoring path) ──────────────────────────────
+
+  function onRectMouseDown(e: MouseEvent<SVGSVGElement>) {
+    if (tool !== 'rect') return
+    const [x, y] = getSvgPct(e)
+    setDraftRect({ x0: x, y0: y, x1: x, y1: y })
+  }
+
+  function onRectMouseMove(e: MouseEvent<SVGSVGElement>) {
+    if (tool !== 'rect' || !draftRect) return
+    const [x, y] = getSvgPct(e)
+    setDraftRect({ ...draftRect, x1: x, y1: y })
+  }
+
+  function commitRect() {
+    if (tool !== 'rect' || !draftRect || !plantId || !floorId) return
+    const x = Math.min(draftRect.x0, draftRect.x1)
+    const y = Math.min(draftRect.y0, draftRect.y1)
+    const w = Math.abs(draftRect.x1 - draftRect.x0)
+    const h = Math.abs(draftRect.y1 - draftRect.y0)
+    if (w < 1 || h < 1) {
+      setDraftRect(null)
+      return
+    }
+    const polygon: [number, number][] = [
+      [x, y],
+      [x + w, y],
+      [x + w, y + h],
+      [x, y + h],
+    ]
+    const areaId = `area-${Date.now().toString(36)}`
+    const displayName = draftName.trim() || `${draftL4Code} area`
+    upsertSubArea.mutate(
+      {
+        areaId,
+        plantId,
+        floorId,
+        l4Code: draftL4Code,
+        displayName,
+        polygonPts: polygon,
+      },
+      {
+        onSuccess: result => {
+          if (result.ok) {
+            showToast('ok', `Saved L4 rectangle "${displayName}".`)
+            setDraftRect(null)
+            setDraftName('')
+            setSelectedAreaId(areaId)
+          } else {
+            showToast('error', result.error.message)
+          }
+        },
+      },
+    )
   }
 
   // ─── Drag-drop pin placement with PIP constraint ──────────────────────────
@@ -391,13 +456,16 @@ export function AdminView({ plantId }: AdminViewProps) {
               <button type="button" onClick={() => setTool('select')} style={{ ...toolBtn, ...(tool === 'select' ? toolBtnActive : {}) }}>
                 ↖ Select
               </button>
-              <button type="button" onClick={() => setTool('draw')} style={{ ...toolBtn, ...(tool === 'draw' ? toolBtnActive : {}) }}>
-                ✎ Draw L4 polygon
+              <button type="button" onClick={() => { setTool('draw'); setDraftRect(null) }} style={{ ...toolBtn, ...(tool === 'draw' ? toolBtnActive : {}) }}>
+                ✎ Polygon
+              </button>
+              <button type="button" onClick={() => { setTool('rect'); setDraft(null) }} style={{ ...toolBtn, ...(tool === 'rect' ? toolBtnActive : {}) }}>
+                ▭ Rectangle
               </button>
               <button type="button" onClick={() => setTool('delete')} style={{ ...toolBtn, ...(tool === 'delete' ? toolBtnActive : {}) }}>
                 🗑 Remove
               </button>
-              {tool === 'draw' && draft && (
+              {((tool === 'draw' && draft) || (tool === 'rect' && draftRect)) && (
                 <button type="button" onClick={cancelDraft} style={{ ...toolBtn, marginLeft: 6 }}>
                   Cancel
                 </button>
@@ -405,6 +473,7 @@ export function AdminView({ plantId }: AdminViewProps) {
             </div>
             <div style={{ fontSize: 12, color: 'var(--fg-muted, #6b7280)' }}>
               {tool === 'draw' && 'Click to add vertex. Double-click to close polygon.'}
+              {tool === 'rect' && 'Click and drag on the canvas to draw a rectangular area.'}
               {tool === 'select' && 'Drag a FL card from the left onto an L4 polygon to place a pin.'}
               {tool === 'delete' && 'Click a polygon or pin to remove it.'}
             </div>
@@ -419,9 +488,12 @@ export function AdminView({ plantId }: AdminViewProps) {
               ref={svgRef}
               viewBox="0 0 100 100"
               preserveAspectRatio="xMidYMid meet"
-              style={{ width: '100%', height: '100%', cursor: tool === 'draw' ? 'crosshair' : 'default' }}
+              style={{ width: '100%', height: '100%', cursor: tool === 'draw' || tool === 'rect' ? 'crosshair' : 'default' }}
               onClick={onCanvasClick}
               onDoubleClick={onCanvasDoubleClick}
+              onMouseDown={onRectMouseDown}
+              onMouseMove={onRectMouseMove}
+              onMouseUp={commitRect}
               onDragOver={onCanvasDragOver}
               onDrop={onCanvasDrop}
             >
@@ -479,6 +551,19 @@ export function AdminView({ plantId }: AdminViewProps) {
                 </>
               )}
 
+              {draftRect && (
+                <rect
+                  x={Math.min(draftRect.x0, draftRect.x1)}
+                  y={Math.min(draftRect.y0, draftRect.y1)}
+                  width={Math.abs(draftRect.x1 - draftRect.x0)}
+                  height={Math.abs(draftRect.y1 - draftRect.y0)}
+                  fill="rgba(0,87,118,0.10)"
+                  stroke="var(--valentia-slate, #005776)"
+                  strokeWidth="0.2"
+                  strokeDasharray="0.6 0.4"
+                />
+              )}
+
               {locations.map(l => (
                 <g key={l.funcLocId} style={{ cursor: tool === 'delete' ? 'pointer' : 'default' }}>
                   <circle
@@ -498,7 +583,7 @@ export function AdminView({ plantId }: AdminViewProps) {
             </svg>
           </div>
 
-          {tool === 'draw' && (
+          {(tool === 'draw' || tool === 'rect') && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingTop: 8 }}>
               <label style={{ fontSize: 12, color: 'var(--fg-muted, #6b7280)' }}>L4 code</label>
               <select value={draftL4Code} onChange={e => setDraftL4Code(e.target.value)} style={selectInput}>
@@ -515,7 +600,7 @@ export function AdminView({ plantId }: AdminViewProps) {
                 style={{ ...searchInput, marginTop: 0, width: 200 }}
               />
               <span style={{ fontSize: 11, color: 'var(--fg-muted, #6b7280)' }}>
-                {draft?.points.length ?? 0} vertices
+                {tool === 'draw' ? `${draft?.points.length ?? 0} vertices` : draftRect ? 'drag to size' : 'click to start'}
               </span>
             </div>
           )}
