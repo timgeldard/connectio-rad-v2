@@ -1,4 +1,5 @@
 """Tests for the Query Cache mechanism, including CacheStore, key security, and repository integration."""
+import asyncio
 import os
 import time
 from unittest.mock import AsyncMock, patch
@@ -58,7 +59,7 @@ async def test_cache_store_ttl():
     assert entry.data == data
 
     # Wait for expiration
-    time.sleep(1.1)
+    await asyncio.sleep(1.1)
     entry_expired = await store.get(key)
     assert entry_expired is None
 
@@ -363,3 +364,59 @@ async def test_disallowed_catalog_target_not_served_from_cache(monkeypatch):
     # The executor must not have been invoked a second time — the request
     # was rejected before any work happened.
     assert executor.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_missing_oauth_not_served_from_cache(monkeypatch):
+    """Cache HIT must not bypass OAuth-required enforcement."""
+    from shared.query_service.errors import DatabricksAuthRequiredError
+
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "true")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "allowed_catalog")
+    spec_factory = lambda: _spec(CacheTier.PER_USER_60S)
+
+    # Populate cache with a valid identity first.
+    executor = _MockExecutor([{"result": 42}])
+    repo_ok = DatabricksRepository(executor=executor, identity=_identity())
+    _, first = await repo_ok.fetch(spec_factory, lambda r: r)
+    assert first.cache_status == "MISS"
+
+    # Same key shape but missing OAuth must raise before cache lookup.
+    no_oauth = UserIdentity(user_id="u001", raw_oauth_token=None, catalog_target="allowed_catalog")
+    repo_no_oauth = DatabricksRepository(executor=executor, identity=no_oauth)
+    with pytest.raises(DatabricksAuthRequiredError):
+        await repo_no_oauth.fetch(spec_factory, lambda r: r)
+
+
+@pytest.mark.asyncio
+async def test_catalog_override_applies_before_first_spec_factory(monkeypatch):
+    """spec_factory must run under catalog_context from the very first invocation."""
+    from shared.query_service.object_resolver import resolve_domain_object
+
+    monkeypatch.setenv("ENABLE_QUERY_CACHE", "false")
+    monkeypatch.setenv("DATABRICKS_ALLOWED_CATALOGS", "override_catalog")
+    monkeypatch.delenv("SPC_CATALOG", raising=False)
+    monkeypatch.delenv("TRACE_CATALOG", raising=False)
+    monkeypatch.setenv("SPC_SCHEMA", "gold")
+
+    executor = _MockExecutor([{"result": 1}])
+    repo = DatabricksRepository(
+        executor=executor,
+        identity=UserIdentity(
+            user_id="u001",
+            raw_oauth_token="tok",
+            catalog_target="override_catalog",
+        ),
+    )
+
+    def spec_factory() -> QuerySpec:
+        return QuerySpec(
+            name="spc.precontext",
+            module="spc",
+            endpoint="/api/spc/subgroups",
+            sql=f"SELECT * FROM {resolve_domain_object('spc', 'spc_quality_metric_subgroup_mv')}",
+            cache_policy=CacheTier.NONE,
+        )
+
+    _, spec = await repo.fetch(spec_factory=spec_factory, mapper=lambda r: r)
+    assert "`override_catalog`.`gold`.`spc_quality_metric_subgroup_mv`" in spec.sql
