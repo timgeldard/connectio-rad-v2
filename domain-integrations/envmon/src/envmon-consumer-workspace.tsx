@@ -13,8 +13,9 @@
  */
 import { useState } from 'react'
 import type { ScopeContext } from '@connectio/data-contracts'
-import { SiteView } from './envmon-consumer/site-view.js'
+import { AdminView } from './envmon-consumer/admin-view.js'
 import { FloorView } from './envmon-consumer/floor-view.js'
+import { SiteView } from './envmon-consumer/site-view.js'
 
 export interface EnvMonConsumerWorkspaceProps {
   readonly scope: ScopeContext
@@ -93,21 +94,10 @@ export function EnvMonConsumerWorkspace({ scope }: EnvMonConsumerWorkspaceProps)
             onSelectFloor={setFloorId}
           />
         ) : tab === 'admin' ? (
-          <AdminPlaceholder />
+          <AdminView plantId={plantId} />
         ) : (
           <div style={emptyShell}>Select a floor from the Site overview to drill in.</div>
         )}
-      </div>
-    </div>
-  )
-}
-
-function AdminPlaceholder() {
-  return (
-    <div style={emptyShell}>
-      <div>Admin coordinate-mapper lands in PR-4.</div>
-      <div style={{ fontSize: 12, color: 'var(--fg-muted, #6b7280)', marginTop: 8 }}>
-        Polygon authoring, drag-from-unmapped, server-side pin-in-polygon, and SVG upload are coming next.
       </div>
     </div>
   )

@@ -26,7 +26,13 @@ from __future__ import annotations
 import json
 import os
 
-from fastapi import APIRouter, Body, Header, HTTPException, Response
+from fastapi import APIRouter, Body, Header, HTTPException, Request, Response
+
+from shared.query_service.volume_storage import (
+    get_volume_file,
+    put_volume_file,
+    sanitise_svg,
+)
 
 from adapters.envmon.envmon_v2_adapter import (
     CoordinateUpsert,
@@ -410,37 +416,45 @@ async def delete_coordinate(
 _MAX_SVG_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
+def _svg_volume_path(plant_id: str, floor_id: str) -> str:
+    catalog = os.getenv("TRACE_CATALOG", "")
+    schema = os.getenv("TRACE_SCHEMA", "gold")
+    if not catalog:
+        raise HTTPException(status_code=503, detail="TRACE_CATALOG not configured")
+    return f"/Volumes/{catalog}/{schema}/envmon_floor_svgs/{plant_id}/{floor_id}.svg"
+
+
 @router.get("/envmon/v2/floors/{plant_id}/{floor_id}/svg")
 async def get_floor_svg(
     plant_id: str,
     floor_id: str,
     x_forwarded_access_token: str | None = Header(default=None),
-    x_forwarded_user: str | None = Header(default=None),
-    x_forwarded_email: str | None = Header(default=None),
 ) -> Response:
     """Stream the uploaded SVG underlay for a floor from the UC Volume.
 
-    Returns 404 if no SVG has been uploaded. The browser never sees the raw
-    Volume path — the API mediates so Unity Catalog enforces access.
+    Returns 404 if no SVG has been uploaded for this (plant, floor). The
+    browser never sees the raw Volume path — the API mediates so Unity
+    Catalog enforces access via the user's OAuth identity.
     """
     _require_databricks_mode()
-    # The path convention is fixed; the read path is "render whatever is
-    # stored", not configurable. UC permissions guarantee the user can read.
-    catalog = os.getenv("TRACE_CATALOG", "")
-    schema = os.getenv("TRACE_SCHEMA", "gold")
-    if not catalog:
-        raise HTTPException(status_code=503, detail="TRACE_CATALOG not configured")
-    volume_path = f"/Volumes/{catalog}/{schema}/envmon_floor_svgs/{plant_id}/{floor_id}.svg"
-    # TODO: integrate Databricks Files API client; current implementation
-    # surfaces 404 so the UI falls back to the grid-only background while the
-    # write path lands in PR-4.
-    raise HTTPException(status_code=404, detail=f"No SVG uploaded for {plant_id}/{floor_id}")
+    host, _ = require_databricks_config()
+    volume_path = _svg_volume_path(plant_id, floor_id)
+    try:
+        body = await get_volume_file(
+            databricks_host=host,
+            volume_path=volume_path,
+            oauth_token=x_forwarded_access_token,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="No SVG uploaded for this floor") from exc
+    return Response(content=body, media_type="image/svg+xml")
 
 
 @router.post("/envmon/v2/floors/{plant_id}/{floor_id}/svg")
 async def upload_floor_svg(
     plant_id: str,
     floor_id: str,
+    request: Request,
     response: Response,
     x_forwarded_access_token: str | None = Header(default=None),
     x_forwarded_user: str | None = Header(default=None),
@@ -448,12 +462,84 @@ async def upload_floor_svg(
 ) -> dict:
     """Accept an SVG upload and persist to the envmon_floor_svgs UC Volume.
 
-    PR-4 stub: validates auth/config and returns a 501 indicating the upload
-    pipeline (multipart parse + Databricks Files API PUT + em_floors.svg_path
-    update) is the next slice.
+    Accepts either multipart/form-data (a ``svg`` part) or a raw
+    ``image/svg+xml`` body. Sanitises (strips ``<script>`` + ``on*`` handlers)
+    before writing. Enforces a 2 MB ceiling. On success, updates
+    ``em_floors.svg_path`` so the floor row records that an underlay exists.
     """
     _require_databricks_mode()
-    raise HTTPException(
-        status_code=501,
-        detail="SVG upload pipeline lands in the next slice of PR-4",
+    host, _ = require_databricks_config()
+    content_type = request.headers.get("content-type", "").lower()
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("svg")
+        if upload is None or not hasattr(upload, "read"):
+            raise HTTPException(status_code=422, detail="Missing 'svg' file in multipart payload")
+        svg_bytes = await upload.read()  # type: ignore[attr-defined]
+    else:
+        svg_bytes = await request.body()
+    if not svg_bytes:
+        raise HTTPException(status_code=422, detail="SVG upload is empty")
+
+    try:
+        clean = sanitise_svg(svg_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    volume_path = _svg_volume_path(plant_id, floor_id)
+    try:
+        bytes_written = await put_volume_file(
+            databricks_host=host,
+            volume_path=volume_path,
+            body=clean,
+            oauth_token=x_forwarded_access_token,
+        )
+    except Exception as exc:  # narrow translation via run_repository_write is overkill for files API
+        raise HTTPException(status_code=502, detail=f"Volume upload failed: {exc}") from exc
+
+    # Update em_floors.svg_path so Site/Floor know to render the underlay.
+    repo = _repo(x_forwarded_access_token, x_forwarded_user, x_forwarded_email)
+    from adapters.envmon.envmon_v2_adapter import (
+        FloorsRequest,
+        FloorUpsert,
     )
+    floors_result, _ = await run_repository_fetch(
+        lambda: repo.fetch_floors(FloorsRequest(plant_id=plant_id))
+    )
+    existing = next(
+        (f for f in floors_result.get("floors", []) if f["floorId"] == floor_id),
+        None,
+    )
+    if existing is not None:
+        # Re-upsert with the SVG path stamped. (Schema currently keeps svg_path
+        # NULL on INSERT in upsert_floor; this update path stamps it via a
+        # follow-up MERGE with the same key.)
+        from shared.query_service.write_spec import WriteSpec
+        from shared.query_service.object_resolver import resolve_domain_object
+
+        floors_tbl = resolve_domain_object("envmon", "em_floors")
+        spec = WriteSpec(
+            name="envmon.update_floor_svg_path",
+            module="envmon",
+            endpoint="/api/envmon/v2/floors/{plant_id}/{floor_id}/svg",
+            sql=f"""
+            UPDATE {floors_tbl}
+            SET svg_path = :svg_path,
+                updated_by = CURRENT_USER(),
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE plant_id = :plant_id AND floor_id = :floor_id
+            """,
+            params={"svg_path": volume_path, "plant_id": plant_id, "floor_id": floor_id},
+            tags=["envmon", "write", "floors", "svg-path"],
+        )
+        await run_repository_write(lambda: repo._repo.execute_write(lambda: spec))  # type: ignore[attr-defined]
+        _ = FloorUpsert  # silence import-not-used
+
+    response.headers["X-Adapter-Mode"] = "databricks-api"
+    return {
+        "plantId": plant_id,
+        "floorId": floor_id,
+        "svgPath": volume_path,
+        "bytes": bytes_written,
+    }
