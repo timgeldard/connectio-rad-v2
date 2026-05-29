@@ -10,6 +10,7 @@ from routes.auth import router as auth_router
 from routes.auth_diagnostics import router as auth_diagnostics_router
 from routes.connected_quality_lab import router as connected_quality_lab_router
 from routes.envmon import router as envmon_router
+from routes.envmon_v2 import router as envmon_v2_router
 from routes.health import router as health_router
 from routes.platform import router as platform_router
 from routes.process_order import router as process_order_router
@@ -58,6 +59,7 @@ app.include_router(warehouse360_router, prefix="/api")
 app.include_router(process_order_router, prefix="/api")
 app.include_router(connected_quality_lab_router, prefix="/api")
 app.include_router(envmon_router, prefix="/api")
+app.include_router(envmon_v2_router, prefix="/api")
 app.include_router(spc_router, prefix="/api")
 app.include_router(quality_router, prefix="/api")
 

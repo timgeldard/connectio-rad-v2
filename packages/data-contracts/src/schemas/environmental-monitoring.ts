@@ -277,3 +277,258 @@ export const EnvMonL5CoordinateSchema = z.object({
 })
 
 export type EnvMonL5Coordinate = z.infer<typeof EnvMonL5CoordinateSchema>
+
+// ===========================================================================
+// EnvMon V2 production schemas (cross-workspace, Databricks-only)
+//
+// These power the rebuilt envmon-consumer workspace: per-plant floor catalogue,
+// L4 polygon authoring, L5 pin placement, status/heatmap, lots, trends, MICs.
+// They co-exist with the older V1 schemas above during PR-3/PR-4 and replace
+// them once PR-5 decommissions the in-memory flow.
+// ===========================================================================
+
+/** Marker status colour-coded on every floor view + KPI counter. */
+export const EnvMonStatusSchema = z.enum(['FAIL', 'WARNING', 'PENDING', 'PASS', 'NO_DATA'])
+export type EnvMonStatus = z.infer<typeof EnvMonStatusSchema>
+
+/** Per-floor counts of swab-points in each status — used by Site cards + Floor KPIs. */
+export const EnvMonStatusCountsSchema = z.object({
+  FAIL: z.number().int().min(0),
+  WARNING: z.number().int().min(0),
+  PENDING: z.number().int().min(0),
+  PASS: z.number().int().min(0),
+  NO_DATA: z.number().int().min(0),
+})
+export type EnvMonStatusCounts = z.infer<typeof EnvMonStatusCountsSchema>
+
+/** Per-plant KPI rollup driving the 5 cards in the Site view header. */
+export const EnvMonPlantKpisSchema = z.object({
+  activeFails: z.number().int().min(0).describe('[classification: source-derived]'),
+  warnings: z.number().int().min(0).describe('[classification: source-derived]'),
+  pending: z.number().int().min(0).describe('[classification: source-derived]'),
+  passRate: z.number().min(0).max(100).describe('[classification: source-derived]'),
+  lotsTested: z.number().int().min(0).describe('[classification: source-derived]'),
+  lotsPlanned: z.number().int().min(0).describe('[classification: source-derived]'),
+  totalLocs: z.number().int().min(0).describe('[classification: source-derived]'),
+})
+export type EnvMonPlantKpis = z.infer<typeof EnvMonPlantKpisSchema>
+
+/** Full Site-view payload: plant identity + KPIs. */
+export const EnvMonSiteSummaryV2Schema = z.object({
+  plantId: z.string().describe('[classification: source-field]'),
+  plantName: z.string().describe('[classification: source-field]'),
+  product: z.string().nullable().describe('[classification: source-field]'),
+  country: z.string().nullable().describe('[classification: source-field]'),
+  kpis: EnvMonPlantKpisSchema,
+})
+export type EnvMonSiteSummaryV2 = z.infer<typeof EnvMonSiteSummaryV2Schema>
+
+/** One floor in a plant's floor catalogue (from em_floors). */
+export const EnvMonFloorSchema = z.object({
+  plantId: z.string(),
+  floorId: z.string(),
+  floorName: z.string(),
+  svgPath: z.string().nullable().describe('UC volume path; consume via /api/envmon/floors/{}/svg'),
+  svgWidth: z.number().int().positive(),
+  svgHeight: z.number().int().positive(),
+  sortOrder: z.number().int(),
+  isActive: z.boolean(),
+  mappedCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  unmappedCount: z.number().int().min(0).describe('[classification: source-derived]'),
+  statusCounts: EnvMonStatusCountsSchema,
+})
+export type EnvMonFloor = z.infer<typeof EnvMonFloorSchema>
+
+export const EnvMonFloorsResponseSchema = z.object({
+  floors: z.array(EnvMonFloorSchema),
+})
+export type EnvMonFloorsResponse = z.infer<typeof EnvMonFloorsResponseSchema>
+
+/** A 2D point on the floor SVG, in percentages of the viewBox (0–100). */
+export const EnvMonPctPointSchema = z.tuple([
+  z.number().min(0).max(100),
+  z.number().min(0).max(100),
+])
+export type EnvMonPctPoint = z.infer<typeof EnvMonPctPointSchema>
+
+/** L4 custom polygon (from em_sub_areas). */
+export const EnvMonSubAreaSchema = z.object({
+  areaId: z.string(),
+  plantId: z.string(),
+  floorId: z.string(),
+  l4Code: z.string(),
+  displayName: z.string(),
+  polygonPts: z.array(EnvMonPctPointSchema).min(3),
+  updatedBy: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+})
+export type EnvMonSubArea = z.infer<typeof EnvMonSubAreaSchema>
+
+export const EnvMonSubAreasResponseSchema = z.object({
+  subAreas: z.array(EnvMonSubAreaSchema),
+})
+export type EnvMonSubAreasResponse = z.infer<typeof EnvMonSubAreasResponseSchema>
+
+/** L5 swab-point pin with current status + activity tally. */
+export const EnvMonLocationSchema = z.object({
+  funcLocId: z.string().describe('SAP TPLNR'),
+  plantId: z.string(),
+  floorId: z.string(),
+  areaId: z.string(),
+  xPct: z.number().min(0).max(100),
+  yPct: z.number().min(0).max(100),
+  name: z.string().nullable(),
+  status: EnvMonStatusSchema,
+  mics: z.array(z.string()),
+  failCount: z.number().int().min(0),
+  warnCount: z.number().int().min(0),
+  passCount: z.number().int().min(0),
+  pendingCount: z.number().int().min(0),
+  riskScore: z.number().min(0).max(1).describe('[classification: application-heuristic]'),
+  lastInspectedDays: z.number().int().min(0).nullable(),
+})
+export type EnvMonLocation = z.infer<typeof EnvMonLocationSchema>
+
+export const EnvMonLocationsResponseSchema = z.object({
+  locations: z.array(EnvMonLocationSchema),
+})
+export type EnvMonLocationsResponse = z.infer<typeof EnvMonLocationsResponseSchema>
+
+/** Functional location seen in SAP that does not yet have a coordinate row. */
+export const EnvMonUnmappedLocationSchema = z.object({
+  funcLocId: z.string(),
+  l4Code: z.string().nullable(),
+  name: z.string().nullable(),
+})
+export type EnvMonUnmappedLocation = z.infer<typeof EnvMonUnmappedLocationSchema>
+
+export const EnvMonUnmappedLocationsResponseSchema = z.object({
+  unmapped: z.array(EnvMonUnmappedLocationSchema),
+})
+export type EnvMonUnmappedLocationsResponse = z.infer<typeof EnvMonUnmappedLocationsResponseSchema>
+
+/** One inspection lot returned by /api/envmon/lots — worst-of-R/W/A valuation. */
+export const EnvMonLotSchema = z.object({
+  lotId: z.string(),
+  funcLocId: z.string(),
+  date: z.string(),
+  inspectionType: z.string().nullable(),
+  valuation: z.enum(['R', 'W', 'A']).nullable(),
+  technician: z.string().nullable(),
+})
+export type EnvMonLot = z.infer<typeof EnvMonLotSchema>
+
+export const EnvMonLotsResponseSchema = z.object({
+  lots: z.array(EnvMonLotSchema),
+})
+export type EnvMonLotsResponse = z.infer<typeof EnvMonLotsResponseSchema>
+
+/** Per-MIC result inside a single lot — /api/envmon/lots/{lot_id}. */
+export const EnvMonLotMicResultSchema = z.object({
+  micId: z.string(),
+  micName: z.string().nullable(),
+  quantitativeResult: z.number().nullable(),
+  upper: z.number().nullable(),
+  lower: z.number().nullable(),
+  valuation: z.enum(['R', 'W', 'A']).nullable(),
+  unit: z.string().nullable(),
+  attributeOutlier: z.boolean(),
+})
+export type EnvMonLotMicResult = z.infer<typeof EnvMonLotMicResultSchema>
+
+export const EnvMonLotDetailResponseSchema = z.object({
+  lotId: z.string(),
+  results: z.array(EnvMonLotMicResultSchema),
+})
+export type EnvMonLotDetailResponse = z.infer<typeof EnvMonLotDetailResponseSchema>
+
+/** One point in a (location, MIC) trend chart. */
+export const EnvMonTrendPointSchema = z.object({
+  date: z.string(),
+  value: z.number().nullable(),
+  valuation: z.enum(['R', 'W', 'A']).nullable(),
+  upper: z.number().nullable(),
+  lower: z.number().nullable(),
+})
+export type EnvMonTrendPoint = z.infer<typeof EnvMonTrendPointSchema>
+
+export const EnvMonTrendResponseSchema = z.object({
+  funcLocId: z.string(),
+  micName: z.string(),
+  points: z.array(EnvMonTrendPointSchema),
+})
+export type EnvMonTrendResponse = z.infer<typeof EnvMonTrendResponseSchema>
+
+/** Distinct MICs for filter chips. */
+export const EnvMonMicSchema = z.object({
+  micId: z.string(),
+  micName: z.string().nullable(),
+})
+export type EnvMonMic = z.infer<typeof EnvMonMicSchema>
+
+export const EnvMonMicsResponseSchema = z.object({
+  mics: z.array(EnvMonMicSchema),
+})
+export type EnvMonMicsResponse = z.infer<typeof EnvMonMicsResponseSchema>
+
+/** Heatmap marker — superset of EnvMonLocation with mode-specific fields. */
+export const EnvMonHeatmapMarkerSchema = z.object({
+  funcLocId: z.string(),
+  areaId: z.string(),
+  xPct: z.number(),
+  yPct: z.number(),
+  status: EnvMonStatusSchema,
+  riskScore: z.number().min(0).max(1),
+  spcWarning: z.boolean(),
+})
+export type EnvMonHeatmapMarker = z.infer<typeof EnvMonHeatmapMarkerSchema>
+
+export const EnvMonHeatmapResponseSchema = z.object({
+  plantId: z.string(),
+  floorId: z.string(),
+  mode: z.enum(['deterministic', 'continuous']),
+  markers: z.array(EnvMonHeatmapMarkerSchema),
+})
+export type EnvMonHeatmapResponse = z.infer<typeof EnvMonHeatmapResponseSchema>
+
+/** SVG upload acknowledgement — returned by POST /api/envmon/floors/{}/svg. */
+export const EnvMonFloorSvgUploadResponseSchema = z.object({
+  plantId: z.string(),
+  floorId: z.string(),
+  svgPath: z.string(),
+  bytes: z.number().int().min(0),
+})
+export type EnvMonFloorSvgUploadResponse = z.infer<typeof EnvMonFloorSvgUploadResponseSchema>
+
+// Write-request shapes (used by PR-4 admin)
+
+export const EnvMonFloorUpsertRequestSchema = z.object({
+  plantId: z.string(),
+  floorId: z.string(),
+  floorName: z.string().min(1),
+  svgWidth: z.number().int().positive(),
+  svgHeight: z.number().int().positive(),
+  sortOrder: z.number().int().default(0),
+  isActive: z.boolean().default(true),
+})
+export type EnvMonFloorUpsertRequest = z.infer<typeof EnvMonFloorUpsertRequestSchema>
+
+export const EnvMonSubAreaUpsertRequestSchema = z.object({
+  areaId: z.string(),
+  plantId: z.string(),
+  floorId: z.string(),
+  l4Code: z.string().min(1),
+  displayName: z.string().min(1),
+  polygonPts: z.array(EnvMonPctPointSchema).min(3),
+})
+export type EnvMonSubAreaUpsertRequest = z.infer<typeof EnvMonSubAreaUpsertRequestSchema>
+
+export const EnvMonCoordinateUpsertRequestSchema = z.object({
+  funcLocId: z.string(),
+  plantId: z.string(),
+  floorId: z.string(),
+  areaId: z.string(),
+  xPct: z.number().min(0).max(100),
+  yPct: z.number().min(0).max(100),
+})
+export type EnvMonCoordinateUpsertRequest = z.infer<typeof EnvMonCoordinateUpsertRequestSchema>
